@@ -470,7 +470,7 @@ function updateHexwitch(m, dt){
 export function inHexZone(m){
   for (const z of G.hexZones || []){
     if (z.shape === 'col'){ if (m.lane === z.lane) return true; }
-    else if (z.shape === 'row'){ if (Math.abs(m.p - z.p) <= 1.5 * TILE_P()) return true; }
+    else if (z.shape === 'row'){ if (Math.abs(m.p - z.p) <= 0.5 * TILE_P()) return true; }   // 1 tile tall across all 7 lanes
     else if (Math.abs(m.lane - z.lane) <= 1 && Math.abs(m.p - z.p) <= 1.5 * TILE_P()) return true;
   }
   return false;

@@ -281,7 +281,7 @@ export function drawHexZones(t){
     const a = Math.min(1, z.t / 1.5), pulse = 0.5 + 0.5 * Math.sin(t * 3);
     let x, y, w, h;
     if (z.shape === 'col'){ x = LANE(z.lane) - CS * 0.49; y = FIELD_TOP; w = CS * 0.98; h = FIELD_BOT - FIELD_TOP; }
-    else if (z.shape === 'row'){ x = GX; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 1.5; w = CS * COLS; h = CS * 3; }
+    else if (z.shape === 'row'){ x = GX; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 0.5; w = CS * COLS; h = CS; }
     else { x = LANE(z.lane) - CS * 1.5 * 0.98; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 1.5; w = CS * 3 * 0.98; h = CS * 3; }
     ctx.fillStyle = `rgba(160,80,220,${(0.12 + 0.06 * pulse) * a})`; rrect(ctx, x, y, w, h, 16); ctx.fill();
     ctx.strokeStyle = `rgba(210,155,255,${(0.5 + 0.3 * pulse) * a})`; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.lineDashOffset = t * 24; rrect(ctx, x, y, w, h, 16); ctx.stroke(); ctx.setLineDash([]);

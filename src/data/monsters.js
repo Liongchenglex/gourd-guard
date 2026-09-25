@@ -36,7 +36,7 @@ export const TYPES = {
   slime:   { hp:3,  r:22, sp:0.045, coins:7,  eat:0.5, pts:22, drop:2, splits:2 },
   blob:    { hp:1,  r:13, sp:0.065, coins:2,  eat:0.3, pts:6,  drop:1 },
   // Chameleon (world 5): takes damage only from pumpkins of its colour (picked from the player's loadout). Tools still hurt it.
-  chameleon:  { hp:3, r:21, sp:0.05,  coins:8,  eat:0.6, pts:24, drop:2 },
+  chameleon:  { hp:2, r:21, sp:0.05,  coins:8,  eat:0.6, pts:24, drop:2 },   // 2 HP (owner, 2026-09-26); reverse chameleons keep 3
   // Reverse Chameleon (world 5): immune to pumpkins of its colour, hurt by every other colour.
   rchameleon: { hp:3, r:21, sp:0.05,  coins:8,  eat:0.6, pts:24, drop:2 },
   // Mirror Sprite (world 5): alternates reflecting (`reflect` s) and open (`open` s). While reflecting, a pumpkin bounces back down its lane into the player's wall.

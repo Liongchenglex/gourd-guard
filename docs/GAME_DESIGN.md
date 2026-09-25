@@ -383,7 +383,16 @@ Reading: the first five levels of every world are fine. Worlds 1, 2, 4 and 5 bre
 | 19 | 50% | 0/2, 62% | 1/2, 98% | 0/2, 44% | 1/2, 85% | 0/2, 62% |
 | 20 | 40% | 0/2, 44% | 0/2, 76% | 0/2, 63% | 0/2, 76% | 0/2, 62% |
 
-Same bot caveats as above (no colour picking, no plan for wind).
+Same bot caveats as above (no colour picking, no plan for wind). Follow-up (2026-09-26): every level 10's spawn gap lengthened by 35% at the owner's request; see the re-run below.
+
+| Level | Before (2 runs) | After, gap ×1.35 (3 runs) |
+|---|---|---|
+| 1-10 | 0/2 | 0/3, 66% |
+| 2-10 | 0/2 | 0/3, 75% |
+| 3-10 | 0/2 | 0/3, 78% |
+| 4-10 | 0/2 | 0/3, 70% |
+| 5-10 | 0/2 | 0/3, 63% |
+
 
 ---
 

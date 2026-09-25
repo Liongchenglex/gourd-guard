@@ -395,6 +395,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-26 | Owner: level 10 of every world spawns 35% more slowly (the bot lost every level-10 fight at the expected upgrades). |
 | 2026-09-26 | Owner: Mirror Sprite now arrives at 3-5 and the Chameleon at 3-8 (swapped). |
 | 2026-09-26 | Owner: chameleons have 2 HP; 3-10 spawns no chameleons; Hexwitch zones are 3×3, a 1-tall row or a 1-wide column. |
 | 2026-09-26 | Owner: two more pumpkins: Turquoise (3-6, bunches of 2 at half power) and Brown (5-7, grows small → medium → big); a rainbow intro card at 1-9. |

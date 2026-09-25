@@ -60,10 +60,12 @@ export function startGame(mode, n, loadout){
     t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
   });
-  if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
+  if (def && def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
+  else if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def && def.puddles) placePuddles(def.puddles);
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def ? def.pattern : Math.floor(Math.random() * PATTERNS.length), def ? def.graves : 2);
+  if (def && def.gravesLayout) applyGravesLayout(def.gravesLayout);   // after the board exists: explicit graves replace pumpkins
   initWalls();
   resolveMatches();
   setGest(null);
@@ -147,13 +149,22 @@ export function placeMine(lane){
 /** Puddles (world 4): n distinct random lanes, mid-field. Crawlers and divers use them. */
 export function placePuddles(n){
   const lanes = shuffle([...Array(COLS).keys()]).slice(0, n);
-  for (const lane of lanes) G.puddles.push({ lane, p:rnd(0.3, 0.6) });
+  const top = Math.max(0.3, shoreP() + 0.06);   // puddles sit below the shoreline
+  for (const lane of lanes) G.puddles.push({ lane, p:rnd(top, Math.max(top + 0.05, 0.7)) });
+}
+/** Where the sea ends (fraction of the field): `shore` tile rows down, or the thin 10% band on plain sea levels. */
+export function shoreP(){ const d = G.def; if (!d) return 0; return d.shore ? Math.min(0.8, d.shore * TILE_P()) : d.sea ? 0.1 : 0; }
+/** Explicit grave cells: clears any pumpkin there and plants the grave. */
+export function applyGravesLayout(cells){
+  for (const [r, c] of cells) if (r >= 0 && r < ROWS && c >= 0 && c < COLS){ grid[r][c] = null; graves[r][c] = true; }
+  resolveMatches();
 }
 /** Wind gust: every pumpkin slides in `dir` until the edge, a grave or another pumpkin stops it (the push rule on every
  *  row or column at once). Leading edge first, so lines compress against the far side. */
-export function gust(dir){
+export function gust(dir, only){
   const [dr, dc] = DIRV[dir];
-  const rows = [...Array(ROWS).keys()], cols = [...Array(COLS).keys()];
+  let rows = [...Array(ROWS).keys()], cols = [...Array(COLS).keys()];
+  if (only){ if (dr !== 0) cols = only.slice(); else rows = only.slice(); }   // partial gusts touch only these columns or rows
   if (dr > 0) rows.reverse();
   if (dc > 0) cols.reverse();
   let moved = 0;
@@ -286,12 +297,22 @@ export function update(dt){
   g.castles = g.castles.filter(w => !w.dead);
   if (g.def && g.def.gust){   // wind: 2 s of leaves, then the whole patch shifts one cell
     g.gustT -= dt;
-    if (g.gustDir == null && g.gustT <= 2){ g.gustDir = g.def.gust.dirs[Math.floor(Math.random() * g.def.gust.dirs.length)]; addFloat(`Wind ${ {left:'←', right:'→', up:'↑', down:'↓'}[g.gustDir] }`, W / 2, GY - 30, '#ffd9a0', 22, 1.8); }
+    if (g.gustDir == null && g.gustT <= 2){
+      g.gustDir = g.def.gust.dirs[Math.floor(Math.random() * g.def.gust.dirs.length)];
+      g.gustSet = null;
+      if (g.def.gust.partial){   // only 2–3 columns (for up/down) or rows (for left/right)
+        const vertical = g.gustDir === 'up' || g.gustDir === 'down', count = 2 + Math.floor(Math.random() * 2), max = vertical ? COLS : ROWS;
+        const start = Math.floor(Math.random() * (max - count + 1)); g.gustSet = [...Array(count).keys()].map(i => start + i);
+      }
+      addFloat(`Wind ${ {left:'←', right:'→', up:'↑', down:'↓'}[g.gustDir] }`, W / 2, GY - 30, '#ffd9a0', 22, 1.8);
+    }
     if (g.gustDir != null && Math.random() < dt * 40){
       const [dr, dc] = DIRV[g.gustDir];
-      g.parts.push({ x:rnd(GX, GX + COLS * CS), y:rnd(GY, GY + ROWS * CS), vx:dc * rnd(160, 260) + rnd(-30, 30), vy:dr * rnd(160, 260) + rnd(-30, 30), t:0, life:0.7, size:rnd(3, 5), color:['#d9a520', '#c9582a', '#8a4a1a'][Math.floor(Math.random() * 3)], kind:'chunk', grav:0, rot:Math.random() * TAU });
+      const vertical = dr !== 0, set = g.gustSet;
+      const col = set && vertical ? set[Math.floor(Math.random() * set.length)] : Math.floor(Math.random() * COLS), row = set && !vertical ? set[Math.floor(Math.random() * set.length)] : Math.floor(Math.random() * ROWS);
+      g.parts.push({ x:GX + col * CS + rnd(0, CS), y:GY + row * CS + rnd(0, CS), vx:dc * rnd(160, 260) + rnd(-30, 30), vy:dr * rnd(160, 260) + rnd(-30, 30), t:0, life:0.7, size:rnd(3, 5), color:['#d9a520', '#c9582a', '#8a4a1a'][Math.floor(Math.random() * 3)], kind:'chunk', grav:0, rot:Math.random() * TAU });
     }
-    if (g.gustT <= 0){ gust(g.gustDir); g.gustDir = null; g.gustT = g.def.gust.every; }
+    if (g.gustT <= 0){ gust(g.gustDir, g.gustSet); g.gustDir = null; g.gustSet = null; g.gustT = g.def.gust.every; }
   }
   for (const sc of g.scarecrows){   // monsters in the lane stop to chew the scarecrow
     for (const m of g.monsters) if (!m.dead && m.lane === sc.lane && m.type !== 'boss' && m.rise <= 0 && m.p >= sc.p - 0.01 && m.p < 0.99){

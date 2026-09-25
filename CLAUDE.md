@@ -19,6 +19,7 @@ The owner designs the rules; your job is to implement them faithfully, keep the 
 - Pumpkin set: Green, Yellow (pays coins ×2–×4), Ice, Fire, Grey, Purple, White, Black, Deep Blue (row lightning), Pink (wall healer), Rainbow. Per-level tables: `docs/WORLDS.md` §5 and `src/data/pumpkins.js`.
 - **Testing toggle to remove before release**: the level select has a "Testing: unlock all levels" link (`save.testUnlock`, checked in `isOpen()`), added 2026-09-25 so the owner can play any level.
 - Consumable tools live in a tray (`#tools`) under the top bar: the full set is always shown, locked ones dimmed with a padlock until their level introduces them.
+- Levels 11–19 are hand-authored per `docs/WORLDS.md` §8a using extra level fields (grave layouts, fog rows/cols, partial wind, castle layouts, shoreline, hexAll, names).
 - Every world has a level-16 monster (Flaming Mummy, Fogwalker, Witch, Bulwark Knight, Shell Turtle) and a level-20 perk (`src/data/perks.js`). The Hexwitch works with hex zones (`G.hexZones`).
 - Every level tap opens a preview card (monsters, boss, pumpkins, graves, tools); first appearances show intro cards. Tools appear in the HUD/shop/drops only once introduced.
 - Neither world is tuned yet: the owner asked to build worlds first and tune later. Level 10 of world 1 felt too hard to the owner.

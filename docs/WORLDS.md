@@ -303,6 +303,26 @@ Weapons drop from kills (10% roll) and can also be bought in the shop. The HUD a
 
 ---
 
+## 8a. Levels 11–19: hand-authored (owner, 2026-09-25)
+
+The second half of every world is authored level by level. Each line is data in `src/data/worlds/world<N>.js` using the fields in `src/data/levels.js` (grave layouts, lane weights, fog rows and columns, partial wind, castle layouts, shoreline, whole-level hexing, "only" pools, level names). Field rows are tile rows counted from the top (about 8 tall).
+
+| Level | 1 Pumpkin Patch | 2 Foggy Hollow | 3 Witchwood | 4 Crumbling Keep | 5 Drowned Marsh |
+|---|---|---|---|---|---|
+| 11 | as generated | as generated | as generated | as generated | as generated |
+| 12 | V-shaped graves | Wraiths only | Wind now blows on 2–3 columns or rows only (arrows mark them), through 20 | 4 castle walls | Shoreline 2 rows down |
+| 13 | Mummies only | L-shaped fog: top row + left column | Mirror sprites only | A full row of castle walls with archers behind it, plus the usual mix | Shoreline 3 rows down |
+| 14 | 6 graves | Left and right columns fogged | Everything spawns as a reverse chameleon (no true chameleons) | Gargoyle haulers, shield knights and archers only, behind two rows of walls | Puddle divers and crawlers only |
+| 15 | Whole top patch row is graves (a 4-row board) | Only the first two rows and the fence row are clear | Chameleons and reverse chameleons only | Left and right columns are castle walls | Shoreline 4 rows down, Sodden Mummies only |
+| 16 | Flaming Mummy | Fogwalker | Witch | Bulwark Knight | Shell Turtle |
+| 17 | Mummies and Flaming Mummies only | Fogwalkers only | Mirror sprites only, all reverse-chameleonised | Level 14 plus Bulwark Knights | Shoreline 4 rows down; Bog Turtles, Shell Turtles and divers only |
+| 18 | Top and bottom patch rows are graves | Only the top (spawn) row is clear | Witches only (they may re-hex a monster into a new colour) | H-shaped castle walls, every monster | Shoreline 4 rows down; Shell Turtles, Sodden Mummies and divers only |
+| 19 | Columns 1, 4 and 7 are graves except their last row (reach them with chain lightning); those lanes spawn less | Only the fence row is clear | Chameleons plus everything else chameleonised | Castle walls everywhere except the first two rows | Shoreline 5 rows down; divers and Shell Turtles only |
+
+Rules that came with it: on shoreline levels every monster surfaces at the water's edge and puddles still exist below it; Puddle Divers may lurk anywhere in the sea; witches can change an already hexed monster's colour.
+
+---
+
 ## 8b. Level-20 perks
 
 Beating level 10 opens the next world; beating **level 20** grants a permanent perk (owner, 2026-09-25). Perks stack, apply on every level, and can each be switched off in the pause menu. The bot's expected profile assumes the perks of earlier worlds are on.
@@ -347,6 +367,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-25 | Owner: levels 11–19 of every world hand-authored (§8a) with graves layouts, fog shapes, partial wind, castle layouts, shorelines and "only" pools. |
 | 2026-09-25 | Owner: a level-16 monster per world (Flaming Mummy, Fogwalker, Witch, Bulwark Knight, Shell Turtle); Hexwitch redesigned around hex zones; rewards shown on level 10 and 20 previews. |
 | 2026-09-25 | Owner: level-20 perks (§8b): quick smash, sprouts −1 s, 50% triple sprouts, 10% rainbows, pick 4. Fire auto-locked on mummy levels. Unlocks usable on every level. |
 | 2026-09-25 | Owner: a fallen wall only loses the night once a monster walks through it; projectile monsters stop shooting at fallen walls. Silver pumpkin removed. Plague Doctor heals a 3×3 zone with a visible aura. |

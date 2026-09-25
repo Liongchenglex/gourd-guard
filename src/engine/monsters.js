@@ -1,4 +1,4 @@
-import { endGame } from './game.js';
+import { endGame, shoreP } from './game.js';
 import { resolveMatches } from './board.js';
 import { TYPES, MODS, VARIANTS } from '../data/monsters.js';
 import { BURN_EVERY, RAINBOW } from '../data/pumpkins.js';
@@ -24,9 +24,13 @@ export function lanesOf(m){ return [m.lane]; }
 
 export function pickLane(){
   const busy = new Set(G.monsters.filter(m => m.p < 0.15).map(m => m.lane));
-  const all = [...Array(COLS).keys()], free = all.filter(l => !busy.has(l));
+  const wts = (G.def && G.def.laneWeights) || null;
+  const all = [...Array(COLS).keys()].filter(l => !wts || wts[l] > 0), free = all.filter(l => !busy.has(l));
   const arr = free.length ? free : all;
-  return arr[Math.floor(Math.random() * arr.length)];
+  if (!wts) return arr[Math.floor(Math.random() * arr.length)];
+  let tot = 0; for (const l of arr) tot += wts[l];
+  let r = Math.random() * tot; for (const l of arr){ r -= wts[l]; if (r <= 0) return l; }
+  return arr[arr.length - 1];
 }
 
 /** Resolve a pool key (type, variant or 'boss') into { type, kind, T, variant }. */
@@ -49,10 +53,14 @@ export function spawnMonster(key, lane, minion, p){
     return a;
   }
   let puddle = null;
-  if ((type === 'crawler' || type === 'diver' || type === 'turtle') && G.puddles && G.puddles.length && p == null){   // rise from a random puddle
+  const seaEdge = shoreP();
+  if (type === 'diver' && seaEdge > 0.05 && p == null && Math.random() < 0.5){   // divers may lurk anywhere in the sea
+    puddle = { lane:lane != null ? lane : pickLane(), p:rnd(0.02, seaEdge - 0.03) }; lane = puddle.lane; p = puddle.p;
+  } else if ((type === 'crawler' || type === 'diver' || type === 'turtle') && G.puddles && G.puddles.length && p == null){   // rise from a random puddle
     puddle = G.puddles[Math.floor(Math.random() * G.puddles.length)];
     lane = puddle.lane; p = puddle.p;
   }
+  if (p == null && type !== 'boss' && G.def && G.def.shore) p = seaEdge - 0.02;   // shoreline levels: everything else surfaces at the water's edge
   let hp = T.hp + (type === 'imp' || type === 'brute' || type === 'wisp' ? hpExtra() : 0) + (mod && mod.hp ? mod.hp : 0);
   const form = type === 'boss' ? (G.mode === 'story' ? (G.def.bossForm || 1) : (G.world >= 1 ? 2 : 1)) : 1;
   if (type === 'boss') hp = form === 2 ? T.form2.hp : T.hp + (G.mode === 'endless' ? 4 * G.world : 0);
@@ -70,6 +78,7 @@ export function spawnMonster(key, lane, minion, p){
     puddle, staggerT:T.stagger ? rnd(T.stagger[0], T.stagger[1]) : 0, lurch:1, upT:T.up || 0, boltT:T.boltEvery || 0, twin:null, trueDeath:false,
     colourLock:null, colourImmune:null, reflecting:false, mirrorT:T.open || 0, hexT:T.hexEvery || 0, zoneT:T.zoneEvery || 0, bulk:1 };
   if (T.noKnockback) m.noKnockback = true;
+  if (G.def && G.def.hexAll && type !== 'boss' && type !== 'chameleon' && type !== 'rchameleon') hexMonster(m, G.def.hexAll === 'reverse', true);
   if (type === 'turtle' && !puddle && G.puddles && G.puddles.length && p == null){ const pd = G.puddles[Math.floor(Math.random() * G.puddles.length)]; m.lane = pd.lane; m.x = m.tx = LANE(pd.lane); m.p = pd.p; }
   if (type === 'chameleon' || type === 'rchameleon'){   // takes one of the player's colours
     const pool = (G.loadout || [0, 1]).filter(t => t !== RAINBOW);
@@ -224,7 +233,7 @@ export function updateMonster(m, dt){
         m.hexT -= dt;
         if (m.hexT <= 0 && m.p > 0.05){
           m.hexT = TYPES.witch.hexEvery;
-          const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'witch' && o.colourLock == null && o.colourImmune == null && o.rise <= 0 && o.p > 0);
+          const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'witch' && o.rise <= 0 && o.p > 0);   // may re-hex an already hexed monster into a new colour (owner)
           if (pick.length) hexMonster(pick[Math.floor(Math.random() * pick.length)], Math.random() < 0.5);
         }
         m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
@@ -409,10 +418,11 @@ function updateVampireCount(m, dt){
 }
 
 /** Turn a monster into a chameleon (or, with `reverse`, a reverse chameleon) of a random loadout colour. */
-export function hexMonster(o, reverse){
+export function hexMonster(o, reverse, quiet){
   const pool = (G.loadout || [0, 1]).filter(t => t !== RAINBOW);
   const col = pool[Math.floor(Math.random() * pool.length)];
   if (reverse){ o.colourImmune = col; o.colourLock = null; } else { o.colourLock = col; o.colourImmune = null; }
+  if (quiet) return;
   ring(o.x, mY(o), 36, 'rgba(210,120,255,.9)'); addFloat('Hexed!', o.x, mY(o) - o.r - 24, '#d09bff', 16, 0.9);
 }
 /** The Hexwitch (world 3 boss): drifts between lanes, hexes 2–3 monsters into chameleons, and lays hex zones where the dead rise again. */

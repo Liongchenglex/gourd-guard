@@ -219,6 +219,9 @@ Level data gives `castles:{ n, hp }`: at level start *n* stone walls stand in di
 ### Fog (world 2 map gimmick)
 Level data lists fog banks as `[top, bottom]` fractions of the field. A monster whose position is inside a bank is not drawn (nor its health), except bosses, which glow through; it keeps walking, chewing and making sounds, and pumpkins hit it as normal. Banks: one thin bank in levels 1–4, one wider bank 5–9, two banks 10–14, two wider banks 15–20. The Lantern tool thins every bank for 10 s and shows what is inside.
 
+### Authored levels 11–19
+Levels 11–19 of every world are hand-authored (`docs/WORLDS.md` §8a) with these level fields: `gravesLayout` (explicit patch cells, replacing pumpkins there), `laneWeights` (spawn weight per lane; 0 = never), `fogRows` / `fogCols` (tile rows from the top, whole lanes), `gust.partial` (each gust touches 2–3 columns or rows, marked by arrows during the warning), `castlesLayout` (explicit walls), `shore` (tile rows of sea; monsters spawn at its edge, puddles sit below it, divers may lurk anywhere in it), `hexAll` ('reverse' or 'chameleon' applied to every non-boss spawn) and `name` (shown on the preview). Witches and the Hexwitch may re-hex an already hexed monster into a new colour.
+
 ### Unlocks and progression
 - Level 1 of a world opens when the previous world's level 10 has been beaten. Every other level opens when the level before it has been beaten. Beating level 10 therefore opens levels 11–20 and the next world at once.
 - **Level-20 perks** (`src/data/perks.js`): beating a world's level 20 grants a permanent perk, toggleable in the pause menu: 1-20 quick smash (0.35 s hold), 2-20 sprouts 1 s sooner, 3-20 half of sprout ticks bring 3 pumpkins, 4-20 rainbow chance 10%, 5-20 loadouts of 4 allowed. The result screen announces the perk.

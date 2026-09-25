@@ -1,11 +1,11 @@
 import { TYPES } from '../../data/monsters.js';
-import { sproutEvery } from '../game.js';
+import { sproutEvery, shoreP } from '../game.js';
 import { perkOn } from '../../data/perks.js';
 import { GEAR } from '../../data/shop.js';
 import { PTYPES, RAINBOW } from '../../data/pumpkins.js';
 import { emptyCells, findCell, groupCells, heldGid } from '../board.js';
 import { dropHop, castleY } from '../combat.js';
-import { mS, mY } from '../monsters.js';
+import { mS, mY, TILE_P } from '../monsters.js';
 import { K, coinTarget, ctx } from './canvas.js';
 import { drawMonster } from './monsters.js';
 import { bg, fogSprite, sprites } from './sprites.js';
@@ -42,17 +42,21 @@ export function render(){
   drawHexZones(t);
   const ms = g.monsters.slice().sort((a, b) => a.p - b.p);
   const walkerBands = g.monsters.filter(m => m.type === 'fogwalker' && !m.dead && m.p > 0).map(m => [m.p - TYPES.fogwalker.band, m.p + TYPES.fogwalker.band]);
-  const bands = [...((g.def && g.def.fog) || []), ...walkerBands];
-  const fogOn = bands.length && !(g.fogClear > 0);
+  const rowBands = ((g.def && g.def.fogRows) || []).map(r => [r * TILE_P(), (r + 1) * TILE_P()]);
+  const bands = [...((g.def && g.def.fog) || []), ...rowBands, ...walkerBands];
+  const fogCols = (g.def && g.def.fogCols) || [];
+  const fogOn = (bands.length || fogCols.length) && !(g.fogClear > 0);
   for (const m of ms){
     if (m.hidden) continue;                                             // wraith: invisible
-    if (fogOn && m.type !== 'boss' && m.p > -0.02 && bands.some(([a, b]) => m.p >= a && m.p <= b)) continue;   // inside a fog bank (bosses glow through)
+    if (fogOn && m.type !== 'boss' && m.p > -0.02 && (bands.some(([a, b]) => m.p >= a && m.p <= b) || fogCols.includes(m.lane))) continue;   // inside a fog bank (bosses glow through)
     drawMonster(m, t);
   }
   drawCastles(t);
   drawScarecrows(t);
   drawArrows(t);
   if (bands.length) drawFog(t, bands, g.fogClear > 0);
+  if (fogCols.length) drawFogCols(t, fogCols, g.fogClear > 0);
+  if (g.gustDir) drawWindArrows(t);
   drawMines(t);
   drawDrops(t);
   drawWalls(t);
@@ -225,7 +229,7 @@ export function drawPuddles(t){
 }
 /** Sea row (world 4): water across the top of the field. */
 export function drawSea(t){
-  const y0 = FIELD_TOP - 6, h = 0.1 * (FIELD_BOT - FIELD_TOP) + 6;
+  const y0 = FIELD_TOP - 6, h = Math.max(0.1, shoreP()) * (FIELD_BOT - FIELD_TOP) + 6;
   const gr = ctx.createLinearGradient(0, y0, 0, y0 + h);
   gr.addColorStop(0, 'rgba(30,110,130,.9)'); gr.addColorStop(1, 'rgba(20,70,90,0)');
   ctx.fillStyle = gr; ctx.fillRect(0, y0, W, h);
@@ -299,6 +303,31 @@ export function drawArrows(t){
     ctx.fillStyle = '#d8d0c0'; tri(ctx, x, y + 14, 5);
     ctx.fillStyle = '#c8b090'; ctx.fillRect(x - 4, y - 16, 8, 5);
   }
+}
+/** Column fog: a vertical bank down a whole lane. */
+export function drawFogCols(t, lanes, cleared){
+  for (const l of lanes){
+    const x0 = LANE(l) - CS * 0.5 - 8, al = cleared ? 0.16 : 0.93;
+    const gr = ctx.createLinearGradient(x0, 0, x0 + CS + 16, 0);
+    gr.addColorStop(0, 'rgba(150,172,190,0)'); gr.addColorStop(0.2, `rgba(158,180,198,${al})`); gr.addColorStop(0.8, `rgba(158,180,198,${al})`); gr.addColorStop(1, 'rgba(150,172,190,0)');
+    ctx.fillStyle = gr; ctx.fillRect(x0, FIELD_TOP - 10, CS + 16, FIELD_BOT - FIELD_TOP + 20);
+    if (fogSprite){ ctx.globalAlpha = cleared ? 0.08 : 0.45; for (let i = 0; i < 4; i++) ctx.drawImage(fogSprite, x0 - 20, FIELD_TOP + ((i * 150 + t * 16) % (FIELD_BOT - FIELD_TOP + 100)) - 80, CS + 56, 160); ctx.globalAlpha = 1; }
+  }
+}
+/** Wind warning: arrows on the patch rows or columns a gust will touch (all of them for a full gust). */
+export function drawWindArrows(t){
+  const d = G.gustDir, set = G.gustSet, vertical = d === 'up' || d === 'down';
+  const glyph = { left:'←', right:'→', up:'↑', down:'↓' }[d];
+  const a = 0.35 + 0.3 * Math.sin(t * 8);
+  ctx.font = 'bold 44px Fredoka, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const idx = set || [...Array(vertical ? COLS : ROWS).keys()];
+  for (const i of idx){   // big translucent arrows laid over the affected columns or rows of the patch
+    const x = vertical ? LANE(i) : GX + COLS * CS / 2, y = vertical ? GY + ROWS * CS / 2 : GY + i * CS + CS / 2;
+    if (vertical){ ctx.fillStyle = `rgba(255,217,160,${a * 0.25})`; ctx.fillRect(LANE(i) - CS / 2, GY, CS, ROWS * CS); }
+    else { ctx.fillStyle = `rgba(255,217,160,${a * 0.25})`; ctx.fillRect(GX, GY + i * CS, COLS * CS, CS); }
+    ctx.fillStyle = `rgba(255,217,160,${a + 0.3})`; ctx.fillText(glyph, x, y);
+  }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 /** Landmines waiting at the wall line. */
 export function drawMines(t){

@@ -24,7 +24,7 @@ export function updateHud(force){
   } else prog = G.total ? G.resolved / G.total : 0;
   const label = G.mode === 'story' ? `Night ${G.def.label}` : `Score ${G.score.toLocaleString()}`;
   const wf = Math.round(wallFrac() * 100);
-  const tools = toolsForNight(G.mode === 'story' ? G.n : highestOpen());
+  const tools = toolsForNight(G.mode === 'story' ? Math.max(G.n, highestOpen()) : highestOpen());
   const sig = [wf, coins, Math.round(prog * 100), label, save.fw, save.repair, save.buster, save.lantern, save.mine, save.bomb, save.scarecrow, G.aim, tools.join(','), Math.round(G.fogClear || 0)].join('|');
   if (sig === hudSig && !force) return;
   const coinsChanged = hudSig && hudSig.split('|')[1] !== String(coins);

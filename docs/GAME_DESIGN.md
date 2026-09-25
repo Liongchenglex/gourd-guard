@@ -215,6 +215,7 @@ Level data lists fog banks as `[top, bottom]` fractions of the field. A monster 
 
 ### Unlocks and progression
 - Level 1 of a world opens when the previous world's level 10 has been beaten. Every other level opens when the level before it has been beaten. Beating level 10 therefore opens levels 11–20 and the next world at once.
+- **Unlocks are global**: once a pumpkin or tool is unlocked it can be used on every level, including earlier ones (owner, 2026-09-25). Availability is computed from the highest open level, not the level being played.
 - Unlocks sit in levels 1–10 so nothing is missable. World 1: Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8. World 2: Lantern 2-2, White 2-3, Landmine 2-5, Pink 2-8. World 3 (Witchwood): Scarecrow 3-2, Purple 3-3. World 4 (Crumbling Keep): Bomb 4-4, Grey 4-6, Black 4-9. World 5 (Drowned Marsh): Deep Blue 5-4. World order was changed by the owner on 2026-09-25; level addresses inside the monster and gimmick tables use the new numbering.
 - Stars are keyed by global night index in the save; `save.unlocked` mirrors the highest open night for older code and the endless-mode loadout.
 

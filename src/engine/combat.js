@@ -82,7 +82,7 @@ export function rollReward(){
 }
 /** Tools that can drop right now: introduced by the current night and below their carry limit. */
 function droppableTools(){
-  const open = toolsForNight(G.mode === 'story' ? G.n : highestOpen());
+  const open = toolsForNight(G.mode === 'story' ? Math.max(G.n, highestOpen()) : highestOpen());
   return GEAR.filter(g => g.consumable && open.includes(g.key) && (save[g.key] || 0) < g.max);
 }
 export function dropWeapon(m){

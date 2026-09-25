@@ -1,10 +1,13 @@
+import { TYPES, BOSS_NAME } from '../data/monsters.js';
 import { BURN_AMT, BURN_EVERY, BURN_N, FREEZE_P, KB_CHANCE, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches } from './board.js';
 import { TILE_P, mS, mY } from './monsters.js';
 import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid } from './state.js';
 import { TAU, clamp, fmt, rnd } from './util.js';
-import { lvOf } from '../save.js';
+import { lvOf, save, persist } from '../save.js';
+import { KILL_REWARD } from '../data/rules.js';
+import { GEAR } from '../data/shop.js';
 import { banner } from '../ui/hud.js';
 
 export function launchGroup(ref){
@@ -34,8 +37,7 @@ export function damage(m, amt, color, small){
 
 export function dropHop(d){ return d.t < 0.45 ? Math.sin(d.t / 0.45 * Math.PI) * 26 : Math.sin(G.t * 3 + d.ph) * 2; }
 
-export function dropPumpkins(m){
-  const n = Math.floor(m.drop) + (Math.random() < m.drop % 1 ? 1 : 0);
+export function dropPumpkins(m, n){
   const y = clamp(mY(m), FIELD_TOP + 20, FIELD_BOT - 30);
   for (let i = 0; i < n; i++){
     const x = clamp(m.x + (n > 1 ? (i - (n - 1) / 2) * 34 : 0), 26, W - 26);
@@ -44,20 +46,47 @@ export function dropPumpkins(m){
   }
 }
 
+/** Kill-reward roll (docs/WORLDS.md §2): exactly one of weapon / pumpkin / coins. A weapon roll with every
+ *  weapon already at its carry limit pays coins instead. */
+export function rollReward(){
+  const r = Math.random();
+  if (r < KILL_REWARD.weapon) return GEAR.some(g => g.consumable && (save[g.key] || 0) < g.max) ? 'weapon' : 'coins';
+  if (r < KILL_REWARD.weapon + KILL_REWARD.pumpkin) return 'pumpkin';
+  return 'coins';
+}
+export function dropWeapon(m){
+  const options = GEAR.filter(g => g.consumable && (save[g.key] || 0) < g.max);
+  const gear = options[Math.floor(Math.random() * options.length)];
+  const y = clamp(mY(m), FIELD_TOP + 20, FIELD_BOT - 30);
+  G.drops.push({ kind:'weapon', item:gear.key, x:clamp(m.x, 26, W - 26), y, t:0, life:7, ph:Math.random() * TAU, dead:false });
+}
 export function kill(m){
   if (m.dead) return;
+  if (m.type === 'mummy' && m.lastHit !== 3){   // not Fire: it collapses and rises again later
+    m.hp = 0; m.rise = TYPES.mummy.rise; m.eating = false; m.kb = 0; m.burnLeft = 0;
+    addFloat('Down… not out', m.x, mY(m) - m.r - 30, '#d8cfb0', 16, 1);
+    for (let i = 0; i < 10; i++) chunk(m.x, mY(m), '#d8cfb0', 160);
+    SFX.knock();
+    return;
+  }
   m.dead = true;
   G.kills++; if (!m.minion) G.resolved++;
-  G.coins += m.coins; G.score += m.pts;
+  G.score += m.pts;
+  const reward = m.type === 'boss' ? 'boss' : rollReward();
   const y = mY(m), s = mS(m);
-  const col = { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wraith:'#cfe8f2', boss:'#6a3a7a' }[m.type];
+  const col = { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wraith:'#cfe8f2', mummy:'#d8cfb0', boss:'#6a3a7a' }[m.type];
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
   ring(m.x, y, m.r * s * 2.2, 'rgba(255,220,150,.8)');
-  const nc = Math.min(m.coins, m.type === 'boss' ? 12 : 5);
-  for (let i = 0; i < nc; i++) G.coinFx.push({ sx:m.x + rnd(-12, 12), sy:y + rnd(-10, 10), t:-i * 0.05, dur:0.65 + Math.random() * 0.2 });
-  dropPumpkins(m);
+  if (reward === 'boss' || reward === 'coins'){
+    G.coins += m.coins;
+    const nc = Math.min(m.coins, m.type === 'boss' ? 12 : 5);
+    for (let i = 0; i < nc; i++) G.coinFx.push({ sx:m.x + rnd(-12, 12), sy:y + rnd(-10, 10), t:-i * 0.05, dur:0.65 + Math.random() * 0.2 });
+  }
+  if (reward === 'boss') dropPumpkins(m, Math.floor(m.drop));
+  else if (reward === 'pumpkin') dropPumpkins(m, Math.max(1, Math.round(m.drop)));
+  else if (reward === 'weapon') dropWeapon(m);
   SFX.kill();
-  if (m.type === 'boss'){ G.shake = 1.2; banner('Bramble King falls!', 'Quick, grab the pumpkins it dropped!', 2.4); SFX.win(); }
+  if (m.type === 'boss'){ G.bossDead = true; G.shake = 1.2; banner(`${BOSS_NAME} falls!`, 'Finish the stragglers and grab the pumpkins it dropped!', 2.4); SFX.win(); }
 }
 
 export function knockback(m){
@@ -78,6 +107,7 @@ export function hitMonster(pr, m){
     ring(m.x, y, 42, 'rgba(180,240,255,.9)');
   }
   if (pr.type === 3){ m.burnLeft = Math.max(m.burnLeft, BURN_N[i]); m.burnAmt = Math.max(m.burnAmt, BURN_AMT[i]); m.burnTick = BURN_EVERY; }
+  m.lastHit = pr.type;
   damage(m, POWER[i], PTYPES[pr.type].spark);
   if (kb && !m.dead) knockback(m);
   if (m.dead && pr.type === 5 && Math.random() < SPAWN_P[i]){

@@ -43,6 +43,8 @@ canvas#cv{ position:absolute; inset:0; width:100%; height:100%; display:block; t
   font-size:calc(var(--u)*12px); font-weight:700; border-radius:99px; min-width:calc(var(--u)*19px); height:calc(var(--u)*19px);
   display:grid; place-items:center; padding:0 calc(var(--u)*4px); }
 .icon-btn[disabled]{ opacity:.4; cursor:default; }
+.icon-btn.aim{ box-shadow:0 0 0 3px var(--candle); }
+.world .soon{ color:var(--muted); font-size:calc(var(--u)*13px); margin:0 0 calc(var(--u)*6px); }
 
 .ov{ position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center;
   gap:calc(var(--u)*14px); padding:calc(var(--u)*22px); text-align:center; background:rgba(8,5,14,.6); z-index:5; }

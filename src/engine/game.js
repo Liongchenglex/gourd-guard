@@ -1,14 +1,15 @@
-import { MFIRST, MINTRO, TYPES } from '../data/monsters.js';
+import { MINTRO, TYPES, BOSS_NAME } from '../data/monsters.js';
+import { GEAR } from '../data/shop.js';
 import { PATTERNS } from '../data/patterns.js';
-import { NTYPES, PTYPES, typesForNight } from '../data/pumpkins.js';
-import { WORLDS, levelFor } from '../data/worlds/index.js';
+import { NTYPES, PTYPES } from '../data/pumpkins.js';
+import { WORLDS, levelFor, typesForNight, highestOpen } from '../data/worlds/index.js';
 import { SFX, ensureAudio } from './audio.js';
-import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnPumpkin } from './board.js';
-import { addFloat, damage, hitMonster, spark } from './combat.js';
+import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts } from './board.js';
+import { addFloat, damage, hitMonster, spark, chunk, ring } from './combat.js';
 import { mS, mY, updateMonster } from './monsters.js';
 import { bgWorld, buildBg } from './render/sprites.js';
 import { endlessSpawn, storySpawn } from './spawner.js';
-import { COLS, CS, FENCE_Y, FIELD_TOP, G, HOLD_TIME, LANE, ROWS, W, gest, grid, setG, setGest, state, walls } from './state.js';
+import { COLS, CS, FENCE_Y, FIELD_TOP, G, GY, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, setG, setGest, state, walls } from './state.js';
 import { rnd } from './util.js';
 import { initWalls } from './walls.js';
 import { persist, save } from '../save.js';
@@ -36,7 +37,7 @@ export function beginNight(n){
 }
 
 export function beginEndless(){
-  const av = typesForNight(Math.max(1, save.unlocked));
+  const av = typesForNight(highestOpen());
   if (av.length > 5) openLoadout(av, lo => startGame('endless', 1, lo));
   else startGame('endless', 1, av.length >= 3 ? av : typesForNight(2));
 }
@@ -50,7 +51,7 @@ export function startGame(mode, n, loadout){
     total:def ? def.total + (def.boss ? 1 : 0) : 0,
     spawned:0, spawnTimer:2.6, bossSpawned:false, bossTimer:100, diff:1, sproutT:0,
     monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], groups:{},
-    t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false,
+    t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null,
   });
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def ? def.pattern : Math.floor(Math.random() * PATTERNS.length), def ? def.graves : 2);
@@ -60,13 +61,18 @@ export function startGame(mode, n, loadout){
   setState('play');
   if (mode === 'story'){
     const parts = [];
-    const newP = PTYPES.findIndex((p, i) => i < NTYPES && p.unlock === n && n > 1);
-    if (newP >= 0) parts.push(`New pumpkin: ${PTYPES[newP].name}! It ${PTYPES[newP].role}.`);
-    for (const [t, lv] of Object.entries(MFIRST)) if (lv === n) parts.push(MINTRO[t]);
-    if (def.boss) parts.push('A boss waits at the end of this night.');
+    for (const key of def.unlockPumpkins){ const P = PTYPES.find(p => p.key === key); if (P) parts.push(`New pumpkin: ${P.name}! It ${P.role}.`); }
+    for (const key of def.unlockGear){
+      const g = GEAR.find(x => x.key === key);
+      if (!g) continue;
+      if ((save[key] || 0) < 1){ save[key] = 1; persist(); }   // one free unit the night a tool is introduced
+      parts.push(`New tool: ${g.name}. ${g.desc}`);
+    }
+    for (const t of def.intro) if (MINTRO[t]) parts.push(MINTRO[t]);
+    if (def.boss) parts.push(`${BOSS_NAME} waits in this night. Monsters keep coming until it falls.`);
     if (def.graves && def.graves > (n > 1 ? levelFor(n - 1).graves : 0)) parts.push(n === 3 ? 'Graves now appear in your patch. They block slides.' : 'One more grave in the patch.');
     if (n === 1) parts.push('Swipe a pumpkin to slide it. Bunch 3 of a color.');
-    banner(`Night ${n}`, parts.length ? parts.join(' ') : WORLDS[G.world].name, parts.length > 1 ? 4.2 : 3);
+    banner(`Night ${def.label}`, parts.length ? parts.join(' ') : WORLDS[G.world].name, parts.length > 1 ? 4.2 : 3);
   } else banner('Endless night', 'How long can the walls hold?', 2.4);
 }
 
@@ -82,10 +88,28 @@ export function useFirework(){
   save.fw--; persist();
   SFX.boom(); G.shake = 1; G.flash = 1;
   for (let i = 0; i < 5; i++){ const x = rnd(60, W - 60), y = rnd(FIELD_TOP, FIELD_TOP + 160); const col = ['#ffd35a', '#ff6a3a', '#d09bff', '#aee8ff', '#a6f06a'][i]; for (let k = 0; k < 24; k++) spark(x, y, col, 260); }
-  for (const m of G.monsters.slice()) if (!m.dead) damage(m, 3, '#ffd35a');
+  for (const m of G.monsters.slice()) if (!m.dead && !(m.rise > 0)){ m.lastHit = -1; damage(m, 3, '#ffd35a'); }
   updateHud(true);
 }
 
+/** Grave buster: first press arms it (tap a grave next), second press or a tap elsewhere cancels. */
+export function useBuster(){
+  if (state !== 'play' || G.over || save.buster <= 0) return;
+  if (!graves.some(row => row.some(Boolean))){ addFloat('No graves to dig', W / 2, GY - 30, '#ffd35a', 18, 1); SFX.bad(); return; }
+  G.aim = G.aim === 'buster' ? null : 'buster';
+  if (G.aim) addFloat('Tap a grave', W / 2, GY - 30, '#ffd35a', 18, 1.2);
+  updateHud(true);
+}
+export function bustGrave(r, c){
+  if (!graves[r][c] || save.buster <= 0) return false;
+  graves[r][c] = false; save.buster--; persist();
+  const x = LANE(c), y = GY + r * CS + CS / 2;
+  for (let i = 0; i < 18; i++) chunk(x, y, i % 2 ? '#8a8d96' : '#3b2a1c', 220);
+  ring(x, y, 40, 'rgba(255,220,150,.9)');
+  SFX.smash(); G.shake = 0.4; G.aim = null;
+  updateHud(true);
+  return true;
+}
 export function useRepair(){
   if (state !== 'play' || G.over || save.repair <= 0) return;
   if (walls.every(w => w.hp >= w.max)){ addFloat('Walls are already full', W / 2, FENCE_Y - 40, '#ffd35a', 18, 1); SFX.bad(); return; }
@@ -104,14 +128,14 @@ export function update(dt){
   if (!g.over){
     const low = ROWS * COLS - emptyCells().length < 10;
     g.sproutT += dt * (low ? 2 : 1);
-    if (g.sproutT >= save.spawnEvery){ if (spawnPumpkin()) g.sproutT = 0; else g.sproutT = save.spawnEvery; }
+    if (g.sproutT >= save.spawnEvery){ if (spawnSprouts()) g.sproutT = 0; else g.sproutT = save.spawnEvery; }
   }
   for (const m of g.monsters) if (!m.dead && !g.over) updateMonster(m, dt);
   for (const pr of g.projs){
     pr.y += pr.vy * dt; pr.rot += dt * pr.spin;
     pr.trail.push(pr.x, pr.y); if (pr.trail.length > 14) pr.trail.splice(0, 2);
     if (pr.y < FENCE_Y + 10){
-      const targets = g.monsters.filter(m => !m.dead && !pr.hit.has(m) && Math.abs(pr.x - m.x) < m.hw).sort((a, b) => b.p - a.p);
+      const targets = g.monsters.filter(m => !m.dead && !(m.rise > 0) && !pr.hit.has(m) && Math.abs(pr.x - m.x) < m.hw).sort((a, b) => b.p - a.p);
       for (const m of targets){
         if (Math.abs(pr.y - mY(m)) < pr.r + m.r * mS(m) * 0.8 || pr.y < mY(m)){
           hitMonster(pr, m);
@@ -154,7 +178,7 @@ export function update(dt){
     g.hintT -= dt;
     if (g.hintT <= 0){ g.hintT = 1.5; g.hint = bestLitGroup() ? null : bestMove(); }
   }
-  if (!g.over && g.mode === 'story' && g.spawned >= g.def.total && (!g.def.boss || g.bossSpawned) && g.monsters.length === 0) endGame(true);
+  if (!g.over && g.mode === 'story' && (g.def.boss ? g.bossDead : g.spawned >= g.def.total) && g.monsters.length === 0) endGame(true);
   updateHud(false);
 }
 

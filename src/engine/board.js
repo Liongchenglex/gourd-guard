@@ -1,11 +1,13 @@
 import { PATTERNS } from '../data/patterns.js';
+import { SPROUT_COUNT } from '../data/rules.js';
+import { GEAR } from '../data/shop.js';
 import { PTYPES, RAINBOW, WILD_CHANCE } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { addFloat, chunk, dropHop, spark } from './combat.js';
 import { COLS, CS, G, GX, GY, LANE, ROWS, gest, graves, grid, nextGid, setGraves, setGrid } from './state.js';
 import { clamp, shuffle } from './util.js';
 import { persist, save } from '../save.js';
-import { banner } from '../ui/hud.js';
+import { banner, updateHud } from '../ui/hud.js';
 
 export function newCell(c){ return { c, lit:false, gids:[], bsize:0, ox:0, oy:0, pop:0, grow:1, fly:0, wig:0, t:Math.random() * 10 }; }
 
@@ -200,6 +202,12 @@ export function spawnPumpkin(){
   return true;
 }
 
+/** One sprout tick: SPROUT_COUNT pumpkins in separate random empty cells; fewer if the patch runs out. */
+export function spawnSprouts(){
+  let placed = 0;
+  for (let i = 0; i < SPROUT_COUNT; i++) if (spawnPumpkin()) placed++;
+  return placed > 0;
+}
 export function landingCell(x){
   const c0 = clamp(Math.floor((x - GX) / CS), 0, COLS - 1);
   for (let d = 0; d < COLS; d++){
@@ -213,6 +221,14 @@ export function landingCell(x){
 
 export function collectDrop(d){
   if (!d || d.dead) return false;
+  if (d.kind === 'weapon'){
+    const gear = GEAR.find(g => g.key === d.item);
+    save[d.item] = Math.min(gear.max, (save[d.item] || 0) + 1); persist();
+    d.dead = true;
+    addFloat(`+1 ${gear.name}`, d.x, d.y - 34, '#ffd35a', 18, 1);
+    SFX.collect(); updateHud(true);
+    return true;
+  }
   const spot = landingCell(d.x);
   if (!spot){ addFloat('Patch is full', d.x, d.y - 34, '#ffd35a', 18, 1); SFX.bad(); return false; }
   flyInto(spot[0], spot[1], d.c, d.x, d.y - dropHop(d));

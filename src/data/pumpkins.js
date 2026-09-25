@@ -1,12 +1,12 @@
 // ---------- Pumpkins ----------
 
 export const PTYPES = [
-  { key:'green',  name:'Green',  role:'normal pumpkin', base:'#5c9c33', light:'#94d65e', dark:'#305c17', spark:'#a6f06a', unlock:1 },
-  { key:'yellow', name:'Yellow', role:'normal pumpkin', base:'#e8b323', light:'#ffe27a', dark:'#9a6a08', spark:'#ffe27a', unlock:1 },
-  { key:'ice',    name:'Ice',    role:'slows monsters and can freeze them solid', base:'#7cc6ec', light:'#e6f8ff', dark:'#2f73a3', spark:'#bfefff', unlock:2 },
-  { key:'fire',   name:'Fire',   role:'keeps burning monsters as they walk', base:'#d63a2a', light:'#ff7057', dark:'#7f1c13', spark:'#ff6a3a', unlock:4 },
-  { key:'grey',   name:'Grey',   role:'pierces through every monster in its column', base:'#8f9096', light:'#d4d5da', dark:'#4d4e55', spark:'#e8e8ee', unlock:6 },
-  { key:'purple', name:'Purple', role:'can spawn a bonus pumpkin in your patch when it kills', base:'#8746c2', light:'#bb88ee', dark:'#4c2379', spark:'#d09bff', unlock:8 },
+  { key:'green',  name:'Green',  role:'normal pumpkin', base:'#5c9c33', light:'#94d65e', dark:'#305c17', spark:'#a6f06a' },
+  { key:'yellow', name:'Yellow', role:'normal pumpkin', base:'#e8b323', light:'#ffe27a', dark:'#9a6a08', spark:'#ffe27a' },
+  { key:'ice',    name:'Ice',    role:'slows monsters and can freeze them solid', base:'#7cc6ec', light:'#e6f8ff', dark:'#2f73a3', spark:'#bfefff' },
+  { key:'fire',   name:'Fire',   role:'keeps burning monsters as they walk', base:'#d63a2a', light:'#ff7057', dark:'#7f1c13', spark:'#ff6a3a' },
+  { key:'grey',   name:'Grey',   role:'pierces through every monster in its column', base:'#8f9096', light:'#d4d5da', dark:'#4d4e55', spark:'#e8e8ee' },
+  { key:'purple', name:'Purple', role:'can spawn a bonus pumpkin in your patch when it kills', base:'#8746c2', light:'#bb88ee', dark:'#4c2379', spark:'#d09bff' },
   { key:'rainbow',name:'Rainbow',role:'joins any bunch as any color', rainbow:true, spark:'#fff3a0' },
 ];
 
@@ -48,4 +48,3 @@ export function lvDesc(t, L){
   return parts.join(', ');
 }
 
-export function typesForNight(n){ return [...Array(NTYPES).keys()].filter(t => PTYPES[t].unlock <= n); }

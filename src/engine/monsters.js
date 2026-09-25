@@ -1,7 +1,7 @@
 import { TYPES } from '../data/monsters.js';
 import { BURN_EVERY } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
-import { chunk, damage } from './combat.js';
+import { chunk, damage, spark, ring, addFloat } from './combat.js';
 import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, LANE } from './state.js';
 import { clamp, rnd } from './util.js';
 import { damageWall } from './walls.js';
@@ -18,7 +18,7 @@ export function spMulNow(){ return G.mode === 'story' ? G.def.spMul : 0.85 + (G.
 
 export function hpExtra(){ return G.mode === 'story' ? 0 : Math.min(2, Math.floor((G.diff - 1) / 10)); }
 
-export function lanesOf(m){ return m.type === 'boss' ? [2, 3, 4] : [m.lane]; }
+export function lanesOf(m){ return [m.lane]; }
 
 export function pickLane(){
   const busy = new Set(G.monsters.filter(m => m.p < 0.15).map(m => m.lane));
@@ -30,12 +30,14 @@ export function pickLane(){
 export function spawnMonster(type, lane, minion, p){
   const T = TYPES[type];
   let hp = T.hp + (type === 'imp' || type === 'brute' || type === 'wraith' ? hpExtra() : 0);
-  if (type === 'boss') hp = T.hp + 4 * G.world;
-  if (lane == null) lane = type === 'boss' ? 3 : pickLane();
+  const form = type === 'boss' ? (G.mode === 'story' ? (G.def.bossForm || 1) : (G.world >= 1 ? 2 : 1)) : 1;
+  if (type === 'boss') hp = form === 2 ? T.form2.hp : T.hp + (G.mode === 'endless' ? 4 * G.world : 0);
+  if (lane == null) lane = pickLane();
   const x = LANE(lane);
-  const m = { type, lane, x, tx:x, p:p != null ? p : -0.02, hp, maxHp:hp, r:T.r, hw:type === 'boss' ? 84 : CS * 0.42,
+  const m = { type, lane, x, tx:x, p:p != null ? p : -0.02, hp, maxHp:hp, r:T.r, hw:CS * 0.42, form,
     sp:T.sp * spMulNow() * rnd(0.92, 1.08), coins:T.coins, eat:T.eat, pts:T.pts, drop:T.drop, ph:Math.random() * 10, age:0, flash:0,
-    slowT:0, frozenT:0, burnLeft:0, burnAmt:0, burnTick:0, kb:0, eating:false, dead:false, minion:!!minion, summon:4, hop:0, drift:rnd(2.5, 4.5) };
+    slowT:0, frozenT:0, burnLeft:0, burnAmt:0, burnTick:0, kb:0, eating:false, dead:false, minion:!!minion, summon:4, hop:0, drift:rnd(2.5, 4.5), rise:0, lastHit:null,
+    hold:T.hold || 1, teleport:T.teleportEvery || 0, shove:form === 2 && T.form2 ? T.form2.shoveEvery : 0 };
   G.monsters.push(m);
   return m;
 }
@@ -51,9 +53,16 @@ export function aheadLimit(m){
   return limit;
 }
 
+/** Short puff of dust/particles where the Gravekeeper vanishes or appears. */
+function puff(x, y){ for (let i = 0; i < 14; i++) spark(x, y, i % 2 ? '#c9b6ff' : '#5a3a7a', 150); ring(x, y, 30, 'rgba(200,170,255,.8)'); }
 export function updateMonster(m, dt){
   m.age += dt; m.ph += dt;
   if (m.flash > 0) m.flash -= dt;
+  if (m.rise > 0){   // collapsed mummy: lies still, untargetable, then stands back up at full health
+    m.rise -= dt;
+    if (m.rise <= 0){ m.rise = 0; m.hp = m.maxHp; m.flash = 0.2; addFloat('Rises again', m.x, mY(m) - m.r - 30, '#d8cfb0', 16, 0.9); }
+    return;
+  }
   let sp = m.sp;
   if (m.frozenT > 0){ m.frozenT -= dt; sp = 0; }
   else if (m.slowT > 0){ m.slowT -= dt; sp *= 0.5; }
@@ -61,7 +70,7 @@ export function updateMonster(m, dt){
   if (m.burnLeft > 0){
     m.burnTick -= dt;
     if (Math.random() < dt * 16) G.parts.push({ x:m.x + rnd(-m.r * 0.6, m.r * 0.6), y:mY(m) + rnd(-4, 10), vx:rnd(-10, 10), vy:-rnd(50, 90), t:0, life:0.5, size:rnd(3, 6), color:'#ff8a3a', kind:'flame', grav:0 });
-    if (m.burnTick <= 0){ m.burnLeft--; m.burnTick = BURN_EVERY; damage(m, m.burnAmt, '#ff9a4a', true); if (m.dead) return; }
+    if (m.burnTick <= 0){ m.burnLeft--; m.burnTick = BURN_EVERY; m.lastHit = 3; damage(m, m.burnAmt, '#ff9a4a', true); if (m.dead) return; }
   }
   if (m.kb > 0){
     const st = Math.min(m.kb, dt * 2.2);
@@ -87,10 +96,35 @@ export function updateMonster(m, dt){
         }
         m.x += (m.tx - m.x) * Math.min(1, dt * 3.5);
         break;
-      case 'boss':
-        m.summon -= dt;
-        if (m.summon <= 0 && m.p > 0.05 && G.world > 0){ m.summon = 14; spawnMonster('bat', [1, 5][Math.floor(Math.random() * 2)], true, m.p + 0.03); }
+      case 'boss': {   // Gravekeeper (docs/WORLDS.md §7): holds position, teleports between lanes, raises ghouls; form 2 shoves monsters forward
+        const T = TYPES.boss;
+        if (m.p >= m.hold) sp = 0;
+        if (m.p > 0.05){
+          m.summon -= dt;
+          if (m.summon <= 0){
+            m.summon = m.form === 2 ? T.form2.summonEvery : T.summonEvery;
+            const g = spawnMonster('ghoul', pickLane(), true, Math.max(0, m.p - 0.02));
+            puff(g.x, mY(g)); SFX.boss();
+          }
+          m.teleport -= dt;
+          if (m.teleport <= 0){
+            m.teleport = T.teleportEvery;
+            const opts = [...Array(COLS).keys()].filter(l => l !== m.lane);
+            puff(m.x, mY(m));
+            m.lane = opts[Math.floor(Math.random() * opts.length)]; m.x = m.tx = LANE(m.lane); m.age = 0;
+            puff(m.x, mY(m));
+          }
+          if (m.form === 2){
+            m.shove -= dt;
+            if (m.shove <= 0){
+              m.shove = T.form2.shoveEvery;
+              const pick = G.monsters.filter(o => o !== m && !o.dead && o.rise <= 0 && !o.eating && o.p > 0 && o.p < 0.6);
+              if (pick.length){ const o = pick[Math.floor(Math.random() * pick.length)]; ring(o.x, mY(o), 36, 'rgba(200,170,255,.9)'); o.p = Math.min(0.95, o.p + T.form2.shove); ring(o.x, mY(o), 36, 'rgba(200,170,255,.9)'); }
+            }
+          }
+        }
         break;
+      }
       default: m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
     }
   }

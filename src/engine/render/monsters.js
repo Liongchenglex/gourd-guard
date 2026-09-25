@@ -17,12 +17,14 @@ export function drawMonster(m, t){
   const F = c => m.flash > 0 ? '#ffffff' : blue ? mix(c, '#7fd0ff', 0.6) : c;
   const k = m.type === 'boss' ? 1 : 0.95;
   ctx.scale(k, k);
+  if (m.rise > 0){ ctx.translate(0, m.r * 0.6); ctx.scale(1.15, 0.35); ctx.globalAlpha = fade * 0.85; }   // collapsed mummy lies flat
   switch (m.type){
     case 'ghoul': drawGhoul(m, F); break;
     case 'bat': drawBat(m, F); break;
     case 'imp': drawImp(m, F); break;
     case 'brute': drawBrute(m, F); break;
     case 'wraith': drawWraith(m, F, t); break;
+    case 'mummy': drawMummy(m, F, t); break;
     case 'boss': drawBoss(m, F, t); break;
   }
   if (m.frozenT > 0){
@@ -134,24 +136,50 @@ export function drawWraith(m, F, t){
   ctx.beginPath(); ctx.moveTo(16, 0); ctx.quadraticCurveTo(26, 6, 22, 14); ctx.stroke();
 }
 
-export function drawBoss(m, F, t){
-  const aura = ctx.createRadialGradient(0, -10, 10, 0, -10, 90);
-  aura.addColorStop(0, 'rgba(160,80,220,.35)'); aura.addColorStop(1, 'rgba(160,80,220,0)');
-  ctx.fillStyle = aura; ctx.fillRect(-90, -100, 180, 180);
-  ctx.strokeStyle = F('#4a3020'); ctx.lineWidth = 7; ctx.lineCap = 'round';
-  const sw = Math.sin(m.ph * (m.eating ? 6 : 1.5)) * 6;
-  ctx.beginPath(); ctx.moveTo(-40, -6); ctx.lineTo(-66, 10 + sw); ctx.lineTo(-78, 0 + sw); ctx.moveTo(-66, 10 + sw); ctx.lineTo(-72, 26 + sw); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(40, -6); ctx.lineTo(66, 10 - sw); ctx.lineTo(78, 0 - sw); ctx.moveTo(66, 10 - sw); ctx.lineTo(72, 26 - sw); ctx.stroke();
-  ctx.fillStyle = F('#2b1a2e');
-  ctx.beginPath(); ctx.moveTo(-44, 40); ctx.lineTo(-44, -12);
-  ctx.quadraticCurveTo(-44, -58, 0, -58); ctx.quadraticCurveTo(44, -58, 44, -12); ctx.lineTo(44, 40);
-  for (let i = 0; i < 6; i++){ const x1 = 44 - (i + 0.5) * (88 / 6), x2 = 44 - (i + 1) * (88 / 6); ctx.quadraticCurveTo(x1, 52 + Math.sin(t * 4 + i) * 5, x2, 40); }
+export function drawMummy(m, F, t){
+  const r = m.r;
+  ctx.fillStyle = F('#d8cfb0');
+  ell(ctx, 0, r * 0.15, r * 0.78, r * 0.95);            // body
+  ell(ctx, 0, -r * 0.75, r * 0.6, r * 0.62);            // head
+  ctx.strokeStyle = F('#a99c7a'); ctx.lineWidth = 2.2;   // bandage lines
+  for (let i = -3; i <= 3; i++){ ctx.beginPath(); ctx.moveTo(-r * 0.75, i * r * 0.26 + Math.sin(m.ph + i) * 2); ctx.lineTo(r * 0.75, i * r * 0.26 + 4 + Math.cos(m.ph + i) * 2); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(-r * 0.55, -r * 0.9); ctx.lineTo(r * 0.55, -r * 0.7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-r * 0.55, -r * 0.55); ctx.lineTo(r * 0.55, -r * 0.42); ctx.stroke();
+  ctx.fillStyle = m.flash > 0 ? '#fff' : '#3b1d0c'; ell(ctx, -r * 0.2, -r * 0.72, r * 0.16, r * 0.18);   // one eye
+  ctx.fillStyle = '#ff9a3a'; ell(ctx, -r * 0.2, -r * 0.72, r * 0.07, r * 0.09);
+  ctx.strokeStyle = F('#c9bd9a'); ctx.lineWidth = 6; ctx.lineCap = 'round';                            // arms out
+  const sw = Math.sin(m.ph * 3) * 4;
+  ctx.beginPath(); ctx.moveTo(-r * 0.6, -r * 0.1); ctx.lineTo(-r * 1.15, r * 0.05 + sw); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(r * 0.6, -r * 0.1); ctx.lineTo(r * 1.15, r * 0.05 - sw); ctx.stroke();
+}
+export function drawBoss(m, F, t){   // The Gravekeeper: hooded digger with a lantern and a shovel
+  const glow = ctx.createRadialGradient(-34, -26, 4, -34, -26, 70);
+  glow.addColorStop(0, 'rgba(255,200,90,.45)'); glow.addColorStop(1, 'rgba(255,200,90,0)');
+  ctx.fillStyle = glow; ctx.fillRect(-104, -96, 140, 140);
+  const aura = ctx.createRadialGradient(0, 0, 10, 0, 0, 80);
+  aura.addColorStop(0, 'rgba(120,80,200,.25)'); aura.addColorStop(1, 'rgba(120,80,200,0)');
+  ctx.fillStyle = aura; ctx.fillRect(-80, -90, 160, 170);
+  // shovel (right)
+  ctx.strokeStyle = F('#6b4a2b'); ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(30, -40); ctx.lineTo(38, 34); ctx.stroke();
+  ctx.fillStyle = F('#9a9ea8'); ctx.beginPath(); ctx.moveTo(28, 30); ctx.lineTo(50, 30); ctx.lineTo(46, 52); ctx.quadraticCurveTo(39, 60, 32, 52); ctx.closePath(); ctx.fill();
+  // lantern pole (left)
+  ctx.strokeStyle = F('#4a3020'); ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(-26, -8); ctx.lineTo(-38, -52); ctx.stroke();
+  ctx.fillStyle = F('#3a2a20'); rrect(ctx, -44, -36, 20, 24, 4); ctx.fill();
+  ctx.fillStyle = m.flash > 0 ? '#fff' : '#ffd35a'; rrect(ctx, -41, -33, 14, 18, 3); ctx.fill();
+  ctx.fillStyle = '#fff3a0'; ell(ctx, -34, -22 + Math.sin(t * 9) * 1.5, 3, 5);
+  // robe
+  ctx.fillStyle = F('#241a2e');
+  ctx.beginPath(); ctx.moveTo(-30, 44); ctx.lineTo(-28, -10); ctx.quadraticCurveTo(-30, -52, 0, -60); ctx.quadraticCurveTo(30, -52, 28, -10); ctx.lineTo(30, 44);
+  for (let i = 0; i < 5; i++){ const x1 = 30 - (i + 0.5) * 12, x2 = 30 - (i + 1) * 12; ctx.quadraticCurveTo(x1, 54 + Math.sin(t * 5 + i) * 4, x2, 44); }
   ctx.closePath(); ctx.fill();
-  ctx.fillStyle = F('#5a3a2a');
-  for (let i = -2; i <= 2; i++){ ctx.beginPath(); ctx.moveTo(i * 15 - 7, -52); ctx.lineTo(i * 15 + (i % 2 ? 3 : -2), -80 + Math.abs(i) * 7); ctx.lineTo(i * 15 + 7, -52); ctx.fill(); }
-  const glow = m.flash > 0 ? '#fff' : '#b6ff5a';
-  ctx.fillStyle = glow; ell(ctx, -15, -24, 8, 10); ell(ctx, 15, -24, 8, 10);
-  ctx.fillStyle = '#10200a'; ell(ctx, -15, -22, 3, 5); ell(ctx, 15, -22, 3, 5);
-  ctx.fillStyle = glow;
-  ctx.beginPath(); ctx.moveTo(-20, 0); ctx.lineTo(-12, 8); ctx.lineTo(-6, 2); ctx.lineTo(0, 10); ctx.lineTo(6, 2); ctx.lineTo(12, 8); ctx.lineTo(20, 0); ctx.quadraticCurveTo(0, 22, -20, 0); ctx.fill();
+  ctx.fillStyle = F('#3a2a48'); ctx.beginPath(); ctx.moveTo(-22, -6); ctx.quadraticCurveTo(0, 6, 22, -6); ctx.lineTo(24, 4); ctx.quadraticCurveTo(0, 16, -24, 4); ctx.closePath(); ctx.fill();   // shoulder cape edge
+  // hood shadow and eyes
+  ctx.fillStyle = '#0c0812'; ctx.beginPath(); ctx.moveTo(-18, -20); ctx.quadraticCurveTo(0, -46, 18, -20); ctx.quadraticCurveTo(0, -14, -18, -20); ctx.fill();
+  const eye = m.flash > 0 ? '#fff' : '#b6ff5a';
+  ctx.fillStyle = eye; ell(ctx, -7, -26, 4, 3.5); ell(ctx, 7, -26, 4, 3.5);
+  ctx.fillStyle = '#10200a'; ell(ctx, -7, -26, 1.5, 2); ell(ctx, 7, -26, 1.5, 2);
+  // hands
+  ctx.fillStyle = F('#cfc6b0'); ell(ctx, -27, -8, 5, 4); ell(ctx, 31, -2, 5, 4);
 }

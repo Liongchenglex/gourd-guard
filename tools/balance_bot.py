@@ -21,7 +21,7 @@ import argparse, json, pathlib, sys, time
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-UNLOCK = [1, 1, 2, 4, 6, 8]  # night each pumpkin type unlocks (Green, Yellow, Ice, Fire, Grey, Purple)
+UNLOCK = [1, 1, 3, 8, 999, 999]  # night each pumpkin type unlocks (Green, Yellow, Ice, Fire, Grey, Purple); Grey/Purple arrive in later worlds
 
 BOT_JS = """
 (interval) => {
@@ -57,17 +57,19 @@ RESULT_JS = """
   const G = window.__gg.G, w = window.__gg.walls;
   const wf = w.reduce((a, x) => a + x.hp, 0) / w.reduce((a, x) => a + x.max, 0);
   return { night: G.n, walls_pct: Math.round(wf * 100), kills: G.kills, resolved: G.resolved + '/' + G.total,
-           seconds: Math.round(G.t), throws: G.throws, missed: G.missed, state: window.__gg.state,
+           seconds: Math.round(G.t), throws: G.throws, missed: G.missed, coins: G.coins, state: window.__gg.state,
            title: document.querySelector('#rTitle').textContent };
 }
 """
 
 
-def profile(n):
-    """Plausible upgrade state for a player reaching night n."""
-    lv = 1 if n <= 3 else 2 if n <= 7 else 3 if n <= 11 else 4
-    fence = 0 if n <= 4 else 1 if n <= 9 else 2
-    return lv, fence
+def profile(n, offset=0):
+    """Expected upgrade state for a player reaching global night n (world 1 = nights 1-20).
+    Levels are tuned to be winnable at this profile and hard below it, so upgrades matter (owner rule, 2026-09-25).
+    offset=-1 simulates a player who skipped the shop for one tier."""
+    lv = 1 if n <= 4 else 2 if n <= 9 else 3 if n <= 14 else 4 if n <= 19 else 5
+    fence = 0 if n <= 5 else 1 if n <= 10 else 2 if n <= 15 else 3
+    return max(1, min(5, lv + offset)), max(0, min(3, fence + offset))
 
 
 def main():
@@ -80,6 +82,7 @@ def main():
     ap.add_argument('--sprout', type=int, default=5, help='seconds between sprouts')
     ap.add_argument('--url', default=None, help='page URL of the built app (required)')
     ap.add_argument('--repeats', type=int, default=1, help='runs per night; a summary line per night follows the runs')
+    ap.add_argument('--offset', type=int, default=0, help='upgrade profile offset: -1 = under-upgraded player, +1 = over-upgraded')
     args = ap.parse_args()
     if not args.url:
         sys.exit('Pass --url, e.g. --url http://127.0.0.1:4173/ after `npm run build` and `python3 tools/serve_dist.py`.')
@@ -96,7 +99,7 @@ def main():
                 page.on('pageerror', lambda e: errors.append(str(e)))
                 page.goto(PAGE)
                 time.sleep(0.8)
-                lv, fence = profile(n)
+                lv, fence = profile(n, args.offset)
                 page.evaluate("""([lv, fence, rep, fw, sprout]) => Object.assign(window.__gg.save, {
                     seenHelp:true, seenFlick:true, fw, repair:rep, fence, spawnEvery:sprout,
                     lv:{ green:lv, yellow:lv, ice:lv, fire:lv, grey:lv, purple:lv } })""",
@@ -108,7 +111,7 @@ def main():
                 while time.time() - t0 < args.timeout and page.evaluate("window.__gg.state") != 'result':
                     time.sleep(0.5)
                 r = page.evaluate(RESULT_JS)
-                r['pumpkin_level'] = lv
+                r['pumpkin_level'] = lv; r['fence'] = fence; r['offset'] = args.offset
                 r['errors'] = errors[:3]
                 if r['state'] != 'result':
                     r['title'] = '(still playing at timeout)'
@@ -124,7 +127,8 @@ def main():
         wins = sum(1 for r in rs if r['title'] == 'Night saved')
         print(json.dumps({ 'night': n, 'runs': len(rs), 'wins': wins, 'win_rate': round(wins / len(rs), 2),
                            'mean_walls_pct': round(sum(r['walls_pct'] for r in rs) / len(rs), 1),
-                           'mean_missed_frac': round(sum(r['missed'] / max(1, r['throws']) for r in rs) / len(rs), 2) }), flush=True)
+                           'mean_missed_frac': round(sum(r['missed'] / max(1, r['throws']) for r in rs) / len(rs), 2),
+                           'mean_coins': round(sum(r.get('coins', 0) for r in rs) / len(rs), 1), 'offset': args.offset }), flush=True)
     if any(r['errors'] for r in results):
         sys.exit(1)
 

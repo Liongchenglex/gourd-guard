@@ -1,3 +1,4 @@
+import { BOSS_NAME } from '../data/monsters.js';
 import { WORLDS, levelFor } from '../data/worlds/index.js';
 import { SFX } from './audio.js';
 import { spawnMonster } from './monsters.js';
@@ -16,7 +17,8 @@ export function pickFrom(pool){
 export function storySpawn(dt){
   const d = G.def;
   G.spawnTimer -= dt;
-  if (G.spawned < d.total && G.spawnTimer <= 0){
+  const keepComing = d.boss && G.bossSpawned && !G.bossDead;   // boss levels: monsters keep coming until the boss dies
+  if ((G.spawned < d.total || keepComing) && G.spawnTimer <= 0){
     spawnMonster(pickFrom(d.pool));
     G.spawned++;
     G.spawnTimer = d.interval * rnd(0.6, 1.4);
@@ -24,7 +26,7 @@ export function storySpawn(dt){
   }
   if (d.boss && !G.bossSpawned && G.spawned >= Math.floor(d.total * 0.4)){
     spawnMonster('boss'); G.bossSpawned = true;
-    banner('Boss!', G.world > 0 ? 'The Bramble King fills the middle three columns and summons bats.' : 'The Bramble King fills the middle three columns.', 2.8); SFX.boss();
+    banner(BOSS_NAME, d.bossForm === 2 ? 'It teleports, raises ghouls and drags monsters forward. Monsters keep coming until it falls.' : 'It teleports between lanes and raises ghouls. Monsters keep coming until it falls.', 3); SFX.boss();
   }
 }
 
@@ -36,7 +38,7 @@ export function endlessSpawn(dt){
     G.spawnTimer = Math.max(0.9, 3.2 - G.diff * 0.15) * rnd(0.6, 1.4);
   }
   G.bossTimer -= dt;
-  if (G.bossTimer <= 0){ spawnMonster('boss'); G.bossTimer = 100; banner('Boss!', 'The Bramble King rises.', 2.4); SFX.boss(); }
+  if (G.bossTimer <= 0){ spawnMonster('boss'); G.bossTimer = 100; banner(BOSS_NAME, 'It rises from the graves.', 2.4); SFX.boss(); }
   const w = G.t > 240 ? 2 : G.t > 120 ? 1 : 0;
   if (w !== G.world){ G.world = w; buildBg(w); banner(WORLDS[w].name, 'The night gets darker.', 2.2); }
 }

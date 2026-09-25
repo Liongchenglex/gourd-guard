@@ -1,9 +1,10 @@
+import { updateHud } from '../ui/hud.js';
 import { ensureAudio } from './audio.js';
 import { bestLitGroup, collectDrop, findCell, slideOne } from './board.js';
 import { dropHop, launchGroup } from './combat.js';
-import { useFirework, useRepair } from './game.js';
+import { useFirework, useRepair, useBuster, bustGrave } from './game.js';
 import { cv } from './render/canvas.js';
-import { COLS, CS, G, GX, GY, H, ROWS, W, gest, grid, setGest, state } from './state.js';
+import { COLS, CS, G, GX, GY, H, ROWS, W, gest, grid, setGest, state, graves } from './state.js';
 import { setState } from '../ui/screens.js';
 
 // ---------- Input ----------
@@ -42,6 +43,10 @@ export function attachInput(){
     const p = toLogical(e);
     if (p.y < 70) return;
     const pos = cellAt(p.x, p.y);
+    if (G.aim === 'buster'){   // armed grave buster: this tap either digs a grave or cancels
+      if (pos && graves[pos.r][pos.c]) bustGrave(pos.r, pos.c); else { G.aim = null; updateHud(true); }
+      e.preventDefault(); return;
+    }
     try { cv.setPointerCapture(e.pointerId); } catch (err) {}
     setGest({ id:e.pointerId, sx:p.x, sy:p.y, x:p.x, y:p.y, ref:pos ? grid[pos.r][pos.c] : null, done:false, held:0 });
     G.idle = 0; G.hint = null;
@@ -74,6 +79,7 @@ export function attachInput(){
     if (e.key === ' '){ e.preventDefault(); const b = bestLitGroup(); if (b) launchGroup(b); }
     else if (e.key === 'f') useFirework();
     else if (e.key === 'r') useRepair();
+    else if (e.key === 'g') useBuster();
   });
 
 }

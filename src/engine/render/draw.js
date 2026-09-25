@@ -1,3 +1,4 @@
+import { GEAR } from '../../data/shop.js';
 import { PTYPES, RAINBOW } from '../../data/pumpkins.js';
 import { emptyCells, findCell, groupCells, heldGid } from '../board.js';
 import { dropHop } from '../combat.js';
@@ -36,6 +37,7 @@ export function render(){
   drawDrops(t);
   drawWalls(t);
   drawGraves();
+  if (G.aim === 'buster') drawAimGraves(t);
   drawGrid(t);
   drawSproutBar();
   drawHintArrow(t);
@@ -164,11 +166,25 @@ export function drawDrops(t){
     ctx.strokeStyle = 'rgba(255,220,130,.85)'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(d.x, y, 25, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(left / d.life, 0, 1)); ctx.stroke();
     const sz = CS * 0.66;
-    ctx.drawImage(sprites[d.c][0], d.x - sz / 2, y - sz / 2 - 2, sz, sz);
+    if (d.kind === 'weapon'){
+      ctx.fillStyle = '#2a1636'; ctx.beginPath(); ctx.arc(d.x, y, 19, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#ffd35a'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = '22px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(GEAR.find(g => g.key === d.item).icon, d.x, y + 1);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    } else ctx.drawImage(sprites[d.c][0], d.x - sz / 2, y - sz / 2 - 2, sz, sz);
     ctx.globalAlpha = 1;
   }
 }
 
+/** Pulsing outline on every grave while the grave buster is armed. */
+export function drawAimGraves(t){
+  ctx.strokeStyle = `rgba(255,211,90,${0.6 + 0.4 * Math.sin(t * 8)})`; ctx.lineWidth = 4;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
+    if (!graves[r][c]) continue;
+    rrect(ctx, LANE(c) - 30, GY + r * CS + CS / 2 - 34, 60, 68, 18); ctx.stroke();
+  }
+}
 export function drawGrid(t){
   const hg = heldGid(), flying = [];
   ctx.save();

@@ -39,15 +39,7 @@ X.X.X.X       XXXXXXX       XXX.XXX       .XXXXX.       XX..X.X
 ```
 
 ### Graves
-Immovable obstacles placed on empty pattern cells at night start. They block slides and pushes, cannot be smashed, and are never filled by sprouts or drops.
-
-| Nights | Graves |
-|---|---|
-| 1–2 | 0 |
-| 3–5 | 1 |
-| 6–9 | 2 |
-| 10–12 | 3 |
-| 13+ | 4 |
+Immovable obstacles placed on empty pattern cells at night start. They block slides and pushes, are never filled by sprouts or drops, and can only be removed with the Grave buster tool (§10). Counts come from level data (`src/data/worlds/world1.js`): world 1 uses 0 (levels 1–2), 1 (3–5), 2 (6–9), 3 (10–14), 4 (15–20).
 
 ---
 
@@ -84,12 +76,12 @@ Hints: after ~6 s idle with no lit bunch, the game outlines one pumpkin with an 
 
 | Type | Color | Role | Unlocks |
 |---|---|---|---|
-| Green | green | Normal | Night 1 |
-| Yellow | yellow | Normal (separate type and level from Green) | Night 1 |
-| Ice | ice blue | Freeze | Night 2 |
-| Fire | red | Flame | Night 4 |
-| Grey | grey | Piercing | Night 6 |
-| Purple | purple | Spawn | Night 8 |
+| Green | green | Normal | Level 1-1 |
+| Yellow | yellow | Normal (separate type and level from Green) | Level 1-1 |
+| Ice | ice blue | Freeze | Level 1-3 |
+| Fire | red | Flame | Level 1-8 |
+| Grey | grey | Piercing | World 3 (not yet reachable) |
+| Purple | purple | Spawn | World 5 (not yet reachable) |
 | Rainbow | multicolor | Wildcard, no level | Rare (see below) |
 
 ### Level tables (levels 1–5, bought in the shop per type)
@@ -116,16 +108,16 @@ Details:
 Level 2: 40 · Level 3: 80 · Level 4: 130 · Level 5: 200.
 
 ### Loadout
-- Nights 1–7 use every unlocked type (2, 3, 4, then 5 colors).
-- From night 8 (6 types unlocked), the player picks **exactly 5** before each night. "Up to 5" was rejected because fewer colors make bunching trivially easy.
+- While 5 or fewer types are unlocked, every unlocked type is in play (world 1: 2, 3, then 4 colours).
+- From the 6th unlocked type (world 3), the player picks **exactly 5** before each level. "Up to 5" was rejected because fewer colors make bunching trivially easy.
 - Only loadout colors sprout and drop.
 
 ---
 
 ## 6. Pumpkin supply
 
-- **Sprouts**: one pumpkin every *N* seconds in a random empty cell. *N* defaults to **5 s**; the player can set 2, 3, 4, 5, 6, 7, 8 or 10 s in the pause menu. When fewer than 10 pumpkins are on the patch, sprouting runs **2× faster** (catch-up rule, added because 5 s alone starved later nights).
-- **Drops**: killed monsters drop pumpkins in the field (count = floor(drop) + chance of fractional part). They fade after 7 s (blinking in the last 2 s). Tap to collect.
+- **Sprouts**: **two pumpkins** every *N* seconds, each in its own random empty cell with an independent colour (one if only one cell is free, none if the patch is full). *N* defaults to **5 s**; the player can set 2, 3, 4, 5, 6, 7, 8 or 10 s in the pause menu. When fewer than 10 pumpkins are on the patch, sprouting runs **2× faster** (catch-up rule, added because 5 s alone starved later nights).
+- **Kill rewards**: every non-boss kill rolls exactly **one** reward: **weapon 10%**, **pumpkin 30%**, **coins 60%** (`src/data/rules.js`). A pumpkin roll drops `max(1, round(drop))` pumpkins in the field; a weapon roll drops one consumable (Wall repair or Firework, chosen among those below their carry limit; if all are full the roll pays coins instead); a coin roll pays the monster's coins. Bosses skip the roll and always pay coins plus their pumpkin drop. Drops fade after 7 s (blinking in the last 2 s). Tap to collect.
 - **Purple spawns**: see above.
 - **Smashing** (hold) removes a pumpkin to make space.
 
@@ -133,16 +125,17 @@ Level 2: 40 · Level 3: 80 · Level 4: 130 · Level 5: 200.
 
 ## 7. Monsters
 
-Speed is in "field lengths per second" before level multipliers (so 0.055 ≈ 18 s to cross). *Eat* is wall damage per second while chewing.
+Speed is in "field lengths per second" before level multipliers (so 0.055 ≈ 18 s to cross). *Eat* is wall damage per second while chewing. *Coins* are paid only on a coin roll (60% of kills; values were raised ×~1.7 on 2026-09-25 to keep income level); *Drops* is the pumpkin count on a pumpkin roll (30%).
 
 | Monster | HP | Speed | Eat | Coins | Drops | Behavior | First night |
 |---|---|---|---|---|---|---|---|
-| Ghoul | 1 | 0.055 | 0.5 | 2 | 0.8 | Walks straight | 1 |
-| Bat | 1 | 0.085 | 0.4 | 2 | 0.8 | Fast, flutters in lane | 3 |
-| Imp | 2 | 0.074 (avg) | 0.6 | 3 | 1.5 | Hops in bursts | 5 |
-| Mossback | 4 | 0.028 | 1.1 | 6 | 3 | Slow tank | 7 |
-| Wraith | 2 | 0.05 | 0.5 | 4 | 1.5 | Drifts to a neighboring column every 3.2–5 s (only mid-field) | 9 |
-| Bramble King (boss) | 13 + 4 × world | 0.0092 | 1.0 per wall | 40 | 6 (incl. 1 rainbow) | Fills the middle 3 columns (2–4) and chews all three walls; from world 2 on, summons a bat into column 1 or 5 every 14 s; immune to knockback and freeze | Every 5th night |
+| Ghoul | 1 | 0.055 | 0.5 | 3 | 1 | Walks straight | 1 |
+| Bat | 1 | 0.085 | 0.4 | 3 | 1 | Fast, flutters in lane | 3 |
+| Imp | 2 | 0.074 (avg) | 0.6 | 5 | 2 | Hops in bursts | 5 |
+| Mossback | 4 | 0.028 | 1.1 | 10 | 3 | Slow tank | 7 |
+| Wraith | 2 | 0.05 | 0.5 | 7 | 2 | Drifts to a neighboring column every 3.2–5 s (only mid-field). Not in world 1 any more; returns in world 2 as the Wisp | – |
+| Mummy | 2 | 0.045 | 0.6 | 5 | 2 | Only Fire (hits or burn ticks) kills it. Any other kill makes it collapse on the spot for 4 s, untargetable and not walking, then it stands up at full health. No rewards for a collapse | 1-9 |
+| The Gravekeeper (world 1 boss) | 20 (form 1) / 36 (form 2) | 0.03 until it holds | 0 (never reaches the wall) | 40 | 6 (incl. 1 rainbow) | Walks to 28% of the field and stops. Every 6 s teleports to a different lane. Raises a ghoul in a random lane at its own depth every 8 s (form 1) or 5.5 s (form 2). Form 2 also shoves one monster 30% of the field forward every 12 s. Immune to knockback and freeze; can be slowed | 1-10 (form 1), 1-20 (form 2) |
 
 - Monsters **queue**: a monster can't walk into the one ahead of it in its column. Only the front monster chews the wall.
 - Spawn lanes avoid columns that already have a monster near the top.
@@ -159,32 +152,37 @@ Speed is in "field lengths per second" before level multipliers (so 0.055 ≈ 18
 
 ---
 
-## 9. Nights, pacing and progression (story mode, 15 nights in the prototype)
+## 9. Levels, pacing and progression (story mode)
 
-Three worlds of 5 nights: The Pumpkin Patch (1–5), Crooked Graveyard (6–10), Hollow Manor (11–15). Every 5th night is a boss night.
+Levels are data: one literal per level in `src/data/worlds/world<N>.js` (schema in `src/data/levels.js`). World 1 (Pumpkin Patch) has 20 levels; worlds 2–6 are empty and show as "coming soon". Level addresses are `world-level`, e.g. `1-7`; internally story night *n* is the global index.
 
-Per night *n*:
-- Monsters: `6 + round(n × (n > 10 ? 1.1 : 1.6))`, minus 3 on boss nights (plus the boss).
-- Spawn gap: `max(2.9, 4.0 − 0.11n)` seconds × random 0.6–1.4 (18% chance of a short gap ×0.3).
-- Speed multiplier: `0.76 + 0.012 × min(n−1, 9) + 0.005 × max(0, n−10)`.
-- Monster pool weights: Ghoul 10, Bat 6, Imp 6, Mossback 3 + 0.2n, Wraith 4 (each from its first night).
-- Boss spawns once 40% of the night's monsters have spawned.
-- The night is won when every monster (including the boss) is dead.
-- Night banners announce new pumpkins, new monsters, bosses and new graves.
+Per level the data gives: starting pattern, graves, wave size, spawn gap, speed multiplier, weighted monster pool, boss and boss form, pumpkins and tools unlocked, and monsters introduced (banner text). Runtime rules on top of the data:
+- Spawn gap is jittered ×0.6–1.4 with an 18% chance of a short gap ×0.3.
+- The boss appears once 40% of the wave has spawned. On boss levels spawning continues until the boss dies (see §7).
+- A level is won when the wave is exhausted (or the boss is dead) and no monster is left.
+- Level banners announce new pumpkins, new tools (with one free unit), new monsters, bosses and new graves.
+
+World 1 starting numbers (2026-09-25, to be tuned by the bot): wave 9 → 20 over levels 1–10 and 22 → 36 over 11–20; spawn gap 3.84 s → 2.7 s; speed ×0.76 → ×0.868 by level 10, then +0.02 per level to ×1.068; pool adds Bat at 1-2, Imp at 1-4, Mossback at 1-6 (weight 3 + 0.2 × level), Mummy at 1-9.
+
+### Unlocks and progression
+- Level 1 of a world opens when the previous world's level 10 has been beaten. Every other level opens when the level before it has been beaten. Beating level 10 therefore opens levels 11–20 and the next world at once.
+- Unlocks sit in levels 1–10 so nothing is missable: Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8.
+- Stars are keyed by global night index in the save; `save.unlocked` mirrors the highest open night for older code and the endless-mode loadout.
 
 ### Endless mode
-Difficulty `1 + t/25`; boss every 100 s; world changes at 120 s and 240 s; uses unlocked pumpkins (loadout pick if 6 unlocked); score from kills.
+Difficulty `1 + t/25`; the Gravekeeper every 100 s (form 2 once the world changes); world changes at 120 s and 240 s; uses unlocked pumpkins (loadout pick if 6 unlocked); score from kills.
 
 ---
 
 ## 10. Economy and shop
 
-- Coins per kill (see monster table). Night bonus on a win: `10 + 3n + 5 × stars`. Coins found are kept on a loss.
+- Coins per kill (see monster table; paid on 60% of kills, see §6 kill rewards). Weapons also drop from 10% of kills. Night bonus on a win: `10 + 3n + 5 × stars`. Coins found are kept on a loss. Consumables also drop from 10% of kills (§6).
 - Shop ("Pumpkin shed"):
   - Pumpkin levels (per type, see costs above; locked types show their unlock night).
   - **Sturdy walls**: +5 wall health per level, 3 levels, 40 / 80 / 130.
   - **Wall repair** (consumable): fully repairs every wall. 40 coins, carry up to 3, player starts with 1.
   - **Firework** (consumable): 3 damage to every monster. 30 coins, carry up to 5, player starts with 1.
+  - **Grave buster** (consumable): tap the button, then tap a grave to dig it out. 30 coins, carry up to 3, one free at level 1-6. Tapping anywhere else cancels.
 - Progress, coins, levels, loadout and settings are saved in the browser (localStorage key `gourdguard.v1`).
 
 ---
@@ -224,6 +222,17 @@ Takeaway: single runs are noisy (night 5 and 10 each split 1–1). Comparisons a
 | 15 | 0/3, 74% | 0/3, 73% |
 
 Pass criterion was wins within 1 and mean walls within 10 points per night; both held, no page errors in 24 runs. Behaviour is treated as identical. Note nights 10 and 15 are harder than the earlier single-run table suggested; that is the prototype's real state, not a regression.
+
+### Ground rules: sprouts in twos + kill-reward roll (2026-09-25, `--repeats 3`, old 15-night table, before vs after)
+
+| Night | Before: wins / mean walls | After: wins / mean walls |
+|---|---|---|
+| 1 | 3/3, 100% | 3/3, 100% |
+| 5 | 3/3, 97% | 3/3, 95% |
+| 10 | 0/3, 69% | 1/3, 85% |
+| 15 | 0/3, 73% | 0/3, 89% |
+
+Wins unchanged within noise; wall health up on the hard nights because two pumpkins per sprout means more throws. No errors in 12 runs. A 60-kill probe of the reward roll landed at 60% coins, 28% pumpkins, 12% weapons. These nights were then replaced by the 20-level world 1 table (§9), which has its own sweep below.
 
 ---
 

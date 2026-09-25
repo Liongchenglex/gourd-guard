@@ -1,9 +1,9 @@
 import { SPAWN_STEPS } from '../data/patterns.js';
 import { LV_COST, NTYPES, PTYPES, lvDesc, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
-import { LEVELS, WORLDS } from '../data/worlds/index.js';
+import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, firstNightOf } from '../data/worlds/index.js';
 import { SFX, ensureAudio } from '../engine/audio.js';
-import { beginEndless, beginNight, makeDemo, startGame, useFirework, useRepair } from '../engine/game.js';
+import { beginEndless, beginNight, makeDemo, startGame, useFirework, useRepair, useBuster } from '../engine/game.js';
 import { bgWorld, buildBg, pumpkinIcon } from '../engine/render/sprites.js';
 import { G, setBannerTimer, setGest, setStateRaw, state } from '../engine/state.js';
 import { $, clamp } from '../engine/util.js';
@@ -22,16 +22,17 @@ export function showResult(win){
       const bonus = 10 + g.n * 3 + st * 5;
       save.coins += g.coins + bonus;
       save.stars[g.n] = Math.max(save.stars[g.n] || 0, st);
-      if (g.n === save.unlocked && g.n < LEVELS) save.unlocked = g.n + 1;
+      save.unlocked = Math.max(save.unlocked || 1, highestOpen());
       title = g.n === LEVELS ? 'Dawn at last' : 'Night saved';
       msg = g.n === LEVELS ? 'Every night is safe. The patch thanks you.' : st === 3 ? 'The walls barely have a scratch.' : 'The walls held. Keep them healthier for more stars.';
-      const nextP = PTYPES.find((p, i) => i < NTYPES && p.unlock === g.n + 1);
+      const nk = ALL_LEVELS[g.n] && (ALL_LEVELS[g.n].unlockPumpkins || [])[0], nextP = nk && PTYPES.find(p => p.key === nk);
       if (nextP && g.n < LEVELS) msg += ` Next night unlocks the ${nextP.name} pumpkin.`;
+      if (g.def.levelNo === 10) msg += ' The rest of this world is open, and the next world will follow.';
       stars = [0,1,2].map(i => `<span class="${i < st ? '' : 'off'}">★</span>`).join('');
       stats.push(['Monsters stopped', g.kills], ['Walls left', pct(wf)], ['Coins found', g.coins], ['Night bonus', bonus]);
       if (g.n < LEVELS) addBtn(box, 'Next night', () => beginNight(g.n + 1));
       addBtn(box, 'Shop', () => openShop('result'), 'alt');
-      addBtn(box, 'Nights', openLevels, 'alt');
+      addBtn(box, 'Levels', openLevels, 'alt');
     } else {
       save.coins += g.coins;
       title = 'A wall fell';
@@ -39,7 +40,7 @@ export function showResult(win){
       stats.push(['Monsters stopped', g.kills], ['Coins found', g.coins]);
       addBtn(box, 'Try again', () => beginNight(g.n));
       addBtn(box, 'Shop', () => openShop('result'), 'alt');
-      addBtn(box, 'Nights', openLevels, 'alt');
+      addBtn(box, 'Levels', openLevels, 'alt');
     }
   } else {
     save.coins += g.coins;
@@ -91,19 +92,22 @@ export function withHelp(fn){ if (!save.seenHelp){ helpNext = fn; save.seenHelp 
 export function openLevels(){
   $('#lvCoins').textContent = save.coins.toLocaleString();
   const list = $('#lvList'); list.innerHTML = '';
-  WORLDS.forEach((w, wi) => {
+  WORLD_NAMES.forEach((name, wi) => {
+    const levels = WORLD_LEVELS[wi];
     const sec = document.createElement('div'); sec.className = 'world';
-    sec.innerHTML = `<h3>${w.name}</h3>`;
+    sec.innerHTML = `<h3>World ${wi + 1}: ${name}</h3>`;
+    if (!levels.length){ sec.innerHTML += '<p class="soon">Coming soon.</p>'; list.appendChild(sec); return; }
+    const start = firstNightOf(wi + 1);
     const row = document.createElement('div'); row.className = 'lv-row';
-    for (let i = 1; i <= 5; i++){
-      const n = wi * 5 + i, locked = n > save.unlocked, st = save.stars[n] || 0;
-      const b = document.createElement('button'); b.className = 'lv' + (n % 5 === 0 ? ' boss' : '');
+    levels.forEach((d, i) => {
+      const n = start + i, locked = !isOpen(n), st = save.stars[n] || 0;
+      const b = document.createElement('button'); b.className = 'lv' + (d.boss ? ' boss' : '');
       b.disabled = locked;
-      b.setAttribute('aria-label', locked ? `Night ${n}, locked` : `Night ${n}, ${st} of 3 stars`);
-      b.innerHTML = locked ? `<span>🔒</span><small></small>` : `<span>${n % 5 === 0 ? '💀' : n}</span><small>${'★'.repeat(st)}${'<span style="opacity:.25">★</span>'.repeat(3 - st)}</small>`;
+      b.setAttribute('aria-label', locked ? `Level ${d.world}-${d.level}, locked` : `Level ${d.world}-${d.level}, ${st} of 3 stars`);
+      b.innerHTML = locked ? `<span>🔒</span><small></small>` : `<span>${d.boss ? '💀' : d.level}</span><small>${'★'.repeat(st)}${'<span style="opacity:.25">★</span>'.repeat(3 - st)}</small>`;
       b.onclick = () => withHelp(() => beginNight(n));
       row.appendChild(b);
-    }
+    });
     sec.appendChild(row); list.appendChild(sec);
   });
   setState('levels');
@@ -145,7 +149,7 @@ export function renderShop(){
   $('#shopCoins').textContent = save.coins.toLocaleString();
   const pbox = $('#shopPumpkins'); pbox.innerHTML = '';
   for (let t = 0; t < NTYPES; t++){
-    const P = PTYPES[t], L = lvOf(t), unlocked = P.unlock <= save.unlocked, maxed = L >= 5, cost = LV_COST[L - 1];
+    const P = PTYPES[t], L = lvOf(t), un = unlockNightOf(P.key), unlocked = t < 2 || un <= highestOpen(), maxed = L >= 5, cost = LV_COST[L - 1];
     const d = document.createElement('div'); d.className = 'item';
     const ic = pumpkinIcon(t, true); ic.className = 'ic'; d.appendChild(ic);
     const tx = document.createElement('div'); tx.className = 'tx';
@@ -153,7 +157,7 @@ export function renderShop(){
     tx.innerHTML = `<b>${P.name} pumpkin, level ${L}</b><p>Now: ${lvDesc(t, L)}.${maxed ? '' : ` Next: ${lvDesc(t, L + 1)}.`}</p><div class="pips" aria-label="Level ${L} of 5">${pips}</div>`;
     d.appendChild(tx);
     const b = document.createElement('button'); b.className = 'btn small';
-    if (!unlocked){ b.textContent = `Night ${P.unlock}`; b.disabled = true; }
+    if (!unlocked){ b.textContent = un === Infinity ? 'Later world' : `Level ${levelFor(un).label}`; b.disabled = true; }
     else if (maxed){ b.textContent = 'Maxed'; b.disabled = true; }
     else { b.innerHTML = `<span class="coin"></span>${cost}`; b.disabled = save.coins < cost; b.setAttribute('aria-label', `Level up ${P.name} for ${cost} coins`); }
     b.onclick = () => {
@@ -186,7 +190,8 @@ export function buildLegend(){
     const row = document.createElement('div');
     row.appendChild(pumpkinIcon(i, true));
     const t = document.createElement('span');
-    t.innerHTML = `<b>${p.name}</b> ${p.role}${p.rainbow ? ' (rare)' : p.unlock > 1 ? ` (from night ${p.unlock})` : ''}`;
+    const un = p.rainbow ? 1 : unlockNightOf(p.key);
+    t.innerHTML = `<b>${p.name}</b> ${p.role}${p.rainbow ? ' (rare)' : un === Infinity ? ' (a later world)' : un > 1 ? ` (from level ${levelFor(un).label})` : ''}`;
     row.appendChild(t); box.appendChild(row);
   });
 }
@@ -232,6 +237,7 @@ export function wireButtons(){
   $('#pauseBtn').onclick = () => { if (state === 'play' && !G.over) setState('pause'); };
 
   $('#fwBtn').onclick = useFirework;
+  $('#gbBtn').onclick = useBuster;
 
   $('#rpBtn').onclick = useRepair;
 

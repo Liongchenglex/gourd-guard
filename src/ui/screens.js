@@ -170,6 +170,7 @@ function showNextIntro(){
 
 export function openLevels(){
   $('#lvCoins').textContent = save.coins.toLocaleString();
+  $('#bUnlockAll').textContent = save.testUnlock ? 'Testing: relock levels' : 'Testing: unlock all levels';
   const list = $('#lvList'); list.innerHTML = '';
   WORLD_NAMES.forEach((name, wi) => {
     const levels = WORLD_LEVELS[wi];
@@ -308,6 +309,7 @@ export function wireButtons(){
   $('#bLvBack').onclick = () => setState('title');
 
   $('#bLvShop').onclick = () => openShop('levels');
+  $('#bUnlockAll').onclick = () => { save.testUnlock = !save.testUnlock; persist(); openLevels(); };   // TESTING ONLY: remove before release
 
   $('#bLoBack').onclick = () => openLevels();
 

@@ -64,6 +64,7 @@ export function typesForNight(n){
 export function isOpen(n){
   const d = ALL_LEVELS[n - 1];
   if (!d) return false;
+  if (save.testUnlock) return true;   // TESTING ONLY: remove before release
   if (d.level === 1){
     if (d.world === 1) return true;
     const prev = firstNightOf(d.world - 1);

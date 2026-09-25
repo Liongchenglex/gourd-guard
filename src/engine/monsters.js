@@ -233,7 +233,7 @@ export function updateMonster(m, dt){
         m.hexT -= dt;
         if (m.hexT <= 0 && m.p > 0.05){
           m.hexT = TYPES.witch.hexEvery;
-          const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'witch' && o.rise <= 0 && o.p > 0);   // may re-hex an already hexed monster into a new colour (owner)
+          const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.rise <= 0 && o.p > 0);   // may re-hex an already hexed monster into a new colour; witches hex each other too (owner)
           if (pick.length) hexMonster(pick[Math.floor(Math.random() * pick.length)], Math.random() < 0.5);
         }
         m.x = m.tx + Math.sin(m.ph * 1.6) * 2;

@@ -64,7 +64,7 @@ Hints: after ~6 s idle with no lit bunch, the game outlines one pumpkin with an 
 
 ## 4. Bunches and launching
 
-- A **bunch** is 3+ orthogonally touching pumpkins of the same color. Any shape counts (lines, L-shapes, clumps).
+- A **bunch** is 3+ orthogonally touching pumpkins of the same color (2+ for Turquoise). Any shape counts (lines, L-shapes, clumps).
 - "Lit" is a live state: pumpkins glow only while they are in a bunch. Moving one out unlights it.
 - **Rainbow** pumpkins count as any color. A rainbow can belong to two different-colored bunches at once. Three or more rainbows touching with no colored pumpkin form a bunch that acts as Green.
 - **Launching**: every pumpkin in the bunch flies straight up its own column at 900 px/s and hits the first monster in that column. If the column is empty it flies to the end and is wasted.
@@ -87,6 +87,8 @@ Hints: after ~6 s idle with no lit bunch, the game outlines one pumpkin with an 
 | Deep Blue | deep navy | Chain: lightning runs along the row of the monster hit and strikes the nearest 3/3/4/5/5 monsters (including it) at 25/50/50/75/75% power. Knockback like Green. | Level 5-4 |
 | Pink | pink | Heal: every hit repairs the wall of the column it flew up by 1/1/2/2/3. Knockback 50/50/50/75/75%. | Level 2-8 |
 | Black | black | Blast: explodes on its first hit for full power; the splash covers 3 lanes × 1 tile height (levels 1–3) or 3 × 3 (levels 4–5) at 50/50/75/75/100% power; level 5 splash also knocks back. Against a castle wall ×1.5. Knockback like Green. | Level 4-9 |
+| Turquoise | turquoise | Bunches of 2 light up and launch (everything else needs 3); power is half of Green's: 0.5, 0.5, 0.75, 0.75, 1; knockback like Green. | Level 3-6 |
+| Brown | brown | Grows on the patch by time since it appeared: small until 4 s, medium until 8 s, then big (level 3–4: 3 s and 6 s; level 5: 2 s and 4 s). Power = Green's × 0.5 / 1 / 2 by size; sizes mix in one bunch and each projectile hits for its own size. Knockback 0, 50, 25, 100, 50% by level. | Level 5-7 |
 | White | white | Boomerang: a throw that hits nothing flies back into the patch and does not count as a miss. Levels 1–2: top-most empty cell of its column (else the nearest column with space); levels 3+: an empty cell beside a same-colour pumpkin when one exists. Knockback like Green. | Level 2-3 |
 | Rainbow | multicolor | Wildcard, no level | Rare (see below) |
 

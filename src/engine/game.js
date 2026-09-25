@@ -338,7 +338,7 @@ export function update(dt){
   let landed = false;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
     const cell = grid[r][c]; if (!cell) continue;
-    cell.t += dt;
+    cell.t += dt; cell.age = (cell.age || 0) + dt;
     const k = Math.min(1, dt * (cell.fly > 0 ? 9 : 16));
     cell.ox -= cell.ox * k; cell.oy -= cell.oy * k;
     if (cell.fly > 0){ cell.fly -= dt; if (cell.fly <= 0){ cell.fly = 0; cell.ox = 0; cell.oy = 0; cell.pop = 1; landed = true; } }

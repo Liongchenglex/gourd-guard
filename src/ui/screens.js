@@ -127,6 +127,13 @@ export function openPreview(n){
     const sm = document.createElement('small'); sm.textContent = `${PTYPES[t].name} pumpkin`; d.appendChild(sm);
     pk.appendChild(d);
   }
+  for (const key of def.introPumpkins){   // explained, not unlocked (rainbow)
+    const t = PTYPES.findIndex(p => p.key === key); if (t < 0) continue;
+    const d = document.createElement('div'); d.className = 'pv-ic';
+    d.appendChild(pumpkinIcon(t, true));
+    const sm = document.createElement('small'); sm.textContent = `${PTYPES[t].name} pumpkin`; d.appendChild(sm);
+    pk.appendChild(d);
+  }
   for (const key of def.unlockGear){
     const g = GEAR.find(x => x.key === key); if (!g) continue;
     const d = document.createElement('div'); d.className = 'pv-ic';
@@ -153,6 +160,10 @@ function startPreviewedNight(){
   for (const key of def.unlockPumpkins){
     const t = PTYPES.findIndex(p => p.key === key);
     if (t >= 0) cards.push({ key:'p:' + key, icon:pumpkinIcon(t, true), title:`New pumpkin: ${PTYPES[t].name}`, text:`It ${PTYPES[t].role}. Bunch three or more to throw it.` });
+  }
+  for (const key of def.introPumpkins){
+    const t = PTYPES.findIndex(p => p.key === key);
+    if (t >= 0) cards.push({ key:'p:' + key, icon:pumpkinIcon(t, true), title:`${PTYPES[t].name} pumpkin`, text:PTYPES[t].rainbow ? 'Rare: it joins any bunch as any colour, and can even sit in two bunches at once. Look out for it among sprouts and drops.' : `It ${PTYPES[t].role}.` });
   }
   for (const key of def.unlockGear){
     const g = GEAR.find(x => x.key === key);

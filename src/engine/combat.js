@@ -1,7 +1,7 @@
 import { TYPES, BOSS_NAMES } from '../data/monsters.js';
-import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW } from '../data/pumpkins.js';
+import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW, TURQUOISE, BROWN, TURQ_FRAC, BROWN_KB, BROWN_SIZE_MULT } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
-import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches } from './board.js';
+import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches, brownSize } from './board.js';
 import { TILE_P, mS, mY, spMulNow, spawnMonster, inHexZone } from './monsters.js';
 import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS, walls, FENCE_Y } from './state.js';
 import { TAU, clamp, fmt, rnd } from './util.js';
@@ -21,7 +21,7 @@ export function launchGroup(ref){
   const type = grp.color, lv = lvOf(type), guar = grp.size >= 5;
   for (const { r, c, cell } of cells){
     const x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;
-    G.projs.push({ x, y, vy:-900, type, vis:cell.c, lv, guar, lane:c, hitWalls:new Set(), grp:bunch, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false });
+    G.projs.push({ x, y, vy:-900, type, vis:cell.c, lv, guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false });
     grid[r][c] = null;
   }
   SFX.launch(cells.length);
@@ -166,7 +166,7 @@ export function hitMonster(pr, m){
   pr.hit.add(m);
   const i = pr.lv - 1, y = mY(m);
   for (let k = 0; k < 10; k++) chunk(pr.x, pr.y, pr.vis === RAINBOW ? '#f0a020' : PTYPES[pr.vis].base, 200);
-  let kb = pr.guar || (pr.type === PINK ? Math.random() < KB_PINK[i] : (pr.type <= 1 || pr.type >= 4) && Math.random() < KB_CHANCE[i]);
+  let kb = pr.guar || (pr.type === PINK ? Math.random() < KB_PINK[i] : pr.type === BROWN ? Math.random() < BROWN_KB[i] : (pr.type <= 1 || pr.type >= 4) && Math.random() < KB_CHANCE[i]);
   if (pr.type === 2){
     if (m.type !== 'boss' && Math.random() < FREEZE_P[i]){ m.frozenT = Math.max(m.frozenT, SLOW_T[i]); addFloat('Frozen!', m.x, y - m.r - 34, '#bfefff', 18, 0.9); SFX.freeze(); }
     else m.slowT = Math.max(m.slowT, SLOW_T[i]);
@@ -179,7 +179,8 @@ export function hitMonster(pr, m){
     return;
   }
   m.lastHit = pr.type; m.lastHitLv = pr.lv;
-  damage(m, POWER[i], PTYPES[pr.type].spark);
+  const hitPower = POWER[i] * (pr.type === TURQUOISE ? TURQ_FRAC : pr.type === BROWN ? BROWN_SIZE_MULT[pr.size == null ? 1 : pr.size] : 1);   // Turquoise: half; Brown: by size
+  damage(m, hitPower, PTYPES[pr.type].spark);
   if (pr.type === PINK){   // Pink: repairs the wall of the column it flew up
     const w = walls[pr.lane]; if (w.hp < w.max){ w.hp = Math.min(w.max, w.hp + HEAL_AMT[i]); addFloat(`Wall +${HEAL_AMT[i]}`, LANE(pr.lane), FENCE_Y - 40, '#ffb3e6', 16, 0.9); for (let k = 0; k < 6; k++) spark(LANE(pr.lane), FENCE_Y - 10, '#ffb3e6', 100); }
   }

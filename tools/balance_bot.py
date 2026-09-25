@@ -21,7 +21,7 @@ import argparse, json, pathlib, sys, time
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-UNLOCK = [1, 1, 3, 8, 66, 43, 23, 69, 84, 28]  # night each pumpkin type unlocks (Green, Yellow, Ice, Fire, Grey, Purple, White, Black, Deep Blue, Pink)
+UNLOCK = [1, 1, 3, 8, 66, 43, 23, 69, 84, 28, 46, 87]  # night each pumpkin type unlocks (Green, Yellow, Ice, Fire, Grey, Purple, White, Black, Deep Blue, Pink, Turquoise, Brown)
 
 BOT_JS = """
 (interval) => {
@@ -109,9 +109,9 @@ def main():
                 page.evaluate("""([lv, fence, rep, fw, sprout, n]) => Object.assign(window.__gg.save, {
                     seenHelp:true, seenFlick:true, fw, repair:rep, fence, spawnEvery:sprout,
                     stars:Object.fromEntries([20, 40, 60, 80, 100].filter(k => k < n).map(k => [k, 3])),   // earlier worlds' level-20 perks are earned
-                    lv:{ green:lv, yellow:lv, ice:lv, fire:lv, grey:lv, purple:lv, white:lv, black:lv, blue:lv, pink:lv } })""",
+                    lv:{ green:lv, yellow:lv, ice:lv, fire:lv, grey:lv, purple:lv, white:lv, black:lv, blue:lv, pink:lv, turquoise:lv, brown:lv } })""",
                     [lv, fence, args.repairs, args.fireworks, args.sprout, n])
-                loadout = sorted([t for t in range(10) if UNLOCK[t] <= n], key=lambda t: UNLOCK[t])[-5:]   # the five most recent types
+                loadout = sorted([t for t in range(12) if UNLOCK[t] <= n], key=lambda t: UNLOCK[t])[-5:]   # the five most recent types
                 page.evaluate(BOT_JS, args.interval)
                 page.evaluate("([n, lo]) => window.__gg.startGame('story', n, lo)", [n, loadout])
                 t0 = time.time()

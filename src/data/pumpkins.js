@@ -11,11 +11,17 @@ export const PTYPES = [
   { key:'black',  name:'Black',  role:'explodes on impact and splashes the columns beside it', base:'#3a3540', light:'#6e6878', dark:'#17141c', spark:'#ff9a3a' },
   { key:'blue',   name:'Deep Blue', role:'chains lightning along the row it hits', base:'#2a3a8a', light:'#6a8aff', dark:'#101a4a', spark:'#9ab0ff' },
   { key:'pink',   name:'Pink',   role:'repairs the wall of its column on every hit and knocks monsters back often', base:'#e05aa8', light:'#ff9ad6', dark:'#8a2a66', spark:'#ffb3e6' },
+  { key:'turquoise', name:'Turquoise', role:'launches in bunches of just 2, at half power', base:'#2ab0a8', light:'#8af0e8', dark:'#0f5a58', spark:'#a0fff8' },
+  { key:'brown',  name:'Brown',  role:'grows while it sits on the patch: small, medium, then big and twice as strong', base:'#8a5a2a', light:'#c9945a', dark:'#4a2e12', spark:'#e0b070' },
   { key:'rainbow',name:'Rainbow',role:'joins any bunch as any color', rainbow:true, spark:'#fff3a0' },
 ];
 
-export const RAINBOW = 10, NTYPES = 10;   // type indices: 0 Green, 1 Yellow, 2 Ice, 3 Fire, 4 Grey, 5 Purple, 6 White, 7 Black, 8 Deep Blue, 9 Pink, 10 Rainbow
-export const YELLOW = 1, BLUE = 8, PINK = 9, WHITE = 6, BLACK = 7;
+export const RAINBOW = 12, NTYPES = 12;   // type indices: 0 Green, 1 Yellow, 2 Ice, 3 Fire, 4 Grey, 5 Purple, 6 White, 7 Black, 8 Deep Blue, 9 Pink, 10 Turquoise, 11 Brown, 12 Rainbow
+export const YELLOW = 1, BLUE = 8, PINK = 9, WHITE = 6, BLACK = 7, TURQUOISE = 10, BROWN = 11;
+export const TURQ_FRAC = 0.5;                          // Turquoise: power as a fraction of Green's; bunches of 2 launch
+export const BROWN_GROW = [[8, 4], [8, 4], [6, 3], [6, 3], [4, 2]];   // Brown: [seconds to full growth, seconds per stage] by level
+export const BROWN_KB   = [0, 0.5, 0.25, 1, 0.5];      // Brown: knockback chance by level (levels 2 and 4 double Green's)
+export const BROWN_SIZE_MULT = [0.5, 1, 2];            // Brown: power multiplier when small, medium, big
 // Per-level tables for the special types (docs/WORLDS.md §5)
 export const COIN_MULT  = [2, 2, 3, 3, 4];          // Yellow: coin multiplier on its kills (always pays coins)
 export const CHAIN_N     = [3, 3, 4, 5, 5];          // Deep Blue: monsters in the same row struck (including the one hit)
@@ -54,6 +60,7 @@ export function lvDesc(t, L){
   if (t === 2){ parts.push(`slows ${SLOW_T[i]}s`); if (FREEZE_P[i]) parts.push(`${pct(FREEZE_P[i])} freeze`); }
   else if (t === 3) parts.push(`burns ${BURN_N[i]} times for ${BURN_AMT[i]}`);
   else if (t === 9) parts.push(`heals wall ${HEAL_AMT[i]}`, `${pct(KB_PINK[i])} knockback`);
+  else if (t === 11) parts.push(BROWN_KB[i] ? `${pct(BROWN_KB[i])} knockback` : 'no knockback', `full size in ${BROWN_GROW[i][0]}s`, 'big = double power');
   else {
     parts.push(KB_CHANCE[i] ? `${pct(KB_CHANCE[i])} knockback` : 'no knockback');
     if (t === 4) parts.push('pierces');
@@ -62,6 +69,7 @@ export function lvDesc(t, L){
     if (t === 6) parts.push(i >= 2 ? 'returns beside its colour' : 'returns on a miss');
     if (t === 7) parts.push(`splashes 3×${SPLASH_ROWS[i]} for ${pct(SPLASH_FRAC[i])}${i >= 4 ? ' with knockback' : ''}`);
     if (t === 8) parts.push(`lightning hits ${CHAIN_N[i]} in the row at ${pct(CHAIN_FRAC[i])}`);
+    if (t === 10) parts.push('bunches of 2 launch', 'half power');
   }
   return parts.join(', ');
 }

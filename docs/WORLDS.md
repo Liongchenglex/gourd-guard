@@ -46,9 +46,9 @@ Level addresses are written `world-level`, e.g. `3-12` = world 3, level 12. Leve
 |---|---|---|---|---|---|---|---|
 | 1 | Pumpkin Patch | Harvest moon over a country graveyard | Graves on the patch | Green, Yellow, Ice, Fire | Ghoul, Bat, Imp, Mossback, Mummy | – | Gravekeeper |
 | 2 | Foggy Hollow | Marsh mist, will-o'-wisps, lanterns | Fog hides field rows; occasional graves | White (boomerang), Pink (heal) | Wisp, Wraith, Wisp Rider, Plague Doctor | Bog Ghoul (Stubborn, 1 HP), Marsh Imp (Stubborn), Swift Bat | Poltergeist |
-| 3 | Witchwood | Enchanted autumn forest, witches | Wind gusts shift the patch; occasional graves | Purple (spawn) | Chameleon, Reverse Chameleon, Mirror Sprite | Wood Ghoul (Swift), Broom Imp (Hungry), Bat (Owl-bat), Wisp | Hexwitch |
+| 3 | Witchwood | Enchanted autumn forest, witches | Wind gusts shift the patch; occasional graves | Purple (spawn), Turquoise (bunches of 2) | Chameleon, Reverse Chameleon, Mirror Sprite | Wood Ghoul (Swift), Broom Imp (Hungry), Bat (Owl-bat), Wisp | Hexwitch |
 | 4 | Crumbling Keep | Vampire's castle under siege | Castle walls block shots; occasional graves | Grey (piercing), Black (blast) | Shield Knight, Gargoyle Hauler, Skeleton Archer, Vampire | Crypt Ghoul (Stubborn), Keep Imp (Armoured), Bat (swarm), Mossback (Siege Brute) | Vampire Count |
-| 5 | Drowned Marsh | Sunken shore, drowned sailors, sea row | Puddles spawn monsters; sea-row levels; occasional graves | Deep Blue (chain) | Puddle Crawler, Drunk Sailor, Puddle Diver, Splitter Slime | Drowned Ghoul (Hungry), Tide Imp (Swift), Mossback (Bog Turtle), Mummy (Sodden) | Twin Tides |
+| 5 | Drowned Marsh | Sunken shore, drowned sailors, sea row | Puddles spawn monsters; sea-row levels; occasional graves | Deep Blue (chain), Brown (grows) | Puddle Crawler, Drunk Sailor, Puddle Diver, Splitter Slime | Drowned Ghoul (Hungry), Tide Imp (Swift), Mossback (Bog Turtle), Mummy (Sodden) | Twin Tides |
 | 6 | Hallow's End | All Hallows' night, everything at once | Graves only | none (full choice from all 11) | none | Everything from worlds 1–5, all with modifiers | Hollow King (5 stages) |
 
 Names are placeholders the owner is free to change.
@@ -87,7 +87,9 @@ Upgrade costs per type: level 2 = 40, level 3 = 80, level 4 = 130, level 5 = 200
 | Black | black | Blast | 4-9 |
 | Deep Blue | deep navy blue | Chain lightning along a row | 5-4 |
 | Purple | purple | Spawn | 3-3 |
-| Rainbow | multicolour | Wildcard, any colour, no level | rare from 1-1 |
+| Turquoise | turquoise | Launches in bunches of just 2, at half of Green's power; knockback like Green | 3-6 |
+| Brown | brown | Grows on the patch: small (half power), medium (Green's power), big (double). Sizes bunch together and each hits for its own size | 5-7 |
+| Rainbow | multicolour | Wildcard, any colour, no level | rare from 1-1; explained by a card at 1-9 |
 
 Loadout choice (exactly 5) starts at 2-8 when Pink becomes the 6th type.
 
@@ -194,6 +196,26 @@ Power = damage per hit. "Knockback" = chance per hit to push the monster back on
 | 3 | 1.5 | 50% | 2 |
 | 4 | 1.5 | 75% | 2 |
 | 5 | 2 | 75% | 3 |
+
+**Turquoise** (a bunch of 2 is enough to launch; power is half of Green's)
+
+| Level | Power | Knockback |
+|---|---|---|
+| 1 | 0.5 | none |
+| 2 | 0.5 | 25% |
+| 3 | 0.75 | 25% |
+| 4 | 0.75 | 50% |
+| 5 | 1 | 50% |
+
+**Brown** (grows while it sits on the patch: small = half of Green's power, medium = Green's, big = double. Sizes bunch together; each pumpkin hits for its size when launched)
+
+| Level | Power (small / medium / big) | Knockback | Full size after | Stage every |
+|---|---|---|---|---|
+| 1 | 0.5 / 1 / 2 | none | 8 s | 4 s |
+| 2 | 0.5 / 1 / 2 | 50% (double Green's) | 8 s | 4 s |
+| 3 | 0.75 / 1.5 / 3 | 25% | 6 s | 3 s |
+| 4 | 0.75 / 1.5 / 3 | 100% (double Green's) | 6 s | 3 s |
+| 5 | 1 / 2 / 4 | 50% | 4 s | 2 s |
 
 **Rainbow**: no level. Acts as the colour and level of the bunch it is thrown in. Sources: 3% of sprouts and drops, Purple spawns (10–50% by level), one in every boss drop.
 
@@ -351,6 +373,9 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Item | Notes |
 |---|---|
+| Paint pumpkin 💡 (owner) | When it lights up, it converts the pumpkins touching it to its colour, turning messy boards into big bunches. |
+| Echo pumpkin (owner) | A bunch you can launch twice. |
+| Poison pumpkin (owner) | To define: e.g. a hit leaves a poison that ticks like Fire's burn but also spreads to monsters that touch the victim. |
 | Burning Mummy | Only Ice kills it. Burns other mummies along the way. To define in R2: does "burn" kill them, or turn them into Burning Mummies (spreading)? Natural home: world 4 or 6. |
 | Medium / Hard per level | Variables: longer sprout interval, 1 pumpkin per sprout instead of 2, no wall (any monster reaching the bottom loses), more graves, more monsters, stacked modifiers, more frequent gusts. Data-wise these are overrides on a level. |
 | Quests | Optional objectives per level (e.g. "keep every wall above 50%", "kill 5 with Fire"). Meaning to confirm. |
@@ -369,6 +394,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-26 | Owner: two more pumpkins: Turquoise (3-6, bunches of 2 at half power) and Brown (5-7, grows small → medium → big); a rainbow intro card at 1-9. |
 | 2026-09-26 | Owner: Bog Ghoul back to 1 HP (Stubborn instead of Armoured); witches and the Hexwitch's full form hex 25% chameleon / 75% reverse; boss levels named; the owner is happy with the difficulty design at this point. |
 | 2026-09-26 | Owner: several monsters chew the same wall; twins' full form sits mid-field and throws from any column via a tail; mummies rise with 1 HP; Poltergeist full form juggles three pumpkins and repaints three; restart goes through the pumpkin picker; witches hex each other. |
 | 2026-09-25 | Owner: levels 11–19 of every world hand-authored (§8a) with graves layouts, fog shapes, partial wind, castle layouts, shorelines and "only" pools. |

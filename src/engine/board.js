@@ -2,15 +2,22 @@ import { perkOn } from '../data/perks.js';
 import { PATTERNS } from '../data/patterns.js';
 import { SPROUT_COUNT } from '../data/rules.js';
 import { GEAR } from '../data/shop.js';
-import { PTYPES, RAINBOW, WILD_CHANCE, WILD_CHANCE_PERK } from '../data/pumpkins.js';
+import { PTYPES, RAINBOW, WILD_CHANCE, WILD_CHANCE_PERK, TURQUOISE, BROWN, BROWN_GROW } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { addFloat, chunk, dropHop, spark } from './combat.js';
 import { COLS, CS, G, GX, GY, LANE, ROWS, gest, graves, grid, nextGid, setGraves, setGrid } from './state.js';
 import { clamp, shuffle } from './util.js';
-import { persist, save } from '../save.js';
+import { persist, save, lvOf } from '../save.js';
 import { banner, updateHud } from '../ui/hud.js';
 
-export function newCell(c){ return { c, lit:false, gids:[], bsize:0, ox:0, oy:0, pop:0, grow:1, fly:0, wig:0, t:Math.random() * 10 }; }
+export function newCell(c){ return { c, lit:false, gids:[], bsize:0, ox:0, oy:0, pop:0, grow:1, fly:0, wig:0, t:Math.random() * 10, age:0 }; }
+/** Smallest bunch that lights up for a colour: Turquoise launches at 2, everything else at 3. */
+export const minBunch = colour => colour === TURQUOISE ? 2 : 3;
+/** Brown pumpkin growth stage from time on the patch: 0 small, 1 medium, 2 big (timings by Brown's level). */
+export function brownSize(cell){
+  const [full, step] = BROWN_GROW[lvOf(BROWN) - 1];
+  return cell.age >= full ? 2 : cell.age >= step ? 1 : 0;
+}
 
 export function randColor(){ const L = G && G.loadout ? G.loadout : [0, 1]; return L[Math.floor(Math.random() * L.length)]; }
 
@@ -43,7 +50,7 @@ export function initBoard(pi, nGraves){
     if (pat[r][c] !== 'X') continue;
     for (const col of shuffle(L.slice())){
       grid[r][c] = newCell(col);
-      if (sameColorSize(grid, r, c) < 3) break;
+      if (sameColorSize(grid, r, c) < minBunch(col)) break;
     }
   }
   const spots = [];
@@ -72,7 +79,7 @@ export function computeGroups(gr){
           if (n && !n.fly && (n.c === k || n.c === RAINBOW)){ seen.add(key); q.push([na, nb]); }
         }
       }
-      if (cells.length >= 3){ groups.push({ color:k, cells }); cells.forEach(([a, b]) => used.add(a * COLS + b)); }
+      if (cells.length >= minBunch(k)){ groups.push({ color:k, cells }); cells.forEach(([a, b]) => used.add(a * COLS + b)); }
     }
   }
   const seenR = new Set();

@@ -2,8 +2,8 @@ import { TYPES } from '../../data/monsters.js';
 import { sproutEvery, shoreP } from '../game.js';
 import { perkOn } from '../../data/perks.js';
 import { GEAR } from '../../data/shop.js';
-import { PTYPES, RAINBOW } from '../../data/pumpkins.js';
-import { emptyCells, findCell, groupCells, heldGid } from '../board.js';
+import { PTYPES, RAINBOW, BROWN } from '../../data/pumpkins.js';
+import { emptyCells, findCell, groupCells, heldGid, brownSize } from '../board.js';
 import { dropHop, castleY } from '../combat.js';
 import { mS, mY, TILE_P } from '../monsters.js';
 import { K, coinTarget, ctx } from './canvas.js';
@@ -76,7 +76,8 @@ export function render(){
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     const s = pr.guar ? 0.76 : 0.66;
     ctx.save(); ctx.translate(pr.x, pr.y); ctx.rotate(pr.rot);
-    ctx.drawImage(sprites[pr.vis][1], -CS * s / 2, -CS * s / 2, CS * s, CS * s);
+    const ps = s * (pr.type === BROWN ? [0.62, 0.82, 1.06][pr.size == null ? 1 : pr.size] : 1);   // brown flies at its grown size
+    ctx.drawImage(sprites[pr.vis][1], -CS * ps / 2, -CS * ps / 2, CS * ps, CS * ps);
     ctx.restore();
   }
   for (const p of g.parts){
@@ -376,6 +377,7 @@ export function drawCell(r, c, cell, t, hg){
   const held = hg != null && cell.lit && cell.gids.includes(hg);
   let x = LANE(c) + cell.ox, y = GY + r * CS + CS / 2 + cell.oy;
   let s = (1 + cell.pop * 0.25) * (0.2 + 0.8 * cell.grow);
+  if (cell.c === BROWN) s *= [0.62, 0.82, 1.06][brownSize(cell)];   // small, medium, big
   if (cell.fly > 0){ s *= 0.85; y -= Math.sin((1 - cell.fly / 0.55) * Math.PI) * 50; }
   if (cell.wig > 0) x += Math.sin(cell.wig * 30) * 3 * cell.wig;
   if (cell.lit){

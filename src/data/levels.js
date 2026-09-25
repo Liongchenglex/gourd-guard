@@ -29,6 +29,7 @@
  * @property {number} [shore]           sea reaches this many tile rows down the field; monsters spawn at the shoreline
  * @property {string} [hexAll]          'reverse' or 'chameleon': every non-boss monster spawns hexed that way
  * @property {string} [name]            optional title shown on the preview card
+ * @property {string[]} [introPumpkins]  pumpkins to explain with a card on this level without unlocking them (e.g. rainbow)
  */
 
 /** Runtime shape the engine reads. `n` is the global story index (1-based across all worlds). */
@@ -37,5 +38,5 @@ export function expandLevel(def, n){
     boss:def.boss ? def.boss : false, bossForm:def.bossForm || 1, pool:def.pool.map(([t, w]) => [t, w]),
     pattern:def.pattern, graves:def.graves, unlockPumpkins:def.unlockPumpkins || [], unlockGear:def.unlockGear || [],
     intro:def.intro || [], fog:def.fog || [], castles:def.castles || null, puddles:def.puddles || 0, sea:!!def.sea || !!def.shore, gust:def.gust || null, gravesLayout:def.gravesLayout || null, laneWeights:def.laneWeights || null,
-    fogRows:def.fogRows || [], fogCols:def.fogCols || [], castlesLayout:def.castlesLayout || null, shore:def.shore || 0, hexAll:def.hexAll || null, name:def.name || null, worldNo:def.world, levelNo:def.level, label:`${def.world}-${def.level}` };
+    fogRows:def.fogRows || [], fogCols:def.fogCols || [], castlesLayout:def.castlesLayout || null, shore:def.shore || 0, hexAll:def.hexAll || null, name:def.name || null, introPumpkins:def.introPumpkins || [], worldNo:def.world, levelNo:def.level, label:`${def.world}-${def.level}` };
 }

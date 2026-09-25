@@ -32,7 +32,7 @@ export const TYPES = {
   poltergeist: { boss:true, hp:26, r:32, sp:0.03, coins:45, eat:0, pts:280, drop:6, hold:0.25, driftEvery:5, swapEvery:8,
                  form2:{ hp:44, swapEvery:6.5, recolourEvery:12 } },
   // Vampire Count: holds, turns into bats to change lane, summons bats, raises castle walls, and enters a healing mode the player breaks with N hits.
-  vampirecount: { boss:true, hp:32, r:34, sp:0.03, coins:50, eat:0, pts:320, drop:6, hold:0.3, laneEvery:9, batsEvery:10, bats:2, wallEvery:15, maxWalls:3,
+  vampirecount: { boss:true, hp:32, r:34, sp:0.03, coins:50, eat:0, pts:320, drop:6, hold:0.3, laneEvery:9, batsEvery:10, bats:2, wallEvery:15, maxWalls:3, wallHp:15,
                   healEvery:20, healRate:2, healHits:[4, 5, 6], stun:2, form2:{ hp:50, batsEvery:8, healEvery:16, calm:4, regen:1, regenEvery:2 } },
 };
 

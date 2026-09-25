@@ -102,6 +102,7 @@ export function updateMonster(m, dt){
     return;
   }
   if (m.eating){
+    m.shield = false;   // a shield knight lowers its shield to chew
     const mul = m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1;
     for (const c of lanesOf(m)) damageWall(c, m.eat * mul * dt);
     if (mul > 0){ SFX.chomp(); if (Math.random() < dt * 5) chunk(m.x + rnd(-10, 10), FENCE_Y - 18, '#8a6440', 90); }
@@ -290,7 +291,7 @@ function updateVampireCount(m, dt){
     if (G.castles.filter(w => !w.dead).length < T.maxWalls){
       const used = new Set(G.castles.filter(w => !w.dead).map(w => w.lane));
       const free = [...Array(COLS).keys()].filter(l => !used.has(l));
-      if (free.length){ const lane = free[Math.floor(Math.random() * free.length)]; G.castles.push({ lane, p:rnd(0.45, 0.7), hp:8, maxHp:8, flash:0, dead:false }); ring(LANE(lane), FIELD_TOP + 0.55 * (FIELD_BOT - FIELD_TOP), 40, 'rgba(200,180,220,.9)'); addFloat('A wall rises', m.x, mY(m) - m.r - 30, '#d8cfe0', 16, 1); }
+      if (free.length){ const lane = free[Math.floor(Math.random() * free.length)]; G.castles.push({ lane, p:rnd(0.45, 0.7), hp:T.wallHp, maxHp:T.wallHp, flash:0, dead:false }); ring(LANE(lane), FIELD_TOP + 0.55 * (FIELD_BOT - FIELD_TOP), 40, 'rgba(200,180,220,.9)'); addFloat('A wall rises', m.x, mY(m) - m.r - 30, '#d8cfe0', 16, 1); }
     }
   }
   m.healT -= dt;

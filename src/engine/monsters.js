@@ -237,7 +237,7 @@ export function updateMonster(m, dt){
         if (m.hexT <= 0 && m.p > 0.05){
           m.hexT = TYPES.witch.hexEvery;
           const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.rise <= 0 && o.p > 0);   // may re-hex an already hexed monster into a new colour; witches hex each other too (owner)
-          if (pick.length) hexMonster(pick[Math.floor(Math.random() * pick.length)], Math.random() < 0.5);
+          if (pick.length) hexMonster(pick[Math.floor(Math.random() * pick.length)], Math.random() >= TYPES.witch.chameleonChance);
         }
         m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
         break;
@@ -451,7 +451,7 @@ function updateHexwitch(m, dt){
     m.hexT = m.form === 2 ? T.form2.hexEvery : T.hexEvery;
     const pick = shuffle(G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.colourLock == null && o.colourImmune == null && o.rise <= 0 && o.p > 0));
     const n = T.hexCount[0] + Math.floor(Math.random() * (T.hexCount[1] - T.hexCount[0] + 1));
-    for (const o of pick.slice(0, n)) hexMonster(o, m.form === 2 ? Math.random() < 0.5 : true);   // form 1: reverse chameleons only (owner); form 2: either kind
+    for (const o of pick.slice(0, n)) hexMonster(o, m.form === 2 ? Math.random() >= T.chameleonChance : true);   // form 1: reverse only (owner); form 2: 25% chameleon, 75% reverse
     if (pick.length) SFX.boss();
   }
   m.zoneT -= dt;

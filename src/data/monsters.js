@@ -47,7 +47,7 @@ export const TYPES = {
   // Fogwalker (2-16): carries a bank of fog across the whole row it walks in, hiding everything at its height, itself included. One hit.
   fogwalker: { hp:1, r:20, sp:0.05, coins:6, eat:0.4, pts:20, drop:2, band:0.06 },
   // Witch (3-16): every `hexEvery` seconds turns one monster into a chameleon or a reverse chameleon.
-  witch:     { hp:3, r:22, sp:0.04, coins:9, eat:0.5, pts:26, drop:2, hexEvery:6 },
+  witch:     { hp:3, r:22, sp:0.04, coins:9, eat:0.5, pts:26, drop:2, hexEvery:6, chameleonChance:0.25 },   // 25% chameleon, 75% reverse chameleon (owner)
   // Bulwark Knight (4-16): armoured giant; every monster inside its 3×3 aura has double health while it stays there.
   bulwark:   { hp:5, r:26, sp:0.04, coins:12, eat:0.7, pts:32, drop:3 },
   // Shell Turtle (5-16): rises from a puddle and walks backwards, shell first: a slow, tough, moving wall that shields what is behind it. Cannot be knocked back.
@@ -64,7 +64,7 @@ export const TYPES = {
   twintides: { boss:true, hp:18, r:32, sp:0.03, coins:30, eat:0, pts:200, drop:3, hold:0.12, boltEvery:6, bolt:3, boltSp:0.3, window:8, revive:8,
                form2:{ hp:28, boltEvery:4.5, boltSp:0.45, window:5, hold:0.5 } },   // form 2 comes halfway down the field (owner)
   // The Hexwitch: drifts between lanes, conjures chameleons; form 2 also hexes monsters already on the field into chameleons.
-  hexwitch: { boss:true, hp:30, r:32, sp:0.03, coins:50, eat:0, pts:320, drop:6, hold:0.25, driftEvery:6, hexEvery:9, hexCount:[2, 3],
+  hexwitch: { boss:true, hp:30, r:32, sp:0.03, coins:50, eat:0, pts:320, drop:6, hold:0.25, driftEvery:6, hexEvery:9, hexCount:[2, 3], chameleonChance:0.25,   // form 2: 25% chameleon / 75% reverse (owner); form 1 is reverse only
               zoneEvery:14, zoneLast:10, zoneRise:4, zones:1, shapes:['box'], form2:{ hp:48, zones:2, shapes:['box', 'col', 'row'], hexEvery:7 } },
 };
 
@@ -78,7 +78,7 @@ export const MODS = {
 
 /** Returning monsters: a base type with one modifier and a world skin. Pool entries may name a variant instead of a type. */
 export const VARIANTS = {
-  bogGhoul: { base:'ghoul', mod:'armoured', name:'Bog Ghoul', tint:'#4f8a6a', intro:'Bog Ghouls: the marsh made them tougher. Three hits now.' },
+  bogGhoul: { base:'ghoul', mod:'stubborn', name:'Bog Ghoul', tint:'#4f8a6a', intro:'Bog Ghouls: one hit still does it, but the marsh mud holds them: no knockback.' },   // 1 HP (owner, 2026-09-26)
   marshImp: { base:'imp',   mod:'stubborn', name:'Marsh Imp', tint:'#6a8a4a', intro:'Marsh Imps dig their heels in: knockback does nothing to them.' },
   swiftBat: { base:'bat',   mod:'swift',    name:'Swift Bat', tint:'#8a5aa8', intro:'Swift Bats: faster than the ones you knew. One hit still does it.' },
   cryptGhoul: { base:'ghoul', mod:'stubborn', name:'Crypt Ghoul', tint:'#8a8a96', intro:'Crypt Ghouls shrug off knockback.' },
@@ -140,7 +140,7 @@ export const MINTRO = {
   mirror:'New foe: mirror sprites. While the mirror is up, a pumpkin bounces straight back into your wall. Hit them when the mirror drops.',
   firemummy:'New foe: flaming mummies. Only Ice finishes them; anything else just knocks them down. They set ordinary mummies alight as they pass.',
   fogwalker:'New foe: fogwalkers. Each drags a bank of fog across its whole row, so you cannot tell which column it is in. One hit kills it. A Lantern shows it.',
-  witch:'New foe: witches. Every few seconds one turns a monster into a chameleon or a reverse chameleon.',
+  witch:'New foe: witches. Every few seconds one turns a monster into a reverse chameleon, or now and then a true chameleon.',
   bulwark:'New foe: bulwark knights. Everything inside their steel aura has double health. Kill the knight first, or pull the others out of the aura.',
   turtle:'New foe: shell turtles. They rise from puddles and walk backwards, shell towards you, like a slow wall. Grey pierces through; everything else has to chew the shell.',
 };

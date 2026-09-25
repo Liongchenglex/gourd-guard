@@ -45,7 +45,7 @@ Level addresses are written `world-level`, e.g. `3-12` = world 3, level 12. Leve
 | # | Name | Theme | Map gimmick | New pumpkins | New monsters | Returning monsters (stronger) | Boss |
 |---|---|---|---|---|---|---|---|
 | 1 | Pumpkin Patch | Harvest moon over a country graveyard | Graves on the patch | Green, Yellow, Ice, Fire | Ghoul, Bat, Imp, Mossback, Mummy | – | Gravekeeper |
-| 2 | Foggy Hollow | Marsh mist, will-o'-wisps, lanterns | Fog hides field rows; occasional graves | White (boomerang), Pink (heal) | Wisp, Wraith, Wisp Rider, Plague Doctor | Bog Ghoul (Armoured), Marsh Imp (Stubborn), Swift Bat | Poltergeist |
+| 2 | Foggy Hollow | Marsh mist, will-o'-wisps, lanterns | Fog hides field rows; occasional graves | White (boomerang), Pink (heal) | Wisp, Wraith, Wisp Rider, Plague Doctor | Bog Ghoul (Stubborn, 1 HP), Marsh Imp (Stubborn), Swift Bat | Poltergeist |
 | 3 | Witchwood | Enchanted autumn forest, witches | Wind gusts shift the patch; occasional graves | Purple (spawn) | Chameleon, Reverse Chameleon, Mirror Sprite | Wood Ghoul (Swift), Broom Imp (Hungry), Bat (Owl-bat), Wisp | Hexwitch |
 | 4 | Crumbling Keep | Vampire's castle under siege | Castle walls block shots; occasional graves | Grey (piercing), Black (blast) | Shield Knight, Gargoyle Hauler, Skeleton Archer, Vampire | Crypt Ghoul (Stubborn), Keep Imp (Armoured), Bat (swarm), Mossback (Siege Brute) | Vampire Count |
 | 5 | Drowned Marsh | Sunken shore, drowned sailors, sea row | Puddles spawn monsters; sea-row levels; occasional graves | Deep Blue (chain) | Puddle Crawler, Drunk Sailor, Puddle Diver, Splitter Slime | Drowned Ghoul (Hungry), Tide Imp (Swift), Mossback (Bog Turtle), Mummy (Sodden) | Twin Tides |
@@ -251,7 +251,7 @@ Stats (HP, speed, eat rate, coins) come from bot runs; this table fixes behaviou
 | Chameleon | Coloured like one of the player's loadout colours; only that colour damages it | matching colour |
 | Reverse Chameleon | Coloured like a loadout colour; immune to that colour, anything else works. Visually distinct: inverted markings, hollow eyes | any other colour |
 | Mirror Sprite | Alternates between a reflecting phase and an open phase (stop-go like the Shield Knight). While reflecting, a pumpkin that hits it bounces back down and hits the player's wall as a projectile | hit during the open phase |
-| Witch (3-16) | Every 6 s turns one monster on the field into a chameleon or a reverse chameleon | kill her early |
+| Witch (3-16) | Every 6 s turns one monster on the field (other witches included) into a reverse chameleon (75%) or a chameleon (25%) | kill her early |
 
 ### World 6: Hallow's End
 
@@ -309,6 +309,7 @@ The second half of every world is authored level by level. Each line is data in 
 
 | Level | 1 Pumpkin Patch | 2 Foggy Hollow | 3 Witchwood | 4 Crumbling Keep | 5 Drowned Marsh |
 |---|---|---|---|---|---|
+| 10 | "The Gravekeeper Stirs" | "A Ghost in the Patch" | "The Hexwitch's Circle" | "The Count's Court" | "Twin Tides Rising" |
 | 11 | as generated | as generated | as generated | as generated | as generated |
 | 12 | V-shaped graves | Wraiths only | Wind now blows on 2–3 columns or rows only (arrows mark them), through 20 | 4 castle walls | Shoreline 2 rows down |
 | 13 | Mummies only | L-shaped fog: top row + left column | Mirror sprites only | A full row of castle walls with archers behind it, plus the usual mix | Shoreline 3 rows down |
@@ -317,7 +318,8 @@ The second half of every world is authored level by level. Each line is data in 
 | 16 | Flaming Mummy: "Wrapped in Flame" | Fogwalker: "The Walking Mist" | Witch: "Hex in the Woods" | Bulwark Knight: "Iron Aura" | Shell Turtle: "Shell First" |
 | 17 | Mummies and Flaming Mummies only | Fogwalkers only | Mirror sprites only, all reverse-chameleonised | Level 14 plus Bulwark Knights | Shoreline 4 rows down; Bog Turtles, Shell Turtles and divers only |
 | 18 | Top and bottom patch rows are graves | Only the top (spawn) row is clear | Witches only (they may re-hex a monster into a new colour) | H-shaped castle walls, every monster | Shoreline 4 rows down; Shell Turtles, Sodden Mummies and divers only |
-| 19 | Columns 1, 4 and 7 are graves except their last row (reach them with chain lightning); those lanes spawn less | Only the fence row is clear | Chameleons plus everything else chameleonised | Castle walls everywhere except the first two rows | Shoreline 5 rows down; divers and Shell Turtles only |
+| 19 | Columns 1, 4 and 7 are graves except their last row (reach them with chain lightning); those lanes spawn less | Only the fence row is clear | Chameleons plus everything else chameleonised | Castle walls everywhere except the first two rows | Shoreline 4 rows down; divers and Shell Turtles only |
+| 20 | "Gravekeeper's Wake" | "Poltergeist Unbound" | "Full Coven Moon" | "Blood Moon Siege" | "The Drowning Tide" |
 
 Rules that came with it: authored levels have no random graves (world 1's drawn layouts stay); the level 19s spawn about 30% fewer monsters, more slowly; on shoreline levels every monster surfaces at the water's edge (shorelines are 1, 2, 2.5, 2.5, 3, 4 and 2.5 rows down on 5-12/13/15/17/18/19/20, the foam line marks the spawn line) and puddles still exist below it; Puddle Divers may lurk anywhere in the sea; witches can change an already hexed monster's colour.
 
@@ -367,6 +369,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-26 | Owner: Bog Ghoul back to 1 HP (Stubborn instead of Armoured); witches and the Hexwitch's full form hex 25% chameleon / 75% reverse; boss levels named; the owner is happy with the difficulty design at this point. |
 | 2026-09-26 | Owner: several monsters chew the same wall; twins' full form sits mid-field and throws from any column via a tail; mummies rise with 1 HP; Poltergeist full form juggles three pumpkins and repaints three; restart goes through the pumpkin picker; witches hex each other. |
 | 2026-09-25 | Owner: levels 11–19 of every world hand-authored (§8a) with graves layouts, fog shapes, partial wind, castle layouts, shorelines and "only" pools. |
 | 2026-09-25 | Owner: a level-16 monster per world (Flaming Mummy, Fogwalker, Witch, Bulwark Knight, Shell Turtle); Hexwitch redesigned around hex zones; rewards shown on level 10 and 20 previews. |

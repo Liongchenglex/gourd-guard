@@ -6,12 +6,15 @@ A Halloween lane-defense puzzle game (working title). Playable prototype, headed
 
 | Path | What it is |
 |---|---|
-| `index.html` | The playable prototype. Open it in any browser. |
+| `src/` | The game: engine, data (levels, pumpkins, monsters), UI. Built with Vite. |
+| `index.html` | Vite entry page (DOM shell). Run `npm run dev` or `npm run build`; it is not playable as a bare file. |
 | `docs/GAME_DESIGN.md` | Every rule, number and decision so far, as currently built. |
 | `docs/WORLDS.md` | The locked Release 1 content plan: worlds, gimmicks, pumpkins, monsters, bosses, weapons, R2 backlog. |
 | `CLAUDE.md` | Briefing that Claude Code reads automatically at the start of every session. |
 | `tools/balance_bot.py` | Bot that plays full nights at human pace and reports how they went. |
 | `tools/smoke_test.py` | Quick check that the game runs with real touch/mouse input and no errors. |
+| `tools/serve_dist.py` | Tiny static server for `dist/`, used by both tools. |
+| `tools/check_levels.mjs` | Proves the world 1 data table matches the old level formulas. |
 
 ## Setting up Claude Code
 
@@ -20,12 +23,14 @@ A Halloween lane-defense puzzle game (working title). Playable prototype, headed
 3. Optional but recommended: let Claude Code turn it into a Git repository so every change can be undone.
 4. For the test tools, Claude Code will need Python 3 and Playwright. You can simply ask it to set them up.
 
-## Suggested first message to Claude Code
+## Working with Claude Code
 
-> Read CLAUDE.md and docs/GAME_DESIGN.md. Then set up the testing tools (Python + Playwright), run the smoke test and a balance run for nights 1, 5 and 10 so we have a baseline. After that, propose a plan for restructuring index.html into a data-driven project as described in CLAUDE.md, but don't start the restructure until I approve the plan.
-
-After the restructure, bring your new ground rules and pumpkin ideas. Tell Claude Code to write them into the design doc first, then build them.
+Claude Code reads `CLAUDE.md` at the start of every session, then `docs/GAME_DESIGN.md` (rules as built) and `docs/WORLDS.md` (Release 1 target). Ask it for one rule or one world at a time; it runs the balance bot before and after each change.
 
 ## Playing the prototype
 
-Open `index.html` in a browser (phone or desktop). On a phone, the easiest way is to serve the folder from your computer on the same Wi-Fi, which Claude Code can set up for you.
+```
+npm install
+npm run dev        # opens a local dev server with live reload
+```
+or `npm run build` then `python3 tools/serve_dist.py` and open http://127.0.0.1:4173/. On a phone, ask Claude Code to publish the current build as a private link.

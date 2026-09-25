@@ -1,7 +1,7 @@
 # Gourd Guard: Game Design Document
 
 Working title: **Gourd Guard** (placeholder; see "Name and IP" below).
-Status: playable prototype, single HTML file (`index.html`). Target: a 120-level mobile game (6 worlds × 20 levels). The Release 1 target design is locked in `docs/WORLDS.md`; this document describes the game as currently built.
+Status: playable prototype, Vite project (`src/`, built to `dist/`). Target: a 120-level mobile game (6 worlds × 20 levels). The Release 1 target design is locked in `docs/WORLDS.md`; this document describes the game as currently built.
 
 This document is the source of truth for the rules. When a rule changes in code, update it here in the same change.
 
@@ -214,6 +214,17 @@ Observation: about 30–50% of launched pumpkins miss (fly up empty columns). Th
 
 Takeaway: single runs are noisy (night 5 and 10 each split 1–1). Comparisons after the restructure need at least 3 runs per night, and the bot should report a win rate over repeats rather than one result. The "won" rows in the table above this one came from earlier single runs.
 
+### Restructure verification (2026-09-25, `--repeats 3 --interval 850`, old single-file prototype vs new Vite build)
+
+| Night | Old: wins / mean walls | New: wins / mean walls |
+|---|---|---|
+| 1 | 3/3, 100% | 3/3, 100% |
+| 5 | 3/3, 97% | 3/3, 97% |
+| 10 | 1/3, 72% | 0/3, 69% |
+| 15 | 0/3, 74% | 0/3, 73% |
+
+Pass criterion was wins within 1 and mean walls within 10 points per night; both held, no page errors in 24 runs. Behaviour is treated as identical. Note nights 10 and 15 are harder than the earlier single-run table suggested; that is the prototype's real state, not a regression.
+
 ---
 
 ## 12. Art, audio, tech
@@ -221,7 +232,7 @@ Takeaway: single runs are noisy (night 5 and 10 each split 1–1). Comparisons a
 - All art is drawn in code on a canvas (vector shapes); pumpkins are pre-rendered to sprites. No external images.
 - All sound is synthesized with Web Audio. No audio files. (Music not yet added.)
 - Fonts: Creepster (titles) and Fredoka (UI) from Google Fonts, both SIL Open Font License.
-- Single HTML file, no dependencies. Mobile-first touch controls; works with mouse too.
+- Vite project of plain JavaScript ES modules (`src/engine`, `src/data`, `src/ui`), no runtime dependencies. Levels are data in `src/data/worlds/`. Mobile-first touch controls; works with mouse too.
 
 ---
 

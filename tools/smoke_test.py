@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """Smoke test for Gourd Guard: plays with real mouse input (no test hook) on phone and desktop sizes.
 
-Usage: python3 tools/smoke_test.py
+Usage: python3 tools/smoke_test.py --url http://127.0.0.1:4173/
+Target is the built app: `npm run build`, then `python3 tools/serve_dist.py` in another terminal.
 Exits non-zero if the page throws any error. Saves screenshots to tools/out/.
 Requires: pip install playwright && playwright install chromium
 """
-import pathlib, random, sys, time
+import argparse, pathlib, random, sys, time
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-PAGE = (ROOT / 'index.html').as_uri()
+ap = argparse.ArgumentParser(); ap.add_argument('--url', required=True, help='page URL of the built app')
+args = ap.parse_args()
+PAGE = args.url
 OUT = ROOT / 'tools' / 'out'
 OUT.mkdir(parents=True, exist_ok=True)
 W, CS, ROWS = 540, 74, 5

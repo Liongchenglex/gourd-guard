@@ -62,7 +62,7 @@ export const TYPES = {
                   healEvery:20, healRate:2, healHits:[4, 5, 6], stun:2, form2:{ hp:50, batsEvery:8, healEvery:16, calm:4, regen:1, regenEvery:2 } },
   // Twin Tides: two sea serpents on the sea row lobbing water bolts at walls. Both must die within `window` seconds or the dead one rises again after `revive` seconds.
   twintides: { boss:true, hp:18, r:32, sp:0.03, coins:30, eat:0, pts:200, drop:3, hold:0.12, boltEvery:6, bolt:3, boltSp:0.3, window:8, revive:8,
-               form2:{ hp:28, boltEvery:4.5, boltSp:0.45, window:5 } },
+               form2:{ hp:28, boltEvery:4.5, boltSp:0.45, window:5, hold:0.5 } },   // form 2 comes halfway down the field (owner)
   // The Hexwitch: drifts between lanes, conjures chameleons; form 2 also hexes monsters already on the field into chameleons.
   hexwitch: { boss:true, hp:30, r:32, sp:0.03, coins:50, eat:0, pts:320, drop:6, hold:0.25, driftEvery:6, hexEvery:9, hexCount:[2, 3],
               zoneEvery:14, zoneLast:10, zoneRise:4, zones:1, shapes:['box'], form2:{ hp:48, zones:2, shapes:['box', 'col', 'row'], hexEvery:7 } },

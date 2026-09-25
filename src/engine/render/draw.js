@@ -51,6 +51,7 @@ export function render(){
     if (fogOn && m.type !== 'boss' && m.p > -0.02 && (bands.some(([a, b]) => m.p >= a && m.p <= b) || fogCols.includes(m.lane))) continue;   // inside a fog bank (bosses glow through)
     drawMonster(m, t);
   }
+  drawTails(t);
   drawCastles(t);
   drawScarecrows(t);
   drawArrows(t);
@@ -238,6 +239,16 @@ export function drawSea(t){   // water from the top of the field down to the sho
   ctx.strokeStyle = 'rgba(235,250,255,.9)'; ctx.lineWidth = 3;   // foam at the shoreline
   ctx.beginPath(); for (let x = 0; x <= W; x += 8) ctx.lineTo(x, y1 + Math.sin(x * 0.08 + t * 3) * 3); ctx.stroke();
   ctx.fillStyle = 'rgba(235,250,255,.5)'; for (let x = 6; x < W; x += 22) ell(ctx, x + Math.sin(t * 2 + x) * 2, y1 + 4 + Math.cos(t * 3 + x) * 2, 4, 2);
+}
+/** Twin Tides: a serpent tail curling out of the water where a bolt is thrown from. */
+export function drawTails(t){
+  for (const tl of G.tails || []){
+    const x = LANE(tl.lane), y = FIELD_TOP + tl.p * (FIELD_BOT - FIELD_TOP), up = Math.sin(Math.min(1, (0.9 - tl.t) / 0.35) * Math.PI) * 60;
+    ctx.fillStyle = 'rgba(127,208,232,.5)'; ell(ctx, x, y + 6, 26, 7);
+    ctx.strokeStyle = '#1f6f78'; ctx.lineWidth = 14; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x - 8, y + 8); ctx.quadraticCurveTo(x + 10, y - up * 0.6, x + 4 + Math.sin(t * 12) * 6, y - up); ctx.stroke();
+    ctx.fillStyle = '#2a8a90'; tri(ctx, x + 4 + Math.sin(t * 12) * 6, y - up - 10, 9);
+  }
 }
 /** Castle walls (world 3): a stone segment across the lane with a health bar. */
 export function drawCastles(t){

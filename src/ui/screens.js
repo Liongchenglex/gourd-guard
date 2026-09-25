@@ -361,7 +361,7 @@ export function wireButtons(){
 
   $('#bResume').onclick = () => setState('play');
 
-  $('#bRestart').onclick = () => { save.coins += G.coins; persist(); if (G.mode === 'story') startGame('story', G.n, G.loadout); else startGame('endless', 1, G.loadout); };
+  $('#bRestart').onclick = () => { save.coins += G.coins; persist(); if (G.mode === 'story') beginNight(G.n); else startGame('endless', 1, G.loadout); };   // restart goes through the pumpkin picker (owner)
 
   $('#bQuit').onclick = () => { save.coins += G.coins; if (G.mode === 'endless' && G.score > save.best) save.best = G.score; persist(); setState('title'); };
 }

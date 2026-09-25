@@ -20,7 +20,7 @@ import { openLoadout, setState, showResult } from '../ui/screens.js';
 // ---------- Flow ----------
 
 export function makeDemo(){
-  setG({ mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], gustT:0, gustDir:null });
+  setG({ mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], gustT:0, gustDir:null });
   initBoard(1, 2);
   [[4,0],[4,1],[4,2],[3,1]].forEach(([r, c]) => { if (grid[r][c]) grid[r][c].c = 0; });
   resolveMatches();
@@ -57,7 +57,7 @@ export function startGame(mode, n, loadout){
     total:def ? def.total + (def.boss ? 1 : 0) : 0,
     spawned:0, spawnTimer:2.6, bossSpawned:false, bossTimer:100, diff:1, sproutT:0,
     monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], groups:{},
-    t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[],
+    t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
   });
   if (def && def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
@@ -322,6 +322,8 @@ export function update(dt){
     if (sc.hp <= 0){ sc.dead = true; for (let i = 0; i < 20; i++) chunk(sc.x, sc.y, i % 2 ? '#c8b060' : '#5a3a1a', 220); SFX.smash(); for (const m of g.monsters) if (m.chewing === sc) m.chewing = null; }
   }
   g.scarecrows = g.scarecrows.filter(s => !s.dead);
+  for (const tl of g.tails) tl.t -= dt;
+  g.tails = g.tails.filter(tl => tl.t > 0);
   for (const z of g.hexZones) z.t -= dt;
   g.hexZones = g.hexZones.filter(z => z.t > 0);
   applyBulwarks();

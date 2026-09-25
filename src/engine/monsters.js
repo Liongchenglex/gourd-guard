@@ -78,6 +78,7 @@ export function spawnMonster(key, lane, minion, p){
     puddle, staggerT:T.stagger ? rnd(T.stagger[0], T.stagger[1]) : 0, lurch:1, upT:T.up || 0, boltT:T.boltEvery || 0, twin:null, trueDeath:false,
     colourLock:null, colourImmune:null, reflecting:false, mirrorT:T.open || 0, hexT:T.hexEvery || 0, zoneT:T.zoneEvery || 0, bulk:1 };
   if (T.noKnockback) m.noKnockback = true;
+  if (form === 2 && T.form2 && T.form2.hold != null) m.hold = T.form2.hold;
   if (G.def && G.def.hexAll && type !== 'boss' && type !== 'chameleon' && type !== 'rchameleon') hexMonster(m, G.def.hexAll === 'reverse', true);
   if (type === 'turtle' && !puddle && G.puddles && G.puddles.length && p == null){ const pd = G.puddles[Math.floor(Math.random() * G.puddles.length)]; m.lane = pd.lane; m.x = m.tx = LANE(pd.lane); m.p = pd.p; }
   if (type === 'chameleon' || type === 'rchameleon'){   // takes one of the player's colours
@@ -106,7 +107,7 @@ export function aheadLimit(m){
   let limit = 1;
   const myLanes = lanesOf(m);
   for (const o of G.monsters){
-    if (o === m || o.dead || o.p <= m.p) continue;
+    if (o === m || o.dead || o.p <= m.p || o.eating) continue;   // a monster already at the wall does not block the queue: everyone gets to chew
     if (!lanesOf(o).some(l => myLanes.includes(l))) continue;
     limit = Math.min(limit, o.p - (m.r + o.r) * 0.75 / (FIELD_BOT - FIELD_TOP));
   }
@@ -120,7 +121,7 @@ export function updateMonster(m, dt){
   if (m.flash > 0) m.flash -= dt;
   if (m.rise > 0){   // collapsed mummy: lies still, untargetable, then stands back up at full health
     m.rise -= dt;
-    if (m.rise <= 0){ m.rise = 0; m.hp = m.maxHp; m.flash = 0.2; addFloat('Rises again', m.x, mY(m) - m.r - 30, '#d8cfb0', 16, 0.9); }
+    if (m.rise <= 0){ m.rise = 0; m.hp = (m.type === 'mummy' || m.type === 'firemummy') ? 1 : m.maxHp; m.flash = 0.2; addFloat('Rises again', m.x, mY(m) - m.r - 30, '#d8cfb0', 16, 0.9); }   // mummies come back with 1 HP (owner)
     return;
   }
   let sp = m.sp;
@@ -148,6 +149,8 @@ export function updateMonster(m, dt){
       return;
     }
     m.breach = 0;
+    const eaters = G.monsters.filter(o => !o.dead && o.eating && o.lane === m.lane), k = eaters.indexOf(m);
+    m.x = m.tx + (k - (eaters.length - 1) / 2) * 15;   // chewers share the wall side by side
     for (const c of lanesOf(m)) damageWall(c, m.eat * mul * dt);
     if (mul > 0){ SFX.chomp(); if (Math.random() < dt * 5) chunk(m.x + rnd(-10, 10), FENCE_Y - 18, '#8a6440', 90); }
     return;
@@ -278,8 +281,13 @@ export function updateMonster(m, dt){
               const T = TYPES.twintides;
               m.boltT = m.form === 2 ? T.form2.boltEvery : T.boltEvery;
               const standing = [...Array(COLS).keys()].filter(l => walls[l].hp > 0);
-              if (standing.length) G.arrows.push({ lane:standing[Math.floor(Math.random() * standing.length)], p:m.p + 0.04, sp:m.form === 2 ? T.form2.boltSp : T.boltSp, dmg:T.bolt, dead:false, water:true });
-              for (let i = 0; i < 10; i++) spark(m.x, mY(m) - 20, '#9fe0f0', 140); SFX.knock();
+              if (standing.length){   // a tail rises from the water in any column and hurls the bolt from there
+                const lane = standing[Math.floor(Math.random() * standing.length)], p0 = Math.max(0.04, shoreP() - 0.03);
+                G.tails.push({ lane, p:p0, t:0.9 });
+                G.arrows.push({ lane, p:p0, sp:m.form === 2 ? T.form2.boltSp : T.boltSp, dmg:T.bolt, dead:false, water:true });
+                for (let i = 0; i < 12; i++) spark(LANE(lane), FIELD_TOP + p0 * (FIELD_BOT - FIELD_TOP), '#9fe0f0', 160);
+              }
+              SFX.knock();
             }
           }
           m.x = m.tx + Math.sin(m.ph * 1.4) * 4;
@@ -339,13 +347,14 @@ function updatePoltergeist(m, dt){
     m.swapT = m.form === 2 ? T.form2.swapEvery : T.swapEvery;
     const cells = [];
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c] && !grid[r][c].fly) cells.push([r, c]);
-    if (cells.length >= 2){
-      const i = Math.floor(Math.random() * cells.length); let j = Math.floor(Math.random() * (cells.length - 1)); if (j >= i) j++;
-      const [r1, c1] = cells[i], [r2, c2] = cells[j], a = grid[r1][c1], b = grid[r2][c2];
-      grid[r1][c1] = b; grid[r2][c2] = a;
-      a.fly = 0.55; a.ox = LANE(c1) - LANE(c2); a.oy = (r1 - r2) * CS;   // animate from old spot
-      b.fly = 0.55; b.ox = LANE(c2) - LANE(c1); b.oy = (r2 - r1) * CS;
-      ring(LANE(c1), GY + r1 * CS + CS / 2, 30, 'rgba(200,220,255,.9)'); ring(LANE(c2), GY + r2 * CS + CS / 2, 30, 'rgba(200,220,255,.9)');
+    const k = m.form === 2 ? 3 : 2;   // form 2 juggles three pumpkins at once (owner)
+    if (cells.length >= k){
+      const picks = shuffle(cells.slice()).slice(0, k), moved = picks.map(([r, c]) => grid[r][c]);
+      for (let q = 0; q < k; q++){   // each pumpkin moves to the next picked cell
+        const [r0, c0] = picks[q], [r1, c1] = picks[(q + 1) % k], cell = moved[q];
+        grid[r1][c1] = cell; cell.fly = 0.55; cell.ox = LANE(c0) - LANE(c1); cell.oy = (r0 - r1) * CS;
+        ring(LANE(c1), GY + r1 * CS + CS / 2, 30, 'rgba(200,220,255,.9)');
+      }
       addFloat('Swapped!', m.x, mY(m) - m.r - 30, '#cfe8f2', 16, 0.9);
       SFX.knock();
       setTimeout(resolveMatches, 600);
@@ -359,9 +368,10 @@ function updatePoltergeist(m, dt){
         const cells = [];
         for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){ const x = grid[r][c]; if (x && !x.fly && x.c !== RAINBOW) cells.push(x); }
         if (cells.length && G.loadout.length > 1){
-          const cell = cells[Math.floor(Math.random() * cells.length)];
-          const others = G.loadout.filter(t => t !== cell.c);
-          cell.c = others[Math.floor(Math.random() * others.length)]; cell.pop = 1;
+          for (const cell of shuffle(cells.slice()).slice(0, 3)){   // three repaints in form 2 (owner)
+            const others = G.loadout.filter(t => t !== cell.c);
+            cell.c = others[Math.floor(Math.random() * others.length)]; cell.pop = 1;
+          }
           addFloat('Repainted!', m.x, mY(m) - m.r - 30, '#cfe8f2', 16, 0.9);
           resolveMatches();
         }

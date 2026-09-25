@@ -4,9 +4,9 @@
 Plays full story nights in a headless browser and reports how each went.
 
 Usage:
-  python3 tools/balance_bot.py --nights 1,5,10 [--interval 850] [--timeout 240] [--repairs 1] [--fireworks 0] [--url http://127.0.0.1:4173/]
+  python3 tools/balance_bot.py --nights 1,5,10 [--interval 850] [--timeout 240] [--repairs 1] [--fireworks 0] --url http://127.0.0.1:4173/
 
-Default target is legacy/index.html via file://; pass --url for the built app (see tools/serve_dist.py).
+Target is the built app: `npm run build`, then `python3 tools/serve_dist.py` in another terminal.
 
 The bot takes one action every --interval ms (850 ≈ a steady human pace):
   1. use a wall repair if any wall is under 25% (and repairs are available)
@@ -78,10 +78,12 @@ def main():
     ap.add_argument('--repairs', type=int, default=1)
     ap.add_argument('--fireworks', type=int, default=0)
     ap.add_argument('--sprout', type=int, default=5, help='seconds between sprouts')
-    ap.add_argument('--url', default=None, help='page URL; default is legacy/index.html via file://')
+    ap.add_argument('--url', default=None, help='page URL of the built app (required)')
     ap.add_argument('--repeats', type=int, default=1, help='runs per night; a summary line per night follows the runs')
     args = ap.parse_args()
-    base = args.url or (ROOT / 'legacy' / 'index.html').as_uri()
+    if not args.url:
+        sys.exit('Pass --url, e.g. --url http://127.0.0.1:4173/ after `npm run build` and `python3 tools/serve_dist.py`.')
+    base = args.url
     PAGE = base + ('&test' if '?' in base else '?test')
 
     results = []

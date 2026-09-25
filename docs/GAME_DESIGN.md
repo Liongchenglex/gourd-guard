@@ -358,6 +358,33 @@ Cells are wins out of 2 and mean wall health. Caveats: this ran before the level
 
 Reading: the first five levels of every world are fine. Worlds 1, 2, 4 and 5 break at the level-10 boss (0/2 in all four) and stay around 1/2 through 11–19 against targets of 65% → 50%. World 3 collapses from 3-5 (chameleons) onward for the bot. Boss fights are the first thing to soften; the owner also plans to hand-author levels 11–19 with twists before tuning them.
 
+### Sweep on the signed-off rules (2026-09-26, `--repeats 2`, same profile, all authored levels, level-16 monsters and perks in; run just before the Turquoise/Brown pumpkins, the Witchwood softening and the Mirror/Chameleon swap)
+
+| Level | Target | Pumpkin Patch | Foggy Hollow | Witchwood | Crumbling Keep | Drowned Marsh |
+|---|---|---|---|---|---|---|
+| 1 | 95% | 2/2, 100% | 2/2, 100% | 2/2, 100% | 2/2, 98% | 2/2, 100% |
+| 2 | 95% | 2/2, 100% | 2/2, 99% | 2/2, 93% | 2/2, 95% | 2/2, 98% |
+| 3 | 95% | 2/2, 100% | 2/2, 100% | 2/2, 100% | 2/2, 92% | 2/2, 100% |
+| 4 | 95% | 2/2, 95% | 2/2, 100% | 2/2, 100% | 2/2, 93% | 2/2, 99% |
+| 5 | 95% | 2/2, 96% | 2/2, 92% | 0/2, 75% | 2/2, 84% | 2/2, 94% |
+| 6 | 85% | 2/2, 84% | 2/2, 88% | 1/2, 81% | 2/2, 92% | 2/2, 100% |
+| 7 | 85% | 1/2, 82% | 1/2, 86% | 1/2, 86% | 2/2, 87% | 2/2, 83% |
+| 8 | 85% | 2/2, 93% | 2/2, 90% | 0/2, 79% | 0/2, 68% | 2/2, 96% |
+| 9 | 85% | 2/2, 95% | 1/2, 88% | 0/2, 74% | 0/2, 80% | 0/2, 59% |
+| 10 | 75% | 0/2, 74% | 0/2, 61% | 0/2, 68% | 0/2, 71% | 0/2, 62% |
+| 11 | 65% | 2/2, 91% | 2/2, 86% | 1/2, 76% | 2/2, 94% | 1/2, 87% |
+| 12 | 65% | 0/2, 48% | 1/2, 77% | 0/2, 74% | 2/2, 93% | 0/2, 76% |
+| 13 | 65% | 0/2, 59% | 1/2, 74% | 1/2, 67% | 0/2, 62% | 0/2, 56% |
+| 14 | 65% | 1/2, 86% | 1/2, 86% | 0/2, 72% | 0/2, 55% | 0/2, 98% |
+| 15 | 65% | 1/2, 74% | 0/2, 76% | 0/2, 48% | 1/2, 81% | 0/2, 44% |
+| 16 | 50% | 0/2, 76% | 2/2, 95% | 0/2, 64% | 1/2, 95% | 0/2, 79% |
+| 17 | 50% | 0/2, 79% | 2/2, 100% | 0/2, 70% | 0/2, 80% | 0/2, 63% |
+| 18 | 50% | 1/2, 67% | 1/2, 100% | 0/2, 100% | 1/2, 78% | 0/2, 48% |
+| 19 | 50% | 0/2, 62% | 1/2, 98% | 0/2, 44% | 1/2, 85% | 0/2, 62% |
+| 20 | 40% | 0/2, 44% | 0/2, 76% | 0/2, 63% | 0/2, 76% | 0/2, 62% |
+
+Same bot caveats as above (no colour picking, no plan for wind).
+
 ---
 
 ## 12. Art, audio, tech

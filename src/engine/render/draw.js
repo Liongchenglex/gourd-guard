@@ -377,7 +377,8 @@ export function drawCell(r, c, cell, t, hg){
   const held = hg != null && cell.lit && cell.gids.includes(hg);
   let x = LANE(c) + cell.ox, y = GY + r * CS + CS / 2 + cell.oy;
   let s = (1 + cell.pop * 0.25) * (0.2 + 0.8 * cell.grow);
-  if (cell.c === BROWN) s *= [0.62, 0.82, 1.06][brownSize(cell)];   // small, medium, big
+  const bsz = cell.c === BROWN ? brownSize(cell) : -1;
+  if (bsz >= 0) s *= [0.55, 0.8, 1.18][bsz];   // small, medium, big: clearly different sizes
   if (cell.fly > 0){ s *= 0.85; y -= Math.sin((1 - cell.fly / 0.55) * Math.PI) * 50; }
   if (cell.wig > 0) x += Math.sin(cell.wig * 30) * 3 * cell.wig;
   if (cell.lit){
@@ -399,7 +400,9 @@ export function drawCell(r, c, cell, t, hg){
     ctx.globalCompositeOperation = 'source-over';
   }
   const sz = CS * s;
+  if (bsz === 2){ const gg = ctx.createRadialGradient(x, y, CS * 0.2, x, y, CS * 0.7); gg.addColorStop(0, 'rgba(255,190,90,.55)'); gg.addColorStop(1, 'rgba(255,190,90,0)'); ctx.fillStyle = gg; ctx.fillRect(x - CS * 0.7, y - CS * 0.7, CS * 1.4, CS * 1.4); }   // big brown: ripe glow
   ctx.drawImage(sprites[cell.c][cell.lit ? 1 : 0], x - sz / 2, y - sz / 2, sz, sz);
+  if (bsz === 0){ ctx.fillStyle = '#7fd05a'; ell(ctx, x + CS * 0.12, y - CS * 0.3, 6, 3, -0.6); ell(ctx, x + CS * 0.2, y - CS * 0.36, 5, 2.5, 0.5); }   // small brown: a sprout
   if (cell.lit && cell.bsize >= 5){
     ctx.fillStyle = '#ffe27a'; ctx.strokeStyle = 'rgba(60,30,0,.7)'; ctx.lineWidth = 1.5;
     drawStar(x + CS * 0.3, y - CS * 0.34, 6.5, t * 2);

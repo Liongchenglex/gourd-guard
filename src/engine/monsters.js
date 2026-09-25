@@ -130,6 +130,7 @@ export function updateMonster(m, dt){
   }
   if (m.eating){
     m.shield = false;   // a shield knight lowers its shield to chew
+    m.reflecting = false;   // a mirror sprite drops its mirror to chew
     const mul = m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1;
     if (walls[m.lane].hp <= 0){   // the wall is down: it walks through the gap; the night is lost when it is in
       m.breach = (m.breach || 0) + dt * mul;

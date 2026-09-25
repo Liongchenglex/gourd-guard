@@ -107,8 +107,8 @@ export const BOSS_INTRO = {
                   2:'Its full form heals whenever you leave it alone for a few seconds, on top of its healing trances. Keep hitting it. Monsters keep coming until it falls.' },
   twintides: { 1:'Two serpents on the sea row, each hurling water at your walls. Kill both within 8 seconds of each other, or the fallen one rises again. Monsters keep coming until both fall.',
                2:'Their full form throws faster and gives you only 5 seconds between the two kills. Monsters keep coming until both fall.' },
-  hexwitch: { 1:'She drifts between lanes a quarter of the way down, hexes monsters into chameleons two or three at a time, and lays a hex zone: anything killed inside it rises again while the zone lasts. Monsters keep coming until she falls.',
-              2:'Her full form lays two hex zones at a time, and they can cover a whole column or row. Monsters keep coming until she falls.' },
+  hexwitch: { 1:'She drifts between lanes a quarter of the way down, hexes monsters into reverse chameleons two or three at a time, and lays a hex zone: anything killed inside it rises again while the zone lasts. Monsters keep coming until she falls.',
+              2:'Her full form hexes monsters into chameleons as well as reverse chameleons, and lays two hex zones at a time that can cover a whole column or row. Monsters keep coming until she falls.' },
 };
 
 export const GRAVES_INTRO = 'Graves now appear in your patch. They never move and block slides and pushes. Plan bunches around them.';

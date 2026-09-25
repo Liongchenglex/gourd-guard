@@ -282,7 +282,7 @@ Rules:
 | 2 | Poltergeist | Swaps pumpkin positions on the patch | Recolours pumpkins |
 | 4 | Vampire Count | Bat swarms; raises new castle walls. **Healing mode**: periodically it stops and starts regenerating, showing a counter (×4, ×5 or ×6); the player must land that many pumpkin hits to break the mode | Regenerates unless hit within 4 s even outside healing mode |
 | 5 | Twin Tides | Two bosses on the sea row lobbing projectiles at walls. Both must die within a short window; otherwise the dead twin revives after ~8 s | Shorter window, faster projectiles |
-| 3 | Hexwitch | Drifts between lanes; every 9 s hexes 2–3 monsters into chameleons; every 14 s lays a **hex zone** (3×3) for 10 s: anything killed inside it rises again after 4 s | Two zones at a time, which can also be a whole column or a whole row; hexes every 7 s |
+| 3 | Hexwitch | Drifts between lanes; every 9 s hexes 2–3 monsters into **reverse chameleons** (form 1 never makes true chameleons: too hard at level 10, owner); every 14 s lays a **hex zone** (3×3) for 10 s: anything killed inside it rises again after 4 s | Hexes into chameleons or reverse chameleons (50/50); two zones at a time, which can also be a whole column or a whole row; hexes every 7 s |
 | 6 | Hollow King | 5 stages: each stage borrows one earlier boss's full kit (Gravekeeper, Poltergeist, Vampire Count, Twin Tides, Hexwitch) | Final stage mixes everything, including the Poltergeist's "destroy every pumpkin of one loadout colour" |
 
 ---

@@ -203,6 +203,17 @@ Simulated human-paced player (~1 action per 0.85 s), pumpkin levels 1 / 2 / 3 / 
 
 Observation: about 30–50% of launched pumpkins miss (fly up empty columns). This is the core skill tax, not a bug.
 
+### Baseline before the restructure (2026-09-25, `tools/balance_bot.py --interval 850`, 2 runs per night)
+
+| Night | Run 1 | Run 2 |
+|---|---|---|
+| 1 | Won, walls 100%, 13/21 throws missed | – |
+| 5 | Won, walls 92%, 10/37 missed | Lost (9/12 resolved), walls 86%, 13/39 missed |
+| 10 | Lost (17/20 resolved), walls 74%, 15/58 missed | Won, walls 73%, 21/69 missed |
+| 15 | Lost (16/21 resolved), walls 52%, 23/56 missed | Lost (14/21 resolved), walls 10/37 missed, 58% |
+
+Takeaway: single runs are noisy (night 5 and 10 each split 1–1). Comparisons after the restructure need at least 3 runs per night, and the bot should report a win rate over repeats rather than one result. The "won" rows in the table above this one came from earlier single runs.
+
 ---
 
 ## 12. Art, audio, tech

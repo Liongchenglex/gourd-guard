@@ -16,6 +16,9 @@ Level addresses are written `world-level`, e.g. `3-12` = world 3, level 12. Leve
 | Levels per world | 20 |
 | Total levels | 120 |
 | Bosses | Level 10 of each world: boss, first form (fewer abilities). Level 20: same boss, full form. All other levels are normal waves. |
+| World unlock | Beating the level-10 boss unlocks the next world. Levels 11–20 are the hard half of a world: optional for progression, harder, with the full-form boss at 20. |
+| Difficulty curve | Every world starts easy and gets harder level by level. Target win rate for the bot (a stand-in for a mid-skill player with the expected upgrades): levels 1–5 ≈ 95%, 6–9 ≈ 85%, boss 10 ≈ 75%, 11–15 ≈ 65%, 16–19 ≈ 50%, boss 20 ≈ 40%. The curve resets at each new world because new mechanics arrive. |
+| Unlock placement | Pumpkin, monster and weapon unlocks sit in levels 1–10 of a world so no player misses them; the level-20 boss and levels 11–19 reward coins and stars. |
 | Colour ramp | World 1 starts with Green + Yellow only. From the 6th unlocked type (3-6) the player picks exactly 5 per level. |
 | Difficulty modes | R2 (see §10). R1 ships one difficulty per level. |
 
@@ -75,7 +78,7 @@ Existing level tables (power 1/1/1.5/1.5/2, shop costs 40/80/130/200) stay unles
 | Fire | red | Flame | Burn ticks; the only thing that kills a Mummy for good | 1-8 |
 | White | white | Boomerang | If it hits nothing it flies back into the patch (top-most empty cell of its column, else nearest column with space) instead of being wasted | 2-3 |
 | Grey | grey | Piercing | Hits every monster in its column; passes castle walls | 3-6 (right after the Gargoyle Hauler at 3-3) |
-| Black | black | Blast | Explodes on the first hit; splashes the lanes to the left and right at the same height | 3-13 |
+| Black | black | Blast | Explodes on the first hit; splashes the lanes to the left and right at the same height | 3-9 |
 | Pink | pink plasma | Chain | Lightning jumps from the hit monster to the nearest monster in a neighbouring column at half power | 4-4 |
 | Purple | purple | Spawn | A kill may spawn a pumpkin into the patch | 5-3 |
 | Gold | gold, with top hat, monocle and coin belt so it reads differently from Yellow | Coins | A Gold kill always gives coins (skips the reward roll) and gives ×2 coins (value tuned by the bot) | 5-10 |
@@ -213,4 +216,5 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-25 | Owner: difficulty rises within each world (easy start, harder finish); the next world unlocks after the level-10 boss. Added the target win-rate curve and the rule that unlocks sit in levels 1–10. Black moved from 3-13 to 3-9 accordingly. |
 | 2026-09-25 | Draft compiled from `dump.md`. Owner decisions: 20 levels per world (120 total); bosses at levels 10 and 20; sprouts place 2 pumpkins in random cells; kill reward 10/30/60 confirmed; world 5 gimmick = wind gusts in four directions, one-cell shift, frequency as difficulty knob; boss placement as proposed; Vampire Count gains healing mode with an ×4/×5/×6 hit counter; Bomb targets the field 3×3; Mirror Sprite reflects into the player's wall and has an open phase; Lantern and Scarecrow weapons kept; Splitter Slime and Plague Doctor kept; earlier monsters return stronger in later worlds. Locked as R1. |

@@ -125,6 +125,6 @@ export const MINTRO = {
   diver:'New foe: puddle divers. They hide in a puddle, surface to hurl water at your wall, and duck under again. Hit them while they are up.',
   slime:'New foe: splitter slimes. Kill one and two blobs crawl out. Black and Grey clean them up.',
   chameleon:'New foe: chameleons. Each takes on one of your colours and only that colour hurts it. Tools still work.',
-  rchameleon:'New foe: reverse chameleons. Hollow-eyed and inverted: immune to their own colour, hurt by every other.',
+  rchameleon:'New foe: reverse chameleons. The X over their pumpkin says it all: immune to that colour, hurt by every other.',
   mirror:'New foe: mirror sprites. While the mirror is up, a pumpkin bounces straight back into your wall. Hit them when the mirror drops.',
 };

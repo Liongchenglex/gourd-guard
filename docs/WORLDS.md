@@ -375,6 +375,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 |---|---|
 | Paint pumpkin 💡 (owner) | When it lights up, it converts the pumpkins touching it to its colour, turning messy boards into big bunches. |
 | Echo pumpkin (owner) | A bunch you can launch twice. |
+| Twin pumpkin (owner) | Two colours on one pumpkin, e.g. half red, half blue. It counts as either colour, so it can bridge two bunches of different colours into one launch (a Rainbow that is limited to two specific colours). |
 | Poison pumpkin (owner) | To define: e.g. a hit leaves a poison that ticks like Fire's burn but also spreads to monsters that touch the victim. |
 | Burning Mummy | Only Ice kills it. Burns other mummies along the way. To define in R2: does "burn" kill them, or turn them into Burning Mummies (spreading)? Natural home: world 4 or 6. |
 | Medium / Hard per level | Variables: longer sprout interval, 1 pumpkin per sprout instead of 2, no wall (any monster reaching the bottom loses), more graves, more monsters, stacked modifiers, more frequent gusts. Data-wise these are overrides on a level. |

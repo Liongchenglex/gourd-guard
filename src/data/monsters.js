@@ -25,7 +25,7 @@ export const TYPES = {
   // Skeleton Archer (world 3): stops near the top and fires an arrow down its lane every `shootEvery` s for `arrow` wall damage.
   archer: { hp:2,  r:20, sp:0.04,  coins:9,  eat:0.4, pts:24, drop:2, hold:0.14, shootEvery:5, arrow:3 },
   // Vampire (world 3 elite): arrives with `bats` bats; regenerates `regen` HP every `regenEvery` s when not hit for `calm` s.
-  vampire:{ hp:5,  r:24, sp:0.045, coins:14, eat:0.7, pts:40, drop:3, bats:2, regen:1, regenEvery:3, calm:4 },
+  vampire:{ hp:5,  r:24, sp:0.045, coins:14, eat:0.7, pts:40, drop:3, bats:4, regen:1, regenEvery:3, calm:4 },   // four bats: left, right, ahead, behind (owner, 2026-09-26)
   // Puddle Crawler (world 4): climbs out of a random puddle instead of walking in from the top.
   crawler: { hp:2,  r:20, sp:0.05,  coins:6,  eat:0.5, pts:18, drop:2 },
   // Drunk Sailor (world 4): staggers between lanes every `stagger` seconds and lurches at uneven speed.
@@ -130,7 +130,7 @@ export const MINTRO = {
   knight:'New foe: shield knights. The shield is up while they march and down while they rest. Hit them when they stop.',
   hauler:'New foe: gargoyle haulers. They push a line of stone gargoyles ahead of them, slowly. Break every gargoyle and the hauler sprints.',
   archer:'New foe: skeleton archers. They stop near the top and shoot arrows at your wall. Reach them behind the castle walls.',
-  vampire:'New foe: vampires. They arrive with bats and heal if you leave them alone. Finish them fast.',
+  vampire:'New foe: vampires. They arrive ringed by four bats and heal if you leave them alone. Finish them fast.',
   crawler:'New foe: puddle crawlers. They climb out of puddles halfway down the field. Watch the water.',
   sailor:'New foe: drunk sailors. They stagger across lanes and lurch at odd speeds. Hard to line up.',
   diver:'New foe: puddle divers. They hide in a puddle, surface to hurl water at your wall, and duck under again. Hit them while they are up.',

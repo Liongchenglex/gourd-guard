@@ -148,7 +148,7 @@ Speed is in "field lengths per second" before level multipliers (so 0.055 ≈ 18
 | Shield Knight | 3 | 0.06 in bursts | 0.6 | 9 | 2 | Marches 1.6 s, rests 1.3 s. Shield up while marching: every hit (pumpkins, burns, fireworks) is blocked and no knockback. Shield down while resting and while chewing the fence | 3-2 |
 | Gargoyle Hauler | 3 | 0.02 pushing, 0.075 free | 0.6 | 10 | 2 | Spawns with 2 Gargoyles (5 HP, eat 0.35, minions) ahead of it in its lane. Crawls while any survive, sprints once all are dead. Grey counters the line | 3-3 |
 | Skeleton Archer | 2 | 0.04 | 0.4 | 9 | 2 | Stops at 14% of the field and every 5 s fires an arrow down its lane that does 3 wall damage on arrival. Usually sits behind castle walls | 3-5 |
-| Vampire | 5 | 0.045 | 0.7 | 14 | 3 | Arrives with 2 bats in the neighbouring lanes. If not hit for 4 s, heals 1 HP every 3 s | 3-8 |
+| Vampire | 5 | 0.045 | 0.7 | 14 | 3 | Arrives ringed by 4 bats: left, right, ahead and behind. If not hit for 4 s, heals 1 HP every 3 s | 4-8 |
 | Puddle Crawler | 2 | 0.05 | 0.5 | 6 | 2 | Climbs out of a random puddle (its lane and depth) instead of walking in from the top | 4-2 |
 | Drunk Sailor | 3 | 0.05 × 0.3–1.7 | 0.6 | 8 | 2 | Every 1.4–2.8 s picks a new lurch speed and, 70% of the time, staggers to a neighbouring lane (anywhere on the field) | 4-3 |
 | Puddle Diver | 3 | 0 | 0 | 9 | 2 | Lives in a random puddle. Hidden and untargetable for 3 s, then surfaces for 2.5 s and hurls a water bolt down its lane (2 wall damage). With no puddles on the level it walks in at 0.04 instead | 4-7 |

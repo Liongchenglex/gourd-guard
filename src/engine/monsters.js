@@ -96,8 +96,9 @@ export function spawnMonster(key, lane, minion, p){
     m.gargs = [];
     for (let i = 0; i < T.push; i++) m.gargs.push(spawnMonster('gargoyle', lane, true, m.p + 0.07 * (i + 1)));
   }
-  if (type === 'vampire'){   // arrives with a couple of bats in neighbouring lanes
-    for (let i = 0; i < T.bats; i++){ const l = Math.max(0, Math.min(COLS - 1, lane + (i ? 1 : -1))); spawnMonster('bat', l, true, Math.max(-0.02, m.p)); }
+  if (type === 'vampire'){   // ringed by bats: left, right, ahead and behind
+    const spots = [[lane - 1, 0], [lane + 1, 0], [lane, 0.06], [lane, -0.06]];
+    for (const [l, dp] of spots.slice(0, T.bats)) spawnMonster('bat', Math.max(0, Math.min(COLS - 1, l)), true, Math.max(-0.02, m.p + dp));
   }
   G.monsters.push(m);
   return m;

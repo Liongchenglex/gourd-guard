@@ -49,7 +49,7 @@ export function spawnMonster(key, lane, minion, p){
     return a;
   }
   let puddle = null;
-  if ((type === 'crawler' || type === 'diver') && G.puddles && G.puddles.length && p == null){   // rise from a random puddle
+  if ((type === 'crawler' || type === 'diver' || type === 'turtle') && G.puddles && G.puddles.length && p == null){   // rise from a random puddle
     puddle = G.puddles[Math.floor(Math.random() * G.puddles.length)];
     lane = puddle.lane; p = puddle.p;
   }
@@ -68,7 +68,9 @@ export function spawnMonster(key, lane, minion, p){
     phase:'move', phaseT:T.move || 0, shield:type === 'knight', gargs:null, freed:false, shootT:T.shootEvery || 0, calmT:0, regenT:0,
     laneT:T.laneEvery || 0, batsT:T.batsEvery || 0, wallT:T.wallEvery || 0, healT:T.healEvery || 0, healing:false, healHits:0, stunT:0,
     puddle, staggerT:T.stagger ? rnd(T.stagger[0], T.stagger[1]) : 0, lurch:1, upT:T.up || 0, boltT:T.boltEvery || 0, twin:null, trueDeath:false,
-    colourLock:null, colourImmune:null, reflecting:false, mirrorT:T.open || 0, conjureT:T.conjureEvery || 0, hexT:form === 2 && T.form2 && T.form2.hexEvery ? T.form2.hexEvery : 0 };
+    colourLock:null, colourImmune:null, reflecting:false, mirrorT:T.open || 0, hexT:T.hexEvery || 0, zoneT:T.zoneEvery || 0, bulk:1 };
+  if (T.noKnockback) m.noKnockback = true;
+  if (type === 'turtle' && !puddle && G.puddles && G.puddles.length && p == null){ const pd = G.puddles[Math.floor(Math.random() * G.puddles.length)]; m.lane = pd.lane; m.x = m.tx = LANE(pd.lane); m.p = pd.p; }
   if (type === 'chameleon' || type === 'rchameleon'){   // takes one of the player's colours
     const pool = (G.loadout || [0, 1]).filter(t => t !== RAINBOW);
     const col = pool[Math.floor(Math.random() * pool.length)];
@@ -207,6 +209,24 @@ export function updateMonster(m, dt){
           for (let i = 0; i < 10; i++) spark(m.x, mY(m), '#7fd0e8', 110);
           if (!m.hidden && walls[m.lane].hp > 0){ G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:TYPES.diver.boltSp, dmg:TYPES.diver.bolt, dead:false, water:true }); SFX.knock(); }
         }
+        break;
+      }
+      case 'firemummy': {   // sets ordinary mummies alight as it passes
+        for (const o of G.monsters) if (o.type === 'mummy' && !o.dead && o.rise <= 0 && Math.abs(o.lane - m.lane) <= 1 && Math.abs(o.p - m.p) < TILE_P()){
+          o.type = 'firemummy'; o.flash = 0.3; addFloat('Alight!', o.x, mY(o) - o.r - 24, '#ff8a3a', 16, 0.9); for (let i = 0; i < 10; i++) spark(o.x, mY(o), '#ff8a3a', 120);
+        }
+        if (Math.random() < dt * 14) G.parts.push({ x:m.x + rnd(-m.r * 0.6, m.r * 0.6), y:mY(m) + rnd(-10, 6), vx:rnd(-10, 10), vy:-rnd(50, 90), t:0, life:0.5, size:rnd(3, 6), color:'#ff8a3a', kind:'flame', grav:0 });
+        m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
+        break;
+      }
+      case 'witch': {   // hexes one monster at a time
+        m.hexT -= dt;
+        if (m.hexT <= 0 && m.p > 0.05){
+          m.hexT = TYPES.witch.hexEvery;
+          const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'witch' && o.colourLock == null && o.colourImmune == null && o.rise <= 0 && o.p > 0);
+          if (pick.length) hexMonster(pick[Math.floor(Math.random() * pick.length)], Math.random() < 0.5);
+        }
+        m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
         break;
       }
       case 'mirror': {   // mirror up / mirror down cycle
@@ -387,13 +407,14 @@ function updateVampireCount(m, dt){
   return false;
 }
 
-/** Turn a monster into a chameleon of a random loadout colour (Hexwitch form 2). */
-export function hexMonster(o){
+/** Turn a monster into a chameleon (or, with `reverse`, a reverse chameleon) of a random loadout colour. */
+export function hexMonster(o, reverse){
   const pool = (G.loadout || [0, 1]).filter(t => t !== RAINBOW);
-  o.colourLock = pool[Math.floor(Math.random() * pool.length)]; o.colourImmune = null;
+  const col = pool[Math.floor(Math.random() * pool.length)];
+  if (reverse){ o.colourImmune = col; o.colourLock = null; } else { o.colourLock = col; o.colourImmune = null; }
   ring(o.x, mY(o), 36, 'rgba(210,120,255,.9)'); addFloat('Hexed!', o.x, mY(o) - o.r - 24, '#d09bff', 16, 0.9);
 }
-/** The Hexwitch (world 5 boss): drifts between neighbouring lanes, conjures chameleons; form 2 hexes monsters on the field. */
+/** The Hexwitch (world 3 boss): drifts between lanes, hexes 2–3 monsters into chameleons, and lays hex zones where the dead rise again. */
 function updateHexwitch(m, dt){
   const T = TYPES.hexwitch;
   m.x += (m.tx - m.x) * Math.min(1, dt * 2.5);
@@ -404,18 +425,41 @@ function updateHexwitch(m, dt){
     const opts = [m.lane - 1, m.lane + 1].filter(l => l >= 0 && l < COLS);
     m.lane = opts[Math.floor(Math.random() * opts.length)]; m.tx = LANE(m.lane);
   }
-  m.conjureT -= dt;
-  if (m.conjureT <= 0){
-    m.conjureT = m.form === 2 ? T.form2.conjureEvery : T.conjureEvery;
-    const c = spawnMonster('chameleon', pickLane(), true, Math.max(0, m.p - 0.02));
-    for (let i = 0; i < 14; i++) spark(c.x, mY(c), '#d09bff', 150); SFX.boss();
+  m.hexT -= dt;
+  if (m.hexT <= 0){
+    m.hexT = m.form === 2 ? T.form2.hexEvery : T.hexEvery;
+    const pick = shuffle(G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.colourLock == null && o.colourImmune == null && o.rise <= 0 && o.p > 0));
+    const n = T.hexCount[0] + Math.floor(Math.random() * (T.hexCount[1] - T.hexCount[0] + 1));
+    for (const o of pick.slice(0, n)) hexMonster(o, false);
+    if (pick.length) SFX.boss();
   }
-  if (m.form === 2){
-    m.hexT -= dt;
-    if (m.hexT <= 0){
-      m.hexT = T.form2.hexEvery;
-      const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.colourLock == null && o.colourImmune == null && o.rise <= 0 && o.p > 0);
-      if (pick.length) hexMonster(pick[Math.floor(Math.random() * pick.length)]);
+  m.zoneT -= dt;
+  if (m.zoneT <= 0){
+    m.zoneT = T.zoneEvery;
+    const want = m.form === 2 ? T.form2.zones : T.zones, shapes = m.form === 2 ? T.form2.shapes : T.shapes;
+    while (G.hexZones.length < want){
+      const shape = shapes[Math.floor(Math.random() * shapes.length)];
+      G.hexZones.push({ shape, lane:Math.floor(Math.random() * COLS), p:rnd(0.25, 0.8), t:T.zoneLast });
     }
+    addFloat('Hex zone!', m.x, mY(m) - m.r - 30, '#d09bff', 18, 1.2); SFX.boss();
+  }
+}
+/** Is a monster inside a Hexwitch zone? (box: 3 lanes × 3 tile heights; col: whole column; row: 3 tile heights across the field) */
+export function inHexZone(m){
+  for (const z of G.hexZones || []){
+    if (z.shape === 'col'){ if (m.lane === z.lane) return true; }
+    else if (z.shape === 'row'){ if (Math.abs(m.p - z.p) <= 1.5 * TILE_P()) return true; }
+    else if (Math.abs(m.lane - z.lane) <= 1 && Math.abs(m.p - z.p) <= 1.5 * TILE_P()) return true;
+  }
+  return false;
+}
+/** Bulwark Knights: monsters inside a knight's 3×3 aura carry double health while they stay there. */
+export function applyBulwarks(){
+  const knights = G.monsters.filter(k => k.type === 'bulwark' && !k.dead);
+  for (const o of G.monsters){
+    if (o.dead || o.type === 'bulwark' || o.type === 'boss') continue;
+    const inside = knights.some(k => Math.abs(o.lane - k.lane) <= 1 && Math.abs(o.p - k.p) <= 1.5 * TILE_P());
+    if (inside && o.bulk !== 2){ o.bulk = 2; o.hp *= 2; o.maxHp *= 2; }
+    else if (!inside && o.bulk === 2){ o.bulk = 1; o.maxHp /= 2; o.hp = Math.min(o.hp / 2, o.maxHp); }
   }
 }

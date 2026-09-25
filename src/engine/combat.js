@@ -2,7 +2,7 @@ import { TYPES, BOSS_NAMES } from '../data/monsters.js';
 import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches } from './board.js';
-import { TILE_P, mS, mY, spMulNow, spawnMonster } from './monsters.js';
+import { TILE_P, mS, mY, spMulNow, spawnMonster, inHexZone } from './monsters.js';
 import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS, walls, FENCE_Y } from './state.js';
 import { TAU, clamp, fmt, rnd } from './util.js';
 import { lvOf, save, persist } from '../save.js';
@@ -107,6 +107,18 @@ export function kill(m){
     }
     m.trueDeath = true;
   }
+  if (m.type !== 'boss' && !m.trueDeath && G.hexZones && G.hexZones.length && inHexZone(m)){   // inside a hex zone: it rises again
+    m.hp = 0; m.rise = TYPES.hexwitch.zoneRise; m.eating = false; m.kb = 0; m.burnLeft = 0;
+    addFloat('Hexed: it will rise', m.x, mY(m) - m.r - 30, '#d09bff', 16, 1);
+    for (let i = 0; i < 10; i++) spark(m.x, mY(m), '#d09bff', 160); SFX.knock();
+    return;
+  }
+  if (m.type === 'firemummy' && m.lastHit !== 2){   // not Ice: it collapses and rises again later
+    m.hp = 0; m.rise = TYPES.firemummy.rise; m.eating = false; m.kb = 0; m.burnLeft = 0;
+    addFloat('Down… still burning', m.x, mY(m) - m.r - 30, '#ff8a3a', 16, 1);
+    for (let i = 0; i < 10; i++) chunk(m.x, mY(m), '#ff8a3a', 160); SFX.knock();
+    return;
+  }
   if (m.type === 'mummy' && m.lastHit !== 3){   // not Fire: it collapses and rises again later
     m.hp = 0; m.rise = TYPES.mummy.rise; m.eating = false; m.kb = 0; m.burnLeft = 0;
     addFloat('Down… not out', m.x, mY(m) - m.r - 30, '#d8cfb0', 16, 1);
@@ -119,7 +131,7 @@ export function kill(m){
   G.score += m.pts;
   const reward = m.type === 'boss' ? 'boss' : m.lastHit === YELLOW ? 'gold' : rollReward();
   const y = mY(m), s = mS(m);
-  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', chameleon:'#6ab04a', rchameleon:'#3a3a4a', mirror:'#c8d8f0', boss:'#6a3a7a' }[m.type] || '#aaa';
+  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', chameleon:'#6ab04a', rchameleon:'#3a3a4a', mirror:'#c8d8f0', firemummy:'#ff8a3a', fogwalker:'#b8c8d8', witch:'#6a3a8a', bulwark:'#8090a8', turtle:'#4a7a5a', boss:'#6a3a7a' }[m.type] || '#aaa';
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
   ring(m.x, y, m.r * s * 2.2, 'rgba(255,220,150,.8)');
   if (reward === 'boss' || reward === 'coins' || reward === 'gold'){

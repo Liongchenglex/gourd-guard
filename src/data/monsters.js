@@ -41,6 +41,17 @@ export const TYPES = {
   rchameleon: { hp:3, r:21, sp:0.05,  coins:8,  eat:0.6, pts:24, drop:2 },
   // Mirror Sprite (world 5): alternates reflecting (`reflect` s) and open (`open` s). While reflecting, a pumpkin bounces back down its lane into the player's wall.
   mirror:     { hp:2, r:19, sp:0.045, coins:9,  eat:0.5, pts:26, drop:2, reflect:2, open:2.5, boltSp:0.55 },
+  // Level-16 monsters (owner, 2026-09-25): one per world.
+  // Flaming Mummy (1-16): only Ice kills it; anything else knocks it down and it rises again. Sets ordinary mummies it passes alight, turning them into flaming mummies.
+  firemummy: { hp:2, r:22, sp:0.045, coins:7, eat:0.6, pts:24, drop:2, rise:4 },
+  // Fogwalker (2-16): carries a bank of fog across the whole row it walks in, hiding everything at its height, itself included. One hit.
+  fogwalker: { hp:1, r:20, sp:0.05, coins:6, eat:0.4, pts:20, drop:2, band:0.06 },
+  // Witch (3-16): every `hexEvery` seconds turns one monster into a chameleon or a reverse chameleon.
+  witch:     { hp:3, r:22, sp:0.04, coins:9, eat:0.5, pts:26, drop:2, hexEvery:6 },
+  // Bulwark Knight (4-16): armoured giant; every monster inside its 3×3 aura has double health while it stays there.
+  bulwark:   { hp:5, r:26, sp:0.04, coins:12, eat:0.7, pts:32, drop:3 },
+  // Shell Turtle (5-16): rises from a puddle and walks backwards, shell first: a slow, tough, moving wall that shields what is behind it. Cannot be knocked back.
+  turtle:    { hp:10, r:26, sp:0.03, coins:12, eat:0.3, pts:30, drop:3, noKnockback:true },
   // Bosses (docs/WORLDS.md §7). `boss:true`; spawned as type 'boss' with `kind` = the key. Never reach the wall.
   gravekeeper: { boss:true, hp:20, r:34, sp:0.03, coins:40, eat:0, pts:250, drop:6, hold:0.28, teleportEvery:6, summonEvery:8,
                  form2:{ hp:36, summonEvery:5.5, shoveEvery:12, shove:0.3 } },
@@ -53,8 +64,8 @@ export const TYPES = {
   twintides: { boss:true, hp:18, r:32, sp:0.03, coins:30, eat:0, pts:200, drop:3, hold:0.12, boltEvery:6, bolt:3, boltSp:0.3, window:8, revive:8,
                form2:{ hp:28, boltEvery:4.5, boltSp:0.45, window:5 } },
   // The Hexwitch: drifts between lanes, conjures chameleons; form 2 also hexes monsters already on the field into chameleons.
-  hexwitch: { boss:true, hp:30, r:32, sp:0.03, coins:50, eat:0, pts:320, drop:6, hold:0.25, driftEvery:6, conjureEvery:9,
-              form2:{ hp:48, conjureEvery:6, hexEvery:12 } },
+  hexwitch: { boss:true, hp:30, r:32, sp:0.03, coins:50, eat:0, pts:320, drop:6, hold:0.25, driftEvery:6, hexEvery:9, hexCount:[2, 3],
+              zoneEvery:14, zoneLast:10, zoneRise:4, zones:1, shapes:['box'], form2:{ hp:48, zones:2, shapes:['box', 'col', 'row'], hexEvery:7 } },
 };
 
 /** Modifiers (docs/WORLDS.md §6): data-only stat tweaks any monster can carry. */
@@ -85,7 +96,7 @@ export const VARIANTS = {
 export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch' };
 export const BOSS_NAME = BOSS_NAMES.gravekeeper;   // legacy alias used by endless mode
 
-export const MNAME = { ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', boss:'Boss' };
+export const MNAME = { ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss' };
 
 export const BOSS_INTRO = {
   gravekeeper: { 1:'It stops a third of the way down and never reaches the wall, but it teleports between lanes and raises ghouls. Monsters keep coming until it falls.',
@@ -96,8 +107,8 @@ export const BOSS_INTRO = {
                   2:'Its full form heals whenever you leave it alone for a few seconds, on top of its healing trances. Keep hitting it. Monsters keep coming until it falls.' },
   twintides: { 1:'Two serpents on the sea row, each hurling water at your walls. Kill both within 8 seconds of each other, or the fallen one rises again. Monsters keep coming until both fall.',
                2:'Their full form throws faster and gives you only 5 seconds between the two kills. Monsters keep coming until both fall.' },
-  hexwitch: { 1:'She drifts between lanes a quarter of the way down and keeps conjuring chameleons, each hurt only by one of your colours. Monsters keep coming until she falls.',
-              2:'Her full form also hexes monsters already on the field into chameleons every few seconds. Monsters keep coming until she falls.' },
+  hexwitch: { 1:'She drifts between lanes a quarter of the way down, hexes monsters into chameleons two or three at a time, and lays a hex zone: anything killed inside it rises again while the zone lasts. Monsters keep coming until she falls.',
+              2:'Her full form lays two hex zones at a time, and they can cover a whole column or row. Monsters keep coming until she falls.' },
 };
 
 export const GRAVES_INTRO = 'Graves now appear in your patch. They never move and block slides and pushes. Plan bunches around them.';
@@ -127,4 +138,9 @@ export const MINTRO = {
   chameleon:'New foe: chameleons. Each takes on one of your colours and only that colour hurts it. Tools still work.',
   rchameleon:'New foe: reverse chameleons. The X over their pumpkin says it all: immune to that colour, hurt by every other.',
   mirror:'New foe: mirror sprites. While the mirror is up, a pumpkin bounces straight back into your wall. Hit them when the mirror drops.',
+  firemummy:'New foe: flaming mummies. Only Ice finishes them; anything else just knocks them down. They set ordinary mummies alight as they pass.',
+  fogwalker:'New foe: fogwalkers. Each drags a bank of fog across its whole row, so you cannot tell which column it is in. One hit kills it. A Lantern shows it.',
+  witch:'New foe: witches. Every few seconds one turns a monster into a chameleon or a reverse chameleon.',
+  bulwark:'New foe: bulwark knights. Everything inside their steel aura has double health. Kill the knight first, or pull the others out of the aura.',
+  turtle:'New foe: shell turtles. They rise from puddles and walk backwards, shell towards you, like a slow wall. Grey pierces through; everything else has to chew the shell.',
 };

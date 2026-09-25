@@ -1,3 +1,4 @@
+import { TYPES } from '../../data/monsters.js';
 import { sproutEvery } from '../game.js';
 import { perkOn } from '../../data/perks.js';
 import { GEAR } from '../../data/shop.js';
@@ -37,17 +38,21 @@ export function render(){
   if (g.def && g.def.sea) drawSea(t);
   drawPuddles(t);
   for (const m of g.monsters) if (m.type === 'doctor' && !m.dead && m.p > 0) drawHealZone(m, t);
+  for (const m of g.monsters) if (m.type === 'bulwark' && !m.dead && m.p > 0) drawBulwarkZone(m, t);
+  drawHexZones(t);
   const ms = g.monsters.slice().sort((a, b) => a.p - b.p);
-  const fogOn = g.def && g.def.fog && g.def.fog.length && !(g.fogClear > 0);
+  const walkerBands = g.monsters.filter(m => m.type === 'fogwalker' && !m.dead && m.p > 0).map(m => [m.p - TYPES.fogwalker.band, m.p + TYPES.fogwalker.band]);
+  const bands = [...((g.def && g.def.fog) || []), ...walkerBands];
+  const fogOn = bands.length && !(g.fogClear > 0);
   for (const m of ms){
     if (m.hidden) continue;                                             // wraith: invisible
-    if (fogOn && m.type !== 'boss' && m.p > -0.02 && g.def.fog.some(([a, b]) => m.p >= a && m.p <= b)) continue;   // inside a fog bank (bosses glow through)
+    if (fogOn && m.type !== 'boss' && m.p > -0.02 && bands.some(([a, b]) => m.p >= a && m.p <= b)) continue;   // inside a fog bank (bosses glow through)
     drawMonster(m, t);
   }
   drawCastles(t);
   drawScarecrows(t);
   drawArrows(t);
-  if (g.def && g.def.fog && g.def.fog.length) drawFog(t, g.def.fog, g.fogClear > 0);
+  if (bands.length) drawFog(t, bands, g.fogClear > 0);
   drawMines(t);
   drawDrops(t);
   drawWalls(t);
@@ -242,6 +247,25 @@ export function drawCastles(t){
     const bw = hw * 1.6, bx = x - bw / 2, by = y + 24;
     ctx.fillStyle = 'rgba(0,0,0,.6)'; rrect(ctx, bx - 1, by - 1, bw + 2, 7, 3); ctx.fill();
     ctx.fillStyle = '#d8d0c8'; rrect(ctx, bx, by, Math.max(0, bw * w.hp / w.maxHp), 5, 2.5); ctx.fill();
+  }
+}
+/** Bulwark Knight's aura: 3 lanes × 3 tile heights, steel blue. */
+export function drawBulwarkZone(m, t){
+  const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
+  const pulse = 0.5 + 0.5 * Math.sin(t * 2.5);
+  ctx.fillStyle = `rgba(140,160,200,${0.10 + 0.05 * pulse})`; rrect(ctx, x, y, w, h, 16); ctx.fill();
+  ctx.strokeStyle = `rgba(190,205,235,${0.45 + 0.3 * pulse})`; ctx.lineWidth = 2; rrect(ctx, x, y, w, h, 16); ctx.stroke();
+}
+/** Hexwitch zones: purple; box (3×3), a whole column, or a row across the field. */
+export function drawHexZones(t){
+  for (const z of G.hexZones || []){
+    const a = Math.min(1, z.t / 1.5), pulse = 0.5 + 0.5 * Math.sin(t * 3);
+    let x, y, w, h;
+    if (z.shape === 'col'){ x = LANE(z.lane) - CS * 0.49; y = FIELD_TOP; w = CS * 0.98; h = FIELD_BOT - FIELD_TOP; }
+    else if (z.shape === 'row'){ x = GX; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 1.5; w = CS * COLS; h = CS * 3; }
+    else { x = LANE(z.lane) - CS * 1.5 * 0.98; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 1.5; w = CS * 3 * 0.98; h = CS * 3; }
+    ctx.fillStyle = `rgba(160,80,220,${(0.12 + 0.06 * pulse) * a})`; rrect(ctx, x, y, w, h, 16); ctx.fill();
+    ctx.strokeStyle = `rgba(210,155,255,${(0.5 + 0.3 * pulse) * a})`; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.lineDashOffset = t * 24; rrect(ctx, x, y, w, h, 16); ctx.stroke(); ctx.setLineDash([]);
   }
 }
 /** Plague Doctor's healing zone: 3 lanes × 3 tile heights, pulsing green. */

@@ -137,6 +137,8 @@ export function openPreview(n){
   $('#pvNewBlock').hidden = !pk.childElementCount;
   const info = [];   // no counts here (owner): just what is special
   if (def.boss) info.push('Monsters keep coming until the boss falls.');
+  if (def.levelNo === 10){ const nextName = WORLD_NAMES[def.worldNo]; info.push(`🎁 Reward: levels 11–20${nextName && WORLD_LEVELS[def.worldNo] && WORLD_LEVELS[def.worldNo].length ? ` and World ${def.worldNo + 1}: ${nextName}` : ''}.`); }
+  if (def.levelNo === 20){ const perk = PERKS.find(p => perkNight(p) === n); if (perk) info.push(`🎁 Reward: ${perk.name}. ${perk.desc}`); }
   if (def.sea) info.push('The sea reaches the top of the field.');
   $('#pvInfo').textContent = info.join(' ');
   setState('preview');

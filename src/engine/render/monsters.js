@@ -47,6 +47,11 @@ export function drawMonster(m, t){
     case 'chameleon': drawChameleon(m, F, t, false); break;
     case 'rchameleon': drawChameleon(m, F, t, true); break;
     case 'mirror': drawMirror(m, F, t); break;
+    case 'firemummy': drawMummy(m, F, t); drawFlames(m, t); break;
+    case 'fogwalker': drawFogwalker(m, F, t); break;
+    case 'witch': drawWitch(m, F, t); break;
+    case 'bulwark': drawBulwark(m, F, t); break;
+    case 'turtle': drawTurtle(m, F, t); break;
     case 'boss': if (m.kind === 'poltergeist') drawPoltergeist(m, F, t); else if (m.kind === 'vampirecount') drawVampireCount(m, F, t); else if (m.kind === 'twintides') drawTwinTide(m, F, t); else if (m.kind === 'hexwitch') drawHexwitch(m, F, t); else drawBoss(m, F, t); break;
   }
 
@@ -73,6 +78,7 @@ export function drawMonster(m, t){
       if (fill > 0){ cx.save(); cx.beginPath(); cx.rect(px - d / 2, by - d / 2, d * fill, d); cx.clip(); cx.fillStyle = '#ff5a4d'; ell(cx, px, by, d / 2, d / 2); cx.restore(); }
     }
   }
+  if (m.bulk === 2){ cx.fillStyle = '#bcd0ff'; cx.font = 'bold 13px Fredoka, system-ui, sans-serif'; cx.textAlign = 'left'; cx.fillText('×2', m.x + Math.ceil(m.maxHp) * 5.5 + 8, by + 5); }   // bulwark aura
   const sign = m.colourLock != null ? m.colourLock : m.colourImmune;
   if (sign != null && sprites[sign]){   // chameleons carry their pumpkin above the health bar; reverse ones with an X through it
     const sz = 30, sy = by - 12 - sz;
@@ -248,6 +254,11 @@ export function monsterIcon(key, px){
     case 'chameleon': drawChameleon(m, F, 1, false); break;
     case 'rchameleon': drawChameleon(m, F, 1, true); break;
     case 'mirror': drawMirror(m, F, 1); break;
+    case 'firemummy': drawMummy(m, F, 1); drawFlames(m, 1); break;
+    case 'fogwalker': drawFogwalker(m, F, 1); break;
+    case 'witch': drawWitch(m, F, 1); break;
+    case 'bulwark': drawBulwark(m, F, 1); break;
+    case 'turtle': drawTurtle(m, F, 1); break;
     case 'boss': if (kind === 'poltergeist') drawPoltergeist(m, F, 1); else if (kind === 'vampirecount') drawVampireCount(m, F, 1); else if (kind === 'twintides') drawTwinTide(m, F, 1); else if (kind === 'hexwitch') drawHexwitch(m, F, 1); else drawBoss(m, F, 1); break;
   }
   cx = prev;
@@ -451,4 +462,39 @@ export function drawHexwitch(m, F, t){   // witch astride a broom, hat and cauld
   cx.fillStyle = F('#c9584a'); cx.fillRect(-9, -50, 24, 4);
   cx.strokeStyle = F('#8fbf5a'); cx.lineWidth = 4; cx.beginPath(); cx.moveTo(14, -12); cx.lineTo(30, -22 + Math.sin(t * 4) * 4); cx.stroke();   // pointing hand
   cx.fillStyle = 'rgba(210,155,255,.9)'; ell(cx, 32, -24 + Math.sin(t * 4) * 4, 4, 4);
+}
+
+export function drawFlames(m, t){   // flames licking up a flaming mummy
+  for (let i = -1; i <= 1; i++){ const h = 10 + Math.sin(t * 9 + i * 2) * 4; cx.fillStyle = i ? '#ff8a3a' : '#ffd35a'; tri(cx, i * 9, -m.r * 0.9 - h * 0.5, h * 0.55); }
+}
+export function drawFogwalker(m, F, t){   // hooded figure holding up a lantern of mist
+  cx.fillStyle = F('#7a8a9a'); cx.beginPath(); cx.moveTo(-14, 20); cx.lineTo(-12, -8); cx.quadraticCurveTo(0, -30, 12, -8); cx.lineTo(14, 20); cx.closePath(); cx.fill();
+  cx.fillStyle = '#1a2230'; cx.beginPath(); cx.moveTo(-8, -10); cx.quadraticCurveTo(0, -22, 8, -10); cx.quadraticCurveTo(0, -6, -8, -10); cx.fill();
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#bfefff'; ell(cx, -3, -12, 2, 2.4); ell(cx, 3, -12, 2, 2.4);
+  cx.strokeStyle = F('#4a3020'); cx.lineWidth = 3; cx.beginPath(); cx.moveTo(10, 0); cx.lineTo(20, -18); cx.stroke();
+  const g = cx.createRadialGradient(22, -22, 2, 22, -22, 16); g.addColorStop(0, 'rgba(220,235,245,.9)'); g.addColorStop(1, 'rgba(220,235,245,0)'); cx.fillStyle = g; cx.fillRect(4, -40, 36, 36);
+}
+export function drawWitch(m, F, t){   // small witch on foot with a crooked wand
+  cx.fillStyle = F('#2a1a3a'); cx.beginPath(); cx.moveTo(-13, 20); cx.lineTo(-8, -10); cx.lineTo(8, -10); cx.lineTo(13, 20); cx.closePath(); cx.fill();
+  cx.fillStyle = F('#8fbf5a'); ell(cx, 0, -16, 9, 9);
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#ffe27a'; ell(cx, -3, -17, 2, 2.4); ell(cx, 3, -17, 2, 2.4);
+  cx.fillStyle = F('#1a1020'); ell(cx, 0, -24, 15, 3.5); cx.beginPath(); cx.moveTo(-7, -24); cx.lineTo(2, -46); cx.lineTo(9, -24); cx.closePath(); cx.fill();
+  cx.strokeStyle = F('#6b4a2b'); cx.lineWidth = 2.5; cx.beginPath(); cx.moveTo(10, -4); cx.lineTo(22, -14); cx.stroke();
+  cx.fillStyle = 'rgba(210,155,255,.9)'; ell(cx, 23, -15 + Math.sin(t * 5) * 2, 3, 3);
+}
+export function drawBulwark(m, F, t){   // heavy armoured knight with a tower shield and a banner
+  cx.fillStyle = F('#6f7380'); ell(cx, 0, 6, 17, 20);
+  cx.fillStyle = F('#8c90a0'); ell(cx, 0, -18, 13, 13);
+  cx.fillStyle = '#1a1c24'; cx.fillRect(-10, -20, 20, 5);
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#bcd0ff'; ell(cx, -5, -18, 1.8, 1.8); ell(cx, 5, -18, 1.8, 1.8);
+  cx.fillStyle = F('#b4b8c8'); rrect(cx, -22, -10, 18, 36, 6); cx.fill(); cx.strokeStyle = F('#4a4e5c'); cx.lineWidth = 2; rrect(cx, -22, -10, 18, 36, 6); cx.stroke();
+  cx.strokeStyle = F('#6b4a2b'); cx.lineWidth = 3; cx.beginPath(); cx.moveTo(18, 10); cx.lineTo(18, -44); cx.stroke();
+  cx.fillStyle = F('#3a4a8a'); cx.beginPath(); cx.moveTo(18, -44); cx.lineTo(34 + Math.sin(t * 3) * 3, -38); cx.lineTo(18, -28); cx.closePath(); cx.fill();
+}
+export function drawTurtle(m, F, t){   // walking backwards: a big plated shell faces the player, the head peeks out at the top
+  cx.fillStyle = F('#3a6a4a'); ell(cx, 0, -20, 7, 6);                                                     // head (away from the player)
+  cx.fillStyle = F('#4a7a5a'); ell(cx, 0, 2, 24, 20);                                                     // shell
+  cx.strokeStyle = F('#2a4a34'); cx.lineWidth = 2;
+  for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++){ cx.beginPath(); cx.arc(i * 12, 2 + j * 10, 6, 0, TAU); cx.stroke(); }   // plates
+  cx.fillStyle = F('#3a6a4a'); ell(cx, -22, 12, 6, 4); ell(cx, 22, 12, 6, 4); ell(cx, -20, -10, 6, 4); ell(cx, 20, -10, 6, 4);   // legs
 }

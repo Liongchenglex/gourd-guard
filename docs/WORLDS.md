@@ -21,6 +21,8 @@ Level addresses are written `world-level`, e.g. `3-12` = world 3, level 12. Leve
 | Unlock placement | Pumpkin, monster and weapon unlocks sit in levels 1–10 of a world so no player misses them; the level-20 boss and levels 11–19 reward coins and stars. Once unlocked, a pumpkin or tool is usable on every level, earlier worlds included (owner, 2026-09-25). |
 | Colour ramp | World 1 starts with Green + Yellow only. From the 6th unlocked type (3-6) the player picks exactly 5 per level. |
 | Difficulty modes | R2 (see §10). R1 ships one difficulty per level. |
+| Level 16 | Every world introduces one more monster at level 16 (owner, 2026-09-25): Flaming Mummy (1-16), Fogwalker (2-16), Witch (3-16), Bulwark Knight (4-16), Shell Turtle (5-16). |
+| Previews | The level card shows the monsters, anything new, and on levels 10 and 20 the reward (next world / the perk). |
 | Upgrade expectation | Players reach pumpkin **level 3 easily** with coins. **Levels 4 and 5 will be gated behind ads** when the game is monetised. So levels 1–10 of every world are tuned to be comfortable at pumpkin level 3 or below, and levels 11–20 are where levels 4–5 pay off. The bot's expected profile must follow this: level ≤3 through the first half of a world, 4–5 only in the second half (owner, 2026-09-25). |
 
 ---
@@ -210,6 +212,7 @@ Stats (HP, speed, eat rate, coins) come from bot runs; this table fixes behaviou
 | Imp | Hops in bursts | anything |
 | Mossback | Slow tank | bunches of 5, Fire |
 | Mummy | Only Fire kills it. Killed by anything else it respawns in the same tile after a delay | Fire |
+| Flaming Mummy (1-16) | Only **Ice** kills it; anything else knocks it down and it rises again after 4 s. Sets ordinary mummies it passes alight, turning them into flaming mummies. Ice is auto-locked into the loadout (both Fire and Ice when both mummies are in the pool) | Ice |
 
 ### World 2: Foggy Hollow
 
@@ -218,7 +221,8 @@ Stats (HP, speed, eat rate, coins) come from bot runs; this table fixes behaviou
 | Wisp (today's Wraith, renamed) | Drifts to a neighbouring column every few seconds, only mid-field | timing |
 | Wraith | Turns invisible for a few seconds, reappears further down the lane | throw where it will be |
 | Wisp Rider | Carried by a wisp: fast while carried, normal speed once the carrier is destroyed | two hits |
-| Plague Doctor | Slow; heals monsters in its column | kill it first |
+| Plague Doctor | Slow; heals every monster in its 3×3 zone (drawn as a green aura) | kill it first |
+| Fogwalker (2-16) | Drags a bank of fog across its whole row as it walks, hiding everything at that height, itself included: you cannot tell which column it is in. One hit. Usually escorted | Lantern, then one hit |
 
 ### World 4: Crumbling Keep
 
@@ -228,6 +232,7 @@ Stats (HP, speed, eat rate, coins) come from bot runs; this table fixes behaviou
 | Gargoyle Hauler | Pushes a row of high-HP stone gargoyles ahead of it; slow while pushing, fast once they are all destroyed | Grey (piercing), unlocked right after |
 | Skeleton Archer | Stays at the back and fires projectiles at a wall | Grey or Black to reach it behind castle walls |
 | Vampire (elite) | Arrives with a bat swarm; regenerates HP if not hit for a while | burst damage, big bunches |
+| Bulwark Knight (4-16) | Armoured giant with a 3×3 steel aura: every monster inside has double health (shown as ×2 beside its health dots) while it stays there | kill the knight, or hit what leaves the aura |
 
 ### World 5: Drowned Marsh
 
@@ -237,6 +242,7 @@ Stats (HP, speed, eat rate, coins) come from bot runs; this table fixes behaviou
 | Drunk Sailor | Wanders freely across rows and columns | Pink chain, Black blast |
 | Puddle Diver | Sits in a puddle, surfaces to throw a projectile at a wall, submerges again | hit while surfaced |
 | Splitter Slime | Splits into two 1-HP blobs when killed | Black blast, Grey |
+| Shell Turtle (5-16) | Rises from a puddle and walks backwards, shell towards the player: a slow 10-HP moving wall that shields whatever is behind it. Cannot be knocked back | Grey pierces; otherwise chew the shell |
 
 ### World 3: Witchwood
 
@@ -245,6 +251,7 @@ Stats (HP, speed, eat rate, coins) come from bot runs; this table fixes behaviou
 | Chameleon | Coloured like one of the player's loadout colours; only that colour damages it | matching colour |
 | Reverse Chameleon | Coloured like a loadout colour; immune to that colour, anything else works. Visually distinct: inverted markings, hollow eyes | any other colour |
 | Mirror Sprite | Alternates between a reflecting phase and an open phase (stop-go like the Shield Knight). While reflecting, a pumpkin that hits it bounces back down and hits the player's wall as a projectile | hit during the open phase |
+| Witch (3-16) | Every 6 s turns one monster on the field into a chameleon or a reverse chameleon | kill her early |
 
 ### World 6: Hallow's End
 
@@ -275,7 +282,7 @@ Rules:
 | 2 | Poltergeist | Swaps pumpkin positions on the patch | Recolours pumpkins |
 | 4 | Vampire Count | Bat swarms; raises new castle walls. **Healing mode**: periodically it stops and starts regenerating, showing a counter (×4, ×5 or ×6); the player must land that many pumpkin hits to break the mode | Regenerates unless hit within 4 s even outside healing mode |
 | 5 | Twin Tides | Two bosses on the sea row lobbing projectiles at walls. Both must die within a short window; otherwise the dead twin revives after ~8 s | Shorter window, faster projectiles |
-| 3 | Hexwitch | Spawns chameleons | Turns monsters already on the field into chameleons |
+| 3 | Hexwitch | Drifts between lanes; every 9 s hexes 2–3 monsters into chameleons; every 14 s lays a **hex zone** (3×3) for 10 s: anything killed inside it rises again after 4 s | Two zones at a time, which can also be a whole column or a whole row; hexes every 7 s |
 | 6 | Hollow King | 5 stages: each stage borrows one earlier boss's full kit (Gravekeeper, Poltergeist, Vampire Count, Twin Tides, Hexwitch) | Final stage mixes everything, including the Poltergeist's "destroy every pumpkin of one loadout colour" |
 
 ---
@@ -340,6 +347,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-25 | Owner: a level-16 monster per world (Flaming Mummy, Fogwalker, Witch, Bulwark Knight, Shell Turtle); Hexwitch redesigned around hex zones; rewards shown on level 10 and 20 previews. |
 | 2026-09-25 | Owner: level-20 perks (§8b): quick smash, sprouts −1 s, 50% triple sprouts, 10% rainbows, pick 4. Fire auto-locked on mummy levels. Unlocks usable on every level. |
 | 2026-09-25 | Owner: a fallen wall only loses the night once a monster walks through it; projectile monsters stop shooting at fallen walls. Silver pumpkin removed. Plague Doctor heals a 3×3 zone with a visible aura. |
 | 2026-09-25 | Owner: World 6 is deferred to a future release; worlds 1–5 are the Release 1 base to polish and tune. |

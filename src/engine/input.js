@@ -2,9 +2,9 @@ import { updateHud } from '../ui/hud.js';
 import { ensureAudio } from './audio.js';
 import { bestLitGroup, collectDrop, findCell, slideOne } from './board.js';
 import { dropHop, launchGroup } from './combat.js';
-import { useFirework, useRepair, useBuster, bustGrave } from './game.js';
+import { useFirework, useRepair, useBuster, bustGrave, useLantern, useMine, placeMine } from './game.js';
 import { cv } from './render/canvas.js';
-import { COLS, CS, G, GX, GY, H, ROWS, W, gest, grid, setGest, state, graves } from './state.js';
+import { COLS, CS, G, GX, GY, H, ROWS, W, gest, graves, grid, setGest, state } from './state.js';
 import { setState } from '../ui/screens.js';
 
 // ---------- Input ----------
@@ -43,6 +43,11 @@ export function attachInput(){
     const p = toLogical(e);
     if (p.y < 70) return;
     const pos = cellAt(p.x, p.y);
+    if (G.aim === 'mine'){   // armed landmine: this tap picks a column (anywhere on the field or patch)
+      const lane = Math.floor((p.x - GX) / CS);
+      if (lane >= 0 && lane < COLS) placeMine(lane); else { G.aim = null; updateHud(true); }
+      e.preventDefault(); return;
+    }
     if (G.aim === 'buster'){   // armed grave buster: this tap either digs a grave or cancels
       if (pos && graves[pos.r][pos.c]) bustGrave(pos.r, pos.c); else { G.aim = null; updateHud(true); }
       e.preventDefault(); return;
@@ -80,6 +85,8 @@ export function attachInput(){
     else if (e.key === 'f') useFirework();
     else if (e.key === 'r') useRepair();
     else if (e.key === 'g') useBuster();
+    else if (e.key === 'l') useLantern();
+    else if (e.key === 'm') useMine();
   });
 
 }

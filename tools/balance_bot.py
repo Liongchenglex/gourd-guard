@@ -21,7 +21,7 @@ import argparse, json, pathlib, sys, time
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-UNLOCK = [1, 1, 3, 8, 999, 999]  # night each pumpkin type unlocks (Green, Yellow, Ice, Fire, Grey, Purple); Grey/Purple arrive in later worlds
+UNLOCK = [1, 1, 3, 8, 999, 999, 23]  # night each pumpkin type unlocks (Green, Yellow, Ice, Fire, Grey, Purple, White); Grey/Purple arrive in later worlds
 
 BOT_JS = """
 (interval) => {
@@ -102,9 +102,9 @@ def main():
                 lv, fence = profile(n, args.offset)
                 page.evaluate("""([lv, fence, rep, fw, sprout]) => Object.assign(window.__gg.save, {
                     seenHelp:true, seenFlick:true, fw, repair:rep, fence, spawnEvery:sprout,
-                    lv:{ green:lv, yellow:lv, ice:lv, fire:lv, grey:lv, purple:lv } })""",
+                    lv:{ green:lv, yellow:lv, ice:lv, fire:lv, grey:lv, purple:lv, white:lv } })""",
                     [lv, fence, args.repairs, args.fireworks, args.sprout])
-                loadout = [t for t in range(6) if UNLOCK[t] <= n][:5]
+                loadout = [t for t in range(7) if UNLOCK[t] <= n][:5]
                 page.evaluate(BOT_JS, args.interval)
                 page.evaluate("([n, lo]) => window.__gg.startGame('story', n, lo)", [n, loadout])
                 t0 = time.time()

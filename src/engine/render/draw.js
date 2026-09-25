@@ -7,7 +7,7 @@ import { K, coinTarget, ctx } from './canvas.js';
 import { drawMonster } from './monsters.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, mix, rrect, shade } from './util.js';
-import { COLS, CS, FENCE_Y, FIELD_TOP, G, GX, GY, H, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, state, walls } from '../state.js';
+import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, GX, GY, H, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, state, walls } from '../state.js';
 import { TAU, clamp, mulberry } from '../util.js';
 import { save } from '../../save.js';
 
@@ -33,7 +33,14 @@ export function render(){
   }
   drawPreview(t);
   const ms = g.monsters.slice().sort((a, b) => a.p - b.p);
-  for (const m of ms) drawMonster(m, t);
+  const fogOn = g.def && g.def.fog && g.def.fog.length && !(g.fogClear > 0);
+  for (const m of ms){
+    if (m.hidden) continue;                                             // wraith: invisible
+    if (fogOn && m.p > -0.02 && g.def.fog.some(([a, b]) => m.p >= a && m.p <= b)) continue;   // inside a fog bank
+    drawMonster(m, t);
+  }
+  if (g.def && g.def.fog && g.def.fog.length) drawFog(t, g.def.fog, g.fogClear > 0);
+  drawMines(t);
   drawDrops(t);
   drawWalls(t);
   drawGraves();
@@ -178,6 +185,31 @@ export function drawDrops(t){
 }
 
 /** Pulsing outline on every grave while the grave buster is armed. */
+/** Fog banks: opaque marsh mist over field ranges; thin and see-through while a lantern burns. */
+export function drawFog(t, bands, cleared){
+  const H0 = FIELD_TOP, H1 = FIELD_BOT;
+  for (const [a, b] of bands){
+    const y0 = H0 + a * (H1 - H0), y1 = H0 + b * (H1 - H0), pad = 26;
+    const gr = ctx.createLinearGradient(0, y0 - pad, 0, y1 + pad);
+    const al = cleared ? 0.18 : 0.94;
+    gr.addColorStop(0, 'rgba(190,205,215,0)'); gr.addColorStop(0.18, `rgba(190,205,215,${al})`); gr.addColorStop(0.82, `rgba(170,190,205,${al})`); gr.addColorStop(1, 'rgba(170,190,205,0)');
+    ctx.fillStyle = gr; ctx.fillRect(0, y0 - pad, W, y1 - y0 + pad * 2);
+    if (fogSprite){
+      ctx.globalAlpha = cleared ? 0.08 : 0.35;
+      for (let i = 0; i < 5; i++){ const x = ((i * 137 + t * 14) % (W + 200)) - 100, fw = 220; ctx.drawImage(fogSprite, x, y0 - 20 + Math.sin(t * 0.7 + i) * 8, fw, y1 - y0 + 40); }
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+/** Landmines waiting at the wall line. */
+export function drawMines(t){
+  for (const mine of G.mines || []){
+    const x = LANE(mine.lane), y = FENCE_Y - 30;
+    ctx.fillStyle = '#2a2230'; ell(ctx, x, y + 6, 13, 6);
+    ctx.fillStyle = '#3d3348'; ell(ctx, x, y, 12, 9);
+    ctx.fillStyle = Math.floor(t * 4) % 2 ? '#ff5a4d' : '#ffd35a'; ell(ctx, x, y - 4, 3, 3);
+  }
+}
 export function drawAimGraves(t){
   ctx.strokeStyle = `rgba(255,211,90,${0.6 + 0.4 * Math.sin(t * 8)})`; ctx.lineWidth = 4;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){

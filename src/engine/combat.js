@@ -1,8 +1,8 @@
-import { TYPES, BOSS_NAME } from '../data/monsters.js';
+import { TYPES, BOSS_NAMES } from '../data/monsters.js';
 import { BURN_AMT, BURN_EVERY, BURN_N, FREEZE_P, KB_CHANCE, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches } from './board.js';
-import { TILE_P, mS, mY } from './monsters.js';
+import { TILE_P, mS, mY, spMulNow } from './monsters.js';
 import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid } from './state.js';
 import { TAU, clamp, fmt, rnd } from './util.js';
 import { lvOf, save, persist } from '../save.js';
@@ -31,6 +31,12 @@ export function launchGroup(ref){
 
 export function damage(m, amt, color, small){
   if (m.dead) return;
+  if (m.carrier){   // wisp rider: the first hit breaks the carrier instead of hurting the rider
+    m.carrier = false; m.flash = 0.15; m.sp = TYPES.rider.walkSp * spMulNow() * rnd(0.92, 1.08);
+    for (let i = 0; i < 12; i++) spark(m.x, mY(m) - 10, '#cfe8f2', 120);
+    addFloat('Wisp broken', m.x, mY(m) - m.r - 24, '#cfe8f2', 16, 0.9);
+    return;
+  }
   m.hp -= amt; m.flash = 0.1;
   addFloat(fmt(amt), m.x + rnd(-8, 8), mY(m) - m.r * mS(m) - 14, color || '#fff', small ? 16 : 23, 0.8);
   if (m.hp <= 0.001) kill(m);
@@ -80,7 +86,7 @@ export function kill(m){
   G.score += m.pts;
   const reward = m.type === 'boss' ? 'boss' : rollReward();
   const y = mY(m), s = mS(m);
-  const col = { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wraith:'#cfe8f2', mummy:'#d8cfb0', boss:'#6a3a7a' }[m.type];
+  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', boss:'#6a3a7a' }[m.type];
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
   ring(m.x, y, m.r * s * 2.2, 'rgba(255,220,150,.8)');
   if (reward === 'boss' || reward === 'coins'){
@@ -92,11 +98,11 @@ export function kill(m){
   else if (reward === 'pumpkin') dropPumpkins(m, Math.max(1, Math.round(m.drop)));
   else if (reward === 'weapon') dropWeapon(m);
   SFX.kill();
-  if (m.type === 'boss'){ G.bossDead = true; G.shake = 1.2; banner(`${BOSS_NAME} falls!`, 'Finish the stragglers and grab the pumpkins it dropped!', 2.4); SFX.win(); }
+  if (m.type === 'boss'){ G.bossDead = true; G.shake = 1.2; banner(`${BOSS_NAMES[m.kind]} falls!`, 'Finish the stragglers and grab the pumpkins it dropped!', 2.4); SFX.win(); }
 }
 
 export function knockback(m){
-  if (m.dead || m.type === 'boss') return;
+  if (m.dead || m.type === 'boss' || m.noKnockback) return;
   m.kb = Math.max(m.kb, TILE_P()); m.eating = false;
   ring(m.x, mY(m), 34, 'rgba(255,240,200,.9)');
   SFX.knock();

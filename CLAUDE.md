@@ -13,14 +13,17 @@ The owner designs the rules; your job is to implement them faithfully, keep the 
 ## Current state
 - Restructured (2026-09-25) into `src/` modules, behaviour verified by the bot. Levels are data.
 - Release 1 ground rules in: sprouts in twos, kill-reward roll (weapon 10% / pumpkin 30% / coins 60%), bosses never reach the wall, boss levels spawn until the boss dies.
-- World 1 (Pumpkin Patch) exists as 20 data levels in `src/data/worlds/world1.js` with Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8, Mummy 1-9, the Gravekeeper at 1-10 and 1-20. Worlds 2–6 are empty stubs and show as "coming soon".
+- World 1 (Pumpkin Patch): 20 data levels in `src/data/worlds/world1.js` with Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8, Mummy 1-9, the Gravekeeper at 1-10 and 1-20.
+- World 2 (Foggy Hollow): 20 data levels in `world2.js` with fog banks, Lantern 2-2, White 2-3, Landmine 2-5, Bog Ghoul/Wisp 2-1, Wraith 2-4, Swift Bat 2-6, Wisp Rider 2-7, Marsh Imp 2-8, Plague Doctor 2-9, the Poltergeist at 2-10 and 2-20. Monsters may carry modifiers (`MODS`) via variants (`VARIANTS`). Worlds 3–6 are empty stubs.
+- Every level tap opens a preview card (monsters, boss, pumpkins, graves, tools); first appearances show intro cards. Tools appear in the HUD/shop/drops only once introduced.
+- Neither world is tuned yet: the owner asked to build worlds first and tune later. Level 10 of world 1 felt too hard to the owner.
 - All art is drawn in code on a canvas; all sound is Web Audio. No external assets.
 - Save data lives in localStorage key `gourdguard.v1` (keep migrations backward-compatible; the game already refunds removed upgrades).
 - Shared mutable state (`G`, `grid`, `graves`, `walls`, `state`, `gest`) lives in `src/engine/state.js`; other modules read it through imports and write it only through its `setX()` functions.
 - Balance rule from the owner: levels are tuned to be winnable at the **expected upgrade profile** for that level (`profile()` in `tools/balance_bot.py`) and hard below it, so upgrading pumpkins matters. Check both with `--offset 0` and `--offset -1`.
 
 ## Next milestone: Release 1 content
-Build `docs/WORLDS.md` one world at a time, each with its own bot runs. Next: tune world 1 against the target curve, then world 2 (fog, White pumpkin, Wisp/Wraith/Wisp Rider/Plague Doctor, Poltergeist).
+Build `docs/WORLDS.md` one world at a time, each with its own bot runs. Next: world 3 (Crumbling Keep: castle walls, Grey and Black pumpkins, Shield Knight, Gargoyle Hauler, Skeleton Archer, Vampire, Vampire Count), then tuning of worlds 1–2 when the owner revisits.
 - Levels must be data: every level's monsters, pacing, pattern, graves and unlocks come from `src/data/worlds/*.js` (schema in `src/data/levels.js`, target shape in `docs/WORLDS.md` §9).
 - Keep the engine free of level-specific numbers.
 

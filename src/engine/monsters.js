@@ -1,8 +1,9 @@
-import { TYPES } from '../data/monsters.js';
-import { BURN_EVERY } from '../data/pumpkins.js';
+import { resolveMatches } from './board.js';
+import { TYPES, MODS, VARIANTS } from '../data/monsters.js';
+import { BURN_EVERY, RAINBOW } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
-import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, LANE } from './state.js';
+import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, LANE, grid, ROWS, GY } from './state.js';
 import { clamp, rnd } from './util.js';
 import { damageWall } from './walls.js';
 
@@ -27,17 +28,31 @@ export function pickLane(){
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-export function spawnMonster(type, lane, minion, p){
-  const T = TYPES[type];
-  let hp = T.hp + (type === 'imp' || type === 'brute' || type === 'wraith' ? hpExtra() : 0);
+/** Resolve a pool key (type, variant or 'boss') into { type, kind, T, variant }. */
+export function resolveMonster(key){
+  if (key === 'boss'){
+    const kind = G.mode === 'story' && G.def.boss ? G.def.boss : 'gravekeeper';
+    return { type:'boss', kind, T:TYPES[kind], variant:null };
+  }
+  const v = VARIANTS[key];
+  if (v) return { type:v.base, kind:v.base, T:TYPES[v.base], variant:v };
+  return { type:key, kind:key, T:TYPES[key], variant:null };
+}
+export function spawnMonster(key, lane, minion, p){
+  const { type, kind, T, variant } = resolveMonster(key);
+  const mod = variant ? MODS[variant.mod] : null;
+  let hp = T.hp + (type === 'imp' || type === 'brute' || type === 'wisp' ? hpExtra() : 0) + (mod && mod.hp ? mod.hp : 0);
   const form = type === 'boss' ? (G.mode === 'story' ? (G.def.bossForm || 1) : (G.world >= 1 ? 2 : 1)) : 1;
   if (type === 'boss') hp = form === 2 ? T.form2.hp : T.hp + (G.mode === 'endless' ? 4 * G.world : 0);
   if (lane == null) lane = pickLane();
   const x = LANE(lane);
-  const m = { type, lane, x, tx:x, p:p != null ? p : -0.02, hp, maxHp:hp, r:T.r, hw:CS * 0.42, form,
-    sp:T.sp * spMulNow() * rnd(0.92, 1.08), coins:T.coins, eat:T.eat, pts:T.pts, drop:T.drop, ph:Math.random() * 10, age:0, flash:0,
+  const m = { type, kind, lane, x, tx:x, p:p != null ? p : -0.02, hp, maxHp:hp, r:T.r, hw:CS * 0.42, form,
+    variant:variant ? variant.name : null, tint:variant ? variant.tint : null, noKnockback:!!(mod && mod.noKnockback),
+    sp:T.sp * spMulNow() * rnd(0.92, 1.08) * (mod && mod.speed ? mod.speed : 1), coins:T.coins, eat:T.eat * (mod && mod.eat ? mod.eat : 1), pts:T.pts, drop:T.drop, ph:Math.random() * 10, age:0, flash:0,
     slowT:0, frozenT:0, burnLeft:0, burnAmt:0, burnTick:0, kb:0, eating:false, dead:false, minion:!!minion, summon:4, hop:0, drift:rnd(2.5, 4.5), rise:0, lastHit:null,
-    hold:T.hold || 1, teleport:T.teleportEvery || 0, shove:form === 2 && T.form2 ? T.form2.shoveEvery : 0 };
+    hold:T.hold || 1, teleport:T.teleportEvery || 0, shove:form === 2 && T.form2 && T.form2.shoveEvery ? T.form2.shoveEvery : 0,
+    hidden:false, vanish:T.show || 0, carrier:type === 'rider', healT:T.healEvery || 0,
+    driftT:T.driftEvery || 0, swapT:T.swapEvery || 0, recolourT:form === 2 && T.form2 && T.form2.recolourEvery ? T.form2.recolourEvery : 0 };
   G.monsters.push(m);
   return m;
 }
@@ -87,7 +102,7 @@ export function updateMonster(m, dt){
     switch (m.type){
       case 'bat': m.x = m.tx + Math.sin(m.ph * 3) * 6; break;
       case 'imp': { const h = Math.max(0, Math.sin(m.ph * 4.5)); sp *= 0.25 + 2.2 * h; m.hop = h; m.x = m.tx; break; }
-      case 'wraith':
+      case 'wisp':
         m.drift -= dt;
         if (m.drift <= 0 && m.p > 0.05 && m.p < 0.85){
           m.drift = rnd(3.2, 5);
@@ -96,8 +111,32 @@ export function updateMonster(m, dt){
         }
         m.x += (m.tx - m.x) * Math.min(1, dt * 3.5);
         break;
-      case 'boss': {   // Gravekeeper (docs/WORLDS.md §7): holds position, teleports between lanes, raises ghouls; form 2 shoves monsters forward
-        const T = TYPES.boss;
+      case 'wraith': {   // fades out for T.hide seconds every T.show seconds; keeps walking, cannot be seen or hit
+        m.vanish -= dt;
+        if (m.vanish <= 0 && m.p > 0.05 && m.p < 0.9){
+          m.hidden = !m.hidden; m.vanish = m.hidden ? TYPES.wraith.hide : TYPES.wraith.show;
+          for (let i = 0; i < 10; i++) spark(m.x, mY(m), '#cfe8f2', 90);
+        }
+        if (m.hidden && m.p >= 0.9){ m.hidden = false; m.vanish = TYPES.wraith.show; }
+        m.x = m.tx + Math.sin(m.ph * 1.2) * 3;
+        break;
+      }
+      case 'rider': m.x = m.tx + (m.carrier ? Math.sin(m.ph * 4) * 5 : 0); break;
+      case 'doctor': {   // heals every other monster in its column
+        m.healT -= dt;
+        if (m.healT <= 0 && m.p > 0.05){
+          m.healT = TYPES.doctor.healEvery;
+          for (const o of G.monsters) if (o !== m && !o.dead && o.lane === m.lane && o.rise <= 0 && o.hp < o.maxHp){
+            o.hp = Math.min(o.maxHp, o.hp + TYPES.doctor.heal); addFloat('+' + TYPES.doctor.heal, o.x, mY(o) - o.r - 20, '#9fe07a', 14, 0.7);
+          }
+          ring(m.x, mY(m), 40, 'rgba(160,230,120,.8)');
+        }
+        break;
+      }
+      case 'boss': {
+        if (m.kind === 'poltergeist'){ updatePoltergeist(m, dt); if (m.p >= m.hold) sp = 0; break; }
+        // Gravekeeper (docs/WORLDS.md §7): holds position, teleports between lanes, raises ghouls; form 2 shoves monsters forward
+        const T = TYPES.gravekeeper;
         if (m.p >= m.hold) sp = 0;
         if (m.p > 0.05){
           m.summon -= dt;
@@ -131,4 +170,51 @@ export function updateMonster(m, dt){
   const np = Math.min(m.p + sp * dt, aheadLimit(m));
   if (np > m.p) m.p = np;
   if (m.p >= 1){ m.p = 1; m.eating = true; }
+}
+
+/** The Poltergeist (world 2 boss): drifts between neighbouring lanes, swaps two pumpkins every few seconds; form 2 also recolours one. */
+function updatePoltergeist(m, dt){
+  const T = TYPES.poltergeist;
+  m.x += (m.tx - m.x) * Math.min(1, dt * 2.5);
+  if (m.p < 0.05) return;
+  m.driftT -= dt;
+  if (m.driftT <= 0){
+    m.driftT = T.driftEvery;
+    const opts = [m.lane - 1, m.lane + 1].filter(l => l >= 0 && l < COLS);
+    m.lane = opts[Math.floor(Math.random() * opts.length)]; m.tx = LANE(m.lane);
+  }
+  m.swapT -= dt;
+  if (m.swapT <= 0){
+    m.swapT = m.form === 2 ? T.form2.swapEvery : T.swapEvery;
+    const cells = [];
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c] && !grid[r][c].fly) cells.push([r, c]);
+    if (cells.length >= 2){
+      const i = Math.floor(Math.random() * cells.length); let j = Math.floor(Math.random() * (cells.length - 1)); if (j >= i) j++;
+      const [r1, c1] = cells[i], [r2, c2] = cells[j], a = grid[r1][c1], b = grid[r2][c2];
+      grid[r1][c1] = b; grid[r2][c2] = a;
+      a.fly = 0.55; a.ox = LANE(c1) - LANE(c2); a.oy = (r1 - r2) * CS;   // animate from old spot
+      b.fly = 0.55; b.ox = LANE(c2) - LANE(c1); b.oy = (r2 - r1) * CS;
+      ring(LANE(c1), GY + r1 * CS + CS / 2, 30, 'rgba(200,220,255,.9)'); ring(LANE(c2), GY + r2 * CS + CS / 2, 30, 'rgba(200,220,255,.9)');
+      addFloat('Swapped!', m.x, mY(m) - m.r - 30, '#cfe8f2', 16, 0.9);
+      SFX.knock();
+      setTimeout(resolveMatches, 600);
+    }
+  }
+  if (m.recolourT > 0 || (m.form === 2 && m.recolourT === 0)){
+    if (m.form === 2){
+      m.recolourT -= dt;
+      if (m.recolourT <= 0){
+        m.recolourT = T.form2.recolourEvery;
+        const cells = [];
+        for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){ const x = grid[r][c]; if (x && !x.fly && x.c !== RAINBOW) cells.push(x); }
+        if (cells.length && G.loadout.length > 1){
+          const cell = cells[Math.floor(Math.random() * cells.length)];
+          const others = G.loadout.filter(t => t !== cell.c);
+          cell.c = others[Math.floor(Math.random() * others.length)]; cell.pop = 1;
+          addFloat('Repainted!', m.x, mY(m) - m.r - 30, '#cfe8f2', 16, 0.9);
+          resolveMatches();
+        }
+      }
+    }
+  }
 }

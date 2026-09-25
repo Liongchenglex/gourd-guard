@@ -7,10 +7,11 @@ export const PTYPES = [
   { key:'fire',   name:'Fire',   role:'keeps burning monsters as they walk', base:'#d63a2a', light:'#ff7057', dark:'#7f1c13', spark:'#ff6a3a' },
   { key:'grey',   name:'Grey',   role:'pierces through every monster in its column', base:'#8f9096', light:'#d4d5da', dark:'#4d4e55', spark:'#e8e8ee' },
   { key:'purple', name:'Purple', role:'can spawn a bonus pumpkin in your patch when it kills', base:'#8746c2', light:'#bb88ee', dark:'#4c2379', spark:'#d09bff' },
+  { key:'white',  name:'White',  role:'flies back into your patch if it hits nothing', base:'#e9e4d8', light:'#ffffff', dark:'#9a948a', spark:'#ffffff' },
   { key:'rainbow',name:'Rainbow',role:'joins any bunch as any color', rainbow:true, spark:'#fff3a0' },
 ];
 
-export const RAINBOW = 6, NTYPES = 6;
+export const RAINBOW = 7, NTYPES = 7;   // type indices: 0 Green, 1 Yellow, 2 Ice, 3 Fire, 4 Grey, 5 Purple, 6 White, 7 Rainbow
 
 export const POWER     = [1, 1, 1.5, 1.5, 2];
 
@@ -44,6 +45,7 @@ export function lvDesc(t, L){
     parts.push(KB_CHANCE[i] ? `${pct(KB_CHANCE[i])} knockback` : 'no knockback');
     if (t === 4) parts.push('pierces');
     if (t === 5){ parts.push(`${pct(SPAWN_P[i])} spawn on kill`); if (RAINBOW_P[i]) parts.push(`${pct(RAINBOW_P[i])} rainbow`); }
+    if (t === 6) parts.push('returns on a miss');
   }
   return parts.join(', ');
 }

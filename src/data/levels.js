@@ -15,7 +15,8 @@
  * @property {Array<[string, number]>} pool  weighted monster pool [type, weight]
  * @property {string[]} unlockPumpkins  pumpkin keys that unlock when this level is first played
  * @property {string[]} unlockGear      GEAR keys (consumables) introduced on this level
- * @property {string[]} intro           monster keys announced on this level (MINTRO text)
+ * @property {string[]} intro           monster or variant keys announced on this level
+ * @property {Array<[number, number]>} [fog]  fog bands as [top, bottom] fractions of the field (world 2)
  */
 
 /** Runtime shape the engine reads. `n` is the global story index (1-based across all worlds). */
@@ -23,5 +24,5 @@ export function expandLevel(def, n){
   return { n, world:def.theme, total:def.total, interval:def.interval, spMul:def.spMul,
     boss:def.boss ? def.boss : false, bossForm:def.bossForm || 1, pool:def.pool.map(([t, w]) => [t, w]),
     pattern:def.pattern, graves:def.graves, unlockPumpkins:def.unlockPumpkins || [], unlockGear:def.unlockGear || [],
-    intro:def.intro || [], worldNo:def.world, levelNo:def.level, label:`${def.world}-${def.level}` };
+    intro:def.intro || [], fog:def.fog || [], worldNo:def.world, levelNo:def.level, label:`${def.world}-${def.level}` };
 }

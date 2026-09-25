@@ -82,6 +82,7 @@ Hints: after ~6 s idle with no lit bunch, the game outlines one pumpkin with an 
 | Fire | red | Flame | Level 1-8 |
 | Grey | grey | Piercing | World 3 (not yet reachable) |
 | Purple | purple | Spawn | World 5 (not yet reachable) |
+| White | white | Boomerang: a throw that hits nothing flies back into the patch (top-most empty cell of its column, else the nearest column with space) and does not count as a miss. Knockback like Green. | Level 2-3 |
 | Rainbow | multicolor | Wildcard, no level | Rare (see below) |
 
 ### Level tables (levels 1–5, bought in the shop per type)
@@ -134,7 +135,12 @@ Speed is in "field lengths per second" before level multipliers (so 0.055 ≈ 18
 | Imp | 2 | 0.074 (avg) | 0.6 | 5 | 2 | Hops in bursts | 5 |
 | Mossback | 4 | 0.028 | 1.1 | 10 | 3 | Slow tank | 7 |
 | Wraith | 2 | 0.05 | 0.5 | 7 | 2 | Drifts to a neighboring column every 3.2–5 s (only mid-field). Not in world 1 any more; returns in world 2 as the Wisp | – |
+| Wisp | 2 | 0.05 | 0.5 | 7 | 2 | The old lane drifter under its new name: drifts to a neighbouring column every 3.2–5 s (mid-field only) | 2-1 |
+| Wraith | 2 | 0.05 | 0.5 | 7 | 2 | Every 4 s it fades out for 2.5 s: invisible and untargetable, still walking. Reappears when it reaches the wall. Flickers just before fading | 2-4 |
+| Wisp Rider | 2 | 0.11 carried, 0.05 walking | 0.5 | 7 | 2 | Fast while its wisp carries it. The first hit of any kind breaks the wisp (no damage), then it walks | 2-7 |
+| Plague Doctor | 3 | 0.035 | 0.5 | 9 | 2 | Every 2 s heals every other monster in its column by 0.5 | 2-9 |
 | Mummy | 2 | 0.045 | 0.6 | 5 | 2 | Only Fire (hits or burn ticks) kills it. Any other kill makes it collapse on the spot for 4 s, untargetable and not walking, then it stands up at full health. No rewards for a collapse | 1-9 |
+| The Poltergeist (world 2 boss) | 26 (form 1) / 44 (form 2) | 0.03 until it holds | 0 | 45 | 6 (incl. 1 rainbow) | Holds at 25% of the field and drifts to a neighbouring lane every 5 s. Every 8 s (6.5 s in form 2) swaps two random pumpkins on the patch, animated so they can be followed. Form 2 also repaints one pumpkin to another loadout colour every 12 s. Immune to knockback and freeze | 2-10 (form 1), 2-20 (form 2) |
 | The Gravekeeper (world 1 boss) | 20 (form 1) / 36 (form 2) | 0.03 until it holds | 0 (never reaches the wall) | 40 | 6 (incl. 1 rainbow) | Walks to 28% of the field and stops. Every 6 s teleports to a different lane. Raises a ghoul in a random lane at its own depth every 8 s (form 1) or 5.5 s (form 2). Form 2 also shoves one monster 30% of the field forward every 12 s. Immune to knockback and freeze; can be slowed | 1-10 (form 1), 1-20 (form 2) |
 
 - Monsters **queue**: a monster can't walk into the one ahead of it in its column. Only the front monster chews the wall.
@@ -166,9 +172,14 @@ Per level the data gives: starting pattern, graves, wave size, spawn gap, speed 
 
 World 1 starting numbers (2026-09-25, to be tuned by the bot): wave 9 → 20 over levels 1–10 and 22 → 36 over 11–20; spawn gap 3.84 s → 2.7 s; speed ×0.76 → ×0.868 by level 10, then +0.02 per level to ×1.068; pool adds Bat at 1-2, Imp at 1-4, Mossback at 1-6 (weight 3 + 0.2 × level), Mummy at 1-9.
 
+World 2 (Foggy Hollow) starting numbers (2026-09-25, untuned): wave 11 → 21 over levels 1–10 and 22 → 36 over 11–20; spawn gap 3.64 s → 2.5 s; speed ×0.8 → ×0.908 by level 10, then +0.02 per level; pool Bog Ghoul 10 and Wisp 5 from 2-1, Wraith 5 from 2-4, Swift Bat 5 from 2-6, Wisp Rider 4 from 2-7, Marsh Imp 5 from 2-8, Plague Doctor 3 from 2-9; graves 0 (1–5), 1 (6–12), 2 (13–20).
+
+### Fog (world 2 map gimmick)
+Level data lists fog banks as `[top, bottom]` fractions of the field. A monster whose position is inside a bank is not drawn (nor its health), but it keeps walking, chewing and making sounds, and pumpkins hit it as normal. Banks: one thin bank in levels 1–4, one wider bank 5–9, two banks 10–14, two wider banks 15–20. The Lantern tool thins every bank for 10 s and shows what is inside.
+
 ### Unlocks and progression
 - Level 1 of a world opens when the previous world's level 10 has been beaten. Every other level opens when the level before it has been beaten. Beating level 10 therefore opens levels 11–20 and the next world at once.
-- Unlocks sit in levels 1–10 so nothing is missable: Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8.
+- Unlocks sit in levels 1–10 so nothing is missable. World 1: Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8. World 2: Lantern 2-2, White 2-3, Landmine 2-5.
 - Stars are keyed by global night index in the save; `save.unlocked` mirrors the highest open night for older code and the endless-mode loadout.
 
 ### Endless mode
@@ -185,7 +196,9 @@ Difficulty `1 + t/25`; the Gravekeeper every 100 s (form 2 once the world change
   - **Wall repair** (consumable): fully repairs every wall. 40 coins, carry up to 3, player starts with 1.
   - **Firework** (consumable): 3 damage to every monster. 30 coins, carry up to 5, player starts with 1.
   - **Grave buster** (consumable, 🧨 icon): tap the button, then tap a grave to dig it out. 30 coins, carry up to 3, one free at level 1-6. Tapping anywhere else cancels.
-  - **Tools are gated by introduction**: a consumable exists only from the level that introduces it (Wall repair 1-1, Firework 1-5, Grave buster 1-6, from level data `unlockGear`). Before that it is hidden in the HUD, locked in the shop, and never drops from kills. New players start with 0 of everything and receive one unit on the introducing level.
+  - **Lantern** (consumable, 🏮): clears every fog bank for 10 s. 25 coins, carry up to 3, one free at 2-2. Disabled while a lantern is already burning; refuses on levels without fog.
+  - **Landmine** (consumable, 💣): tap the button, then tap any column. The mine waits at that column's wall line and blasts the first non-boss monster to reach it for 6 damage. One mine per column. 35 coins, carry up to 3, one free at 2-5.
+  - **Tools are gated by introduction**: a consumable exists only from the level that introduces it (Wall repair 1-1, Firework 1-5, Grave buster 1-6, Lantern 2-2, Landmine 2-5, from level data `unlockGear`). Before that it is hidden in the HUD, locked in the shop, and never drops from kills. New players start with 0 of everything and receive one unit on the introducing level.
 - Progress, coins, levels, loadout and settings are saved in the browser (localStorage key `gourdguard.v1`).
 
 ---

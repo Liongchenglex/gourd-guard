@@ -1,11 +1,11 @@
 import { mS, mY } from '../monsters.js';
 import { ctx } from './canvas.js';
-import { TYPES } from '../../data/monsters.js';
+import { TYPES, VARIANTS } from '../../data/monsters.js';
 import { CS } from '../state.js';
 
 let cx = ctx;   // drawing context; monsterIcon() swaps it for an offscreen canvas
 import { ell, mix, rrect, tri } from './util.js';
-import { clamp } from '../util.js';
+import { clamp, TAU } from '../util.js';
 
 export function drawMonster(m, t){
   let y = mY(m); const s = mS(m);
@@ -18,7 +18,7 @@ export function drawMonster(m, t){
   cx.fillStyle = 'rgba(0,0,0,.35)';
   if (m.type === 'bat') ell(cx, 0, m.r + 18, m.r * 0.6, 4);
   else ell(cx, 0, m.r * 0.95, m.r * (m.type === 'imp' ? 0.9 - m.hop * 0.25 : 1), m.r * 0.22);
-  const F = c => m.flash > 0 ? '#ffffff' : blue ? mix(c, '#7fd0ff', 0.6) : c;
+  const F = c => m.flash > 0 ? '#ffffff' : blue ? mix(c, '#7fd0ff', 0.6) : m.tint ? mix(c, m.tint, 0.45) : c;
   const k = m.type === 'boss' ? 1 : 0.95;
   cx.scale(k, k);
   if (m.rise > 0){ cx.translate(0, m.r * 0.6); cx.scale(1.15, 0.35); cx.globalAlpha = fade * 0.85; }   // collapsed mummy lies flat
@@ -27,9 +27,12 @@ export function drawMonster(m, t){
     case 'bat': drawBat(m, F); break;
     case 'imp': drawImp(m, F); break;
     case 'brute': drawBrute(m, F); break;
+    case 'wisp': drawWisp(m, F, t); break;
     case 'wraith': drawWraith(m, F, t); break;
+    case 'rider': drawRider(m, F, t); break;
+    case 'doctor': drawDoctor(m, F, t); break;
     case 'mummy': drawMummy(m, F, t); break;
-    case 'boss': drawBoss(m, F, t); break;
+    case 'boss': if (m.kind === 'poltergeist') drawPoltergeist(m, F, t); else drawBoss(m, F, t); break;
   }
   if (m.frozenT > 0){
     cx.globalAlpha = fade * 0.5; cx.fillStyle = '#d8f4ff'; cx.strokeStyle = '#ffffff'; cx.lineWidth = 2;
@@ -127,7 +130,7 @@ export function drawBrute(m, F){
   cx.fillStyle = '#efe4d0'; tri(cx, -9, 3, 5); tri(cx, 9, 3, 5);
 }
 
-export function drawWraith(m, F, t){
+export function drawWisp(m, F, t){
   cx.fillStyle = F('#cfe8f2');
   cx.beginPath(); cx.moveTo(-18, 16); cx.lineTo(-18, -6);
   cx.quadraticCurveTo(-18, -30, 0, -30); cx.quadraticCurveTo(18, -30, 18, -6); cx.lineTo(18, 16);
@@ -189,24 +192,78 @@ export function drawBoss(m, F, t){   // The Gravekeeper: hooded digger with a la
 }
 
 /** Offscreen icon of a monster type (for level previews and intro cards). */
-export function monsterIcon(type, px){
+export function monsterIcon(key, px){
   const c = document.createElement('canvas'); c.width = c.height = px || 96;
-  const T = TYPES[type];
-  const m = { type, r:T.r, ph:1.3, flash:0, hop:0.4, slowT:0, frozenT:0, rise:0, eating:false, age:5, demo:true, x:0, p:0.5, hp:T.hp, maxHp:T.hp, form:1 };
+  const v = VARIANTS[key];
+  const kind = v ? v.base : key, T = TYPES[kind], isBoss = !!T.boss, type = isBoss ? 'boss' : kind;
+  const m = { type, kind, r:T.r, ph:1.3, flash:0, hop:0.4, slowT:0, frozenT:0, rise:0, eating:false, age:5, demo:true, x:0, p:0.5, hp:T.hp, maxHp:T.hp, form:1, carrier:true, tint:v ? v.tint : null, vanish:5 };
   const prev = cx; cx = c.getContext('2d');
-  const box = type === 'boss' ? 150 : T.r * 3.2;
-  cx.scale(c.width / box, c.width / box); cx.translate(box / 2, box / 2 + (type === 'boss' ? 6 : T.r * 0.15));
+  const box = isBoss ? 150 : T.r * 3.2;
+  cx.scale(c.width / box, c.width / box); cx.translate(box / 2, box / 2 + (isBoss ? 6 : T.r * 0.15));
   cx.fillStyle = 'rgba(0,0,0,.3)'; ell(cx, 0, T.r * 0.95, T.r, T.r * 0.22);
-  const F = col => col;
+  const F = col => m.tint ? mix(col, m.tint, 0.45) : col;
   switch (type){
     case 'ghoul': drawGhoul(m, F); break;
     case 'bat': drawBat(m, F); break;
     case 'imp': drawImp(m, F); break;
     case 'brute': drawBrute(m, F); break;
+    case 'wisp': drawWisp(m, F, 1); break;
     case 'wraith': drawWraith(m, F, 1); break;
+    case 'rider': drawRider(m, F, 1); break;
+    case 'doctor': drawDoctor(m, F, 1); break;
     case 'mummy': drawMummy(m, F, 1); break;
-    case 'boss': drawBoss(m, F, 1); break;
+    case 'boss': if (kind === 'poltergeist') drawPoltergeist(m, F, 1); else drawBoss(m, F, 1); break;
   }
   cx = prev;
   return c;
+}
+
+export function drawWraith(m, F, t){   // a hooded shade; flickers as it is about to fade
+  const near = m.vanish < 0.6 ? 0.5 + 0.5 * Math.sin(t * 30) : 1;
+  cx.globalAlpha *= near * 0.9;
+  cx.fillStyle = F('#b8c8d8');
+  cx.beginPath(); cx.moveTo(-17, 18); cx.lineTo(-17, -8); cx.quadraticCurveTo(-17, -34, 0, -34); cx.quadraticCurveTo(17, -34, 17, -8); cx.lineTo(17, 18);
+  for (let i = 0; i < 4; i++){ const x1 = 17 - (i + 0.5) * 8.5, x2 = 17 - (i + 1) * 8.5; cx.quadraticCurveTo(x1, 26 + Math.sin(t * 5 + i) * 4, x2, 18); }
+  cx.closePath(); cx.fill();
+  cx.fillStyle = '#0d1420'; cx.beginPath(); cx.moveTo(-11, -12); cx.quadraticCurveTo(0, -28, 11, -12); cx.quadraticCurveTo(0, -6, -11, -12); cx.fill();
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#9fe8ff'; ell(cx, -4, -15, 2.4, 3); ell(cx, 4, -15, 2.4, 3);
+}
+export function drawRider(m, F, t){   // a small imp-like rider; while carried, a wisp glows under it and it bobs
+  if (m.carrier){
+    const glow = cx.createRadialGradient(0, 4, 2, 0, 4, 26); glow.addColorStop(0, 'rgba(207,232,242,.85)'); glow.addColorStop(1, 'rgba(207,232,242,0)');
+    cx.fillStyle = glow; cx.fillRect(-30, -24, 60, 56);
+    cx.fillStyle = F('#cfe8f2'); ell(cx, 0, 6, 14, 9); ell(cx, -10, 2, 6, 7); ell(cx, 10, 2, 6, 7);
+    cx.translate(0, -12 + Math.sin(t * 8) * 2);
+  }
+  cx.fillStyle = F('#c9584a'); ell(cx, 0, -4, 11, 12);
+  cx.fillStyle = F('#7a2a20'); tri(cx, -7, -14, 5); tri(cx, 7, -14, 5);
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#ffe27a'; ell(cx, -4, -6, 2.5, 3); ell(cx, 4, -6, 2.5, 3);
+  cx.strokeStyle = F('#c9584a'); cx.lineWidth = 4; cx.lineCap = 'round';
+  cx.beginPath(); cx.moveTo(-9, 2); cx.lineTo(-16, 10); cx.moveTo(9, 2); cx.lineTo(16, 10); cx.stroke();
+}
+export function drawDoctor(m, F, t){   // plague doctor: wide hat, beaked mask, green satchel
+  cx.fillStyle = F('#2a2a22');
+  cx.beginPath(); cx.moveTo(-16, 22); cx.lineTo(-14, -8); cx.quadraticCurveTo(0, -18, 14, -8); cx.lineTo(16, 22); cx.closePath(); cx.fill();
+  cx.fillStyle = F('#6a8a3a'); rrect(cx, 6, 2, 12, 10, 3); cx.fill();
+  cx.fillStyle = F('#3b3b30'); ell(cx, 0, -14, 12, 11);
+  cx.fillStyle = F('#d8cfa8'); cx.beginPath(); cx.moveTo(-4, -12); cx.lineTo(0, 2); cx.lineTo(6, -12); cx.closePath(); cx.fill();   // beak
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#c9f0a0'; ell(cx, -5, -16, 2.6, 2.6); ell(cx, 5, -16, 2.6, 2.6);
+  cx.fillStyle = F('#1c1c16'); ell(cx, 0, -25, 20, 4); rrect(cx, -10, -40, 20, 16, 3); cx.fill();   // hat
+  const pulse = (t * 0.5) % 1; cx.strokeStyle = `rgba(160,230,120,${1 - pulse})`; cx.lineWidth = 2; cx.beginPath(); cx.arc(0, 0, 22 + pulse * 18, 0, TAU); cx.stroke();
+}
+export function drawPoltergeist(m, F, t){   // translucent ghost with trailing tatters and two grabbing hands
+  const aura = cx.createRadialGradient(0, -10, 6, 0, -10, 80); aura.addColorStop(0, 'rgba(200,220,255,.35)'); aura.addColorStop(1, 'rgba(200,220,255,0)');
+  cx.fillStyle = aura; cx.fillRect(-80, -90, 160, 170);
+  cx.globalAlpha *= 0.85;
+  cx.fillStyle = F('#dfe9f5');
+  cx.beginPath(); cx.moveTo(-32, 30); cx.lineTo(-30, -14); cx.quadraticCurveTo(-30, -56, 0, -56); cx.quadraticCurveTo(30, -56, 30, -14); cx.lineTo(32, 30);
+  for (let i = 0; i < 6; i++){ const x1 = 32 - (i + 0.5) * (64 / 6), x2 = 32 - (i + 1) * (64 / 6); cx.quadraticCurveTo(x1, 46 + Math.sin(t * 4 + i) * 6, x2, 30); }
+  cx.closePath(); cx.fill();
+  cx.fillStyle = '#1c2a3a'; ell(cx, -11, -26, 6, 9); ell(cx, 11, -26, 6, 9);
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#7ff9ff'; ell(cx, -11, -27, 3, 4.5); ell(cx, 11, -27, 3, 4.5);
+  cx.fillStyle = '#1c2a3a'; cx.beginPath(); cx.ellipse(0, -6, 9, 12 + Math.sin(t * 3) * 3, 0, 0, TAU); cx.fill();   // wailing mouth
+  cx.strokeStyle = F('#dfe9f5'); cx.lineWidth = 7; cx.lineCap = 'round';
+  const sw = Math.sin(t * 2.2) * 10;
+  cx.beginPath(); cx.moveTo(-28, -4); cx.lineTo(-52, 6 + sw); cx.stroke(); cx.beginPath(); cx.moveTo(28, -4); cx.lineTo(52, 6 - sw); cx.stroke();
+  cx.fillStyle = F('#dfe9f5'); ell(cx, -54, 8 + sw, 7, 6); ell(cx, 54, 8 - sw, 7, 6);
 }

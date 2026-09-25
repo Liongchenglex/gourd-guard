@@ -1,4 +1,4 @@
-import { BOSS_NAME } from '../data/monsters.js';
+import { BOSS_NAME, BOSS_NAMES, BOSS_INTRO } from '../data/monsters.js';
 import { WORLDS, levelFor } from '../data/worlds/index.js';
 import { SFX } from './audio.js';
 import { spawnMonster } from './monsters.js';
@@ -26,7 +26,7 @@ export function storySpawn(dt){
   }
   if (d.boss && !G.bossSpawned && G.spawned >= Math.floor(d.total * 0.4)){
     spawnMonster('boss'); G.bossSpawned = true;
-    banner(BOSS_NAME, d.bossForm === 2 ? 'It teleports, raises ghouls and drags monsters forward. Monsters keep coming until it falls.' : 'It teleports between lanes and raises ghouls. Monsters keep coming until it falls.', 3); SFX.boss();
+    banner(BOSS_NAMES[d.boss] || 'Boss', (BOSS_INTRO[d.boss] || {})[d.bossForm] || 'Monsters keep coming until it falls.', 3); SFX.boss();
   }
 }
 

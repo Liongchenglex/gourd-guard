@@ -2,10 +2,10 @@ import { SPAWN_STEPS } from '../data/patterns.js';
 import { LV_COST, NTYPES, PTYPES, lvDesc, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, firstNightOf, typesForNight, gearUnlockNightOf } from '../data/worlds/index.js';
-import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAME, GRAVES_INTRO } from '../data/monsters.js';
+import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, VARIANTS } from '../data/monsters.js';
 import { monsterIcon } from '../engine/render/monsters.js';
 import { SFX, ensureAudio } from '../engine/audio.js';
-import { beginEndless, beginNight, makeDemo, startGame, useFirework, useRepair, useBuster } from '../engine/game.js';
+import { beginEndless, beginNight, makeDemo, startGame, useFirework, useRepair, useBuster, useLantern, useMine } from '../engine/game.js';
 import { bgWorld, buildBg, pumpkinIcon } from '../engine/render/sprites.js';
 import { G, setBannerTimer, setGest, setStateRaw, state } from '../engine/state.js';
 import { $, clamp } from '../engine/util.js';
@@ -103,7 +103,7 @@ export function openPreview(n){
   for (const [t] of def.pool){
     const d = document.createElement('div'); d.className = 'pv-ic';
     d.appendChild(monsterIcon(t, 108));
-    const sm = document.createElement('small'); sm.textContent = MNAME[t] || t; d.appendChild(sm);
+    const sm = document.createElement('small'); sm.textContent = VARIANTS[t] ? VARIANTS[t].name : (MNAME[t] || t); d.appendChild(sm);
     if (def.intro.includes(t)){ const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'NEW'; d.appendChild(tag); }
     mons.appendChild(d);
   }
@@ -111,8 +111,8 @@ export function openPreview(n){
   const bb = $('#pvBoss'); bb.innerHTML = '';
   if (def.boss){
     const d = document.createElement('div'); d.className = 'pv-ic big';
-    d.appendChild(monsterIcon('boss', 160));
-    const sm = document.createElement('small'); sm.textContent = `${BOSS_NAME}${def.bossForm === 2 ? ', full form' : ''}`; d.appendChild(sm);
+    d.appendChild(monsterIcon(def.boss, 160));
+    const sm = document.createElement('small'); sm.textContent = `${BOSS_NAMES[def.boss]}${def.bossForm === 2 ? ', full form' : ''}`; d.appendChild(sm);
     bb.appendChild(d);
   }
   const pk = $('#pvPumpkins'); pk.innerHTML = '';
@@ -125,6 +125,7 @@ export function openPreview(n){
   }
   const info = [];
   info.push(def.boss ? 'Monsters keep coming until the boss falls.' : `${def.total} monsters.`);
+  if (def.fog.length) info.push(`${def.fog.length} fog bank${def.fog.length > 1 ? 's' : ''}.`);
   if (def.graves) info.push(`${def.graves} grave${def.graves > 1 ? 's' : ''} in the patch${def.graves > prevGraves ? ' (more than before)' : ''}.`);
   for (const key of def.unlockGear){ const g = GEAR.find(x => x.key === key); if (g) info.push(`New tool: ${g.name}.`); }
   $('#pvInfo').textContent = info.join(' ');
@@ -144,8 +145,9 @@ function startPreviewedNight(){
     if (g) cards.push({ key:'g:' + key, icon:g.icon, title:`New tool: ${g.name}`, text:`${g.desc} You get one to start with. More drop from monsters and sell in the shop.` });
   }
   if (def.graves && !prevGraves) cards.push({ key:'graves', icon:'🪦', title:'Graves', text:GRAVES_INTRO });
-  for (const t of def.intro) cards.push({ key:'m:' + t, icon:monsterIcon(t, 160), title:`New monster: ${MNAME[t] || t}`, text:MINTRO[t] || '' });
-  if (def.boss) cards.push({ key:`b:${def.boss}:${def.bossForm}`, icon:monsterIcon('boss', 200), title:def.bossForm === 2 ? `${BOSS_NAME}, full form` : `Boss: ${BOSS_NAME}`, text:BOSS_INTRO[def.bossForm] });
+  if (def.fog.length && !(n > 1 && levelFor(n - 1).fog.length)) cards.push({ key:'fog', icon:'🌫️', title:'Fog', text:FOG_INTRO });
+  for (const t of def.intro){ const v = VARIANTS[t]; cards.push({ key:'m:' + t, icon:monsterIcon(t, 160), title:v ? `Returning: ${v.name}` : `New monster: ${MNAME[t] || t}`, text:v ? v.intro : (MINTRO[t] || '') }); }
+  if (def.boss) cards.push({ key:`b:${def.boss}:${def.bossForm}`, icon:monsterIcon(def.boss, 200), title:def.bossForm === 2 ? `${BOSS_NAMES[def.boss]}, full form` : `Boss: ${BOSS_NAMES[def.boss]}`, text:BOSS_INTRO[def.boss][def.bossForm] });
   introQueue = cards.filter(c => !save.seenIntro[c.key]);
   introNext = () => beginNight(n);
   showNextIntro();
@@ -311,6 +313,8 @@ export function wireButtons(){
 
   $('#fwBtn').onclick = useFirework;
   $('#gbBtn').onclick = useBuster;
+  $('#lnBtn').onclick = useLantern;
+  $('#lmBtn').onclick = useMine;
   $('#bPvBack').onclick = openLevels;
   $('#bPvGo').onclick = () => { ensureAudio(); startPreviewedNight(); };
   $('#bIntroOk').onclick = () => { ensureAudio(); showNextIntro(); };

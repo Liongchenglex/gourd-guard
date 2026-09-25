@@ -16,7 +16,8 @@ The owner designs the rules; your job is to implement them faithfully, keep the 
 - World 1 (Pumpkin Patch): 20 data levels in `src/data/worlds/world1.js` with Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8, Mummy 1-9, the Gravekeeper at 1-10 and 1-20.
 - World 2 (Foggy Hollow): 20 data levels in `world2.js` with fog banks, Lantern 2-2, White 2-3, Landmine 2-5, Bog Ghoul/Wisp 2-1, Wraith 2-4, Swift Bat 2-6, Wisp Rider 2-7, Marsh Imp 2-8, Plague Doctor 2-9, the Poltergeist at 2-10 and 2-20. Monsters may carry modifiers (`MODS`) via variants (`VARIANTS`).
 - World 3 (Crumbling Keep): 20 data levels in `world3.js` with castle walls (`castles`), Bomb 3-4, Grey 3-6 (loadout choice starts here), Black 3-9, Crypt Ghoul/Keep Imp 3-1, Shield Knight 3-2, Gargoyle Hauler 3-3, Skeleton Archer 3-5, Siege Brute 3-7, Vampire 3-8, the Vampire Count at 3-10 and 3-20.
-- World 4 (Drowned Marsh): 20 data levels in `world4.js` with puddles and sea-row levels, Pink 4-4, Drowned Ghoul/Tide Imp 4-1, Puddle Crawler 4-2, Drunk Sailor 4-3, Bog Turtle 4-5, Splitter Slime 4-6, Puddle Diver 4-7, Sodden Mummy 4-9, the Twin Tides at 4-10 and 4-20. Worlds 5–6 are empty stubs.
+- World 4 (Drowned Marsh): 20 data levels in `world4.js` with puddles and sea-row levels, Pink 4-4, Drowned Ghoul/Tide Imp 4-1, Puddle Crawler 4-2, Drunk Sailor 4-3, Bog Turtle 4-5, Splitter Slime 4-6, Puddle Diver 4-7, Sodden Mummy 4-9, the Twin Tides at 4-10 and 4-20.
+- World 5 (Witchwood): 20 data levels in `world5.js` with wind gusts (`gust`), Scarecrow 5-2, Purple 5-3, Gold 5-10, Wood Ghoul/Broom Imp 5-1, Owl-bat 5-2, Wisp 5-4, Chameleon 5-5, Reverse Chameleon 5-7, Mirror Sprite 5-8, the Hexwitch at 5-10 and 5-20. World 6 is an empty stub.
 - **Testing toggle to remove before release**: the level select has a "Testing: unlock all levels" link (`save.testUnlock`, checked in `isOpen()`), added 2026-09-25 so the owner can play any level.
 - Known cosmetic issue: six tool buttons crowd the top bar on phones; fix in the UI/art pass (a tool tray), keeping 44 px targets.
 - Every level tap opens a preview card (monsters, boss, pumpkins, graves, tools); first appearances show intro cards. Tools appear in the HUD/shop/drops only once introduced.
@@ -27,7 +28,7 @@ The owner designs the rules; your job is to implement them faithfully, keep the 
 - Balance rule from the owner: levels are tuned to be winnable at the **expected upgrade profile** for that level (`profile()` in `tools/balance_bot.py`) and hard below it, so upgrading pumpkins matters. Check both with `--offset 0` and `--offset -1`.
 
 ## Next milestone: Release 1 content
-Build `docs/WORLDS.md` one world at a time, each with its own bot runs. Next: world 5 (Witchwood: wind gusts, Purple and Gold pumpkins, Scarecrow tool, Chameleon, Reverse Chameleon, Mirror Sprite, Hexwitch), then world 6, then tuning of worlds 1–4 when the owner revisits.
+Build `docs/WORLDS.md` one world at a time, each with its own bot runs. Next: world 6 (Hallow's End: graves only, every monster with modifiers, the Hollow King in 5 stages), then tuning of worlds 1–5 when the owner revisits.
 - Levels must be data: every level's monsters, pacing, pattern, graves and unlocks come from `src/data/worlds/*.js` (schema in `src/data/levels.js`, target shape in `docs/WORLDS.md` §9).
 - Keep the engine free of level-specific numbers.
 

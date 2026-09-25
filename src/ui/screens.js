@@ -2,10 +2,10 @@ import { SPAWN_STEPS } from '../data/patterns.js';
 import { LV_COST, NTYPES, PTYPES, lvDesc, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, firstNightOf, typesForNight, gearUnlockNightOf } from '../data/worlds/index.js';
-import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, VARIANTS } from '../data/monsters.js';
+import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS } from '../data/monsters.js';
 import { monsterIcon } from '../engine/render/monsters.js';
 import { SFX, ensureAudio } from '../engine/audio.js';
-import { beginEndless, beginNight, makeDemo, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb } from '../engine/game.js';
+import { beginEndless, beginNight, makeDemo, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
 import { bgWorld, buildBg, pumpkinIcon } from '../engine/render/sprites.js';
 import { G, setBannerTimer, setGest, setStateRaw, state } from '../engine/state.js';
 import { $, clamp } from '../engine/util.js';
@@ -129,6 +129,7 @@ export function openPreview(n){
   if (def.castles) info.push(`${def.castles.n} castle wall${def.castles.n > 1 ? 's' : ''}.`);
   if (def.puddles) info.push(`${def.puddles} puddle${def.puddles > 1 ? 's' : ''}.`);
   if (def.sea) info.push('The sea reaches the top of the field.');
+  if (def.gust) info.push(`Wind every ${def.gust.every} s.`);
   if (def.graves) info.push(`${def.graves} grave${def.graves > 1 ? 's' : ''} in the patch${def.graves > prevGraves ? ' (more than before)' : ''}.`);
   for (const key of def.unlockGear){ const g = GEAR.find(x => x.key === key); if (g) info.push(`New tool: ${g.name}.`); }
   $('#pvInfo').textContent = info.join(' ');
@@ -152,6 +153,7 @@ function startPreviewedNight(){
   if (def.castles && !(n > 1 && levelFor(n - 1).castles)) cards.push({ key:'castles', icon:'🏰', title:'Castle walls', text:CASTLE_INTRO });
   if (def.puddles && !(n > 1 && levelFor(n - 1).puddles)) cards.push({ key:'puddles', icon:'💧', title:'Puddles', text:PUDDLE_INTRO });
   if (def.sea && !(n > 1 && levelFor(n - 1).sea)) cards.push({ key:'sea', icon:'🌊', title:'The sea row', text:SEA_INTRO });
+  if (def.gust && !(n > 1 && levelFor(n - 1).gust)) cards.push({ key:'wind', icon:'🍂', title:'Wind', text:WIND_INTRO });
   for (const t of def.intro) if (!VARIANTS[t]) cards.push({ key:'m:' + t, icon:monsterIcon(t, 160), title:`New monster: ${MNAME[t] || t}`, text:MINTRO[t] || '' });   // returning variants get no card (owner)
   if (def.boss) cards.push({ key:`b:${def.boss}:${def.bossForm}`, icon:monsterIcon(def.boss, 200), title:def.bossForm === 2 ? `${BOSS_NAMES[def.boss]}, full form` : `Boss: ${BOSS_NAMES[def.boss]}`, text:BOSS_INTRO[def.boss][def.bossForm] });
   introQueue = cards.filter(c => !save.seenIntro[c.key]);
@@ -324,6 +326,7 @@ export function wireButtons(){
   $('#lnBtn').onclick = useLantern;
   $('#lmBtn').onclick = useMine;
   $('#bmBtn').onclick = useBomb;
+  $('#scBtn').onclick = useScarecrow;
   $('#bPvBack').onclick = openLevels;
   $('#bPvGo').onclick = () => { ensureAudio(); startPreviewedNight(); };
   $('#bIntroOk').onclick = () => { ensureAudio(); showNextIntro(); };

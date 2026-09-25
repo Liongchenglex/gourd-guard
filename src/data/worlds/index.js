@@ -15,6 +15,7 @@ export const WORLDS = [
   { name:'Foggy Hollow', sky:['#0b1420','#1c3340','#4f6f66'], ground:['#18262a','#0f1719'], moon:'#dff5ff', grass:'#213732' },
   { name:'Crumbling Keep',    sky:['#12060c','#3a0f1c','#86291d'], ground:['#2a2226','#171214'], moon:'#ffb893', grass:'#3a2a2a' },
   { name:'Drowned Marsh',     sky:['#061a22','#0f3a44','#2a7a78'], ground:['#14262a','#0b1618'], moon:'#d6fff6', grass:'#1f3d3a' },
+  { name:'Witchwood',         sky:['#1a0a14','#3a1a2e','#a0522a'], ground:['#2a1e18','#171009'], moon:'#ffd9a0', grass:'#4a3020' },
 ];
 
 /** Display names for the six worlds (docs/WORLDS.md §3). Worlds without levels yet show as "coming soon". */

@@ -1,5 +1,5 @@
 import { TYPES, BOSS_NAMES } from '../data/monsters.js';
-import { BURN_AMT, BURN_EVERY, BURN_N, FREEZE_P, KB_CHANCE, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P } from '../data/pumpkins.js';
+import { BURN_AMT, BURN_EVERY, BURN_N, FREEZE_P, KB_CHANCE, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, GOLD } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches } from './board.js';
 import { TILE_P, mS, mY, spMulNow, spawnMonster } from './monsters.js';
@@ -33,6 +33,14 @@ export function damage(m, amt, color, small){
   if (m.dead) return;
   if (m.shield){   // shield knight marching: the hit bounces off
     m.flash = 0.1; addFloat('Blocked', m.x, mY(m) - m.r * mS(m) - 14, '#d8d8e0', 15, 0.6); SFX.knock();
+    return;
+  }
+  if (m.colourLock != null && m.lastHit >= 0 && m.lastHit !== m.colourLock){   // chameleon: wrong colour
+    m.flash = 0.1; addFloat('Wrong colour', m.x, mY(m) - m.r * mS(m) - 14, PTYPES[m.colourLock].light, 15, 0.7); SFX.knock();
+    return;
+  }
+  if (m.colourImmune != null && m.lastHit === m.colourImmune){   // reverse chameleon: its own colour
+    m.flash = 0.1; addFloat('Immune', m.x, mY(m) - m.r * mS(m) - 14, PTYPES[m.colourImmune].light, 15, 0.7); SFX.knock();
     return;
   }
   m.calmT = 0;   // vampires and the Count stop regenerating for a while after any hit
@@ -108,13 +116,14 @@ export function kill(m){
   m.dead = true;
   G.kills++; if (!m.minion) G.resolved++;
   G.score += m.pts;
-  const reward = m.type === 'boss' ? 'boss' : rollReward();
+  const reward = m.type === 'boss' ? 'boss' : m.lastHit === GOLD ? 'gold' : rollReward();
   const y = mY(m), s = mS(m);
-  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', boss:'#6a3a7a' }[m.type] || '#aaa';
+  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', chameleon:'#6ab04a', rchameleon:'#3a3a4a', mirror:'#c8d8f0', boss:'#6a3a7a' }[m.type] || '#aaa';
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
   ring(m.x, y, m.r * s * 2.2, 'rgba(255,220,150,.8)');
-  if (reward === 'boss' || reward === 'coins'){
-    G.coins += m.coins;
+  if (reward === 'boss' || reward === 'coins' || reward === 'gold'){
+    G.coins += m.coins * (reward === 'gold' ? 2 : 1);
+    if (reward === 'gold') addFloat(`+${m.coins * 2} gold!`, m.x, y - m.r - 40, '#ffe680', 18, 1);
     const nc = Math.min(m.coins, m.type === 'boss' ? 12 : 5);
     for (let i = 0; i < nc; i++) G.coinFx.push({ sx:m.x + rnd(-12, 12), sy:y + rnd(-10, 10), t:-i * 0.05, dur:0.65 + Math.random() * 0.2 });
   }
@@ -150,6 +159,11 @@ export function hitMonster(pr, m){
     ring(m.x, y, 42, 'rgba(180,240,255,.9)');
   }
   if (pr.type === 3){ m.burnLeft = Math.max(m.burnLeft, BURN_N[i]); m.burnAmt = Math.max(m.burnAmt, BURN_AMT[i]); m.burnTick = BURN_EVERY; }
+  if (m.type === 'mirror' && m.reflecting){   // bounces the pumpkin back down its lane into the wall
+    G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:TYPES.mirror.boltSp, dmg:POWER[i], dead:false, mirror:true, vis:pr.vis });
+    addFloat('Reflected!', m.x, y - m.r - 24, '#e8f4ff', 16, 0.9); ring(m.x, y, 34, 'rgba(232,244,255,.9)'); SFX.knock();
+    return;
+  }
   m.lastHit = pr.type;
   damage(m, POWER[i], PTYPES[pr.type].spark);
   if (pr.type === 8){   // Pink: lightning jumps to the nearest monster in a neighbouring lane for half power

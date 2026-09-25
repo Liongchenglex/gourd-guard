@@ -66,7 +66,13 @@ export function spawnMonster(key, lane, minion, p){
     driftT:T.driftEvery || 0, swapT:T.swapEvery || 0, recolourT:form === 2 && T.form2 && T.form2.recolourEvery ? T.form2.recolourEvery : 0,
     phase:'move', phaseT:T.move || 0, shield:type === 'knight', gargs:null, freed:false, shootT:T.shootEvery || 0, calmT:0, regenT:0,
     laneT:T.laneEvery || 0, batsT:T.batsEvery || 0, wallT:T.wallEvery || 0, healT:T.healEvery || 0, healing:false, healHits:0, stunT:0,
-    puddle, staggerT:T.stagger ? rnd(T.stagger[0], T.stagger[1]) : 0, lurch:1, upT:T.up || 0, boltT:T.boltEvery || 0, twin:null, trueDeath:false };
+    puddle, staggerT:T.stagger ? rnd(T.stagger[0], T.stagger[1]) : 0, lurch:1, upT:T.up || 0, boltT:T.boltEvery || 0, twin:null, trueDeath:false,
+    colourLock:null, colourImmune:null, reflecting:false, mirrorT:T.open || 0, conjureT:T.conjureEvery || 0, hexT:form === 2 && T.form2 && T.form2.hexEvery ? T.form2.hexEvery : 0 };
+  if (type === 'chameleon' || type === 'rchameleon'){   // takes one of the player's colours
+    const pool = (G.loadout || [0, 1]).filter(t => t !== RAINBOW);
+    const col = pool[Math.floor(Math.random() * pool.length)];
+    if (type === 'chameleon') m.colourLock = col; else m.colourImmune = col;
+  }
   if (type === 'diver'){
     if (puddle){ m.hidden = true; m.upT = T.down; }        // starts submerged, surfaces after `down`
     else { m.sp = 0.04 * spMulNow(); m.walker = true; }    // no puddles on this level: it just walks in
@@ -195,6 +201,12 @@ export function updateMonster(m, dt){
         }
         break;
       }
+      case 'mirror': {   // mirror up / mirror down cycle
+        m.mirrorT -= dt;
+        if (m.mirrorT <= 0){ m.reflecting = !m.reflecting; m.mirrorT = m.reflecting ? TYPES.mirror.reflect : TYPES.mirror.open; }
+        m.x = m.tx + Math.sin(m.ph * 2) * 3;
+        break;
+      }
       case 'vampire': {   // heals when left alone
         m.calmT += dt;
         if (m.calmT >= TYPES.vampire.calm && m.hp < m.maxHp){
@@ -218,6 +230,7 @@ export function updateMonster(m, dt){
       case 'boss': {
         if (m.kind === 'poltergeist'){ updatePoltergeist(m, dt); if (m.p >= m.hold) sp = 0; break; }
         if (m.kind === 'vampirecount'){ if (updateVampireCount(m, dt) || m.p >= m.hold) sp = 0; break; }
+        if (m.kind === 'hexwitch'){ updateHexwitch(m, dt); if (m.p >= m.hold) sp = 0; break; }
         if (m.kind === 'twintides'){   // sits on the sea row and hurls water bolts at random walls
           if (m.p >= m.hold) sp = 0;
           if (m.p > 0.05){
@@ -264,7 +277,8 @@ export function updateMonster(m, dt){
       default: m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
     }
   }
-  const np = Math.min(m.p + sp * dt, aheadLimit(m));
+  let np = Math.min(m.p + sp * dt, aheadLimit(m));
+  if (m.chewing && !m.chewing.dead) np = Math.min(np, m.chewing.p);   // held at a scarecrow
   if (np > m.p) m.p = np;
   if (m.p >= 1){ m.p = 1; m.eating = true; }
 }
@@ -361,4 +375,37 @@ function updateVampireCount(m, dt){
     return true;
   }
   return false;
+}
+
+/** Turn a monster into a chameleon of a random loadout colour (Hexwitch form 2). */
+export function hexMonster(o){
+  const pool = (G.loadout || [0, 1]).filter(t => t !== RAINBOW);
+  o.colourLock = pool[Math.floor(Math.random() * pool.length)]; o.colourImmune = null;
+  ring(o.x, mY(o), 36, 'rgba(210,120,255,.9)'); addFloat('Hexed!', o.x, mY(o) - o.r - 24, '#d09bff', 16, 0.9);
+}
+/** The Hexwitch (world 5 boss): drifts between neighbouring lanes, conjures chameleons; form 2 hexes monsters on the field. */
+function updateHexwitch(m, dt){
+  const T = TYPES.hexwitch;
+  m.x += (m.tx - m.x) * Math.min(1, dt * 2.5);
+  if (m.p < 0.05) return;
+  m.driftT -= dt;
+  if (m.driftT <= 0){
+    m.driftT = T.driftEvery;
+    const opts = [m.lane - 1, m.lane + 1].filter(l => l >= 0 && l < COLS);
+    m.lane = opts[Math.floor(Math.random() * opts.length)]; m.tx = LANE(m.lane);
+  }
+  m.conjureT -= dt;
+  if (m.conjureT <= 0){
+    m.conjureT = m.form === 2 ? T.form2.conjureEvery : T.conjureEvery;
+    const c = spawnMonster('chameleon', pickLane(), true, Math.max(0, m.p - 0.02));
+    for (let i = 0; i < 14; i++) spark(c.x, mY(c), '#d09bff', 150); SFX.boss();
+  }
+  if (m.form === 2){
+    m.hexT -= dt;
+    if (m.hexT <= 0){
+      m.hexT = T.form2.hexEvery;
+      const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.colourLock == null && o.colourImmune == null && o.rise <= 0 && o.p > 0);
+      if (pick.length) hexMonster(pick[Math.floor(Math.random() * pick.length)]);
+    }
+  }
 }

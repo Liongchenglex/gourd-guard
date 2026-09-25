@@ -1,3 +1,4 @@
+import { PTYPES } from '../../data/pumpkins.js';
 import { mS, mY } from '../monsters.js';
 import { ctx } from './canvas.js';
 import { TYPES, VARIANTS } from '../../data/monsters.js';
@@ -42,8 +43,12 @@ export function drawMonster(m, t){
     case 'diver': drawDiver(m, F, t); break;
     case 'slime': drawSlime(m, F, t); break;
     case 'blob': drawBlob(m, F, t); break;
-    case 'boss': if (m.kind === 'poltergeist') drawPoltergeist(m, F, t); else if (m.kind === 'vampirecount') drawVampireCount(m, F, t); else if (m.kind === 'twintides') drawTwinTide(m, F, t); else drawBoss(m, F, t); break;
+    case 'chameleon': drawChameleon(m, F, t, false); break;
+    case 'rchameleon': drawChameleon(m, F, t, true); break;
+    case 'mirror': drawMirror(m, F, t); break;
+    case 'boss': if (m.kind === 'poltergeist') drawPoltergeist(m, F, t); else if (m.kind === 'vampirecount') drawVampireCount(m, F, t); else if (m.kind === 'twintides') drawTwinTide(m, F, t); else if (m.kind === 'hexwitch') drawHexwitch(m, F, t); else drawBoss(m, F, t); break;
   }
+  if (m.colourLock != null && m.type !== 'chameleon'){ cx.strokeStyle = PTYPES[m.colourLock].light; cx.lineWidth = 3; cx.beginPath(); cx.arc(0, -4, m.r * 1.15, 0, TAU); cx.stroke(); }   // hexed: colour ring
   if (m.frozenT > 0){
     cx.globalAlpha = fade * 0.5; cx.fillStyle = '#d8f4ff'; cx.strokeStyle = '#ffffff'; cx.lineWidth = 2;
     rrect(cx, -m.r * 1.15, -m.r * 1.45, m.r * 2.3, m.r * 2.6, 10); cx.fill(); cx.stroke();
@@ -207,7 +212,7 @@ export function monsterIcon(key, px){
   const c = document.createElement('canvas'); c.width = c.height = px || 96;
   const v = VARIANTS[key];
   const kind = v ? v.base : key, T = TYPES[kind], isBoss = !!T.boss, type = isBoss ? 'boss' : kind;
-  const m = { type, kind, r:T.r, ph:1.3, flash:0, hop:0.4, slowT:0, frozenT:0, rise:0, eating:false, age:5, demo:true, x:0, p:0.5, hp:T.hp, maxHp:T.hp, form:1, carrier:true, tint:v ? v.tint : null, vanish:5 };
+  const m = { type, kind, r:T.r, ph:1.3, flash:0, hop:0.4, slowT:0, frozenT:0, rise:0, eating:false, age:5, demo:true, x:0, p:0.5, hp:T.hp, maxHp:T.hp, form:1, carrier:true, tint:v ? v.tint : null, vanish:5, colourLock:kind === 'chameleon' ? 0 : null, colourImmune:kind === 'rchameleon' ? 1 : null, reflecting:kind === 'mirror' };
   const prev = cx; cx = c.getContext('2d');
   const box = isBoss ? 150 : T.r * 3.2;
   cx.scale(c.width / box, c.width / box); cx.translate(box / 2, box / 2 + (isBoss ? 6 : T.r * 0.15));
@@ -233,7 +238,10 @@ export function monsterIcon(key, px){
     case 'diver': drawDiver(m, F, 1); break;
     case 'slime': drawSlime(m, F, 1); break;
     case 'blob': drawBlob(m, F, 1); break;
-    case 'boss': if (kind === 'poltergeist') drawPoltergeist(m, F, 1); else if (kind === 'vampirecount') drawVampireCount(m, F, 1); else if (kind === 'twintides') drawTwinTide(m, F, 1); else drawBoss(m, F, 1); break;
+    case 'chameleon': drawChameleon(m, F, 1, false); break;
+    case 'rchameleon': drawChameleon(m, F, 1, true); break;
+    case 'mirror': drawMirror(m, F, 1); break;
+    case 'boss': if (kind === 'poltergeist') drawPoltergeist(m, F, 1); else if (kind === 'vampirecount') drawVampireCount(m, F, 1); else if (kind === 'twintides') drawTwinTide(m, F, 1); else if (kind === 'hexwitch') drawHexwitch(m, F, 1); else drawBoss(m, F, 1); break;
   }
   cx = prev;
   return c;
@@ -401,4 +409,40 @@ export function drawTwinTide(m, F, t){   // sea serpent rearing out of the water
   cx.fillStyle = F('#2a8a90'); tri(cx, 14, -60, 6); tri(cx, 30, -60, 6);
   cx.fillStyle = m.flash > 0 ? '#fff' : '#bfefff'; ell(cx, 18, -50, 3.2, 3.2); ell(cx, 28, -50, 3.2, 3.2);
   cx.fillStyle = '#0b2a30'; cx.beginPath(); cx.ellipse(26, -42, 8, 3 + Math.sin(t * 3) * 2, 0, 0, TAU); cx.fill();   // jaws
+}
+
+export function drawChameleon(m, F, t, reverse){   // lizard in the colour it is locked to; reverse ones are inverted with hollow eyes
+  const colIdx = reverse ? m.colourImmune : m.colourLock;
+  const P = PTYPES[colIdx == null ? 0 : colIdx];
+  const body = reverse ? P.dark : P.base, spots = reverse ? P.light : P.dark;
+  cx.fillStyle = F(body); ell(cx, 0, 6, 20, 11); ell(cx, 14, -6, 11, 9);                        // body, head
+  cx.strokeStyle = F(body); cx.lineWidth = 5; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo(-18, 6); cx.quadraticCurveTo(-30, 2, -28, -10 + Math.sin(t * 3) * 3); cx.stroke();   // curled tail
+  cx.fillStyle = F(spots); for (let i = 0; i < 4; i++) ell(cx, -12 + i * 8, 4 + (i % 2) * 5, 3, 3);
+  if (reverse){ cx.fillStyle = '#0a0a10'; ell(cx, 17, -9, 3.5, 4); cx.strokeStyle = P.light; cx.lineWidth = 1.5; cx.beginPath(); cx.arc(17, -9, 4.5, 0, TAU); cx.stroke(); }
+  else { cx.fillStyle = m.flash > 0 ? '#fff' : P.light; ell(cx, 17, -9, 3.5, 4); cx.fillStyle = '#10200a'; ell(cx, 18, -9, 1.5, 2); }
+  cx.strokeStyle = F(body); cx.lineWidth = 4; cx.beginPath(); cx.moveTo(-8, 12); cx.lineTo(-14, 20); cx.moveTo(8, 12); cx.lineTo(14, 20); cx.stroke();
+}
+export function drawMirror(m, F, t){   // small winged sprite holding a hand mirror
+  cx.fillStyle = F('#c8d8f0'); ell(cx, 0, 2, 9, 12); ell(cx, 0, -12, 8, 8);
+  cx.fillStyle = 'rgba(200,216,240,.5)'; ell(cx, -14, -4 + Math.sin(t * 12) * 2, 8, 4, -0.4); ell(cx, 14, -4 - Math.sin(t * 12) * 2, 8, 4, 0.4);
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#5a7aff'; ell(cx, -3, -13, 2, 2.4); ell(cx, 3, -13, 2, 2.4);
+  const my = m.reflecting ? 14 : -4, mx = m.reflecting ? 0 : 16;
+  cx.strokeStyle = F('#8a7a5a'); cx.lineWidth = 3; cx.beginPath(); cx.moveTo(8, 4); cx.lineTo(mx, my + 10); cx.stroke();
+  cx.fillStyle = F('#8a7a5a'); ell(cx, mx, my, 11, 11);
+  const g = cx.createLinearGradient(mx - 8, my - 8, mx + 8, my + 8); g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#bfe6ff'); g.addColorStop(1, '#8ac0ff');
+  cx.fillStyle = m.reflecting ? g : '#6a7a8a'; ell(cx, mx, my, 8, 8);
+  if (m.reflecting){ cx.fillStyle = 'rgba(255,255,255,.9)'; ell(cx, mx - 3, my - 3, 2, 3, -0.7); }
+}
+export function drawHexwitch(m, F, t){   // witch astride a broom, hat and cauldron-green glow
+  const g = cx.createRadialGradient(0, -10, 6, 0, -10, 80); g.addColorStop(0, 'rgba(160,80,220,.3)'); g.addColorStop(1, 'rgba(160,80,220,0)'); cx.fillStyle = g; cx.fillRect(-80, -90, 160, 170);
+  cx.strokeStyle = F('#6b4a2b'); cx.lineWidth = 6; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo(-44, 26); cx.lineTo(30, 12); cx.stroke();
+  cx.fillStyle = F('#c8b060'); cx.beginPath(); cx.moveTo(-40, 20); cx.lineTo(-62, 12 + Math.sin(t * 6) * 3); cx.lineTo(-64, 34); cx.lineTo(-42, 32); cx.closePath(); cx.fill();   // broom straw
+  cx.fillStyle = F('#2a1a3a'); cx.beginPath(); cx.moveTo(-18, 20); cx.lineTo(-10, -24); cx.lineTo(14, -24); cx.lineTo(22, 20); cx.closePath(); cx.fill();   // robe
+  cx.fillStyle = F('#8fbf5a'); ell(cx, 2, -32, 11, 12);                                                                                       // green face
+  cx.fillStyle = F('#4a2a5a'); ell(cx, -2, -30, 2.5, 1.5);                                                                                     // wart
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#ffe27a'; ell(cx, -3, -34, 2.6, 3); ell(cx, 7, -34, 2.6, 3);
+  cx.fillStyle = F('#1a1020'); ell(cx, 2, -44, 22, 5); cx.beginPath(); cx.moveTo(-10, -44); cx.lineTo(4, -78 + Math.sin(t * 2) * 2); cx.lineTo(16, -44); cx.closePath(); cx.fill();   // hat
+  cx.fillStyle = F('#c9584a'); cx.fillRect(-9, -50, 24, 4);
+  cx.strokeStyle = F('#8fbf5a'); cx.lineWidth = 4; cx.beginPath(); cx.moveTo(14, -12); cx.lineTo(30, -22 + Math.sin(t * 4) * 4); cx.stroke();   // pointing hand
+  cx.fillStyle = 'rgba(210,155,255,.9)'; ell(cx, 32, -24 + Math.sin(t * 4) * 4, 4, 4);
 }

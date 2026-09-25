@@ -35,6 +35,12 @@ export const TYPES = {
   // Splitter Slime (world 4): splits into two blobs when killed.
   slime:   { hp:3,  r:22, sp:0.045, coins:7,  eat:0.5, pts:22, drop:2, splits:2 },
   blob:    { hp:1,  r:13, sp:0.065, coins:2,  eat:0.3, pts:6,  drop:1 },
+  // Chameleon (world 5): takes damage only from pumpkins of its colour (picked from the player's loadout). Tools still hurt it.
+  chameleon:  { hp:3, r:21, sp:0.05,  coins:8,  eat:0.6, pts:24, drop:2 },
+  // Reverse Chameleon (world 5): immune to pumpkins of its colour, hurt by every other colour.
+  rchameleon: { hp:3, r:21, sp:0.05,  coins:8,  eat:0.6, pts:24, drop:2 },
+  // Mirror Sprite (world 5): alternates reflecting (`reflect` s) and open (`open` s). While reflecting, a pumpkin bounces back down its lane into the player's wall.
+  mirror:     { hp:2, r:19, sp:0.045, coins:9,  eat:0.5, pts:26, drop:2, reflect:2, open:2.5, boltSp:0.55 },
   // Bosses (docs/WORLDS.md §7). `boss:true`; spawned as type 'boss' with `kind` = the key. Never reach the wall.
   gravekeeper: { boss:true, hp:20, r:34, sp:0.03, coins:40, eat:0, pts:250, drop:6, hold:0.28, teleportEvery:6, summonEvery:8,
                  form2:{ hp:36, summonEvery:5.5, shoveEvery:12, shove:0.3 } },
@@ -46,6 +52,9 @@ export const TYPES = {
   // Twin Tides: two sea serpents on the sea row lobbing water bolts at walls. Both must die within `window` seconds or the dead one rises again after `revive` seconds.
   twintides: { boss:true, hp:18, r:32, sp:0.03, coins:30, eat:0, pts:200, drop:3, hold:0.12, boltEvery:6, bolt:3, boltSp:0.3, window:8, revive:8,
                form2:{ hp:28, boltEvery:4.5, boltSp:0.45, window:5 } },
+  // The Hexwitch: drifts between lanes, conjures chameleons; form 2 also hexes monsters already on the field into chameleons.
+  hexwitch: { boss:true, hp:30, r:32, sp:0.03, coins:50, eat:0, pts:320, drop:6, hold:0.25, driftEvery:6, conjureEvery:9,
+              form2:{ hp:48, conjureEvery:6, hexEvery:12 } },
 };
 
 /** Modifiers (docs/WORLDS.md §6): data-only stat tweaks any monster can carry. */
@@ -68,12 +77,15 @@ export const VARIANTS = {
   tideImp:      { base:'imp',   mod:'swift',    name:'Tide Imp',      tint:'#3aa0a8', intro:'Tide Imps ride the surf: 40% faster.' },
   bogTurtle:    { base:'brute', mod:'armoured', name:'Bog Turtle',    tint:'#3a6a5a', intro:'Bog Turtles carry a shell: six hits.' },
   soddenMummy:  { base:'mummy', mod:'stubborn', name:'Sodden Mummy',  tint:'#5a7a7a', intro:'Sodden Mummies cannot be knocked back, and still only Fire finishes them.' },
+  woodGhoul:    { base:'ghoul', mod:'swift',    name:'Wood Ghoul',    tint:'#7a6a2a', intro:'Wood Ghouls run 40% faster.' },
+  broomImp:     { base:'imp',   mod:'hungry',   name:'Broom Imp',     tint:'#8a4a8a', intro:'Broom Imps chew walls twice as fast.' },
+  owlBat:       { base:'bat',   mod:'stubborn', name:'Owl-bat',       tint:'#a07a4a', intro:'Owl-bats shrug off knockback.' },
 };
 
-export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides' };
+export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch' };
 export const BOSS_NAME = BOSS_NAMES.gravekeeper;   // legacy alias used by endless mode
 
-export const MNAME = { ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', boss:'Boss' };
+export const MNAME = { ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', boss:'Boss' };
 
 export const BOSS_INTRO = {
   gravekeeper: { 1:'It stops a third of the way down and never reaches the wall, but it teleports between lanes and raises ghouls. Monsters keep coming until it falls.',
@@ -84,12 +96,15 @@ export const BOSS_INTRO = {
                   2:'Its full form heals whenever you leave it alone for a few seconds, on top of its healing trances. Keep hitting it. Monsters keep coming until it falls.' },
   twintides: { 1:'Two serpents on the sea row, each hurling water at your walls. Kill both within 8 seconds of each other, or the fallen one rises again. Monsters keep coming until both fall.',
                2:'Their full form throws faster and gives you only 5 seconds between the two kills. Monsters keep coming until both fall.' },
+  hexwitch: { 1:'She drifts between lanes a quarter of the way down and keeps conjuring chameleons, each hurt only by one of your colours. Monsters keep coming until she falls.',
+              2:'Her full form also hexes monsters already on the field into chameleons every few seconds. Monsters keep coming until she falls.' },
 };
 
 export const GRAVES_INTRO = 'Graves now appear in your patch. They never move and block slides and pushes. Plan bunches around them.';
 export const CASTLE_INTRO = 'Castle walls stand in some lanes. A pumpkin that hits one damages the wall and stops, so monsters behind it are safe until it breaks. Grey pumpkins pierce straight through; Black ones blast it and the lanes beside it.';
 export const PUDDLE_INTRO = 'Puddles dot the field. Some monsters climb out of them instead of walking in from the top, and Puddle Divers hide inside them between attacks.';
 export const SEA_INTRO = 'The sea has reached the top of the field. Anything can surface anywhere along it.';
+export const WIND_INTRO = 'Wind blows through Witchwood. Leaves show the direction for two seconds, then every pumpkin in your patch shifts one cell that way, as if pushed. Bunches can form or break.';
 export const FOG_INTRO = 'Fog covers part of the field. Monsters inside it are invisible but still walking. Pumpkins fly through it and hit as normal. A Lantern clears it for a while.';
 
 export const MINTRO = {
@@ -109,4 +124,7 @@ export const MINTRO = {
   sailor:'New foe: drunk sailors. They stagger across lanes and lurch at odd speeds. Hard to line up.',
   diver:'New foe: puddle divers. They hide in a puddle, surface to hurl water at your wall, and duck under again. Hit them while they are up.',
   slime:'New foe: splitter slimes. Kill one and two blobs crawl out. Black and Grey clean them up.',
+  chameleon:'New foe: chameleons. Each takes on one of your colours and only that colour hurts it. Tools still work.',
+  rchameleon:'New foe: reverse chameleons. Hollow-eyed and inverted: immune to their own colour, hurt by every other.',
+  mirror:'New foe: mirror sprites. While the mirror is up, a pumpkin bounces straight back into your wall. Hit them when the mirror drops.',
 };

@@ -4,13 +4,13 @@ import { PATTERNS } from '../data/patterns.js';
 import { NTYPES, PTYPES, POWER } from '../data/pumpkins.js';
 import { WORLDS, levelFor, typesForNight, highestOpen } from '../data/worlds/index.js';
 import { SFX, ensureAudio } from './audio.js';
-import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, landingCell, flyInto } from './board.js';
+import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, landingCell, flyInto, DIRV } from './board.js';
 import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle } from './combat.js';
 import { mS, mY, updateMonster, TILE_P } from './monsters.js';
 import { bgWorld, buildBg } from './render/sprites.js';
 import { endlessSpawn, storySpawn } from './spawner.js';
 import { COLS, CS, FENCE_Y, FIELD_TOP, G, GY, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, setG, setGest, state, walls, GX, FIELD_BOT } from './state.js';
-import { rnd, shuffle, clamp } from './util.js';
+import { rnd, shuffle, clamp, TAU } from './util.js';
 import { initWalls, damageWall } from './walls.js';
 import { persist, save } from '../save.js';
 import { banner, updateHud } from '../ui/hud.js';
@@ -19,7 +19,7 @@ import { openLoadout, setState, showResult } from '../ui/screens.js';
 // ---------- Flow ----------
 
 export function makeDemo(){
-  setG({ mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[] });
+  setG({ mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], gustT:0, gustDir:null });
   initBoard(1, 2);
   [[4,0],[4,1],[4,2],[3,1]].forEach(([r, c]) => { if (grid[r][c]) grid[r][c].c = 0; });
   resolveMatches();
@@ -51,7 +51,8 @@ export function startGame(mode, n, loadout){
     total:def ? def.total + (def.boss ? 1 : 0) : 0,
     spawned:0, spawnTimer:2.6, bossSpawned:false, bossTimer:100, diff:1, sproutT:0,
     monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], groups:{},
-    t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[],
+    t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[],
+    gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
   });
   if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def && def.puddles) placePuddles(def.puddles);
@@ -141,6 +142,41 @@ export function placeMine(lane){
 export function placePuddles(n){
   const lanes = shuffle([...Array(COLS).keys()]).slice(0, n);
   for (const lane of lanes) G.puddles.push({ lane, p:rnd(0.3, 0.6) });
+}
+/** Wind gust: every pumpkin moves one cell in `dir`, leading edge first, blocked by the edge, graves and stuck pumpkins. */
+export function gust(dir){
+  const [dr, dc] = DIRV[dir];
+  const rows = [...Array(ROWS).keys()], cols = [...Array(COLS).keys()];
+  if (dr > 0) rows.reverse();
+  if (dc > 0) cols.reverse();
+  let moved = 0;
+  for (const r of rows) for (const c of cols){
+    const cell = grid[r][c]; if (!cell || cell.fly) continue;
+    const nr = r + dr, nc = c + dc;
+    if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS || graves[nr][nc] || grid[nr][nc]) continue;
+    grid[nr][nc] = cell; grid[r][c] = null;
+    cell.ox = -dc * CS; cell.oy = -dr * CS; moved++;
+  }
+  if (gest) setGest(null);
+  SFX.slide(); G.shake = Math.max(G.shake, 0.2);
+  resolveMatches();
+  return moved;
+}
+/** Scarecrow: first press arms it (tap a column next), second press or a tap elsewhere cancels. */
+export function useScarecrow(){
+  if (state !== 'play' || G.over || save.scarecrow <= 0) return;
+  G.aim = G.aim === 'scarecrow' ? null : 'scarecrow';
+  if (G.aim) addFloat('Tap a column', W / 2, GY - 30, '#ffd35a', 18, 1.2);
+  updateHud(true);
+}
+export function placeScarecrow(lane){
+  if (save.scarecrow <= 0 || G.scarecrows.some(s => s.lane === lane)){ addFloat('Scarecrow already there', LANE(lane), FENCE_Y - 60, '#ffd35a', 16, 1); SFX.bad(); G.aim = null; updateHud(true); return false; }
+  save.scarecrow--; persist();
+  const p = 0.84;
+  G.scarecrows.push({ lane, p, x:LANE(lane), y:FIELD_TOP + p * (FIELD_BOT - FIELD_TOP), hp:12, maxHp:12, dead:false });
+  for (let i = 0; i < 12; i++) spark(LANE(lane), FIELD_TOP + p * (FIELD_BOT - FIELD_TOP), '#c8b060', 120);
+  SFX.collect(); G.aim = null; updateHud(true);
+  return true;
 }
 export function raiseCastles(n, hp){
   const lanes = shuffle([...Array(COLS).keys()]).slice(0, n);
@@ -234,6 +270,23 @@ export function update(dt){
   g.arrows = g.arrows.filter(a => !a.dead);
   for (const w of g.castles) if (w.flash > 0) w.flash -= dt;
   g.castles = g.castles.filter(w => !w.dead);
+  if (g.def && g.def.gust){   // wind: 2 s of leaves, then the whole patch shifts one cell
+    g.gustT -= dt;
+    if (g.gustDir == null && g.gustT <= 2){ g.gustDir = g.def.gust.dirs[Math.floor(Math.random() * g.def.gust.dirs.length)]; addFloat(`Wind ${ {left:'←', right:'→', up:'↑', down:'↓'}[g.gustDir] }`, W / 2, GY - 30, '#ffd9a0', 22, 1.8); }
+    if (g.gustDir != null && Math.random() < dt * 40){
+      const [dr, dc] = DIRV[g.gustDir];
+      g.parts.push({ x:rnd(GX, GX + COLS * CS), y:rnd(GY, GY + ROWS * CS), vx:dc * rnd(160, 260) + rnd(-30, 30), vy:dr * rnd(160, 260) + rnd(-30, 30), t:0, life:0.7, size:rnd(3, 5), color:['#d9a520', '#c9582a', '#8a4a1a'][Math.floor(Math.random() * 3)], kind:'chunk', grav:0, rot:Math.random() * TAU });
+    }
+    if (g.gustT <= 0){ gust(g.gustDir); g.gustDir = null; g.gustT = g.def.gust.every; }
+  }
+  for (const sc of g.scarecrows){   // monsters in the lane stop to chew the scarecrow
+    for (const m of g.monsters) if (!m.dead && m.lane === sc.lane && m.type !== 'boss' && m.rise <= 0 && m.p >= sc.p - 0.01 && m.p < 0.99){
+      m.p = Math.min(m.p, sc.p); m.chewing = sc; sc.hp -= m.eat * (m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1) * dt;
+      if (Math.random() < dt * 4) chunk(sc.x + rnd(-8, 8), sc.y, '#c8b060', 80);
+    }
+    if (sc.hp <= 0){ sc.dead = true; for (let i = 0; i < 20; i++) chunk(sc.x, sc.y, i % 2 ? '#c8b060' : '#5a3a1a', 220); SFX.smash(); for (const m of g.monsters) if (m.chewing === sc) m.chewing = null; }
+  }
+  g.scarecrows = g.scarecrows.filter(s => !s.dead);
   g.monsters = g.monsters.filter(m => !m.dead);
   for (const d of g.drops){
     d.t += dt;

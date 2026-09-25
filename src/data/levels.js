@@ -20,6 +20,7 @@
  * @property {{n:number, hp:number}} [castles]  castle walls at level start: count and health each (world 3)
  * @property {number} [puddles]      puddle cells placed on the field at level start (world 4)
  * @property {boolean} [sea]         sea row: the top of the field is water and every spawn surfaces from it (world 4)
+ * @property {{every:number, dirs:string[]}} [gust]  wind: seconds between gusts and the directions it may blow (world 5)
  */
 
 /** Runtime shape the engine reads. `n` is the global story index (1-based across all worlds). */
@@ -27,5 +28,5 @@ export function expandLevel(def, n){
   return { n, world:def.theme, total:def.total, interval:def.interval, spMul:def.spMul,
     boss:def.boss ? def.boss : false, bossForm:def.bossForm || 1, pool:def.pool.map(([t, w]) => [t, w]),
     pattern:def.pattern, graves:def.graves, unlockPumpkins:def.unlockPumpkins || [], unlockGear:def.unlockGear || [],
-    intro:def.intro || [], fog:def.fog || [], castles:def.castles || null, puddles:def.puddles || 0, sea:!!def.sea, worldNo:def.world, levelNo:def.level, label:`${def.world}-${def.level}` };
+    intro:def.intro || [], fog:def.fog || [], castles:def.castles || null, puddles:def.puddles || 0, sea:!!def.sea, gust:def.gust || null, worldNo:def.world, levelNo:def.level, label:`${def.world}-${def.level}` };
 }

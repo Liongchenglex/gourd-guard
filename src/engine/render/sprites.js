@@ -34,6 +34,13 @@ export function paintPumpkin(g, cx, cy, R, col, lit){
   g.lineTo(cx + R * 0.22, cy - R * 0.9);
   g.quadraticCurveTo(cx + R * 0.07, cy - R * 0.84, cx + R * 0.1, cy - R * 0.6); g.closePath(); g.fill();
   g.fillStyle = '#3f7a2a'; ell(g, cx - R * 0.3, cy - R * 0.78, R * 0.22, R * 0.09, -0.45);
+  if (col.gold){   // top hat, monocle and a coin on the belt so Gold reads differently from Yellow
+    g.fillStyle = '#1a1418'; g.fillRect(cx - R * 0.62, cy - R * 0.86, R * 1.0, R * 0.1); g.fillRect(cx - R * 0.42, cy - R * 1.28, R * 0.6, R * 0.45);
+    g.fillStyle = '#c9102a'; g.fillRect(cx - R * 0.42, cy - R * 0.96, R * 0.6, R * 0.09);
+    g.strokeStyle = '#fff0a0'; g.lineWidth = R * 0.05; g.beginPath(); g.arc(cx + R * 0.3, cy - R * 0.12, R * 0.2, 0, TAU); g.stroke();
+    g.beginPath(); g.moveTo(cx + R * 0.48, cy - R * 0.02); g.lineTo(cx + R * 0.62, cy + R * 0.28); g.stroke();
+    g.fillStyle = '#ffe680'; ell(g, cx, cy + R * 0.5, R * 0.12, R * 0.12); g.fillStyle = '#b8860b'; ell(g, cx, cy + R * 0.5, R * 0.06, R * 0.06);
+  }
   if (lit){
     const fg = g.createRadialGradient(cx, cy + R * 0.08, 0, cx, cy + R * 0.08, R * 0.75);
     fg.addColorStop(0, '#fff8c8'); fg.addColorStop(0.45, '#ffd04a'); fg.addColorStop(1, '#ff8a1f');

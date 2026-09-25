@@ -8,8 +8,8 @@ export const lvOf = t => clamp(save.lv[PTYPES[t].key] || 1, 1, 5);
 
 export const SAVE_KEY = 'gourdguard.v1';
 
-export const save = { unlocked:1, stars:{}, coins:0, fence:0, fw:0, repair:0, buster:0, lantern:0, mine:0, bomb:0, seenIntro:{}, best:0, muted:false, seenHelp:false, seenFlick:false, spawnEvery:5,
-  lv:{ green:1, yellow:1, ice:1, fire:1, grey:1, purple:1, white:1, black:1, pink:1 }, loadout:[0,1,2,3,4] };
+export const save = { unlocked:1, stars:{}, coins:0, fence:0, fw:0, repair:0, buster:0, lantern:0, mine:0, bomb:0, scarecrow:0, seenIntro:{}, best:0, muted:false, seenHelp:false, seenFlick:false, spawnEvery:5,
+  lv:{ green:1, yellow:1, ice:1, fire:1, grey:1, purple:1, white:1, black:1, pink:1, gold:1 }, loadout:[0,1,2,3,4] };
 
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && typeof s === 'object') Object.assign(save, s); } catch (e) {}
 
@@ -25,7 +25,7 @@ if (!save.seenIntro || typeof save.seenIntro !== 'object') save.seenIntro = {};
 
 if (typeof save.buster !== 'number') save.buster = 0;
 
-for (const k of ['lantern', 'mine', 'bomb']) if (typeof save[k] !== 'number') save[k] = 0;
+for (const k of ['lantern', 'mine', 'bomb', 'scarecrow']) if (typeof save[k] !== 'number') save[k] = 0;
 
 // Old upgrades were replaced by pumpkin levels: refund what was spent on them.
 

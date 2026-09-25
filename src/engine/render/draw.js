@@ -42,6 +42,7 @@ export function render(){
     drawMonster(m, t);
   }
   drawCastles(t);
+  drawScarecrows(t);
   drawArrows(t);
   if (g.def && g.def.fog && g.def.fog.length) drawFog(t, g.def.fog, g.fogClear > 0);
   drawMines(t);
@@ -240,10 +241,26 @@ export function drawCastles(t){
     ctx.fillStyle = '#d8d0c8'; rrect(ctx, bx, by, Math.max(0, bw * w.hp / w.maxHp), 5, 2.5); ctx.fill();
   }
 }
+/** Scarecrows (world 5 tool): a post with a straw figure and a health bar. */
+export function drawScarecrows(t){
+  for (const sc of G.scarecrows || []){
+    const x = sc.x, y = sc.y;
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ell(ctx, x, y + 24, 18, 6);
+    ctx.fillStyle = '#5a3a1a'; ctx.fillRect(x - 3, y - 20, 6, 44); ctx.fillRect(x - 22, y - 8, 44, 5);
+    ctx.fillStyle = '#c8b060'; ell(ctx, x, y - 2, 12, 14); ell(ctx, x - 22, y - 6 + Math.sin(t * 3) * 2, 6, 4); ell(ctx, x + 22, y - 6 - Math.sin(t * 3) * 2, 6, 4);
+    ctx.fillStyle = '#e8a030'; ell(ctx, x, y - 22, 11, 10);
+    ctx.fillStyle = '#3a2a1a'; ell(ctx, x - 4, y - 24, 2, 2.5); ell(ctx, x + 4, y - 24, 2, 2.5);
+    ctx.fillStyle = '#4a2a10'; ctx.fillRect(x - 14, y - 34, 28, 4); ctx.fillRect(x - 8, y - 46, 16, 13);
+    const bw = 40, bx = x - bw / 2, by = y + 28;
+    ctx.fillStyle = 'rgba(0,0,0,.6)'; rrect(ctx, bx - 1, by - 1, bw + 2, 7, 3); ctx.fill();
+    ctx.fillStyle = '#c8b060'; rrect(ctx, bx, by, Math.max(0, bw * sc.hp / sc.maxHp), 5, 2.5); ctx.fill();
+  }
+}
 /** Archers' arrows. */
 export function drawArrows(t){
   for (const a of G.arrows || []){
     const x = LANE(a.lane), y = FIELD_TOP + a.p * (FIELD_BOT - FIELD_TOP);
+    if (a.mirror){ const sz = CS * 0.5; ctx.drawImage(sprites[a.vis][0], x - sz / 2, y - sz / 2, sz, sz); continue; }   // a reflected pumpkin
     ctx.strokeStyle = '#3a2a1c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y - 14); ctx.lineTo(x, y + 10); ctx.stroke();
     ctx.fillStyle = '#d8d0c0'; tri(ctx, x, y + 14, 5);
     ctx.fillStyle = '#c8b090'; ctx.fillRect(x - 4, y - 16, 8, 5);

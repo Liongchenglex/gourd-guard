@@ -79,6 +79,7 @@ def main():
     ap.add_argument('--fireworks', type=int, default=0)
     ap.add_argument('--sprout', type=int, default=5, help='seconds between sprouts')
     ap.add_argument('--url', default=None, help='page URL; default is legacy/index.html via file://')
+    ap.add_argument('--repeats', type=int, default=1, help='runs per night; a summary line per night follows the runs')
     args = ap.parse_args()
     base = args.url or (ROOT / 'legacy' / 'index.html').as_uri()
     PAGE = base + ('&test' if '?' in base else '?test')
@@ -87,31 +88,41 @@ def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
         for n in [int(x) for x in args.nights.split(',')]:
-            page = browser.new_page(viewport={'width': 390, 'height': 844})
-            errors = []
-            page.on('pageerror', lambda e: errors.append(str(e)))
-            page.goto(PAGE)
-            time.sleep(0.8)
-            lv, fence = profile(n)
-            page.evaluate("""([lv, fence, rep, fw, sprout]) => Object.assign(window.__gg.save, {
-                seenHelp:true, seenFlick:true, fw, repair:rep, fence, spawnEvery:sprout,
-                lv:{ green:lv, yellow:lv, ice:lv, fire:lv, grey:lv, purple:lv } })""",
-                [lv, fence, args.repairs, args.fireworks, args.sprout])
-            loadout = [t for t in range(6) if UNLOCK[t] <= n][:5]
-            page.evaluate(BOT_JS, args.interval)
-            page.evaluate("([n, lo]) => window.__gg.startGame('story', n, lo)", [n, loadout])
-            t0 = time.time()
-            while time.time() - t0 < args.timeout and page.evaluate("window.__gg.state") != 'result':
-                time.sleep(0.5)
-            r = page.evaluate(RESULT_JS)
-            r['pumpkin_level'] = lv
-            r['errors'] = errors[:3]
-            if r['state'] != 'result':
-                r['title'] = '(still playing at timeout)'
-            print(json.dumps(r), flush=True)
-            results.append(r)
-            page.close()
+            for rep in range(args.repeats):
+                page = browser.new_page(viewport={'width': 390, 'height': 844})
+                errors = []
+                page.on('pageerror', lambda e: errors.append(str(e)))
+                page.goto(PAGE)
+                time.sleep(0.8)
+                lv, fence = profile(n)
+                page.evaluate("""([lv, fence, rep, fw, sprout]) => Object.assign(window.__gg.save, {
+                    seenHelp:true, seenFlick:true, fw, repair:rep, fence, spawnEvery:sprout,
+                    lv:{ green:lv, yellow:lv, ice:lv, fire:lv, grey:lv, purple:lv } })""",
+                    [lv, fence, args.repairs, args.fireworks, args.sprout])
+                loadout = [t for t in range(6) if UNLOCK[t] <= n][:5]
+                page.evaluate(BOT_JS, args.interval)
+                page.evaluate("([n, lo]) => window.__gg.startGame('story', n, lo)", [n, loadout])
+                t0 = time.time()
+                while time.time() - t0 < args.timeout and page.evaluate("window.__gg.state") != 'result':
+                    time.sleep(0.5)
+                r = page.evaluate(RESULT_JS)
+                r['pumpkin_level'] = lv
+                r['errors'] = errors[:3]
+                if r['state'] != 'result':
+                    r['title'] = '(still playing at timeout)'
+                print(json.dumps(r), flush=True)
+                results.append(r)
+                page.close()
         browser.close()
+    nights = []
+    for r in results:
+        if r['night'] not in nights: nights.append(r['night'])
+    for n in nights:
+        rs = [r for r in results if r['night'] == n]
+        wins = sum(1 for r in rs if r['title'] == 'Night saved')
+        print(json.dumps({ 'night': n, 'runs': len(rs), 'wins': wins, 'win_rate': round(wins / len(rs), 2),
+                           'mean_walls_pct': round(sum(r['walls_pct'] for r in rs) / len(rs), 1),
+                           'mean_missed_frac': round(sum(r['missed'] / max(1, r['throws']) for r in rs) / len(rs), 2) }), flush=True)
     if any(r['errors'] for r in results):
         sys.exit(1)
 

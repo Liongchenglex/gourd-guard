@@ -72,7 +72,7 @@ export function startGame(mode, n, loadout){
     }
     for (const t of def.intro){ const v = VARIANTS[t]; if (v) parts.push(v.intro); else if (MINTRO[t]) parts.push(MINTRO[t]); }
     if (def.fog.length && !(n > 1 && levelFor(n - 1).fog.length)) parts.push('Fog hides part of the field. A Lantern clears it.');
-    if (def.boss) parts.push(`${BOSS_NAMES[def.boss]} waits in this night. Monsters keep coming until it falls.`);
+    if (def.boss) parts.push(def.boss === 'twintides' ? `${BOSS_NAMES[def.boss]} wait in this night. Monsters keep coming until both fall.` : `${BOSS_NAMES[def.boss]} waits in this night. Monsters keep coming until it falls.`);
     if (def.graves && def.graves > (n > 1 ? levelFor(n - 1).graves : 0)) parts.push(n === 3 ? 'Graves now appear in your patch. They block slides.' : 'One more grave in the patch.');
     if (n === 1) parts.push('Swipe a pumpkin to slide it. Bunch 3 of a color.');
     banner(`Night ${def.label}`, parts.length ? parts.join(' ') : WORLDS[G.world].name, parts.length > 1 ? 4.2 : 3);

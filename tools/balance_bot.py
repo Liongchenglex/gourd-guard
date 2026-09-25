@@ -4,7 +4,9 @@
 Plays full story nights in a headless browser and reports how each went.
 
 Usage:
-  python3 tools/balance_bot.py --nights 1,5,10 [--interval 850] [--timeout 240] [--repairs 1] [--fireworks 0]
+  python3 tools/balance_bot.py --nights 1,5,10 [--interval 850] [--timeout 240] [--repairs 1] [--fireworks 0] [--url http://127.0.0.1:4173/]
+
+Default target is legacy/index.html via file://; pass --url for the built app (see tools/serve_dist.py).
 
 The bot takes one action every --interval ms (850 ≈ a steady human pace):
   1. use a wall repair if any wall is under 25% (and repairs are available)
@@ -19,7 +21,6 @@ import argparse, json, pathlib, sys, time
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-PAGE = (ROOT / 'index.html').as_uri() + '?test'
 UNLOCK = [1, 1, 2, 4, 6, 8]  # night each pumpkin type unlocks (Green, Yellow, Ice, Fire, Grey, Purple)
 
 BOT_JS = """
@@ -77,7 +78,10 @@ def main():
     ap.add_argument('--repairs', type=int, default=1)
     ap.add_argument('--fireworks', type=int, default=0)
     ap.add_argument('--sprout', type=int, default=5, help='seconds between sprouts')
+    ap.add_argument('--url', default=None, help='page URL; default is legacy/index.html via file://')
     args = ap.parse_args()
+    base = args.url or (ROOT / 'legacy' / 'index.html').as_uri()
+    PAGE = base + ('&test' if '?' in base else '?test')
 
     results = []
     with sync_playwright() as p:

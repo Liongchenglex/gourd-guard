@@ -42,11 +42,11 @@ Level addresses are written `world-level`, e.g. `3-12` = world 3, level 12. Leve
 | # | Name | Theme | Map gimmick | New pumpkins | New monsters | Returning monsters (stronger) | Boss |
 |---|---|---|---|---|---|---|---|
 | 1 | Pumpkin Patch | Harvest moon over a country graveyard | Graves on the patch | Green, Yellow, Ice, Fire | Ghoul, Bat, Imp, Mossback, Mummy | – | Gravekeeper |
-| 2 | Foggy Hollow | Marsh mist, will-o'-wisps, lanterns | Fog hides field rows; occasional graves | White (boomerang) | Wisp, Wraith, Wisp Rider, Plague Doctor | Bog Ghoul (Armoured), Marsh Imp (Stubborn), Swift Bat | Poltergeist |
-| 3 | Crumbling Keep | Vampire's castle under siege | Castle walls block shots; occasional graves | Grey (piercing), Black (blast) | Shield Knight, Gargoyle Hauler, Skeleton Archer, Vampire | Crypt Ghoul (Stubborn), Keep Imp (Armoured), Bat (swarm), Mossback (Siege Brute) | Vampire Count |
-| 4 | Drowned Marsh | Sunken shore, drowned sailors, sea row | Puddles spawn monsters; sea-row levels; occasional graves | Pink (chain) | Puddle Crawler, Drunk Sailor, Puddle Diver, Splitter Slime | Drowned Ghoul (Hungry), Tide Imp (Swift), Mossback (Bog Turtle), Mummy (Sodden) | Twin Tides |
-| 5 | Witchwood | Enchanted autumn forest, witches | Wind gusts shift the patch; occasional graves | Purple (spawn), Gold (coins) | Chameleon, Reverse Chameleon, Mirror Sprite | Wood Ghoul (Swift), Broom Imp (Hungry), Bat (Owl-bat), Wisp | Hexwitch |
-| 6 | Hallow's End | All Hallows' night, everything at once | Graves only | none (full choice from all 10) | none | Everything from worlds 1–5, all with modifiers | Hollow King (5 stages) |
+| 2 | Foggy Hollow | Marsh mist, will-o'-wisps, lanterns | Fog hides field rows; occasional graves | White (boomerang), Pink (heal) | Wisp, Wraith, Wisp Rider, Plague Doctor | Bog Ghoul (Armoured), Marsh Imp (Stubborn), Swift Bat | Poltergeist |
+| 3 | Witchwood | Enchanted autumn forest, witches | Wind gusts shift the patch; occasional graves | Purple (spawn) | Chameleon, Reverse Chameleon, Mirror Sprite | Wood Ghoul (Swift), Broom Imp (Hungry), Bat (Owl-bat), Wisp | Hexwitch |
+| 4 | Crumbling Keep | Vampire's castle under siege | Castle walls block shots; occasional graves | Grey (piercing), Black (blast) | Shield Knight, Gargoyle Hauler, Skeleton Archer, Vampire | Crypt Ghoul (Stubborn), Keep Imp (Armoured), Bat (swarm), Mossback (Siege Brute) | Vampire Count |
+| 5 | Drowned Marsh | Sunken shore, drowned sailors, sea row | Puddles spawn monsters; sea-row levels; occasional graves | Deep Blue (chain), Silver (net) | Puddle Crawler, Drunk Sailor, Puddle Diver, Splitter Slime | Drowned Ghoul (Hungry), Tide Imp (Swift), Mossback (Bog Turtle), Mummy (Sodden) | Twin Tides |
+| 6 | Hallow's End | All Hallows' night, everything at once | Graves only | none (full choice from all 11) | none | Everything from worlds 1–5, all with modifiers | Hollow King (5 stages) |
 
 Names are placeholders the owner is free to change.
 
@@ -58,11 +58,11 @@ Names are placeholders the owner is free to change.
 
 **World 2: Fog.** One or more horizontal bands of the field are fogged. Monsters inside are invisible; their movement, chewing and sounds still happen. Bands are per-level data (e.g. field rows 2–3 of 5). The Lantern weapon clears all fog for 10 s.
 
-**World 3: Castle walls.** Stone segments spawn in random lanes at random field heights, with high HP. A pumpkin that hits a wall damages it and stops; monsters behind it are safe until it breaks. Grey passes through with damage. Black damages the wall and splashes the neighbouring lanes. Walls never spawn on the player's wall line.
+**World 3: Wind gusts.** A gust has a direction: left, right, up or down. Leaves blow across the patch for 2 s in that direction as a warning. Then **every pumpkin slides in the gust direction until it is stopped** by the edge, a grave or another pumpkin: the push rule applied to every row (or column) at once, leading edge first, so lines compress against the far side (`pumpkin, blank, pumpkin, blank` blown right becomes `blank, blank, pumpkin, pumpkin`). Lit state is recomputed after the gust. Gust frequency is the difficulty knob (e.g. every 20 s in early levels, every 10 s late).
 
-**World 4: Puddles and sea.** Puddle cells are marked field tiles. Monsters may rise from any puddle instead of the top of the field. On sea levels the whole top row is water and monsters surface anywhere along it. The Puddle Diver hides in a puddle between attacks and is immune while submerged.
+**World 4: Castle walls.** Stone segments spawn in random lanes at random field heights, with high HP. A pumpkin that hits a wall damages it and stops; monsters behind it are safe until it breaks. Grey passes through with damage. Black damages the wall and splashes the neighbouring lanes. Walls never spawn on the player's wall line.
 
-**World 5: Wind gusts.** A gust has a direction: left, right, up or down. Leaves blow across the patch for 2 s in that direction as a warning. Then **every pumpkin slides in the gust direction until it is stopped** by the edge, a grave or another pumpkin: the push rule applied to every row (or column) at once, leading edge first, so lines compress against the far side (`pumpkin, blank, pumpkin, blank` blown right becomes `blank, blank, pumpkin, pumpkin`). Lit state is recomputed after the gust. Gust frequency is the difficulty knob (e.g. every 20 s in early levels, every 10 s late).
+**World 5: Puddles and sea.** Puddle cells are marked field tiles. Monsters may rise from any puddle instead of the top of the field. On sea levels the whole top row is water and monsters surface anywhere along it. The Puddle Diver hides in a puddle between attacks and is immune while submerged.
 
 **World 6: Graves only.** The challenge is the monster mix.
 
@@ -75,24 +75,25 @@ Upgrade costs per type: level 2 = 40, level 3 = 80, level 4 = 130, level 5 = 200
 | Type | Look | Role | Introduced |
 |---|---|---|---|
 | Green | green | Normal | 1-1 |
-| Yellow | yellow | Normal, separate level from Green | 1-1 |
+| Yellow | yellow | Coins: a Yellow kill always pays coins, multiplied by level (replaces the Gold idea; a separate gold pumpkin could not be told from Yellow and confused chameleons) | 1-1 |
+| Pink | pink | Heal: repairs its column's wall on every hit; high knockback | 2-8 |
 | Ice | ice blue | Freeze | 1-3 |
 | Fire | red | Flame; the only thing that kills a Mummy for good | 1-8 |
 | White | white | Boomerang | 2-3 |
-| Grey | grey | Piercing; passes castle walls | 3-6 |
-| Black | black | Blast | 3-9 |
-| Pink | pink plasma | Chain | 4-4 |
-| Purple | purple | Spawn | 5-3 |
-| Gold | gold with top hat, monocle and coin belt | Coins | 5-10 |
+| Grey | grey | Piercing; passes castle walls | 4-6 |
+| Black | black | Blast | 4-9 |
+| Deep Blue | deep navy blue | Chain lightning along a row | 5-4 |
+| Silver | bright bluish silver | Net against arrows and bolts | 5-8 |
+| Purple | purple | Spawn | 3-3 |
 | Rainbow | multicolour | Wildcard, any colour, no level | rare from 1-1 |
 
-Loadout choice (exactly 5) starts at 3-6 when Grey becomes the 6th type.
+Loadout choice (exactly 5) starts at 2-8 when Pink becomes the 6th type.
 
 ### Level-by-level effects
 
 Power = damage per hit. "Knockback" = chance per hit to push the monster back one tile (a bunch of 5+ always knocks back; bosses and Stubborn monsters never). Values without a mark are what the game does today. 💡 = proposed, not built yet; edit freely.
 
-**Green, Yellow** (normal)
+**Green** (normal)
 
 | Level | Power | Knockback |
 |---|---|---|
@@ -102,15 +103,25 @@ Power = damage per hit. "Knockback" = chance per hit to push the monster back on
 | 4 | 1.5 | 50% |
 | 5 | 2 | 50% |
 
+**Yellow** (normal, plus coins: a kill made with Yellow skips the reward roll, always pays coins, multiplied)
+
+| Level | Power | Knockback | Coins on a Yellow kill |
+|---|---|---|---|
+| 1 | 1 | none | ×2 |
+| 2 | 1 | 25% | ×2 |
+| 3 | 1.5 | 25% | ×3 |
+| 4 | 1.5 | 50% | ×3 |
+| 5 | 2 | 50% | ×4 |
+
 **Ice** (slows; frozen monsters stop and don't eat; bosses can be slowed but not frozen; never knocks back on its own)
 
 | Level | Power | Slow lasts | Freeze chance |
 |---|---|---|---|
-| 1 | 1 | 1 s | none |
-| 2 | 1 | 1.5 s | none |
-| 3 | 1.5 | 2 s | 25% |
-| 4 | 1.5 | 2.5 s | 50% |
-| 5 | 2 | 3 s | 50% |
+| 1 | 1 | 1.5 s | none |
+| 2 | 1 | 2 s | none |
+| 3 | 1.5 | 3 s | 25% |
+| 4 | 1.5 | 4 s | 50% |
+| 5 | 2 | 5 s | 50% |
 
 **Fire** (burn ticks every 1 s; a new hit refreshes to the larger count and amount; never knocks back on its own)
 
@@ -119,8 +130,8 @@ Power = damage per hit. "Knockback" = chance per hit to push the monster back on
 | 1 | 1 | 2 × 0.1 | 0.2 |
 | 2 | 1 | 2 × 0.2 | 0.4 |
 | 3 | 1.5 | 3 × 0.2 | 0.6 |
-| 4 | 1.5 | 4 × 0.2 | 0.8 |
-| 5 | 2 | 5 × 0.2 | 1.0 |
+| 4 | 1.5 | 4 × 0.3 | 1.2 |
+| 5 | 2 | 5 × 0.3 | 1.5 |
 
 **Grey** (hits every monster in its column and passes castle walls, damaging them; each hit rolls knockback separately)
 
@@ -132,15 +143,15 @@ Power = damage per hit. "Knockback" = chance per hit to push the monster back on
 | 4 | 1.5 | 50% |
 | 5 | 2 | 50% |
 
-**Purple** (a kill may spawn a pumpkin straight into an empty patch cell)
+**Purple** (every launched Purple bunch spawns one pumpkin into the patch on its first hit, whatever its size; each kill it makes may spawn one more)
 
-| Level | Power | Knockback | Spawn chance on kill | Spawn is rainbow |
+| Level | Power | Knockback | Spawn is rainbow | Extra spawn per kill |
 |---|---|---|---|---|
-| 1 | 1 | none | 25% | never |
-| 2 | 1 | 25% | 50% | never |
-| 3 | 1.5 | 25% | 100% | never |
-| 4 | 1.5 | 50% | 100% | 25% |
-| 5 | 2 | 50% | 100% | 50% |
+| 1 | 1 | none | 10% | 25% |
+| 2 | 1 | 25% | 20% | 40% |
+| 3 | 1.5 | 25% | 30% | 50% |
+| 4 | 1.5 | 50% | 40% | 60% |
+| 5 | 2 | 50% | 50% | 70%  |
 
 **White** (a throw that hits nothing flies back into the patch instead of being wasted)
 
@@ -148,41 +159,51 @@ Power = damage per hit. "Knockback" = chance per hit to push the monster back on
 |---|---|---|---|
 | 1 | 1 | none | returns to the top-most empty cell of its column |
 | 2 | 1 | 25% | same |
-| 3 | 1.5 | 25% | 💡 returns beside a same-colour pumpkin when one has a free neighbour |
-| 4 | 1.5 | 50% | 💡 same |
-| 5 | 2 | 50% | 💡 the returned pumpkin comes back lit if it lands in a bunch, and the throw is refunded as +1 coin |
+| 3 | 1.5 | 25% | returns beside a same-colour pumpkin when one has a free neighbour |
+| 4 | 1.5 | 50% | same |
+| 5 | 2 | 50% | same (a return that completes a bunch lights it, as any landing does) |
 
-**Black** (explodes on its first hit; splashes monsters in the two neighbouring lanes at the same height; ×1.5 against castle walls)
+**Black** (explodes on its first hit; splash zone is 3 lanes wide by 1 or 3 tile heights; ×1.5 against castle walls)
 
-| Level | Power | Knockback | Splash damage |
+| Level | Power | Knockback | Splash damage | Splash zone |
 |---|---|---|---|
-| 1 | 1 | none | 50% of power |
-| 2 | 1 | 25% | 50% |
-| 3 | 1.5 | 25% | 💡 75% |
-| 4 | 1.5 | 50% | 💡 75% |
-| 5 | 2 | 50% | 💡 100%, and the splash also knocks back |
+| 1 | 1 | none | 50% of power | 3 × 1 |
+| 2 | 1 | 25% | 50% | 3 × 1 |
+| 3 | 1.5 | 25% | 75% | 3 × 1 |
+| 4 | 1.5 | 50% | 75% | 3 × 3 |
+| 5 | 2 | 50% | 100%, and the splash also knocks back | 3 × 3 |
 
-**Pink** (lightning jumps from the hit monster to the nearest monster in a neighbouring lane)
+**Deep Blue** (lightning runs along the row of the monster it hits: the nearest monsters at that height, in any lane, are struck too)
 
-| Level | Power | Knockback | Chain |
+| Level | Power | Knockback | Chain power | Monsters struck in the row (including the first) |
 |---|---|---|---|
-| 1 | 1 | none | 1 jump at 50% power |
-| 2 | 1 | 25% | 1 jump at 50% |
-| 3 | 1.5 | 25% | 💡 2 jumps at 50% |
-| 4 | 1.5 | 50% | 💡 2 jumps at 75% |
-| 5 | 2 | 50% | 💡 3 jumps at 75% |
+| 1 | 1 | none | 25% | 3 |
+| 2 | 1 | 25% | 50% | 3 |
+| 3 | 1.5 | 25% | 50% | 4 |
+| 4 | 1.5 | 50% | 75% | 5 |
+| 5 | 2 | 50% | 75% | 5 |
 
-**Gold** (a kill made with Gold skips the reward roll and always pays coins)
+**Pink** (healer: every hit repairs the wall of the column it flew up; knocks back often)
 
-| Level | Power | Knockback | Coins on a Gold kill |
+| Level | Power | Knockback | Wall repair per hit |
 |---|---|---|---|
-| 1 | 1 | none | ×2 |
-| 2 | 1 | 25% | ×2 |
-| 3 | 1.5 | 25% | 💡 ×3 |
-| 4 | 1.5 | 50% | 💡 ×3 |
-| 5 | 2 | 50% | 💡 ×4, and the kill also drops a pumpkin |
+| 1 | 1 | 50% | 1 |
+| 2 | 1 | 50% | 1 |
+| 3 | 1.5 | 50% | 2 |
+| 4 | 1.5 | 75% | 2 |
+| 5 | 2 | 75% | 3 |
 
-**Rainbow**: no level. Acts as the colour and level of the bunch it is thrown in. Sources: 3% of sprouts and drops, Purple level 4–5 spawns, one in every boss drop.
+**Silver** (net: when it hits, or reaches the top of its column, it leaves a net across that column that catches every arrow, water bolt and reflected pumpkin while it lasts)
+
+| Level | Power | Knockback | Net lasts | Caught projectiles |
+|---|---|---|---|---|
+| 1 | 1 | none | 4 s | destroyed |
+| 2 | 1 | 25% | 5 s | destroyed |
+| 3 | 1.5 | 25% | 6 s | destroyed |
+| 4 | 1.5 | 50% | 7 s | destroyed |
+| 5 | 2 | 50% | 8 s | thrown back at the nearest monster in the column |
+
+**Rainbow**: no level. Acts as the colour and level of the bunch it is thrown in. Sources: 3% of sprouts and drops, Purple spawns (10–50% by level), one in every boss drop.
 
 ---
 
@@ -209,7 +230,7 @@ Stats (HP, speed, eat rate, coins) come from bot runs; this table fixes behaviou
 | Wisp Rider | Carried by a wisp: fast while carried, normal speed once the carrier is destroyed | two hits |
 | Plague Doctor | Slow; heals monsters in its column | kill it first |
 
-### World 3: Crumbling Keep
+### World 4: Crumbling Keep
 
 | Monster | Behaviour | Counter |
 |---|---|---|
@@ -218,7 +239,7 @@ Stats (HP, speed, eat rate, coins) come from bot runs; this table fixes behaviou
 | Skeleton Archer | Stays at the back and fires projectiles at a wall | Grey or Black to reach it behind castle walls |
 | Vampire (elite) | Arrives with a bat swarm; regenerates HP if not hit for a while | burst damage, big bunches |
 
-### World 4: Drowned Marsh
+### World 5: Drowned Marsh
 
 | Monster | Behaviour | Counter |
 |---|---|---|
@@ -227,7 +248,7 @@ Stats (HP, speed, eat rate, coins) come from bot runs; this table fixes behaviou
 | Puddle Diver | Sits in a puddle, surfaces to throw a projectile at a wall, submerges again | hit while surfaced |
 | Splitter Slime | Splits into two 1-HP blobs when killed | Black blast, Grey |
 
-### World 5: Witchwood
+### World 3: Witchwood
 
 | Monster | Behaviour | Counter |
 |---|---|---|
@@ -262,16 +283,16 @@ Rules:
 |---|---|---|---|
 | 1 | Gravekeeper | Summons ghouls; teleports itself around the field | Teleports monsters forward or across lanes |
 | 2 | Poltergeist | Swaps pumpkin positions on the patch | Recolours pumpkins |
-| 3 | Vampire Count | Bat swarms; raises new castle walls. **Healing mode**: periodically it stops and starts regenerating, showing a counter (×4, ×5 or ×6); the player must land that many pumpkin hits to break the mode | Regenerates unless hit within 4 s even outside healing mode |
-| 4 | Twin Tides | Two bosses on the sea row lobbing projectiles at walls. Both must die within a short window; otherwise the dead twin revives after ~8 s | Shorter window, faster projectiles |
-| 5 | Hexwitch | Spawns chameleons | Turns monsters already on the field into chameleons |
+| 4 | Vampire Count | Bat swarms; raises new castle walls. **Healing mode**: periodically it stops and starts regenerating, showing a counter (×4, ×5 or ×6); the player must land that many pumpkin hits to break the mode | Regenerates unless hit within 4 s even outside healing mode |
+| 5 | Twin Tides | Two bosses on the sea row lobbing projectiles at walls. Both must die within a short window; otherwise the dead twin revives after ~8 s | Shorter window, faster projectiles |
+| 3 | Hexwitch | Spawns chameleons | Turns monsters already on the field into chameleons |
 | 6 | Hollow King | 5 stages: each stage borrows one earlier boss's full kit (Gravekeeper, Poltergeist, Vampire Count, Twin Tides, Hexwitch) | Final stage mixes everything, including the Poltergeist's "destroy every pumpkin of one loadout colour" |
 
 ---
 
 ## 8. Weapons (consumables)
 
-Weapons drop from kills (10% roll) and can also be bought in the shop.
+Weapons drop from kills (10% roll) and can also be bought in the shop. The HUD always shows the full set of tools; ones not yet introduced are dimmed with a padlock (owner, 2026-09-25).
 
 | Weapon | Effect | Introduced |
 |---|---|---|
@@ -280,8 +301,8 @@ Weapons drop from kills (10% roll) and can also be bought in the shop.
 | Gravestone buster | Removes one grave (tap it) | 1-6 |
 | Lantern | Clears all fog for 10 s | 2-2 |
 | Landmine | Placed in a lane at the wall line; explodes on the first monster to step on it | 2-5 |
-| Bomb | Damages a 3×3 area of the field: 3 lanes × 3 tile heights, tap to aim | 3-4 |
-| Scarecrow | Decoy planted in a lane; monsters stop to chew it until it breaks | 5-2 |
+| Bomb | Damages a 3×3 area of the field: 3 lanes × 3 tile heights, tap to aim | 4-4 |
+| Scarecrow | Decoy planted in a lane; monsters stop to chew it until it breaks | 3-2 |
 
 ---
 
@@ -315,6 +336,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-25 | Owner, after the tables: Gold removed (Yellow pays the coins by level); Pink lightning became Deep Blue (row lightning); new Pink healer at 2-8; new Silver net pumpkin at 5-8 for projectile monsters; world order is now Pumpkin Patch, Foggy Hollow, Witchwood, Crumbling Keep, Drowned Marsh, Hallow's End; the tool tray shows the full set with locks; dragging across the field collects drops. Owner's per-level numbers for Ice, Fire, Purple, Black, Deep Blue and White adopted. |
 | 2026-09-25 | Owner, after playing the whole game: pumpkin level 3 is the easy ceiling, levels 4–5 will be ad-gated, so levels 1–10 of each world must be comfortable at level ≤3. §5 rewritten as level-by-level tables with proposals for White, Black, Pink and Gold. |
 | 2026-09-25 | Owner, after playing: wind gusts slide pumpkins all the way until blocked (full push), replacing the one-cell nudge. |
 | 2026-09-25 | Owner: the Ghoul and the Imp are reused in every world as the fodder monsters, each with a world skin and one modifier. World 2 design approved with Bog Ghoul at 2-1 and Swift Bat at 2-6; Poltergeist drifts between lanes rather than teleporting. |

@@ -219,6 +219,19 @@ export function landingCell(x){
   return null;
 }
 
+/** Empty cell orthogonally next to a pumpkin of `colour` (or a rainbow), closest to x; falls back to landingCell. */
+export function landingNear(x, colour){
+  const c0 = clamp(Math.floor((x - GX) / CS), 0, COLS - 1);
+  let best = null, bd = Infinity;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
+    if (grid[r][c] || graves[r][c]) continue;
+    const near = [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].some(([a, b]) => inside(a, b) && grid[a][b] && !grid[a][b].fly && (grid[a][b].c === colour || grid[a][b].c === RAINBOW || colour === RAINBOW));
+    if (!near) continue;
+    const d = Math.abs(c - c0) * 10 + (ROWS - r);
+    if (d < bd){ bd = d; best = [r, c]; }
+  }
+  return best || landingCell(x);
+}
 export function collectDrop(d){
   if (!d || d.dead) return false;
   if (d.kind === 'weapon'){

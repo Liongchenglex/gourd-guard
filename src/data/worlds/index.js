@@ -19,7 +19,7 @@ export const WORLDS = [
 ];
 
 /** Display names for the six worlds (docs/WORLDS.md §3). Worlds without levels yet show as "coming soon". */
-export const WORLD_NAMES = ['Pumpkin Patch', 'Foggy Hollow', 'Crumbling Keep', 'Drowned Marsh', 'Witchwood', "Hallow's End"];
+export const WORLD_NAMES = ['Pumpkin Patch', 'Foggy Hollow', 'Witchwood', 'Crumbling Keep', 'Drowned Marsh', "Hallow's End"];   // order changed by the owner 2026-09-25
 
 export const WORLD_LEVELS = [world1, world2, world3, world4, world5, world6];
 

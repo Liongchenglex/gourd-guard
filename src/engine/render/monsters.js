@@ -1,3 +1,4 @@
+import { sprites } from './sprites.js';
 import { PTYPES } from '../../data/pumpkins.js';
 import { mS, mY } from '../monsters.js';
 import { ctx } from './canvas.js';
@@ -48,7 +49,7 @@ export function drawMonster(m, t){
     case 'mirror': drawMirror(m, F, t); break;
     case 'boss': if (m.kind === 'poltergeist') drawPoltergeist(m, F, t); else if (m.kind === 'vampirecount') drawVampireCount(m, F, t); else if (m.kind === 'twintides') drawTwinTide(m, F, t); else if (m.kind === 'hexwitch') drawHexwitch(m, F, t); else drawBoss(m, F, t); break;
   }
-  if (m.colourLock != null && m.type !== 'chameleon'){ cx.strokeStyle = PTYPES[m.colourLock].light; cx.lineWidth = 3; cx.beginPath(); cx.arc(0, -4, m.r * 1.15, 0, TAU); cx.stroke(); }   // hexed: colour ring
+
   if (m.frozenT > 0){
     cx.globalAlpha = fade * 0.5; cx.fillStyle = '#d8f4ff'; cx.strokeStyle = '#ffffff'; cx.lineWidth = 2;
     rrect(cx, -m.r * 1.15, -m.r * 1.45, m.r * 2.3, m.r * 2.6, 10); cx.fill(); cx.stroke();
@@ -71,6 +72,12 @@ export function drawMonster(m, t){
       cx.fillStyle = 'rgba(255,255,255,.18)'; ell(cx, px, by, d / 2, d / 2);
       if (fill > 0){ cx.save(); cx.beginPath(); cx.rect(px - d / 2, by - d / 2, d * fill, d); cx.clip(); cx.fillStyle = '#ff5a4d'; ell(cx, px, by, d / 2, d / 2); cx.restore(); }
     }
+  }
+  const sign = m.colourLock != null ? m.colourLock : m.colourImmune;
+  if (sign != null && sprites[sign]){   // chameleons carry their pumpkin above the health bar; reverse ones with an X through it
+    const sz = 30, sy = by - 12 - sz;
+    cx.drawImage(sprites[sign][0], m.x - sz / 2, sy, sz, sz);
+    if (m.colourImmune != null){ cx.strokeStyle = '#ff3a3a'; cx.lineWidth = 3.5; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo(m.x - 11, sy + 4); cx.lineTo(m.x + 11, sy + sz - 4); cx.moveTo(m.x + 11, sy + 4); cx.lineTo(m.x - 11, sy + sz - 4); cx.stroke(); }
   }
   if (m.healing){ cx.fillStyle = '#ff6a6a'; cx.font = 'bold 22px Fredoka, system-ui, sans-serif'; cx.textAlign = 'center'; cx.fillText(`heal ×${m.healHits}`, m.x, by - 14); cx.textAlign = 'left'; }
   cx.globalAlpha = 1;
@@ -418,7 +425,7 @@ export function drawChameleon(m, F, t, reverse){   // lizard in the colour it is
   cx.fillStyle = F(body); ell(cx, 0, 6, 20, 11); ell(cx, 14, -6, 11, 9);                        // body, head
   cx.strokeStyle = F(body); cx.lineWidth = 5; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo(-18, 6); cx.quadraticCurveTo(-30, 2, -28, -10 + Math.sin(t * 3) * 3); cx.stroke();   // curled tail
   cx.fillStyle = F(spots); for (let i = 0; i < 4; i++) ell(cx, -12 + i * 8, 4 + (i % 2) * 5, 3, 3);
-  if (reverse){ cx.fillStyle = '#0a0a10'; ell(cx, 17, -9, 3.5, 4); cx.strokeStyle = P.light; cx.lineWidth = 1.5; cx.beginPath(); cx.arc(17, -9, 4.5, 0, TAU); cx.stroke(); }
+  if (reverse){ cx.strokeStyle = '#ff3a3a'; cx.lineWidth = 2.2; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo(13, -13); cx.lineTo(21, -5); cx.moveTo(21, -13); cx.lineTo(13, -5); cx.stroke(); }   // X eye
   else { cx.fillStyle = m.flash > 0 ? '#fff' : P.light; ell(cx, 17, -9, 3.5, 4); cx.fillStyle = '#10200a'; ell(cx, 18, -9, 1.5, 2); }
   cx.strokeStyle = F(body); cx.lineWidth = 4; cx.beginPath(); cx.moveTo(-8, 12); cx.lineTo(-14, 20); cx.moveTo(8, 12); cx.lineTo(14, 20); cx.stroke();
 }

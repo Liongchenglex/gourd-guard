@@ -69,7 +69,7 @@ export function addBtn(box, label, fn, cls){ const b = document.createElement('b
 
 export const OVS = { title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult', preview:'#ovPreview', intro:'#ovIntro' };
 
-export let shopReturn = 'levels', helpNext = null, loadoutNext = null, loadoutAvail = [], loadoutSel = new Set();
+export let shopReturn = 'levels', helpNext = null, loadoutNext = null, loadoutAvail = [], loadoutSel = new Set(), loadoutMust = [];
 
 export function setState(s){
   setStateRaw(s);
@@ -124,14 +124,9 @@ export function openPreview(n){
     if (def.unlockPumpkins.includes(PTYPES[t].key)){ const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'NEW'; d.appendChild(tag); }
     pk.appendChild(d);
   }
-  const info = [];
-  info.push(def.boss ? 'Monsters keep coming until the boss falls.' : `${def.total} monsters.`);
-  if (def.fog.length) info.push(`${def.fog.length} fog bank${def.fog.length > 1 ? 's' : ''}.`);
-  if (def.castles) info.push(`${def.castles.n} castle wall${def.castles.n > 1 ? 's' : ''}.`);
-  if (def.puddles) info.push(`${def.puddles} puddle${def.puddles > 1 ? 's' : ''}.`);
+  const info = [];   // no counts here (owner): just what is new or special
+  if (def.boss) info.push('Monsters keep coming until the boss falls.');
   if (def.sea) info.push('The sea reaches the top of the field.');
-  if (def.gust) info.push(`Wind every ${def.gust.every} s.`);
-  if (def.graves) info.push(`${def.graves} grave${def.graves > 1 ? 's' : ''} in the patch${def.graves > prevGraves ? ' (more than before)' : ''}.`);
   for (const key of def.unlockGear){ const g = GEAR.find(x => x.key === key); if (g) info.push(`New tool: ${g.name}.`); }
   $('#pvInfo').textContent = info.join(' ');
   setState('preview');
@@ -196,9 +191,9 @@ export function openLevels(){
   setState('levels');
 }
 
-export function openLoadout(avail, next){
-  loadoutAvail = avail; loadoutNext = next;
-  const pref = (save.loadout || []).filter(t => avail.includes(t));
+export function openLoadout(avail, next, required){
+  loadoutAvail = avail; loadoutNext = next; loadoutMust = required || [];
+  const pref = [...loadoutMust, ...(save.loadout || []).filter(t => avail.includes(t) && !loadoutMust.includes(t))];
   for (const t of avail) if (pref.length < 5 && !pref.includes(t)) pref.push(t);
   loadoutSel = new Set(pref.slice(0, 5));
   const box = $('#picks'); box.innerHTML = '';
@@ -208,7 +203,9 @@ export function openLoadout(avail, next){
     const nm = document.createElement('b'); nm.textContent = PTYPES[t].name; b.appendChild(nm);
     const sm = document.createElement('small'); sm.textContent = `Level ${lvOf(t)}`; b.appendChild(sm);
     b.title = PTYPES[t].role;
+    if (loadoutMust.includes(t)){ const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'NEW'; b.appendChild(tag); b.classList.add('must'); }
     b.onclick = () => {
+      if (loadoutMust.includes(t)){ SFX.bad(); return; }   // introduced this level: stays in
       if (loadoutSel.has(t)) loadoutSel.delete(t);
       else if (loadoutSel.size < 5) loadoutSel.add(t);
       syncLoadout();

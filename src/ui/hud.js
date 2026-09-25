@@ -39,11 +39,15 @@ export function updateHud(force){
   $('#fwCount').textContent = save.fw; $('#fwBtn').disabled = save.fw <= 0;
   $('#rpCount').textContent = save.repair; $('#rpBtn').disabled = save.repair <= 0;
   $('#gbCount').textContent = save.buster; $('#gbBtn').disabled = save.buster <= 0; $('#gbBtn').classList.toggle('aim', G.aim === 'buster');
-  $('#rpBtn').hidden = !tools.includes('repair'); $('#fwBtn').hidden = !tools.includes('fw'); $('#gbBtn').hidden = !tools.includes('buster');
-  $('#lnCount').textContent = save.lantern; $('#lnBtn').disabled = save.lantern <= 0 || (G.fogClear || 0) > 0; $('#lnBtn').hidden = !tools.includes('lantern');
-  $('#bmCount').textContent = save.bomb; $('#bmBtn').disabled = save.bomb <= 0; $('#bmBtn').classList.toggle('aim', G.aim === 'bomb'); $('#bmBtn').hidden = !tools.includes('bomb');
-  $('#scCount').textContent = save.scarecrow; $('#scBtn').disabled = save.scarecrow <= 0; $('#scBtn').classList.toggle('aim', G.aim === 'scarecrow'); $('#scBtn').hidden = !tools.includes('scarecrow');
-  $('#lmCount').textContent = save.mine; $('#lmBtn').disabled = save.mine <= 0; $('#lmBtn').classList.toggle('aim', G.aim === 'mine'); $('#lmBtn').hidden = !tools.includes('mine');
+  $('#lnCount').textContent = save.lantern; $('#lnBtn').disabled = save.lantern <= 0 || (G.fogClear || 0) > 0;
+  $('#bmCount').textContent = save.bomb; $('#bmBtn').disabled = save.bomb <= 0; $('#bmBtn').classList.toggle('aim', G.aim === 'bomb');
+  $('#scCount').textContent = save.scarecrow; $('#scBtn').disabled = save.scarecrow <= 0; $('#scBtn').classList.toggle('aim', G.aim === 'scarecrow');
+  $('#lmCount').textContent = save.mine; $('#lmBtn').disabled = save.mine <= 0; $('#lmBtn').classList.toggle('aim', G.aim === 'mine');
+  for (const [btn, key] of [['#rpBtn', 'repair'], ['#fwBtn', 'fw'], ['#gbBtn', 'buster'], ['#lnBtn', 'lantern'], ['#lmBtn', 'mine'], ['#bmBtn', 'bomb'], ['#scBtn', 'scarecrow']]){
+    const el = $(btn), locked = !tools.includes(key);   // the full set is always shown; locked tools are dimmed with a padlock
+    el.classList.toggle('locked', locked); el.hidden = false;
+    if (locked) el.disabled = true;
+  }
   if (coinsChanged){ const cb = $('#coinBox'); cb.classList.add('bump'); setTimeout(() => cb.classList.remove('bump'), 120); }
 }
 

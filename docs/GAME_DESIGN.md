@@ -54,6 +54,7 @@ Immovable obstacles placed on empty pattern cells at night start. They block sli
 | Swipe a lit pumpkin sideways or down | Slides/pushes it like any pumpkin (can break its bunch). |
 | Press and hold a pumpkin 0.6 s | Smash it (a ring fills while holding; move or release early to cancel). |
 | Tap a dropped pumpkin in the field | It flies over the wall into the top-most empty cell of its column (or the nearest column with space). |
+| Drag a finger across the field | Every dropped pumpkin or tool the finger passes over is collected (owner, 2026-09-25). |
 | Space / F / R / P or Esc | Launch best bunch / firework / wall repair / pause (desktop). |
 
 Hints: after ~6 s idle with no lit bunch, the game outlines one pumpkin with an arrow showing a slide/push that builds a bunch (weighted toward columns with monsters).
@@ -77,15 +78,16 @@ Hints: after ~6 s idle with no lit bunch, the game outlines one pumpkin with an 
 | Type | Color | Role | Unlocks |
 |---|---|---|---|
 | Green | green | Normal | Level 1-1 |
-| Yellow | yellow | Normal (separate type and level from Green) | Level 1-1 |
+| Yellow | yellow | Normal, plus coins: a Yellow kill skips the reward roll and pays coins ×2, ×2, ×3, ×3, ×4 by level | Level 1-1 |
 | Ice | ice blue | Freeze | Level 1-3 |
 | Fire | red | Flame | Level 1-8 |
-| Grey | grey | Piercing (also passes castle walls, damaging them) | Level 3-6 |
-| Purple | purple | Spawn | Level 5-3 |
-| Gold | gold, with top hat, monocle and coin belt | Coins: a kill made with Gold skips the reward roll, always pays coins, and pays double. Knockback like Green. | Level 5-10 |
-| Pink | pink | Chain: on a hit, lightning jumps to the nearest monster in a neighbouring lane for half power (one jump). Knockback like Green. | Level 4-4 |
-| Black | black | Blast: explodes on its first hit for full power and hits monsters in the two neighbouring lanes at the same height for half. Against a castle wall it does ×1.5 and splashes the lanes beside it. Knockback like Green. | Level 3-9 |
-| White | white | Boomerang: a throw that hits nothing flies back into the patch (top-most empty cell of its column, else the nearest column with space) and does not count as a miss. Knockback like Green. | Level 2-3 |
+| Grey | grey | Piercing (also passes castle walls, damaging them) | Level 4-6 |
+| Purple | purple | Spawn: every launched Purple bunch spawns one pumpkin on its first hit; each kill may spawn another (25/40/50/60/70% by level); spawns are rainbow 10/20/30/40/50% | Level 3-3 |
+| Deep Blue | deep navy | Chain: lightning runs along the row of the monster hit and strikes the nearest 3/3/4/5/5 monsters (including it) at 25/50/50/75/75% power. Knockback like Green. | Level 5-4 |
+| Pink | pink | Heal: every hit repairs the wall of the column it flew up by 1/1/2/2/3. Knockback 50/50/50/75/75%. | Level 2-8 |
+| Silver | bright bluish silver | Net: on a hit or at the top of its column it leaves a net across the column for 4–8 s by level that catches arrows, water bolts and reflected pumpkins; level 5 nets throw them back at the nearest monster in the column. Knockback like Green. | Level 5-8 |
+| Black | black | Blast: explodes on its first hit for full power; the splash covers 3 lanes × 1 tile height (levels 1–3) or 3 × 3 (levels 4–5) at 50/50/75/75/100% power; level 5 splash also knocks back. Against a castle wall ×1.5. Knockback like Green. | Level 4-9 |
+| White | white | Boomerang: a throw that hits nothing flies back into the patch and does not count as a miss. Levels 1–2: top-most empty cell of its column (else the nearest column with space); levels 3+: an empty cell beside a same-colour pumpkin when one exists. Knockback like Green. | Level 2-3 |
 | Rainbow | multicolor | Wildcard, no level | Rare (see below) |
 
 ### Level tables (levels 1–5, bought in the shop per type)
@@ -94,11 +96,11 @@ All types share the power curve: **1, 1, 1.5, 1.5, 2** (power = damage per hit).
 
 | Level | Knockback chance (Green, Yellow, Grey, Purple) | Ice | Fire (burns × power) | Purple extra spawn on kill |
 |---|---|---|---|---|
-| 1 | none | slow 1 s | 2 × 0.1 | 25% |
-| 2 | 25% | slow 1.5 s | 2 × 0.2 | 50% |
-| 3 | 25% | slow 2 s, 25% freeze | 3 × 0.2 | 100% |
-| 4 | 50% | slow 2.5 s, 50% freeze | 4 × 0.2 | 100% (25% of spawns are rainbow) |
-| 5 | 50% | slow 3 s, 50% freeze | 5 × 0.2 | 100% (50% of spawns are rainbow) |
+| 1 | none | slow 1.5 s | 2 × 0.1 | 25% |
+| 2 | 25% | slow 2 s | 2 × 0.2 | 40% |
+| 3 | 25% | slow 3 s, 25% freeze | 3 × 0.2 | 50% |
+| 4 | 50% | slow 4 s, 50% freeze | 4 × 0.3 | 60% |
+| 5 | 50% | slow 5 s, 50% freeze | 5 × 0.3 | 70% |
 
 Details:
 - **Knockback**: pushes the monster back up its column by one tile (one cell height). A monster eating a wall is pulled off it.
@@ -113,8 +115,9 @@ Level 2: 40 · Level 3: 80 · Level 4: 130 · Level 5: 200.
 
 ### Loadout
 - While 5 or fewer types are unlocked, every unlocked type is in play (world 1: 2, 3, then 4 colours).
-- From the 6th unlocked type (Grey at 3-6), the player picks **exactly 5** before each level. "Up to 5" was rejected because fewer colors make bunching trivially easy.
+- From the 6th unlocked type (Pink at 2-8), the player picks **exactly 5** before each level. "Up to 5" was rejected because fewer colors make bunching trivially easy.
 - Only loadout colors sprout and drop.
+- Level-by-level tables for every type, including the ones with their own effects, live in `docs/WORLDS.md` §5.
 
 ---
 
@@ -150,13 +153,13 @@ Speed is in "field lengths per second" before level multipliers (so 0.055 ≈ 18
 | Drunk Sailor | 3 | 0.05 × 0.3–1.7 | 0.6 | 8 | 2 | Every 1.4–2.8 s picks a new lurch speed and, 70% of the time, staggers to a neighbouring lane (anywhere on the field) | 4-3 |
 | Puddle Diver | 3 | 0 | 0 | 9 | 2 | Lives in a random puddle. Hidden and untargetable for 3 s, then surfaces for 2.5 s and hurls a water bolt down its lane (2 wall damage). With no puddles on the level it walks in at 0.04 instead | 4-7 |
 | Splitter Slime | 3 | 0.045 | 0.5 | 7 | 2 | On death spawns 2 Blobs (1 HP, 0.065, minions) in the lanes beside it | 4-6 |
-| Chameleon | 3 | 0.05 | 0.6 | 8 | 2 | Takes one of the player's loadout colours at spawn (drawn in it). Only pumpkins of that colour damage it; other colours bounce off with "Wrong colour". Tools (fireworks, bombs, mines) still hurt it | 5-5 |
-| Reverse Chameleon | 3 | 0.05 | 0.6 | 8 | 2 | Takes a loadout colour and is immune to it; every other colour and all tools work. Drawn inverted with hollow eyes | 5-7 |
-| Mirror Sprite | 2 | 0.045 | 0.5 | 9 | 2 | Mirror up for 2 s, down for 2.5 s. While up, a pumpkin that hits it is reflected: it flies back down the lane and damages the player's wall for its power. Hit it while the mirror is down | 5-8 |
+| Chameleon | 3 | 0.05 | 0.6 | 8 | 2 | Takes one of the player's loadout colours at spawn (drawn in it, with that pumpkin shown above its health bar). Only pumpkins of that colour damage it; other colours bounce off with "Wrong colour". Tools (fireworks, bombs, mines) still hurt it | 3-5 |
+| Reverse Chameleon | 3 | 0.05 | 0.6 | 8 | 2 | Takes a loadout colour and is immune to it; every other colour and all tools work. Drawn inverted with an X eye and a red X through the pumpkin above its health bar | 3-7 |
+| Mirror Sprite | 2 | 0.045 | 0.5 | 9 | 2 | Mirror up for 2 s, down for 2.5 s. While up, a pumpkin that hits it is reflected: it flies back down the lane and damages the player's wall for its power. Hit it while the mirror is down | 3-8 |
 | Mummy | 2 | 0.045 | 0.6 | 5 | 2 | Only Fire (hits or burn ticks) kills it. Any other kill makes it collapse on the spot for 4 s, untargetable and not walking, then it stands up at full health. No rewards for a collapse | 1-9 |
-| The Hexwitch (world 5 boss) | 30 (form 1) / 48 (form 2) | 0.03 until she holds | 0 | 50 | 6 (incl. 1 rainbow) | Holds at 25% and drifts to a neighbouring lane every 6 s. Every 9 s (6 s in form 2) conjures a Chameleon in a random lane at her depth. Form 2 also hexes one monster on the field into a chameleon (colour ring) every 12 s. Immune to knockback and freeze | 5-10 (form 1), 5-20 (form 2) |
-| The Twin Tides (world 4 boss) | 18 each (form 1) / 28 each (form 2) | 0.03 until they hold | 0 | 30 each | 3 each (incl. 1 rainbow) | Two serpents in distinct random lanes, holding at 12% (the sea row). Every 6 s (4.5 s in form 2) each hurls a water bolt at a random wall for 3. Killing one alone puts it **down** for 8 s (5 s in form 2), untargetable; if the other dies inside that window both die for good, otherwise the fallen one rises at full health. The progress bar tracks their combined health. Immune to knockback and freeze | 4-10 (form 1), 4-20 (form 2) |
-| The Vampire Count (world 3 boss) | 32 (form 1) / 50 (form 2) | 0.03 until it holds | 0 | 50 | 6 (incl. 1 rainbow) | Holds at 30%. Every 9 s bursts into bats and reforms in another lane. Every 10 s (8 s in form 2) calls 2 bats. Every 15 s raises a castle wall (the level's wall HP) if fewer than 3 stand. Every 20 s (16 s) enters a **healing trance**: stands still healing 2 HP/s and shows "heal ×N" (N = 4, 5 or 6); each hit counts down and at zero the trance breaks and it is stunned 2 s. Form 2 also heals 1 HP every 2 s whenever it has not been hit for 4 s. Immune to knockback and freeze | 3-10 (form 1), 3-20 (form 2) |
+| The Hexwitch (world 3 boss) | 30 (form 1) / 48 (form 2) | 0.03 until she holds | 0 | 50 | 6 (incl. 1 rainbow) | Holds at 25% and drifts to a neighbouring lane every 6 s. Every 9 s (6 s in form 2) conjures a Chameleon in a random lane at her depth. Form 2 also hexes one monster on the field into a chameleon (colour ring) every 12 s. Immune to knockback and freeze | 5-10 (form 1), 5-20 (form 2) |
+| The Twin Tides (world 5 boss) | 18 each (form 1) / 28 each (form 2) | 0.03 until they hold | 0 | 30 each | 3 each (incl. 1 rainbow) | Two serpents in distinct random lanes, holding at 12% (the sea row). Every 6 s (4.5 s in form 2) each hurls a water bolt at a random wall for 3. Killing one alone puts it **down** for 8 s (5 s in form 2), untargetable; if the other dies inside that window both die for good, otherwise the fallen one rises at full health. The progress bar tracks their combined health. Immune to knockback and freeze | 4-10 (form 1), 4-20 (form 2) |
+| The Vampire Count (world 4 boss) | 32 (form 1) / 50 (form 2) | 0.03 until it holds | 0 | 50 | 6 (incl. 1 rainbow) | Holds at 30%. Every 9 s bursts into bats and reforms in another lane. Every 10 s (8 s in form 2) calls 2 bats. Every 15 s raises a castle wall (the level's wall HP) if fewer than 3 stand. Every 20 s (16 s) enters a **healing trance**: stands still healing 2 HP/s and shows "heal ×N" (N = 4, 5 or 6); each hit counts down and at zero the trance breaks and it is stunned 2 s. Form 2 also heals 1 HP every 2 s whenever it has not been hit for 4 s. Immune to knockback and freeze | 3-10 (form 1), 3-20 (form 2) |
 | The Poltergeist (world 2 boss) | 26 (form 1) / 44 (form 2) | 0.03 until it holds | 0 | 45 | 6 (incl. 1 rainbow) | Holds at 25% of the field and drifts to a neighbouring lane every 5 s. Every 8 s (6.5 s in form 2) swaps two random pumpkins on the patch, animated so they can be followed. Form 2 also repaints one pumpkin to another loadout colour every 12 s. Immune to knockback and freeze | 2-10 (form 1), 2-20 (form 2) |
 | The Gravekeeper (world 1 boss) | 20 (form 1) / 36 (form 2) | 0.03 until it holds | 0 (never reaches the wall) | 40 | 6 (incl. 1 rainbow) | Walks to 28% of the field and stops. Every 6 s teleports to a different lane. Raises a ghoul in a random lane at its own depth every 8 s (form 1) or 5.5 s (form 2). Form 2 also shoves one monster 30% of the field forward every 12 s. Immune to knockback and freeze; can be slowed | 1-10 (form 1), 1-20 (form 2) |
 
@@ -183,7 +186,9 @@ Per level the data gives: starting pattern, graves, wave size, spawn gap, speed 
 - Spawn gap is jittered ×0.6–1.4 with an 18% chance of a short gap ×0.3.
 - The boss appears once 40% of the wave has spawned. On boss levels spawning continues until the boss dies (see §7).
 - A level is won when the wave is exhausted (or the boss is dead) and no monster is left.
-- **Level preview**: choosing a level opens a card showing the monsters in its pool (NEW tags on first appearances), the boss if any, the pumpkins in play, the monster count or "until the boss falls", graves and new tools. Start from there.
+- **Level preview**: choosing a level opens a card showing the monsters in its pool (NEW tags on first appearances), the boss if any, and the pumpkins in play. No counts (owner, 2026-09-25). Start from there.
+- **Introduced monsters always appear**: every monster listed in a level's `intro` is forced into the spawn order right after the first spawn, so an introduction is never an empty promise.
+- **Loadout lock**: on a level that introduces a pumpkin, that pumpkin is pre-selected in the pick-5 screen and cannot be deselected.
 - **Intro cards**: the first time a pumpkin, tool, graves, monster or boss form appears, a card with its icon and one paragraph must be confirmed before the level starts (`save.seenIntro`). The bot's `startGame` path bypasses both screens.
 - Level banners still summarise the same things at the start of the level.
 
@@ -191,19 +196,19 @@ World 1 starting numbers (2026-09-25, to be tuned by the bot): wave 9 → 20 ove
 
 World 2 (Foggy Hollow) starting numbers (2026-09-25, untuned): wave 11 → 21 over levels 1–10 and 22 → 36 over 11–20; spawn gap 3.64 s → 2.5 s; speed ×0.8 → ×0.908 by level 10, then +0.02 per level; pool Bog Ghoul 10 and Wisp 5 from 2-1, Wraith 5 from 2-4, Swift Bat 5 from 2-6, Wisp Rider 4 from 2-7, Marsh Imp 5 from 2-8, Plague Doctor 3 from 2-9; graves 0 (1–5), 1 (6–12), 2 (13–20).
 
-World 3 (Crumbling Keep) starting numbers (2026-09-25, untuned): wave 12 → 22 over levels 1–10 and 23 → 37 over 11–20; spawn gap 3.54 s → 2.5 s; speed ×0.82 → ×0.928 by level 10, then +0.02 per level; pool Crypt Ghoul 10 and Keep Imp 5 from 3-1, Shield Knight 5 from 3-2, Gargoyle Hauler 3 from 3-3, Skeleton Archer 4 from 3-5, Siege Brute 3 from 3-7, Vampire 2 from 3-8; graves 0 (1–6), 1 (7–14), 2 (15–20).
+World 4 (Crumbling Keep) starting numbers (2026-09-25, untuned): wave 12 → 22 over levels 1–10 and 23 → 37 over 11–20; spawn gap 3.54 s → 2.5 s; speed ×0.82 → ×0.928 by level 10, then +0.02 per level; pool Crypt Ghoul 10 and Keep Imp 5 from 3-1, Shield Knight 5 from 3-2, Gargoyle Hauler 3 from 3-3, Skeleton Archer 4 from 3-5, Siege Brute 3 from 3-7, Vampire 2 from 3-8; graves 0 (1–6), 1 (7–14), 2 (15–20).
 
-World 4 (Drowned Marsh) starting numbers (2026-09-25, untuned): wave 13 → 23 over levels 1–10 and 24 → 38 over 11–20; spawn gap 3.44 s → 2.4 s; speed ×0.84 → ×0.948 by level 10, then +0.02 per level; pool Drowned Ghoul 10 and Tide Imp 5 from 4-1, Puddle Crawler 5 from 4-2, Drunk Sailor 4 from 4-3, Bog Turtle 3 from 4-5, Splitter Slime 4 from 4-6, Puddle Diver 3 from 4-7, Sodden Mummy 3 from 4-9; graves 0 (1–5), 1 (6–12), 2 (13–20).
+World 5 (Drowned Marsh) starting numbers (2026-09-25, untuned): wave 13 → 23 over levels 1–10 and 24 → 38 over 11–20; spawn gap 3.44 s → 2.4 s; speed ×0.84 → ×0.948 by level 10, then +0.02 per level; pool Drowned Ghoul 10 and Tide Imp 5 from 4-1, Puddle Crawler 5 from 4-2, Drunk Sailor 4 from 4-3, Bog Turtle 3 from 4-5, Splitter Slime 4 from 4-6, Puddle Diver 3 from 4-7, Sodden Mummy 3 from 4-9; graves 0 (1–5), 1 (6–12), 2 (13–20).
 
-World 5 (Witchwood) starting numbers (2026-09-25, untuned): wave 14 → 24 over levels 1–10 and 26 → 39 over 11–20; spawn gap 3.34 s → 2.4 s; speed ×0.86 → ×0.968 by level 10, then +0.02 per level; pool Wood Ghoul 10 and Broom Imp 5 from 5-1, Owl-bat 4 from 5-2, Wisp 4 from 5-4, Chameleon 5 from 5-5, Reverse Chameleon 4 from 5-7, Mirror Sprite 3 from 5-8; graves 0 (1–4), 1 (5–12), 2 (13–20).
+World 3 (Witchwood) starting numbers (2026-09-25, untuned): wave 14 → 24 over levels 1–10 and 26 → 39 over 11–20; spawn gap 3.34 s → 2.4 s; speed ×0.86 → ×0.968 by level 10, then +0.02 per level; pool Wood Ghoul 10 and Broom Imp 5 from 5-1, Owl-bat 4 from 5-2, Wisp 4 from 5-4, Chameleon 5 from 5-5, Reverse Chameleon 4 from 5-7, Mirror Sprite 3 from 5-8; graves 0 (1–4), 1 (5–12), 2 (13–20).
 
-### Wind gusts (world 5 map gimmick)
+### Wind gusts (world 3 map gimmick)
 Level data gives `gust:{ every, dirs }`. A gust timer counts down; for the last 2 s leaves blow across the patch in the coming direction and a "Wind →" label shows. Then **every pumpkin slides in that direction until stopped** by the edge, a grave or another pumpkin, leading edge first, so lines compress against the far side (the push rule applied to every row or column at once). Any gesture in progress is cancelled and bunches are recomputed. Levels 1–4 gust every 22 s left or right only; 5–9 every 18 s in all four directions; 10–14 every 14 s; 15–20 every 10 s.
 
-### Puddles and the sea row (world 4 map gimmick)
+### Puddles and the sea row (world 5 map gimmick)
 Level data gives `puddles` (count) and `sea` (boolean). Puddles are placed at level start in distinct random lanes at 30–60% of the field: 1 in levels 1–4, 2 in 5–9, 3 in 10–14, 4 in 15–20. Puddle Crawlers and Puddle Divers spawn from them. On sea levels (every even level from 4-6, plus both boss levels) the top 10% of the field is water and monsters surface from it with a splash; the Twin Tides live there.
 
-### Castle walls (world 3 map gimmick)
+### Castle walls (world 4 map gimmick)
 Level data gives `castles:{ n, hp }`: at level start *n* stone walls stand in distinct random lanes at 40–72% of the field: 1×6 HP in levels 1–4, 2×9 in 5–10, 3×12 in 11–15, 3×15 in 16–20 (owner, 2026-09-25: ramp 6 → 15). Monsters walk through them freely. A pumpkin flying up its lane hits the wall before anything behind it: it deals its power to the wall and stops. Grey deals its power and continues. Black deals ×1.5, stops, and splashes monsters and walls in the neighbouring lanes at that height for half. Bombs damage walls too. Broken walls crumble away. The Vampire Count raises new ones.
 
 ### Fog (world 2 map gimmick)
@@ -211,7 +216,7 @@ Level data lists fog banks as `[top, bottom]` fractions of the field. A monster 
 
 ### Unlocks and progression
 - Level 1 of a world opens when the previous world's level 10 has been beaten. Every other level opens when the level before it has been beaten. Beating level 10 therefore opens levels 11–20 and the next world at once.
-- Unlocks sit in levels 1–10 so nothing is missable. World 1: Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8. World 2: Lantern 2-2, White 2-3, Landmine 2-5. World 3: Bomb 3-4, Grey 3-6, Black 3-9. World 4: Pink 4-4 (no new tool). World 5: Scarecrow 5-2, Purple 5-3, Gold 5-10.
+- Unlocks sit in levels 1–10 so nothing is missable. World 1: Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8. World 2: Lantern 2-2, White 2-3, Landmine 2-5, Pink 2-8. World 3 (Witchwood): Scarecrow 3-2, Purple 3-3. World 4 (Crumbling Keep): Bomb 4-4, Grey 4-6, Black 4-9. World 5 (Drowned Marsh): Deep Blue 5-4, Silver 5-8. World order was changed by the owner on 2026-09-25; level addresses inside the monster and gimmick tables use the new numbering.
 - Stars are keyed by global night index in the save; `save.unlocked` mirrors the highest open night for older code and the endless-mode loadout.
 
 ### Endless mode
@@ -232,7 +237,7 @@ Difficulty `1 + t/25`; the Gravekeeper every 100 s (form 2 once the world change
   - **Landmine** (consumable, 💣): tap the button, then tap any column. The mine waits at that column's wall line and blasts the first non-boss monster to reach it for 6 damage. One mine per column. 35 coins, carry up to 3, one free at 2-5.
   - **Bomb** (consumable, 💥): tap the button, then tap a spot on the field. Everything within one lane either side and 1.5 tile heights up or down takes 4 damage, castle walls included. 45 coins, carry up to 3, one free at 3-4.
   - **Scarecrow** (consumable, 🌾): tap the button, then tap a column. A scarecrow with 12 health stands near that wall; monsters in the column stop at it and chew it at their eat rate until it breaks. One per column. 35 coins, carry up to 3, one free at 5-2.
-  - **Tools are gated by introduction**: a consumable exists only from the level that introduces it (Wall repair 1-1, Firework 1-5, Grave buster 1-6, Lantern 2-2, Landmine 2-5, Bomb 3-4, Scarecrow 5-2, from level data `unlockGear`). Before that it is hidden in the HUD, locked in the shop, and never drops from kills. New players start with 0 of everything and receive one unit on the introducing level.
+  - **Tools are gated by introduction**: a consumable exists only from the level that introduces it (Wall repair 1-1, Firework 1-5, Grave buster 1-6, Lantern 2-2, Landmine 2-5, Scarecrow 3-2, Bomb 4-4, from level data `unlockGear`). Before that it shows in the tool tray dimmed with a padlock, is locked in the shop, and never drops from kills. New players start with 0 of everything and receive one unit on the introducing level.
 - Progress, coins, levels, loadout and settings are saved in the browser (localStorage key `gourdguard.v1`).
 
 ---

@@ -1,9 +1,9 @@
 import { TYPES, BOSS_NAMES } from '../data/monsters.js';
-import { BURN_AMT, BURN_EVERY, BURN_N, FREEZE_P, KB_CHANCE, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, GOLD } from '../data/pumpkins.js';
+import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, NET_T, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SILVER, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches } from './board.js';
 import { TILE_P, mS, mY, spMulNow, spawnMonster } from './monsters.js';
-import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS } from './state.js';
+import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS, walls, FENCE_Y } from './state.js';
 import { TAU, clamp, fmt, rnd } from './util.js';
 import { lvOf, save, persist } from '../save.js';
 import { KILL_REWARD } from '../data/rules.js';
@@ -14,13 +14,14 @@ import { banner } from '../ui/hud.js';
 export function launchGroup(ref){
   if (!ref || !ref.lit || !G || G.over) return;
   const gid = primaryGid(ref), grp = G.groups[gid];
+  const bunch = { spawned:false };   // shared by every projectile of this launch (Purple's one-per-bunch spawn)
   if (!grp) return;
   const cells = groupCells(gid);
   if (!cells.length) return;
   const type = grp.color, lv = lvOf(type), guar = grp.size >= 5;
   for (const { r, c, cell } of cells){
     const x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;
-    G.projs.push({ x, y, vy:-900, type, vis:cell.c, lv, guar, lane:c, hitWalls:new Set(), rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false });
+    G.projs.push({ x, y, vy:-900, type, vis:cell.c, lv, guar, lane:c, hitWalls:new Set(), grp:bunch, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false });
     grid[r][c] = null;
   }
   SFX.launch(cells.length);
@@ -116,14 +117,15 @@ export function kill(m){
   m.dead = true;
   G.kills++; if (!m.minion) G.resolved++;
   G.score += m.pts;
-  const reward = m.type === 'boss' ? 'boss' : m.lastHit === GOLD ? 'gold' : rollReward();
+  const reward = m.type === 'boss' ? 'boss' : m.lastHit === YELLOW ? 'gold' : rollReward();
   const y = mY(m), s = mS(m);
   const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', chameleon:'#6ab04a', rchameleon:'#3a3a4a', mirror:'#c8d8f0', boss:'#6a3a7a' }[m.type] || '#aaa';
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
   ring(m.x, y, m.r * s * 2.2, 'rgba(255,220,150,.8)');
   if (reward === 'boss' || reward === 'coins' || reward === 'gold'){
-    G.coins += m.coins * (reward === 'gold' ? 2 : 1);
-    if (reward === 'gold') addFloat(`+${m.coins * 2} gold!`, m.x, y - m.r - 40, '#ffe680', 18, 1);
+    const mult = reward === 'gold' ? COIN_MULT[(m.lastHitLv || 1) - 1] : 1;
+    G.coins += Math.round(m.coins * mult);
+    if (reward === 'gold') addFloat(`+${Math.round(m.coins * mult)} coins!`, m.x, y - m.r - 40, '#ffe27a', 18, 1);
     const nc = Math.min(m.coins, m.type === 'boss' ? 12 : 5);
     for (let i = 0; i < nc; i++) G.coinFx.push({ sx:m.x + rnd(-12, 12), sy:y + rnd(-10, 10), t:-i * 0.05, dur:0.65 + Math.random() * 0.2 });
   }
@@ -152,7 +154,7 @@ export function hitMonster(pr, m){
   pr.hit.add(m);
   const i = pr.lv - 1, y = mY(m);
   for (let k = 0; k < 10; k++) chunk(pr.x, pr.y, pr.vis === RAINBOW ? '#f0a020' : PTYPES[pr.vis].base, 200);
-  let kb = pr.guar || ((pr.type <= 1 || pr.type >= 4) && Math.random() < KB_CHANCE[i]);
+  let kb = pr.guar || (pr.type === PINK ? Math.random() < KB_PINK[i] : (pr.type <= 1 || pr.type >= 4) && Math.random() < KB_CHANCE[i]);
   if (pr.type === 2){
     if (m.type !== 'boss' && Math.random() < FREEZE_P[i]){ m.frozenT = Math.max(m.frozenT, SLOW_T[i]); addFloat('Frozen!', m.x, y - m.r - 34, '#bfefff', 18, 0.9); SFX.freeze(); }
     else m.slowT = Math.max(m.slowT, SLOW_T[i]);
@@ -164,32 +166,34 @@ export function hitMonster(pr, m){
     addFloat('Reflected!', m.x, y - m.r - 24, '#e8f4ff', 16, 0.9); ring(m.x, y, 34, 'rgba(232,244,255,.9)'); SFX.knock();
     return;
   }
-  m.lastHit = pr.type;
+  m.lastHit = pr.type; m.lastHitLv = pr.lv;
   damage(m, POWER[i], PTYPES[pr.type].spark);
-  if (pr.type === 8){   // Pink: lightning jumps to the nearest monster in a neighbouring lane for half power
-    let best = null, bd = Infinity;
-    for (const o of G.monsters) if (o !== m && !o.dead && !o.hidden && o.rise <= 0 && Math.abs(o.lane - m.lane) === 1){ const d = Math.abs(mY(o) - y); if (d < bd){ bd = d; best = o; } }
-    if (best){
-      const y2 = mY(best), n = 6;
-      for (let k = 0; k <= n; k++){ const f = k / n; G.parts.push({ x:m.x + (best.x - m.x) * f + rnd(-8, 8), y:y + (y2 - y) * f + rnd(-8, 8), vx:0, vy:0, t:0, life:0.25, size:4, color:'#ffb3e6', kind:'dot', grav:0 }); }
-      ring(best.x, y2, 30, 'rgba(255,179,230,.9)');
-      best.lastHit = 8; damage(best, POWER[i] / 2, '#ffb3e6', true);
+  if (pr.type === PINK){   // Pink: repairs the wall of the column it flew up
+    const w = walls[pr.lane]; if (w.hp < w.max){ w.hp = Math.min(w.max, w.hp + HEAL_AMT[i]); addFloat(`Wall +${HEAL_AMT[i]}`, LANE(pr.lane), FENCE_Y - 40, '#ffb3e6', 16, 0.9); for (let k = 0; k < 6; k++) spark(LANE(pr.lane), FENCE_Y - 10, '#ffb3e6', 100); }
+  }
+  if (pr.type === SILVER) addNet(pr.lane, NET_T[i], i >= 4);   // Silver: a net across the column
+  if (pr.type === 5 && pr.grp && !pr.grp.spawned){   // Purple: every launched bunch spawns one pumpkin on its first hit
+    pr.grp.spawned = true; purpleSpawn(m, y, i);
+  }
+  if (pr.type === BLUE){   // Deep Blue: lightning runs along the row and strikes up to CHAIN_N monsters (including this one)
+    const others = G.monsters.filter(o => o !== m && !o.dead && !o.hidden && o.rise <= 0 && Math.abs(mY(o) - y) < CS * 0.8).sort((a, b) => Math.abs(a.x - m.x) - Math.abs(b.x - m.x)).slice(0, CHAIN_N[i] - 1);
+    let from = m;
+    for (const o of others){
+      const y1 = mY(from), y2 = mY(o), n = 6;
+      for (let k = 0; k <= n; k++){ const f = k / n; G.parts.push({ x:from.x + (o.x - from.x) * f + rnd(-8, 8), y:y1 + (y2 - y1) * f + rnd(-8, 8), vx:0, vy:0, t:0, life:0.25, size:4, color:'#9ab0ff', kind:'dot', grav:0 }); }
+      ring(o.x, y2, 30, 'rgba(154,176,255,.9)');
+      o.lastHit = BLUE; o.lastHitLv = pr.lv; damage(o, POWER[i] * CHAIN_FRAC[i], '#9ab0ff', true);
+      from = o;
     }
   }
   if (pr.type === 7){   // Black: blast the neighbouring lanes at the same height for half power
     ring(pr.x, y, 70, 'rgba(255,154,58,.9)'); for (let k = 0; k < 24; k++) spark(pr.x, y, k % 2 ? '#ff9a3a' : '#3a3540', 260); G.shake = Math.max(G.shake, 0.4);
-    for (const o of G.monsters.slice()) if (o !== m && !o.dead && !o.hidden && o.rise <= 0 && Math.abs(o.lane - m.lane) === 1 && Math.abs(mY(o) - y) < CS * 1.2){ o.lastHit = 7; damage(o, POWER[i] / 2, '#ff9a3a', true); }
-    for (const w of G.castles) if (!w.dead && Math.abs(w.lane - m.lane) === 1 && Math.abs(castleY(w) - y) < CS * 1.2) damageCastle(w, POWER[i] / 2);
+    const reach = SPLASH_ROWS[i] === 3 ? CS * 1.6 : CS * 0.7, frac = SPLASH_FRAC[i];
+    for (const o of G.monsters.slice()) if (o !== m && !o.dead && !o.hidden && o.rise <= 0 && Math.abs(o.lane - m.lane) <= 1 && Math.abs(mY(o) - y) < reach){ o.lastHit = 7; o.lastHitLv = pr.lv; damage(o, POWER[i] * frac, '#ff9a3a', true); if (i >= 4 && !o.dead) knockback(o); }
+    for (const w of G.castles) if (!w.dead && Math.abs(w.lane - m.lane) <= 1 && Math.abs(castleY(w) - y) < reach) damageCastle(w, POWER[i] * frac);
   }
   if (kb && !m.dead) knockback(m);
-  if (m.dead && pr.type === 5 && Math.random() < SPAWN_P[i]){
-    const empties = emptyCells();
-    if (empties.length){
-      const [r, c] = empties[Math.floor(Math.random() * empties.length)];
-      flyInto(r, c, Math.random() < RAINBOW_P[i] ? RAINBOW : randColor(), m.x, y);
-      addFloat('+1 pumpkin', m.x, y - 40, '#d09bff', 18, 1);
-    }
-  }
+  if (m.dead && pr.type === 5 && Math.random() < SPAWN_P[i]) purpleSpawn(m, y, i);   // Purple: extra spawn per kill
   SFX.hit();
 }
 
@@ -213,4 +217,21 @@ export function damageCastle(w, amt){
   for (let i = 0; i < 6; i++) chunk(LANE(w.lane), y, '#8a8d96', 160);
   if (w.hp <= 0.001){ w.dead = true; for (let i = 0; i < 22; i++) chunk(LANE(w.lane), y, i % 2 ? '#8a8d96' : '#55585f', 260); ring(LANE(w.lane), y, 44, 'rgba(220,220,230,.9)'); SFX.smash(); G.shake = Math.max(G.shake, 0.5); }
   else SFX.knock();
+}
+
+/** Purple spawn: a random loadout pumpkin (or rainbow) flies into a random empty patch cell. */
+export function purpleSpawn(m, y, i){
+  const empties = emptyCells();
+  if (!empties.length) return;
+  const [r, c] = empties[Math.floor(Math.random() * empties.length)];
+  flyInto(r, c, Math.random() < RAINBOW_P[i] ? RAINBOW : randColor(), m.x, y);
+  addFloat('+1 pumpkin', m.x, y - 40, '#d09bff', 18, 1);
+}
+/** Silver net: catches every arrow and bolt in the lane while it lasts; level 5 nets throw them back at the nearest monster. */
+export function addNet(lane, dur, throwBack){
+  const n = G.nets.find(x => x.lane === lane);
+  if (n){ n.t = Math.max(n.t, dur); n.throwBack = n.throwBack || throwBack; }
+  else G.nets.push({ lane, t:dur, throwBack });
+  ring(LANE(lane), FIELD_TOP + 30, 30, 'rgba(232,240,255,.9)');
+  addFloat('Net up', LANE(lane), FIELD_TOP + 40, '#e8f0ff', 16, 0.9);
 }

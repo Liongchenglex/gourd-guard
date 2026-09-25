@@ -62,7 +62,9 @@ export function attachInput(){
       e.preventDefault(); return;
     }
     try { cv.setPointerCapture(e.pointerId); } catch (err) {}
-    setGest({ id:e.pointerId, sx:p.x, sy:p.y, x:p.x, y:p.y, ref:pos ? grid[pos.r][pos.c] : null, done:false, held:0 });
+    const inField = p.y < FENCE_Y;   // above the fence: a drag sweeps up dropped pumpkins and tools
+    setGest({ id:e.pointerId, sx:p.x, sy:p.y, x:p.x, y:p.y, ref:pos ? grid[pos.r][pos.c] : null, done:false, held:0, collect:inField });
+    if (inField){ const d = dropAt(p.x, p.y); if (d) collectDrop(d); }
     G.idle = 0; G.hint = null;
     e.preventDefault();
   });
@@ -70,6 +72,7 @@ export function attachInput(){
   cv.addEventListener('pointermove', e => {
     if (!gest || e.pointerId !== gest.id) return;
     const p = toLogical(e); gest.x = p.x; gest.y = p.y;
+    if (gest.collect){ const d = dropAt(p.x, p.y); if (d) collectDrop(d); return; }
     if (gest.done) return;
     const dx = p.x - gest.sx, dy = p.y - gest.sy;
     if (Math.hypot(dx, dy) < 26) return;

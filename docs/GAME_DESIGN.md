@@ -88,7 +88,7 @@ Hints: after ~6 s idle with no lit bunch, the game outlines one pumpkin with an 
 | Pink | pink | Heal: every hit repairs the wall of the column it flew up by 1/1/2/2/3. Knockback 50/50/50/75/75%. | Level 2-8 |
 | Black | black | Blast: explodes on its first hit for full power; the splash covers 3 lanes × 1 tile height (levels 1–3) or 3 × 3 (levels 4–5) at 50/50/75/75/100% power; level 5 splash also knocks back. Against a castle wall ×1.5. Knockback like Green. | Level 4-9 |
 | Turquoise | turquoise | Bunches of 2 light up and launch (everything else needs 3); power is half of Green's: 0.5, 0.5, 0.75, 0.75, 1; knockback like Green. | Level 3-6 |
-| Brown | brown | Grows on the patch by time since it appeared: small until 4 s, medium until 8 s, then big (level 3–4: 3 s and 6 s; level 5: 2 s and 4 s). Power = Green's × 0.5 / 1 / 2 by size; sizes mix in one bunch and each projectile hits for its own size. Knockback 0, 50, 25, 100, 50% by level. | Level 5-7 |
+| Brown | brown | Grows on the patch by time since it appeared: small until 4 s, medium until 8 s, then big (level 3–4: 3 s and 6 s; level 5: 2 s and 4 s). Power = Green's × 0.5 / 1 / 2 by size; sizes mix in one bunch and each projectile hits for its own size. Knockback 0, 50, 50, 100, 100% by level. | Level 5-7 |
 | White | white | Boomerang: a throw that hits nothing flies back into the patch and does not count as a miss. Levels 1–2: top-most empty cell of its column (else the nearest column with space); levels 3+: an empty cell beside a same-colour pumpkin when one exists. Knockback like Green. | Level 2-3 |
 | Rainbow | multicolor | Wildcard, no level | Rare (see below) |
 

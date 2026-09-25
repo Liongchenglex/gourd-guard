@@ -213,9 +213,9 @@ Power = damage per hit. "Knockback" = chance per hit to push the monster back on
 |---|---|---|---|---|
 | 1 | 0.5 / 1 / 2 | none | 8 s | 4 s |
 | 2 | 0.5 / 1 / 2 | 50% (double Green's) | 8 s | 4 s |
-| 3 | 0.75 / 1.5 / 3 | 25% | 6 s | 3 s |
-| 4 | 0.75 / 1.5 / 3 | 100% (double Green's) | 6 s | 3 s |
-| 5 | 1 / 2 / 4 | 50% | 4 s | 2 s |
+| 3 | 0.75 / 1.5 / 3 | 50% | 6 s | 3 s |
+| 4 | 0.75 / 1.5 / 3 | 100% (double again) | 6 s | 3 s |
+| 5 | 1 / 2 / 4 | 100% | 4 s | 2 s |
 
 **Rainbow**: no level. Acts as the colour and level of the bunch it is thrown in. Sources: 3% of sprouts and drops, Purple spawns (10–50% by level), one in every boss drop.
 

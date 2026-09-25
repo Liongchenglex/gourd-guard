@@ -20,7 +20,7 @@ export const RAINBOW = 12, NTYPES = 12;   // type indices: 0 Green, 1 Yellow, 2 
 export const YELLOW = 1, BLUE = 8, PINK = 9, WHITE = 6, BLACK = 7, TURQUOISE = 10, BROWN = 11;
 export const TURQ_FRAC = 0.5;                          // Turquoise: power as a fraction of Green's; bunches of 2 launch
 export const BROWN_GROW = [[8, 4], [8, 4], [6, 3], [6, 3], [4, 2]];   // Brown: [seconds to full growth, seconds per stage] by level
-export const BROWN_KB   = [0, 0.5, 0.25, 1, 0.5];      // Brown: knockback chance by level (levels 2 and 4 double Green's)
+export const BROWN_KB   = [0, 0.5, 0.5, 1, 1];         // Brown: knockback chance by level; the doubling at levels 2 and 4 sticks
 export const BROWN_SIZE_MULT = [0.5, 1, 2];            // Brown: power multiplier when small, medium, big
 // Per-level tables for the special types (docs/WORLDS.md §5)
 export const COIN_MULT  = [2, 2, 3, 3, 4];          // Yellow: coin multiplier on its kills (always pays coins)

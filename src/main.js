@@ -1,203 +1,38 @@
 import './style.css';
-(() => {
-'use strict';
-const TAU = Math.PI * 2;
-const W = 540, COLS = 7, ROWS = 5, CS = 74, GX = (W - COLS * CS) / 2;
-const LANE = c => GX + c * CS + CS / 2;
-let H = 960, GY = 0, FENCE_Y = 0, FIELD_TOP = 150, FIELD_BOT = 0;
-function layout(){
-  GY = H - 26 - ROWS * CS;
-  FENCE_Y = GY - 34;
-  FIELD_BOT = FENCE_Y - 22;
-  FIELD_TOP = Math.round(Math.max(140, H * 0.15));
-}
-layout();
+import { MFIRST, MINTRO, TYPES } from './data/monsters.js';
+import { PATTERNS, SPAWN_STEPS } from './data/patterns.js';
+import { BURN_AMT, BURN_EVERY, BURN_N, FREEZE_P, KB_CHANCE, LV_COST, NTYPES, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, WILD_CHANCE, lvDesc, pct, typesForNight } from './data/pumpkins.js';
+import { GEAR } from './data/shop.js';
+import { LEVELS, WORLDS, gravesFor, levelDef, poolFor } from './data/worlds/index.js';
+import { SFX, ensureAudio } from './engine/audio.js';
+import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, GX, GY, H, HOLD_TIME, LANE, ROWS, W, bannerTimer, gest, graves, grid, layout, nextGid, setBannerTimer, setG, setGest, setGraves, setGrid, setH, setStateRaw, setWalls, state, walls } from './engine/state.js';
+import { $, TAU, clamp, fmt, mulberry, rnd, shuffle } from './engine/util.js';
+import { lvOf, persist, save } from './save.js';
 
-const $ = s => document.querySelector(s);
-const rnd = (a, b) => a + Math.random() * (b - a);
-const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
-const fmt = v => String(Math.round(v * 10) / 10);
-function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
-
-// ---------- Pumpkins ----------
-const PTYPES = [
-  { key:'green',  name:'Green',  role:'normal pumpkin', base:'#5c9c33', light:'#94d65e', dark:'#305c17', spark:'#a6f06a', unlock:1 },
-  { key:'yellow', name:'Yellow', role:'normal pumpkin', base:'#e8b323', light:'#ffe27a', dark:'#9a6a08', spark:'#ffe27a', unlock:1 },
-  { key:'ice',    name:'Ice',    role:'slows monsters and can freeze them solid', base:'#7cc6ec', light:'#e6f8ff', dark:'#2f73a3', spark:'#bfefff', unlock:2 },
-  { key:'fire',   name:'Fire',   role:'keeps burning monsters as they walk', base:'#d63a2a', light:'#ff7057', dark:'#7f1c13', spark:'#ff6a3a', unlock:4 },
-  { key:'grey',   name:'Grey',   role:'pierces through every monster in its column', base:'#8f9096', light:'#d4d5da', dark:'#4d4e55', spark:'#e8e8ee', unlock:6 },
-  { key:'purple', name:'Purple', role:'can spawn a bonus pumpkin in your patch when it kills', base:'#8746c2', light:'#bb88ee', dark:'#4c2379', spark:'#d09bff', unlock:8 },
-  { key:'rainbow',name:'Rainbow',role:'joins any bunch as any color', rainbow:true, spark:'#fff3a0' },
-];
-const RAINBOW = 6, NTYPES = 6;
-const POWER     = [1, 1, 1.5, 1.5, 2];
-const KB_CHANCE = [0, 0.25, 0.25, 0.5, 0.5];
-const SLOW_T    = [1, 1.5, 2, 2.5, 3];
-const FREEZE_P  = [0, 0, 0.25, 0.5, 0.5];
-const BURN_N    = [2, 2, 3, 4, 5];
-const BURN_AMT  = [0.1, 0.2, 0.2, 0.2, 0.2];
-const BURN_EVERY = 1;
-const SPAWN_P   = [0.25, 0.5, 1, 1, 1];
-const RAINBOW_P = [0, 0, 0, 0.25, 0.5];
-const LV_COST   = [40, 80, 130, 200];
-const WILD_CHANCE = 0.03;
-function pct(v){ return Math.round(v * 100) + '%'; }
-function lvDesc(t, L){
-  const i = L - 1, parts = [`power ${POWER[i]}`];
-  if (t === 2){ parts.push(`slows ${SLOW_T[i]}s`); if (FREEZE_P[i]) parts.push(`${pct(FREEZE_P[i])} freeze`); }
-  else if (t === 3) parts.push(`burns ${BURN_N[i]} times for ${BURN_AMT[i]}`);
-  else {
-    parts.push(KB_CHANCE[i] ? `${pct(KB_CHANCE[i])} knockback` : 'no knockback');
-    if (t === 4) parts.push('pierces');
-    if (t === 5){ parts.push(`${pct(SPAWN_P[i])} spawn on kill`); if (RAINBOW_P[i]) parts.push(`${pct(RAINBOW_P[i])} rainbow`); }
-  }
-  return parts.join(', ');
-}
-const lvOf = t => clamp(save.lv[PTYPES[t].key] || 1, 1, 5);
-function typesForNight(n){ return [...Array(NTYPES).keys()].filter(t => PTYPES[t].unlock <= n); }
-
-// Starting layouts: X = pumpkin, . = empty (5 rows × 7 columns)
-const PATTERNS = [
-  ['X.X.X.X', '.X.X.X.', 'X.X.X.X', '.X.X.X.', 'X.X.X.X'],
-  ['.......', '..X.X..', '.XX.XX.', 'XXX.XXX', 'XXXXXXX'],
-  ['X..X..X', 'X..X..X', 'XX.X.XX', 'XX...XX', 'XXX.XXX'],
-  ['...X...', '..XXX..', '.XX.XX.', 'XXX.XXX', '.XXXXX.'],
-  ['X...X.X', '.X.X...', 'X.X..XX', '.X.XX..', 'XX..X.X'],
-];
-const SPAWN_STEPS = [2, 3, 4, 5, 6, 7, 8, 10];
-function gravesFor(n){ return n >= 13 ? 4 : n >= 10 ? 3 : n >= 6 ? 2 : n >= 3 ? 1 : 0; }
-
-// ---------- Monsters ----------
-const TYPES = {
-  ghoul:  { hp:1,  r:21, sp:0.055, coins:2,  eat:0.5, pts:10, drop:0.8 },
-  bat:    { hp:1,  r:16, sp:0.085, coins:2,  eat:0.4, pts:12, drop:0.8 },
-  imp:    { hp:2,  r:17, sp:0.074, coins:3,  eat:0.6, pts:14, drop:1.5 },
-  brute:  { hp:4,  r:28, sp:0.028, coins:6,  eat:1.1, pts:30, drop:3 },
-  wraith: { hp:2,  r:21, sp:0.05,  coins:4,  eat:0.5, pts:20, drop:1.5 },
-  boss:   { hp:13, r:52, sp:0.0092,coins:40, eat:1.0, pts:250, drop:6 },
-};
-const MINTRO = {
-  bat:'New foe: bats. Quick, but one hit does it.',
-  imp:'New foe: imps. They take 2 hits and hop in sudden bursts.',
-  brute:'New foe: mossbacks. They take 4 hits and chew walls fast, but drop 3 pumpkins.',
-  wraith:'New foe: wraiths. They drift into the next column now and then.',
-};
-const MFIRST = { bat:3, imp:5, brute:7, wraith:9 };
-const WORLDS = [
-  { name:'The Pumpkin Patch', sky:['#170d2a','#46213f','#a9523a'], ground:['#2b1b2a','#1a1219'], moon:'#ffe6ad', grass:'#3a2436' },
-  { name:'Crooked Graveyard', sky:['#0a1322','#1b3145','#4d6b67'], ground:['#1a2427','#10171a'], moon:'#e2f4ff', grass:'#233236' },
-  { name:'Hollow Manor',      sky:['#12060c','#3a0f1c','#86291d'], ground:['#271417','#170b0e'], moon:'#ffb893', grass:'#3a1c20' },
-];
-const LEVELS = 15;
-function poolFor(n){
-  const p = [['ghoul', 10]];
-  if (n >= MFIRST.bat) p.push(['bat', 6]);
-  if (n >= MFIRST.imp) p.push(['imp', 6]);
-  if (n >= MFIRST.brute) p.push(['brute', 3 + n * 0.2]);
-  if (n >= MFIRST.wraith) p.push(['wraith', 4]);
-  return p;
-}
-function pickFrom(pool){
+export function pickFrom(pool){
   let tot = 0; for (const [, w] of pool) tot += w;
   let r = Math.random() * tot;
   for (const [t, w] of pool){ r -= w; if (r <= 0) return t; }
   return pool[0][0];
 }
-function levelDef(n){
-  return { n, world:Math.min(2, Math.floor((n - 1) / 5)), total:6 + Math.round(n * (n > 10 ? 1.1 : 1.6)) - (n % 5 === 0 ? 3 : 0),
-    interval:Math.max(2.9, 4.0 - n * 0.11), spMul:0.76 + Math.min(n - 1, 9) * 0.012 + Math.max(0, n - 10) * 0.005,
-    boss:n % 5 === 0, pool:poolFor(n), pattern:(n - 1) % PATTERNS.length, graves:gravesFor(n) };
-}
-const GEAR = [
-  { key:'fence',  icon:'🧱', name:'Sturdy walls', desc:'Every column wall gets 5 more health per level.', max:3, cost:[40,80,130] },
-  { key:'repair', icon:'🔨', name:'Wall repair',  desc:'Use it mid-battle to fully repair every wall. Carry up to 3.', max:3, cost:[40], consumable:true },
-  { key:'fw',     icon:'🎆', name:'Firework',     desc:'Use it mid-battle to hit every monster for 3. Carry up to 5.', max:5, cost:[30], consumable:true },
-];
-const wallMax = () => 18 + 5 * save.fence;
 
-// ---------- Save ----------
-const SAVE_KEY = 'gourdguard.v1';
-const save = { unlocked:1, stars:{}, coins:0, fence:0, fw:1, repair:1, best:0, muted:false, seenHelp:false, seenFlick:false, spawnEvery:5,
-  lv:{ green:1, yellow:1, ice:1, fire:1, grey:1, purple:1 }, loadout:[0,1,2,3,4] };
-try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && typeof s === 'object') Object.assign(save, s); } catch (e) {}
-if (!save.lv || typeof save.lv !== 'object') save.lv = {};
-for (const t of PTYPES.slice(0, NTYPES)) if (!save.lv[t.key]) save.lv[t.key] = 1;
-if (!SPAWN_STEPS.includes(save.spawnEvery)) save.spawnEvery = 5;
-if (typeof save.repair !== 'number') save.repair = 1;
-// Old upgrades were replaced by pumpkin levels: refund what was spent on them.
-if (save.knife || save.oil){
-  const k = [25,50,90,140,200].slice(0, save.knife || 0), o = [35,70,120].slice(0, save.oil || 0);
-  save.coins += [...k, ...o].reduce((a, b) => a + b, 0); save.knife = 0; save.oil = 0; save.refunded = true;
-}
-if (save.seenHelp && !save.seenPowers){ save.seenHelp = false; }
-save.seenPowers = true;
-function persist(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+export const wallMax = () => 18 + 5 * save.fence;
 
-// ---------- Audio ----------
-let AC = null, master = null, noiseBuf = null, lastCoin = 0, lastHit = 0, lastThrow = 0, lastChomp = 0;
-function ensureAudio(){
-  try {
-    if (!AC){
-      const A = window.AudioContext || window.webkitAudioContext; if (!A) return;
-      AC = new A(); master = AC.createGain(); master.gain.value = 0.45; master.connect(AC.destination);
-      noiseBuf = AC.createBuffer(1, Math.floor(AC.sampleRate * 1), AC.sampleRate);
-      const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    }
-    if (AC.state === 'suspended') AC.resume();
-  } catch (e) {}
-}
-function tone(f, d, type, v, f2, delay){
-  if (!AC || save.muted) return;
-  const t0 = AC.currentTime + (delay || 0);
-  const o = AC.createOscillator(), g = AC.createGain();
-  o.type = type || 'sine'; o.frequency.setValueAtTime(f, t0);
-  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + d);
-  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(v || 0.15, t0 + 0.012);
-  g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
-  o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + d + 0.05);
-}
-function noise(d, v, f, q, delay, f2){
-  if (!AC || save.muted) return;
-  const t0 = AC.currentTime + (delay || 0);
-  const s = AC.createBufferSource(); s.buffer = noiseBuf;
-  const bq = AC.createBiquadFilter(); bq.type = 'bandpass'; bq.frequency.setValueAtTime(f, t0); bq.Q.value = q || 1;
-  if (f2) bq.frequency.exponentialRampToValueAtTime(f2, t0 + d);
-  const g = AC.createGain(); g.gain.setValueAtTime(v, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
-  s.connect(bq); bq.connect(g); g.connect(master); s.start(t0); s.stop(t0 + d + 0.05);
-}
-const SFX = {
-  slide(){ noise(0.14, 0.14, 700, 1, 0, 260); },
-  push(){ noise(0.16, 0.16, 500, 1, 0, 200); tone(150, 0.12, 'triangle', 0.06, 110); },
-  bad(){ tone(190, 0.1, 'square', 0.05, 150); },
-  match(n, groups){ const base = 440 * Math.pow(2, (groups - 1) * 3 / 12); [0,4,7,12,16].slice(0, Math.min(5, n)).forEach((s, i) => tone(base * Math.pow(2, s / 12), 0.18, 'triangle', 0.1, null, i * 0.05)); },
-  launch(n){ const t = performance.now(); if (t - lastThrow < 60) return; lastThrow = t; noise(0.3, 0.3 + Math.min(0.2, n * 0.04), 500, 1.4, 0, 2800); },
-  sprout(){ tone(480, 0.12, 'sine', 0.06, 880); },
-  collect(){ tone(880, 0.08, 'triangle', 0.07, 1320); tone(1320, 0.1, 'sine', 0.04, null, 0.06); },
-  smash(){ noise(0.18, 0.3, 500, 0.8); tone(160, 0.12, 'square', 0.05, 90); },
-  hit(){ const n = performance.now(); if (n - lastHit < 45) return; lastHit = n; tone(210, 0.12, 'square', 0.06, 80); noise(0.08, 0.18, 900, 1.5); },
-  freeze(){ tone(1400, 0.2, 'sine', 0.05, 2200); tone(1800, 0.25, 'triangle', 0.03, 2600, 0.05); },
-  knock(){ tone(120, 0.14, 'triangle', 0.1, 70); },
-  chomp(){ const n = performance.now(); if (n - lastChomp < 260) return; lastChomp = n; noise(0.07, 0.12, 380, 2); },
-  kill(){ tone(330, 0.18, 'triangle', 0.1, 700); },
-  coin(){ const n = performance.now(); if (n - lastCoin < 70) return; lastCoin = n; tone(1320, 0.07, 'sine', 0.05); tone(1760, 0.12, 'sine', 0.05, null, 0.05); },
-  wallBreak(){ tone(140, 0.5, 'sawtooth', 0.14, 45); noise(0.5, 0.35, 300, 0.7); },
-  repair(){ [0,4,7].forEach((s, i) => tone(392 * Math.pow(2, s / 12), 0.16, 'square', 0.05, null, i * 0.07)); },
-  boom(){ noise(0.9, 0.45, 300, 0.6, 0, 120); tone(90, 0.6, 'sine', 0.22, 40); },
-  win(){ [0,4,7,12].forEach((s, i) => tone(523 * Math.pow(2, s / 12), 0.32, 'triangle', 0.12, null, i * 0.12)); },
-  lose(){ [0,-3,-7,-12].forEach((s, i) => tone(330 * Math.pow(2, s / 12), 0.42, 'sawtooth', 0.07, null, i * 0.18)); },
-  boss(){ tone(70, 1.3, 'sawtooth', 0.11, 48); tone(104, 1.3, 'sawtooth', 0.07, 70); },
-};
 
 // ---------- Canvas / sizing ----------
-const wrap = $('#wrap'), cv = $('#cv'), ctx = cv.getContext('2d');
-let scale = 1, dpr = 1, K = 1;
-let sprites = [], fogSprite = null, bg = null, bgWorld = -1;
-let coinTarget = { x:W - 150, y:36 };
-function resize(){
+
+export const wrap = $('#wrap'), cv = $('#cv'), ctx = cv.getContext('2d');
+
+export let scale = 1, dpr = 1, K = 1;
+
+export let sprites = [], fogSprite = null, bg = null, bgWorld = -1;
+
+export let coinTarget = { x:W - 150, y:36 };
+
+export function resize(){
   let aw = Math.max(200, document.body.clientWidth), ah = Math.max(300, document.body.clientHeight);
   if (aw > ah * 0.8){ aw -= 32; ah -= 32; }
-  H = Math.round(clamp(ah / aw * W, 900, 1200));
+  setH(Math.round(clamp(ah / aw * W, 900, 1200)));
   layout();
   scale = Math.min(aw / W, ah / H);
   dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -211,24 +46,33 @@ function resize(){
   buildBg(G ? G.world : 0);
   requestAnimationFrame(measureCoin);
 }
-function measureCoin(){
+
+export function measureCoin(){
   const a = $('#coinBox .coin').getBoundingClientRect(), b = wrap.getBoundingClientRect();
   if (a.width) coinTarget = { x:(a.left + a.width / 2 - b.left) / scale, y:(a.top + a.height / 2 - b.top) / scale };
 }
 
-function ell(g, x, y, rx, ry, rot){ g.beginPath(); g.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), rot || 0, 0, TAU); g.fill(); }
-function tri(g, x, y, s){ g.beginPath(); g.moveTo(x, y - s); g.lineTo(x + s * 0.95, y + s * 0.6); g.lineTo(x - s * 0.95, y + s * 0.6); g.closePath(); g.fill(); }
-function rrect(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
-function hexToRgb(h){ const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
-function mix(a, b, t){ const A = hexToRgb(a), B = hexToRgb(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})`; }
-function shade(c, d){ if (c[0] !== '#') return c; const A = hexToRgb(c); return `rgb(${A.map(v => clamp(v + d, 0, 255)).join(',')})`; }
 
-const RAINBOW_RIBS = [
+export function ell(g, x, y, rx, ry, rot){ g.beginPath(); g.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), rot || 0, 0, TAU); g.fill(); }
+
+export function tri(g, x, y, s){ g.beginPath(); g.moveTo(x, y - s); g.lineTo(x + s * 0.95, y + s * 0.6); g.lineTo(x - s * 0.95, y + s * 0.6); g.closePath(); g.fill(); }
+
+export function rrect(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+
+export function hexToRgb(h){ const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+
+export function mix(a, b, t){ const A = hexToRgb(a), B = hexToRgb(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})`; }
+
+export function shade(c, d){ if (c[0] !== '#') return c; const A = hexToRgb(c); return `rgb(${A.map(v => clamp(v + d, 0, 255)).join(',')})`; }
+
+
+export const RAINBOW_RIBS = [
   { base:'#d63a2a', light:'#ff8a70', dark:'#7f1c13' }, { base:'#8746c2', light:'#c79cf2', dark:'#4c2379' },
   { base:'#f0a020', light:'#ffd98a', dark:'#9a5a08' }, { base:'#3f86d5', light:'#a8d4ff', dark:'#1d4a82' },
   { base:'#5c9c33', light:'#a6e07a', dark:'#305c17' },
 ];
-function paintPumpkin(g, cx, cy, R, col, lit){
+
+export function paintPumpkin(g, cx, cy, R, col, lit){
   g.fillStyle = 'rgba(0,0,0,.35)'; ell(g, cx, cy + R * 0.8, R * 0.9, R * 0.2);
   const ribs = [[-0.55, 0.5], [0.55, 0.5], [-0.28, 0.58], [0.28, 0.58], [0, 0.6]];
   ribs.forEach(([ox, rw], i) => {
@@ -265,12 +109,14 @@ function paintPumpkin(g, cx, cy, R, col, lit){
     g.fillStyle = 'rgba(255,255,255,.28)'; ell(g, cx - R * 0.32, cy - R * 0.32, R * 0.1, R * 0.2, 0.35);
   }
 }
-function pumpkinIcon(t, lit, px){
+
+export function pumpkinIcon(t, lit, px){
   const c = document.createElement('canvas'); c.width = c.height = px || 96;
   const g = c.getContext('2d'); g.scale(c.width / CS, c.width / CS); paintPumpkin(g, CS / 2, CS / 2 + 3, CS * 0.4, PTYPES[t], lit);
   return c;
 }
-function buildSprites(){
+
+export function buildSprites(){
   const px = Math.max(24, Math.round(CS * K));
   sprites = PTYPES.map(col => [false, true].map(lit => {
     const c = document.createElement('canvas'); c.width = c.height = px;
@@ -285,7 +131,8 @@ function buildSprites(){
   fg.fillStyle = gr; fg.fillRect(0, 0, fs, fs);
 }
 
-function buildBg(world){
+
+export function buildBg(world){
   bgWorld = world;
   const w = WORLDS[world];
   bg = document.createElement('canvas'); bg.width = Math.round(W * K); bg.height = Math.round(H * K);
@@ -366,21 +213,18 @@ function buildBg(world){
   }
 }
 
-// ---------- Game state ----------
-let G = null;
-let state = 'title';
-let grid = [], graves = [], walls = [];
-let gest = null;
-let bannerTimer = 0;
-let gidSeq = 0;
-const HOLD_TIME = 0.6;
 
-function newCell(c){ return { c, lit:false, gids:[], bsize:0, ox:0, oy:0, pop:0, grow:1, fly:0, wig:0, t:Math.random() * 10 }; }
-function randColor(){ const L = G && G.loadout ? G.loadout : [0, 1]; return L[Math.floor(Math.random() * L.length)]; }
-function randSprout(){ return Math.random() < WILD_CHANCE ? RAINBOW : randColor(); }
-const inside = (a, b) => a >= 0 && a < ROWS && b >= 0 && b < COLS;
-const blocked = (a, b) => !inside(a, b) || !!grid[a][b] || !!graves[a][b];
-function sameColorSize(gr, r0, c0){
+export function newCell(c){ return { c, lit:false, gids:[], bsize:0, ox:0, oy:0, pop:0, grow:1, fly:0, wig:0, t:Math.random() * 10 }; }
+
+export function randColor(){ const L = G && G.loadout ? G.loadout : [0, 1]; return L[Math.floor(Math.random() * L.length)]; }
+
+export function randSprout(){ return Math.random() < WILD_CHANCE ? RAINBOW : randColor(); }
+
+export const inside = (a, b) => a >= 0 && a < ROWS && b >= 0 && b < COLS;
+
+export const blocked = (a, b) => !inside(a, b) || !!grid[a][b] || !!graves[a][b];
+
+export function sameColorSize(gr, r0, c0){
   const col = gr[r0][c0].c, seen = new Set([r0 * COLS + c0]), q = [[r0, c0]];
   while (q.length){
     const [r, c] = q.pop();
@@ -393,10 +237,11 @@ function sameColorSize(gr, r0, c0){
   }
   return seen.size;
 }
-function initBoard(pi, nGraves){
+
+export function initBoard(pi, nGraves){
   const pat = PATTERNS[pi];
-  grid = Array.from({ length:ROWS }, () => Array(COLS).fill(null));
-  graves = Array.from({ length:ROWS }, () => Array(COLS).fill(false));
+  setGrid(Array.from({ length:ROWS }, () => Array(COLS).fill(null)));
+  setGraves(Array.from({ length:ROWS }, () => Array(COLS).fill(false)));
   const L = G.loadout;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
     if (pat[r][c] !== 'X') continue;
@@ -409,10 +254,13 @@ function initBoard(pi, nGraves){
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (pat[r][c] !== 'X') spots.push([r, c]);
   for (const [r, c] of shuffle(spots).slice(0, nGraves)) graves[r][c] = true;
 }
-function initWalls(){ const m = wallMax(); walls = Array.from({ length:COLS }, () => ({ hp:m, max:m, flash:0 })); }
+
+export function initWalls(){ const m = wallMax(); setWalls(Array.from({ length:COLS }, () => ({ hp:m, max:m, flash:0 }))); }
+
 
 // Bunches: 3+ touching pumpkins of one color. Rainbows count as any color.
-function computeGroups(gr){
+
+export function computeGroups(gr){
   const groups = [], present = new Set();
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){ const x = gr[r][c]; if (x && !x.fly && x.c !== RAINBOW) present.add(x.c); }
   const used = new Set();
@@ -452,7 +300,8 @@ function computeGroups(gr){
   }
   return groups;
 }
-function resolveMatches(){
+
+export function resolveMatches(){
   const groups = computeGroups(grid);
   const was = new Map();
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
@@ -463,7 +312,7 @@ function resolveMatches(){
   G.groups = {};
   let sx = 0, sy = 0, n = 0, biggest = 0, fresh = 0;
   for (const g of groups){
-    const gid = ++gidSeq, size = g.cells.length;
+    const gid = nextGid(), size = g.cells.length;
     G.groups[gid] = { color:g.color, size };
     let changed = false;
     for (const [r, c] of g.cells){
@@ -489,14 +338,18 @@ function resolveMatches(){
   }
   return fresh;
 }
-const DIRV = { left:[0,-1], right:[0,1], up:[-1,0], down:[1,0] };
-function slideDest(r, c, dir){
+
+export const DIRV = { left:[0,-1], right:[0,1], up:[-1,0], down:[1,0] };
+
+export function slideDest(r, c, dir){
   const [dr, dc] = DIRV[dir];
   while (!blocked(r + dr, c + dc)){ r += dr; c += dc; }
   return [r, c];
 }
+
 // A move is a list of [fromRow, fromCol, toRow, toCol]. Returns null if nothing can move.
-function planMove(r, c, dir){
+
+export function planMove(r, c, dir){
   const [dr, dc] = DIRV[dir];
   if (!inside(r + dr, c + dc) || graves[r + dr][c + dc]) return null;
   if (!grid[r + dr][c + dc]){ const [tr, tc] = slideDest(r, c, dir); return [[r, c, tr, tc]]; }
@@ -508,7 +361,8 @@ function planMove(r, c, dir){
   if (!k) return null;
   return line.map(([x, y]) => [x, y, x + dr * k, y + dc * k]);
 }
-function applyMove(moves, animate){
+
+export function applyMove(moves, animate){
   const cells = moves.map(([a, b]) => grid[a][b]);
   for (const [a, b] of moves) grid[a][b] = null;
   moves.forEach(([a, b, x, y], i) => {
@@ -517,11 +371,13 @@ function applyMove(moves, animate){
   });
   return cells;
 }
-function revertMove(moves, cells){
+
+export function revertMove(moves, cells){
   for (const [, , x, y] of moves) grid[x][y] = null;
   moves.forEach(([a, b], i) => { grid[a][b] = cells[i]; });
 }
-function slideOne(ref, dir){
+
+export function slideOne(ref, dir){
   if (!G || G.over) return false;
   const pos = findCell(ref); if (!pos) return false;
   G.idle = 0; G.hint = null;
@@ -532,14 +388,17 @@ function slideOne(ref, dir){
   resolveMatches();
   return true;
 }
-function emptyCells(){ const out = []; for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (!grid[r][c] && !graves[r][c]) out.push([r, c]); return out; }
-function flyInto(r, c, color, fromX, fromY){
+
+export function emptyCells(){ const out = []; for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (!grid[r][c] && !graves[r][c]) out.push([r, c]); return out; }
+
+export function flyInto(r, c, color, fromX, fromY){
   const cell = newCell(color);
   cell.fly = 0.55; cell.ox = fromX - LANE(c); cell.oy = fromY - (GY + r * CS + CS / 2);
   grid[r][c] = cell;
   return cell;
 }
-function spawnPumpkin(){
+
+export function spawnPumpkin(){
   const empties = emptyCells();
   if (!empties.length) return false;
   const [r, c] = empties[Math.floor(Math.random() * empties.length)];
@@ -550,7 +409,8 @@ function spawnPumpkin(){
   resolveMatches();
   return true;
 }
-function landingCell(x){
+
+export function landingCell(x){
   const c0 = clamp(Math.floor((x - GX) / CS), 0, COLS - 1);
   for (let d = 0; d < COLS; d++){
     for (const c of d ? [c0 - d, c0 + d] : [c0]){
@@ -560,7 +420,8 @@ function landingCell(x){
   }
   return null;
 }
-function collectDrop(d){
+
+export function collectDrop(d){
   if (!d || d.dead) return false;
   const spot = landingCell(d.x);
   if (!spot){ addFloat('Patch is full', d.x, d.y - 34, '#ffd35a', 18, 1); SFX.bad(); return false; }
@@ -569,7 +430,8 @@ function collectDrop(d){
   SFX.collect();
   return true;
 }
-function smash(ref){
+
+export function smash(ref){
   const pos = findCell(ref); if (!pos) return;
   grid[pos.r][pos.c] = null;
   const x = LANE(pos.c), y = GY + pos.r * CS + CS / 2;
@@ -577,17 +439,20 @@ function smash(ref){
   SFX.smash();
   resolveMatches();
 }
-function findCell(ref){
+
+export function findCell(ref){
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c] === ref) return { r, c };
   return null;
 }
-function laneThreat(){
+
+export function laneThreat(){
   const t = Array(COLS).fill(0);
   if (!G) return t;
   for (const m of G.monsters) if (!m.dead) for (let c = 0; c < COLS; c++) if (Math.abs(m.x - LANE(c)) < m.hw) t[c] = Math.max(t[c], 1 + m.p);
   return t;
 }
-function boardScore(gr, threat){
+
+export function boardScore(gr, threat){
   let sc = 0;
   for (const g of computeGroups(gr)) for (const [, c] of g.cells) sc += 1 + threat[c] * 2;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
@@ -598,7 +463,8 @@ function boardScore(gr, threat){
   }
   return sc;
 }
-function bestMove(){
+
+export function bestMove(){
   const threat = laneThreat(), base = boardScore(grid, threat);
   let best = null, bs = base + 0.05;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
@@ -614,18 +480,21 @@ function bestMove(){
   }
   return best;
 }
-function primaryGid(ref){
+
+export function primaryGid(ref){
   if (!ref || !ref.lit || !ref.gids.length || !G.groups) return null;
   let gid = ref.gids[0];
   for (const g of ref.gids) if (G.groups[g] && G.groups[gid] && G.groups[g].size > G.groups[gid].size) gid = g;
   return gid;
 }
-function groupCells(gid){
+
+export function groupCells(gid){
   const out = [];
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){ const cell = grid[r][c]; if (cell && cell.lit && cell.gids.includes(gid)) out.push({ r, c, cell }); }
   return out;
 }
-function launchGroup(ref){
+
+export function launchGroup(ref){
   if (!ref || !ref.lit || !G || G.over) return;
   const gid = primaryGid(ref), grp = G.groups[gid];
   if (!grp) return;
@@ -642,7 +511,8 @@ function launchGroup(ref){
   G.idle = 0; G.hint = null;
   resolveMatches();
 }
-function bestLitGroup(){
+
+export function bestLitGroup(){
   if (!G.groups) return null;
   const threat = laneThreat();
   let best = null, bs = -1;
@@ -654,20 +524,29 @@ function bestLitGroup(){
   return best;
 }
 
+
 // ---------- Monsters ----------
-function mY(m){ return FIELD_TOP + clamp(m.p, -0.1, 1.05) * (FIELD_BOT - FIELD_TOP); }
-function mS(m){ return 0.85 + 0.2 * clamp(m.p, 0, 1); }
-const TILE_P = () => CS / (FIELD_BOT - FIELD_TOP);
-function spMulNow(){ return G.mode === 'story' ? G.def.spMul : 0.85 + (G.diff - 1) * 0.015; }
-function hpExtra(){ return G.mode === 'story' ? 0 : Math.min(2, Math.floor((G.diff - 1) / 10)); }
-function lanesOf(m){ return m.type === 'boss' ? [2, 3, 4] : [m.lane]; }
-function pickLane(){
+
+export function mY(m){ return FIELD_TOP + clamp(m.p, -0.1, 1.05) * (FIELD_BOT - FIELD_TOP); }
+
+export function mS(m){ return 0.85 + 0.2 * clamp(m.p, 0, 1); }
+
+export const TILE_P = () => CS / (FIELD_BOT - FIELD_TOP);
+
+export function spMulNow(){ return G.mode === 'story' ? G.def.spMul : 0.85 + (G.diff - 1) * 0.015; }
+
+export function hpExtra(){ return G.mode === 'story' ? 0 : Math.min(2, Math.floor((G.diff - 1) / 10)); }
+
+export function lanesOf(m){ return m.type === 'boss' ? [2, 3, 4] : [m.lane]; }
+
+export function pickLane(){
   const busy = new Set(G.monsters.filter(m => m.p < 0.15).map(m => m.lane));
   const all = [...Array(COLS).keys()], free = all.filter(l => !busy.has(l));
   const arr = free.length ? free : all;
   return arr[Math.floor(Math.random() * arr.length)];
 }
-function spawnMonster(type, lane, minion, p){
+
+export function spawnMonster(type, lane, minion, p){
   const T = TYPES[type];
   let hp = T.hp + (type === 'imp' || type === 'brute' || type === 'wraith' ? hpExtra() : 0);
   if (type === 'boss') hp = T.hp + 4 * G.world;
@@ -679,14 +558,17 @@ function spawnMonster(type, lane, minion, p){
   G.monsters.push(m);
   return m;
 }
-function damage(m, amt, color, small){
+
+export function damage(m, amt, color, small){
   if (m.dead) return;
   m.hp -= amt; m.flash = 0.1;
   addFloat(fmt(amt), m.x + rnd(-8, 8), mY(m) - m.r * mS(m) - 14, color || '#fff', small ? 16 : 23, 0.8);
   if (m.hp <= 0.001) kill(m);
 }
-function dropHop(d){ return d.t < 0.45 ? Math.sin(d.t / 0.45 * Math.PI) * 26 : Math.sin(G.t * 3 + d.ph) * 2; }
-function dropPumpkins(m){
+
+export function dropHop(d){ return d.t < 0.45 ? Math.sin(d.t / 0.45 * Math.PI) * 26 : Math.sin(G.t * 3 + d.ph) * 2; }
+
+export function dropPumpkins(m){
   const n = Math.floor(m.drop) + (Math.random() < m.drop % 1 ? 1 : 0);
   const y = clamp(mY(m), FIELD_TOP + 20, FIELD_BOT - 30);
   for (let i = 0; i < n; i++){
@@ -695,7 +577,8 @@ function dropPumpkins(m){
     G.drops.push({ x, y:y + (i % 2) * 16, c, t:-i * 0.08, life:7, ph:Math.random() * TAU, dead:false });
   }
 }
-function kill(m){
+
+export function kill(m){
   if (m.dead) return;
   m.dead = true;
   G.kills++; if (!m.minion) G.resolved++;
@@ -710,13 +593,15 @@ function kill(m){
   SFX.kill();
   if (m.type === 'boss'){ G.shake = 1.2; banner('Bramble King falls!', 'Quick, grab the pumpkins it dropped!', 2.4); SFX.win(); }
 }
-function knockback(m){
+
+export function knockback(m){
   if (m.dead || m.type === 'boss') return;
   m.kb = Math.max(m.kb, TILE_P()); m.eating = false;
   ring(m.x, mY(m), 34, 'rgba(255,240,200,.9)');
   SFX.knock();
 }
-function damageWall(c, amt){
+
+export function damageWall(c, amt){
   const w = walls[c]; if (!w || w.hp <= 0 || G.over) return;
   w.hp = Math.max(0, w.hp - amt); w.flash = Math.min(1, w.flash + amt * 0.6);
   if (w.hp <= 0){
@@ -728,7 +613,8 @@ function damageWall(c, amt){
     endGame(false);
   }
 }
-function aheadLimit(m){
+
+export function aheadLimit(m){
   let limit = 1;
   const myLanes = lanesOf(m);
   for (const o of G.monsters){
@@ -738,7 +624,8 @@ function aheadLimit(m){
   }
   return limit;
 }
-function updateMonster(m, dt){
+
+export function updateMonster(m, dt){
   m.age += dt; m.ph += dt;
   if (m.flash > 0) m.flash -= dt;
   let sp = m.sp;
@@ -785,7 +672,8 @@ function updateMonster(m, dt){
   if (np > m.p) m.p = np;
   if (m.p >= 1){ m.p = 1; m.eating = true; }
 }
-function hitMonster(pr, m){
+
+export function hitMonster(pr, m){
   pr.hit.add(m);
   const i = pr.lv - 1, y = mY(m);
   for (let k = 0; k < 10; k++) chunk(pr.x, pr.y, pr.vis === RAINBOW ? '#f0a020' : PTYPES[pr.vis].base, 200);
@@ -809,20 +697,28 @@ function hitMonster(pr, m){
   SFX.hit();
 }
 
+
 // ---------- Effects ----------
-function spark(x, y, color, spd){ if (!G) return; const a = Math.random() * TAU, s = rnd(0.3, 1) * spd; G.parts.push({ x, y, vx:Math.cos(a) * s, vy:Math.sin(a) * s, t:0, life:rnd(0.3, 0.6), size:rnd(2, 3.5), color, kind:'spark', grav:0 }); }
-function chunk(x, y, color, spd){ const a = Math.random() * TAU, s = rnd(0.3, 1) * spd; G.parts.push({ x, y, vx:Math.cos(a) * s, vy:Math.sin(a) * s - 60, t:0, life:rnd(0.4, 0.8), size:rnd(3, 6), color, kind:'chunk', grav:600, rot:Math.random() * TAU }); }
-function ring(x, y, r, color){ G.parts.push({ x, y, r, t:0, life:0.4, color, kind:'ring' }); }
-function addFloat(text, x, y, color, size, life){ if (!G) return; G.floats.push({ text, x, y, color, size, t:0, life:life || 0.8 }); }
-function banner(big, sub, dur){
+
+export function spark(x, y, color, spd){ if (!G) return; const a = Math.random() * TAU, s = rnd(0.3, 1) * spd; G.parts.push({ x, y, vx:Math.cos(a) * s, vy:Math.sin(a) * s, t:0, life:rnd(0.3, 0.6), size:rnd(2, 3.5), color, kind:'spark', grav:0 }); }
+
+export function chunk(x, y, color, spd){ const a = Math.random() * TAU, s = rnd(0.3, 1) * spd; G.parts.push({ x, y, vx:Math.cos(a) * s, vy:Math.sin(a) * s - 60, t:0, life:rnd(0.4, 0.8), size:rnd(3, 6), color, kind:'chunk', grav:600, rot:Math.random() * TAU }); }
+
+export function ring(x, y, r, color){ G.parts.push({ x, y, r, t:0, life:0.4, color, kind:'ring' }); }
+
+export function addFloat(text, x, y, color, size, life){ if (!G) return; G.floats.push({ text, x, y, color, size, t:0, life:life || 0.8 }); }
+
+export function banner(big, sub, dur){
   $('#bnBig').textContent = big; $('#bnSub').textContent = sub || '';
   const b = $('#banner'); b.style.top = (FIELD_TOP + (FIELD_BOT - FIELD_TOP) * 0.14) * scale + 'px';
-  b.classList.add('show'); bannerTimer = dur || 2;
+  b.classList.add('show'); setBannerTimer(dur || 2);
 }
 
+
 // ---------- Flow ----------
-function makeDemo(){
-  G = { mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], coins:0, shake:0, t:0, flash:0, groups:{} };
+
+export function makeDemo(){
+  setG({ mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], coins:0, shake:0, t:0, flash:0, groups:{} });
   initBoard(1, 2);
   [[4,0],[4,1],[4,2],[3,1]].forEach(([r, c]) => { if (grid[r][c]) grid[r][c].c = 0; });
   resolveMatches();
@@ -832,32 +728,35 @@ function makeDemo(){
     G.monsters.push({ type:t, lane:l, x, tx:x, p, hp:T.hp, maxHp:T.hp, r:T.r, hw:CS * 0.42, sp:0, ph:Math.random() * 10, age:5, flash:0, slowT:0, frozenT:0, burnLeft:0, hop:0, eating:p >= 1, demo:true });
   });
 }
-function beginNight(n){
+
+export function beginNight(n){
   const av = typesForNight(n);
   if (av.length > 5) openLoadout(av, lo => startGame('story', n, lo));
   else startGame('story', n, av);
 }
-function beginEndless(){
+
+export function beginEndless(){
   const av = typesForNight(Math.max(1, save.unlocked));
   if (av.length > 5) openLoadout(av, lo => startGame('endless', 1, lo));
   else startGame('endless', 1, av.length >= 3 ? av : typesForNight(2));
 }
-function startGame(mode, n, loadout){
+
+export function startGame(mode, n, loadout){
   ensureAudio();
   const def = mode === 'story' ? levelDef(n) : null;
-  G = {
+  setG({
     mode, n:n || 1, def, world:def ? def.world : 0, loadout:loadout.slice(),
     coins:0, score:0, kills:0, resolved:0, throws:0, missed:0,
     total:def ? def.total + (def.boss ? 1 : 0) : 0,
     spawned:0, spawnTimer:2.6, bossSpawned:false, bossTimer:100, diff:1, sproutT:0,
     monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], groups:{},
     t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false,
-  };
+  });
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def ? def.pattern : Math.floor(Math.random() * PATTERNS.length), def ? def.graves : 2);
   initWalls();
   resolveMatches();
-  gest = null;
+  setGest(null);
   setState('play');
   if (mode === 'story'){
     const parts = [];
@@ -870,7 +769,8 @@ function startGame(mode, n, loadout){
     banner(`Night ${n}`, parts.length ? parts.join(' ') : WORLDS[G.world].name, parts.length > 1 ? 4.2 : 3);
   } else banner('Endless night', 'How long can the walls hold?', 2.4);
 }
-function storySpawn(dt){
+
+export function storySpawn(dt){
   const d = G.def;
   G.spawnTimer -= dt;
   if (G.spawned < d.total && G.spawnTimer <= 0){
@@ -884,7 +784,8 @@ function storySpawn(dt){
     banner('Boss!', G.world > 0 ? 'The Bramble King fills the middle three columns and summons bats.' : 'The Bramble King fills the middle three columns.', 2.8); SFX.boss();
   }
 }
-function endlessSpawn(dt){
+
+export function endlessSpawn(dt){
   G.diff = 1 + G.t / 25;
   G.spawnTimer -= dt;
   if (G.spawnTimer <= 0){
@@ -896,14 +797,17 @@ function endlessSpawn(dt){
   const w = G.t > 240 ? 2 : G.t > 120 ? 1 : 0;
   if (w !== G.world){ G.world = w; buildBg(w); banner(WORLDS[w].name, 'The night gets darker.', 2.2); }
 }
-function wallFrac(){ let a = 0, b = 0; for (const w of walls){ a += w.hp; b += w.max; } return b ? a / b : 1; }
-function endGame(win){
+
+export function wallFrac(){ let a = 0, b = 0; for (const w of walls){ a += w.hp; b += w.max; } return b ? a / b : 1; }
+
+export function endGame(win){
   if (G.over) return;
-  G.over = true; gest = null;
+  G.over = true; setGest(null);
   if (win) SFX.win(); else SFX.lose();
   setTimeout(() => showResult(win), win ? 1100 : 1000);
 }
-function showResult(win){
+
+export function showResult(win){
   const g = G, box = $('#rBtns'); box.innerHTML = '';
   const stats = [];
   let title = '', msg = '', stars = '';
@@ -949,10 +853,13 @@ function showResult(win){
   $('#rStats').innerHTML = stats.map(([a, b]) => `<span>${a}</span><span>${b}</span>`).join('');
   setState('result');
 }
-function fmtTime(s){ const m = Math.floor(s / 60), r = Math.floor(s % 60); return m ? `${m}m ${r}s` : `${r}s`; }
-function addBtn(box, label, fn, cls){ const b = document.createElement('button'); b.className = 'btn small' + (cls ? ' ' + cls : ''); b.textContent = label; b.onclick = () => { ensureAudio(); fn(); }; box.appendChild(b); }
 
-function useFirework(){
+export function fmtTime(s){ const m = Math.floor(s / 60), r = Math.floor(s % 60); return m ? `${m}m ${r}s` : `${r}s`; }
+
+export function addBtn(box, label, fn, cls){ const b = document.createElement('button'); b.className = 'btn small' + (cls ? ' ' + cls : ''); b.textContent = label; b.onclick = () => { ensureAudio(); fn(); }; box.appendChild(b); }
+
+
+export function useFirework(){
   if (state !== 'play' || G.over || save.fw <= 0) return;
   save.fw--; persist();
   SFX.boom(); G.shake = 1; G.flash = 1;
@@ -960,7 +867,8 @@ function useFirework(){
   for (const m of G.monsters.slice()) if (!m.dead) damage(m, 3, '#ffd35a');
   updateHud(true);
 }
-function useRepair(){
+
+export function useRepair(){
   if (state !== 'play' || G.over || save.repair <= 0) return;
   if (walls.every(w => w.hp >= w.max)){ addFloat('Walls are already full', W / 2, FENCE_Y - 40, '#ffd35a', 18, 1); SFX.bad(); return; }
   save.repair--; persist();
@@ -969,11 +877,15 @@ function useRepair(){
   updateHud(true);
 }
 
+
 // ---------- UI ----------
-const OVS = { title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult' };
-let shopReturn = 'levels', helpNext = null, loadoutNext = null, loadoutAvail = [], loadoutSel = new Set();
-function setState(s){
-  state = s;
+
+export const OVS = { title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult' };
+
+export let shopReturn = 'levels', helpNext = null, loadoutNext = null, loadoutAvail = [], loadoutSel = new Set();
+
+export function setState(s){
+  setStateRaw(s);
   for (const [k, sel] of Object.entries(OVS)) $(sel).classList.toggle('show', k === s);
   $('#hud').classList.toggle('on', s === 'play' || s === 'pause');
   if (s === 'title'){
@@ -981,7 +893,7 @@ function setState(s){
     if (bgWorld !== 0) buildBg(0);
     $('#bestTxt').textContent = save.best ? `Best endless score: ${save.best.toLocaleString()}` : '';
   }
-  if (s !== 'play'){ gest = null; $('#banner').classList.remove('show'); bannerTimer = 0; }
+  if (s !== 'play'){ setGest(null); $('#banner').classList.remove('show'); setBannerTimer(0); }
   if (s === 'pause') syncSpawn();
   syncSound();
   hudSig = '';
@@ -989,8 +901,10 @@ function setState(s){
   const ov = OVS[s] ? $(OVS[s]) : null, first = ov && ov.querySelector('button:not([disabled])');
   if (first && matchMedia('(pointer:fine)').matches) first.focus({ preventScroll:true });
 }
-function withHelp(fn){ if (!save.seenHelp){ helpNext = fn; save.seenHelp = true; persist(); setState('help'); } else fn(); }
-function openLevels(){
+
+export function withHelp(fn){ if (!save.seenHelp){ helpNext = fn; save.seenHelp = true; persist(); setState('help'); } else fn(); }
+
+export function openLevels(){
   $('#lvCoins').textContent = save.coins.toLocaleString();
   const list = $('#lvList'); list.innerHTML = '';
   WORLDS.forEach((w, wi) => {
@@ -1010,7 +924,8 @@ function openLevels(){
   });
   setState('levels');
 }
-function openLoadout(avail, next){
+
+export function openLoadout(avail, next){
   loadoutAvail = avail; loadoutNext = next;
   const pref = (save.loadout || []).filter(t => avail.includes(t));
   for (const t of avail) if (pref.length < 5 && !pref.includes(t)) pref.push(t);
@@ -1032,14 +947,17 @@ function openLoadout(avail, next){
   syncLoadout();
   setState('loadout');
 }
-function syncLoadout(){
+
+export function syncLoadout(){
   for (const b of document.querySelectorAll('#picks .pick')) b.setAttribute('aria-pressed', loadoutSel.has(+b.dataset.t) ? 'true' : 'false');
   const n = loadoutSel.size;
   $('#loCount').textContent = n === 5 ? 'Ready.' : `${n} of 5 picked`;
   $('#bLoGo').disabled = n !== 5;
 }
-function openShop(ret){ shopReturn = ret || 'levels'; renderShop(); setState('shop'); }
-function renderShop(){
+
+export function openShop(ret){ shopReturn = ret || 'levels'; renderShop(); setState('shop'); }
+
+export function renderShop(){
   $('#shopCoins').textContent = save.coins.toLocaleString();
   const pbox = $('#shopPumpkins'); pbox.innerHTML = '';
   for (let t = 0; t < NTYPES; t++){
@@ -1077,7 +995,8 @@ function renderShop(){
     d.appendChild(b); list.appendChild(d);
   }
 }
-function buildLegend(){
+
+export function buildLegend(){
   const box = $('#legend'); box.innerHTML = '';
   PTYPES.forEach((p, i) => {
     const row = document.createElement('div');
@@ -1087,20 +1006,26 @@ function buildLegend(){
     row.appendChild(t); box.appendChild(row);
   });
 }
-function syncSound(){ const t = `Sound: ${save.muted ? 'off' : 'on'}`; $('#bSoundT').textContent = t; $('#bSoundP').textContent = t; }
-function toggleSound(){ save.muted = !save.muted; persist(); ensureAudio(); syncSound(); }
-function syncSpawn(){
+
+export function syncSound(){ const t = `Sound: ${save.muted ? 'off' : 'on'}`; $('#bSoundT').textContent = t; $('#bSoundP').textContent = t; }
+
+export function toggleSound(){ save.muted = !save.muted; persist(); ensureAudio(); syncSound(); }
+
+export function syncSpawn(){
   const i = SPAWN_STEPS.indexOf(save.spawnEvery);
   $('#spVal').textContent = save.spawnEvery + 's';
   $('#spMinus').disabled = i <= 0; $('#spPlus').disabled = i >= SPAWN_STEPS.length - 1;
 }
-function stepSpawn(d){
+
+export function stepSpawn(d){
   const i = clamp(SPAWN_STEPS.indexOf(save.spawnEvery) + d, 0, SPAWN_STEPS.length - 1);
   save.spawnEvery = SPAWN_STEPS[i]; persist(); syncSpawn();
 }
 
-let hudSig = '';
-function updateHud(force){
+
+export let hudSig = '';
+
+export function updateHud(force){
   if (!G || G.mode === 'demo') return;
   const coins = save.coins + G.coins;
   const prog = G.mode === 'story' ? (G.total ? G.resolved / G.total : 0) : 1 - G.bossTimer / 100;
@@ -1122,17 +1047,22 @@ function updateHud(force){
   if (coinsChanged){ const cb = $('#coinBox'); cb.classList.add('bump'); setTimeout(() => cb.classList.remove('bump'), 120); }
 }
 
+
 // ---------- Input ----------
-function toLogical(e){ const r = cv.getBoundingClientRect(); return { x:(e.clientX - r.left) / r.width * W, y:(e.clientY - r.top) / r.height * H }; }
-function cellAt(x, y){
+
+export function toLogical(e){ const r = cv.getBoundingClientRect(); return { x:(e.clientX - r.left) / r.width * W, y:(e.clientY - r.top) / r.height * H }; }
+
+export function cellAt(x, y){
   const c = Math.floor((x - GX) / CS), r = Math.floor((y - GY) / CS);
   return (r >= 0 && r < ROWS && c >= 0 && c < COLS) ? { r, c } : null;
 }
-function dropAt(x, y){
+
+export function dropAt(x, y){
   let best = null, bd = 44;
   for (const d of G.drops){ if (d.dead || d.t < 0) continue; const dist = Math.hypot(d.x - x, (d.y - dropHop(d)) - y); if (dist < bd){ bd = dist; best = d; } }
   return best;
 }
+
 cv.addEventListener('pointerdown', e => {
   ensureAudio();
   if (state !== 'play' || G.over) return;
@@ -1140,10 +1070,11 @@ cv.addEventListener('pointerdown', e => {
   if (p.y < 70) return;
   const pos = cellAt(p.x, p.y);
   try { cv.setPointerCapture(e.pointerId); } catch (err) {}
-  gest = { id:e.pointerId, sx:p.x, sy:p.y, x:p.x, y:p.y, ref:pos ? grid[pos.r][pos.c] : null, done:false, held:0 };
+  setGest({ id:e.pointerId, sx:p.x, sy:p.y, x:p.x, y:p.y, ref:pos ? grid[pos.r][pos.c] : null, done:false, held:0 });
   G.idle = 0; G.hint = null;
   e.preventDefault();
 });
+
 cv.addEventListener('pointermove', e => {
   if (!gest || e.pointerId !== gest.id) return;
   const p = toLogical(e); gest.x = p.x; gest.y = p.y;
@@ -1155,9 +1086,10 @@ cv.addEventListener('pointermove', e => {
   if (gest.ref.lit && dy < 0 && Math.abs(dy) > Math.abs(dx) * 0.6){ launchGroup(gest.ref); return; }
   slideOne(gest.ref, Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down'));
 });
-function endGesture(e, cancel){
+
+export function endGesture(e, cancel){
   if (!gest || e.pointerId !== gest.id) return;
-  const g = gest; gest = null;
+  const g = gest; setGest(null);
   if (cancel || state !== 'play' || G.over || g.done) return;
   if (Math.hypot(g.x - g.sx, g.y - g.sy) >= 16) return;
   if (g.ref && findCell(g.ref)){
@@ -1168,28 +1100,50 @@ function endGesture(e, cancel){
   const d = dropAt(g.sx, g.sy);
   if (d) collectDrop(d);
 }
+
 cv.addEventListener('pointerup', e => endGesture(e, false));
+
 cv.addEventListener('pointercancel', e => endGesture(e, true));
+
 cv.addEventListener('contextmenu', e => e.preventDefault());
 
+
 $('#bStory').onclick = () => { ensureAudio(); openLevels(); };
+
 $('#bEndless').onclick = () => { ensureAudio(); withHelp(beginEndless); };
+
 $('#bHelpT').onclick = () => { helpNext = () => setState('title'); setState('help'); };
+
 $('#bHelpOk').onclick = () => { ensureAudio(); const f = helpNext || (() => setState('title')); helpNext = null; f(); };
+
 $('#bSoundT').onclick = toggleSound; $('#bSoundP').onclick = toggleSound;
+
 $('#spMinus').onclick = () => stepSpawn(-1); $('#spPlus').onclick = () => stepSpawn(1);
+
 $('#bLvBack').onclick = () => setState('title');
+
 $('#bLvShop').onclick = () => openShop('levels');
+
 $('#bLoBack').onclick = () => openLevels();
+
 $('#bLoGo').onclick = () => { if (loadoutSel.size !== 5) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo); };
+
 $('#bShopBack').onclick = () => { if (shopReturn === 'result') setState('result'); else openLevels(); };
+
 $('#pauseBtn').onclick = () => { if (state === 'play' && !G.over) setState('pause'); };
+
 $('#fwBtn').onclick = useFirework;
+
 $('#rpBtn').onclick = useRepair;
+
 $('#bResume').onclick = () => setState('play');
+
 $('#bRestart').onclick = () => { save.coins += G.coins; persist(); if (G.mode === 'story') startGame('story', G.n, G.loadout); else startGame('endless', 1, G.loadout); };
+
 $('#bQuit').onclick = () => { save.coins += G.coins; if (G.mode === 'endless' && G.score > save.best) save.best = G.score; persist(); setState('title'); };
+
 document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play' && G && !G.over) setState('pause'); });
+
 window.addEventListener('keydown', e => {
   if (e.key === 'Escape' || e.key === 'p'){ if (state === 'play' && !G.over) setState('pause'); else if (state === 'pause') setState('play'); return; }
   if (state !== 'play' || G.over) return;
@@ -1198,8 +1152,10 @@ window.addEventListener('keydown', e => {
   else if (e.key === 'r') useRepair();
 });
 
+
 // ---------- Update ----------
-function update(dt){
+
+export function update(dt){
   const g = G;
   g.t += dt; g.idle += dt;
   if (!g.over){ if (g.mode === 'story') storySpawn(dt); else endlessSpawn(dt); }
@@ -1259,7 +1215,8 @@ function update(dt){
   if (!g.over && g.mode === 'story' && g.spawned >= g.def.total && (!g.def.boss || g.bossSpawned) && g.monsters.length === 0) endGame(true);
   updateHud(false);
 }
-function commonFx(dt){
+
+export function commonFx(dt){
   const g = G;
   if (g.shake > 0) g.shake = Math.max(0, g.shake - dt * 2.5);
   if (g.flash > 0) g.flash = Math.max(0, g.flash - dt * 2.5);
@@ -1273,16 +1230,20 @@ function commonFx(dt){
   for (const c of g.coinFx){ c.t += dt; if (c.t >= c.dur && !c.done){ c.done = true; SFX.coin(); } }
   g.coinFx = g.coinFx.filter(c => !c.done);
 }
-function demoUpdate(dt){
+
+export function demoUpdate(dt){
   G.t += dt;
   for (const m of G.monsters){ m.ph += dt; if (m.type === 'imp') m.hop = Math.max(0, Math.sin(m.ph * 4.5)); if (m.type === 'bat') m.x = m.tx + Math.sin(m.ph * 3) * 6; }
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c]) grid[r][c].t += dt;
   commonFx(dt);
 }
 
+
 // ---------- Render ----------
-const starsR = mulberry(42), STARS = Array.from({ length:46 }, () => ({ x:starsR() * W, y:starsR(), s:starsR() * 1.6 + 0.6, p:starsR() * TAU }));
-function render(){
+
+export const starsR = mulberry(42), STARS = Array.from({ length:46 }, () => ({ x:starsR() * W, y:starsR(), s:starsR() * 1.6 + 0.6, p:starsR() * TAU }));
+
+export function render(){
   const g = G, t = g.t;
   ctx.setTransform(K, 0, 0, K, 0, 0);
   ctx.save();
@@ -1354,7 +1315,8 @@ function render(){
   if (g.flash > 0){ ctx.fillStyle = `rgba(255,240,210,${g.flash * 0.45})`; ctx.fillRect(0, 0, W, H); }
 }
 
-function drawWalls(t){
+
+export function drawWalls(t){
   const fy = FENCE_Y;
   // corner posts
   ctx.fillStyle = '#4a3220'; ctx.fillRect(0, fy - 26, GX, 42); ctx.fillRect(W - GX, fy - 26, GX, 42);
@@ -1387,7 +1349,8 @@ function drawWalls(t){
     rrect(ctx, bx, by, Math.max(3, bw * f), 4, 2); ctx.fill();
   }
 }
-function drawGraves(){
+
+export function drawGraves(){
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
     if (!graves[r][c]) continue;
     const x = LANE(c), y = GY + r * CS + CS / 2;
@@ -1400,8 +1363,10 @@ function drawGraves(){
     ctx.fillStyle = '#4f7a34'; ell(ctx, x + 12, y + 16, 7, 4, -0.4);
   }
 }
-function heldGid(){ return gest && !gest.done && gest.ref && gest.ref.lit ? primaryGid(gest.ref) : null; }
-function drawPreview(t){
+
+export function heldGid(){ return gest && !gest.done && gest.ref && gest.ref.lit ? primaryGid(gest.ref) : null; }
+
+export function drawPreview(t){
   const gid = heldGid(); if (gid == null || state !== 'play') return;
   const cols = new Set(groupCells(gid).map(o => o.c));
   for (const c of cols){
@@ -1415,7 +1380,8 @@ function drawPreview(t){
     if (best){ ctx.strokeStyle = `rgba(255,220,120,${0.6 + 0.3 * Math.sin(t * 8)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, topY, best.r * mS(best) + 8, 0, TAU); ctx.stroke(); }
   }
 }
-function drawDrops(t){
+
+export function drawDrops(t){
   for (const d of G.drops){
     if (d.t < 0) continue;
     const left = d.life - d.t, y = d.y - dropHop(d);
@@ -1434,7 +1400,8 @@ function drawDrops(t){
     ctx.globalAlpha = 1;
   }
 }
-function drawGrid(t){
+
+export function drawGrid(t){
   const hg = heldGid(), flying = [];
   ctx.save();
   ctx.beginPath(); ctx.rect(0, GY - 4, W, ROWS * CS + 8); ctx.clip();
@@ -1446,7 +1413,8 @@ function drawGrid(t){
   ctx.restore();
   for (const [r, c, cell] of flying) drawCell(r, c, cell, t, hg);
 }
-function drawCell(r, c, cell, t, hg){
+
+export function drawCell(r, c, cell, t, hg){
   const held = hg != null && cell.lit && cell.gids.includes(hg);
   let x = LANE(c) + cell.ox, y = GY + r * CS + CS / 2 + cell.oy;
   let s = (1 + cell.pop * 0.25) * (0.2 + 0.8 * cell.grow);
@@ -1477,14 +1445,16 @@ function drawCell(r, c, cell, t, hg){
     drawStar(x + CS * 0.3, y - CS * 0.34, 6.5, t * 2);
   }
 }
-function drawSproutBar(){
+
+export function drawSproutBar(){
   if (G.mode === 'demo') return;
   const y = GY + ROWS * CS + 8, w = COLS * CS - 16, x = GX + 8;
   const full = emptyCells().length === 0, f = clamp(G.sproutT / save.spawnEvery, 0, 1);
   ctx.fillStyle = 'rgba(255,255,255,.1)'; rrect(ctx, x, y, w, 5, 2.5); ctx.fill();
   ctx.fillStyle = full ? 'rgba(255,90,77,.7)' : '#94d65e'; rrect(ctx, x, y, Math.max(5, w * f), 5, 2.5); ctx.fill();
 }
-function drawHoldRing(){
+
+export function drawHoldRing(){
   if (!gest || gest.done || !gest.ref || gest.held < 0.12) return;
   const pos = findCell(gest.ref); if (!pos) return;
   const f = clamp((gest.held - 0.12) / (HOLD_TIME - 0.12), 0, 1);
@@ -1494,7 +1464,8 @@ function drawHoldRing(){
   ctx.strokeStyle = f > 0.85 ? '#ff5a4d' : '#ffb04a';
   ctx.beginPath(); ctx.arc(x, y, CS * 0.44, -Math.PI / 2, -Math.PI / 2 + TAU * f); ctx.stroke();
 }
-function drawHintArrow(t){
+
+export function drawHintArrow(t){
   if (!G.hint || state !== 'play') return;
   const pos = findCell(G.hint.ref); if (!pos){ G.hint = null; return; }
   const cx = LANE(pos.c), cy = GY + pos.r * CS + CS / 2;
@@ -1510,13 +1481,15 @@ function drawHintArrow(t){
   ctx.fill(); ctx.stroke();
   ctx.restore();
 }
-function drawStar(x, y, r, rot){
+
+export function drawStar(x, y, r, rot){
   ctx.beginPath();
   for (let i = 0; i < 10; i++){ const a = rot + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
   ctx.closePath(); ctx.fill(); ctx.stroke();
 }
 
-function drawMonster(m, t){
+
+export function drawMonster(m, t){
   let y = mY(m); const s = mS(m);
   if (m.eating && m.frozenT <= 0) y += Math.sin(m.ph * 14) * 2.5;
   const fade = m.demo ? 1 : Math.min(1, m.age / 0.5);
@@ -1563,7 +1536,8 @@ function drawMonster(m, t){
   }
   ctx.globalAlpha = 1;
 }
-function drawGhoul(m, F){
+
+export function drawGhoul(m, F){
   const sw = m.eating ? 0 : Math.sin(m.ph * 6);
   ctx.fillStyle = F('#3a2f4b'); ell(ctx, -8, 20 + sw * 2, 6, 7); ell(ctx, 8, 20 - sw * 2, 6, 7);
   ctx.fillStyle = F('#5b4a73');
@@ -1583,7 +1557,8 @@ function drawGhoul(m, F){
   const jaw = m.eating ? Math.abs(Math.sin(m.ph * 14)) * 3 : 0;
   ctx.beginPath(); ctx.moveTo(-6, -8 + jaw); ctx.lineTo(-3, -6 + jaw); ctx.lineTo(0, -8 + jaw); ctx.lineTo(3, -6 + jaw); ctx.lineTo(6, -8 + jaw); ctx.stroke();
 }
-function wing(f, F){
+
+export function wing(f, F){
   ctx.fillStyle = F('#3a2450');
   ctx.beginPath(); ctx.moveTo(-6, -4);
   ctx.quadraticCurveTo(-20, -18 - f * 8, -33, -6 - f * 12);
@@ -1591,7 +1566,8 @@ function wing(f, F){
   ctx.quadraticCurveTo(-20, -1, -15, 8 - f * 1);
   ctx.quadraticCurveTo(-11, 2, -6, 8); ctx.closePath(); ctx.fill();
 }
-function drawBat(m, F){
+
+export function drawBat(m, F){
   const f = m.frozenT > 0 ? 0.3 : Math.sin(m.ph * 16);
   ctx.translate(0, Math.sin(m.ph * 5) * 3);
   wing(f, F); ctx.save(); ctx.scale(-1, 1); wing(f, F); ctx.restore();
@@ -1600,7 +1576,8 @@ function drawBat(m, F){
   ctx.fillStyle = m.flash > 0 ? '#fff' : '#ff4d6d'; ell(ctx, -4, -3, 2.6, 2.6); ell(ctx, 4, -3, 2.6, 2.6);
   ctx.fillStyle = '#fff'; tri(ctx, -2.5, 5, 2); tri(ctx, 2.5, 5, 2);
 }
-function drawImp(m, F){
+
+export function drawImp(m, F){
   ctx.translate(0, -m.hop * 14);
   ctx.strokeStyle = F('#a52a22'); ctx.lineWidth = 3; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(8, 10); ctx.quadraticCurveTo(24, 12, 20, -4); ctx.stroke();
@@ -1616,7 +1593,8 @@ function drawImp(m, F){
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -8, 5, 0.2, Math.PI - 0.2); ctx.stroke();
   ctx.fillStyle = F('#c53e2e'); ell(ctx, -8, 18, 4, 3); ell(ctx, 8, 18, 4, 3);
 }
-function drawBrute(m, F){
+
+export function drawBrute(m, F){
   const sw = m.eating ? Math.sin(m.ph * 12) * 2 : Math.sin(m.ph * 3.2);
   ctx.fillStyle = F('#3d4a2c'); ell(ctx, -28, 6 + sw * 3, 9, 13, 0.3); ell(ctx, 28, 6 - sw * 3, 9, 13, -0.3);
   ctx.fillStyle = F('#4d5b3a');
@@ -1628,7 +1606,8 @@ function drawBrute(m, F){
   ctx.fillStyle = '#1b140e'; rrect(ctx, -14, 4, 28, 11 + jaw, 5); ctx.fill();
   ctx.fillStyle = '#efe4d0'; tri(ctx, -9, 3, 5); tri(ctx, 9, 3, 5);
 }
-function drawWraith(m, F, t){
+
+export function drawWraith(m, F, t){
   ctx.fillStyle = F('#cfe8f2');
   ctx.beginPath(); ctx.moveTo(-18, 16); ctx.lineTo(-18, -6);
   ctx.quadraticCurveTo(-18, -30, 0, -30); ctx.quadraticCurveTo(18, -30, 18, -6); ctx.lineTo(18, 16);
@@ -1640,7 +1619,8 @@ function drawWraith(m, F, t){
   ctx.beginPath(); ctx.moveTo(-16, 0); ctx.quadraticCurveTo(-26, 6, -22, 14); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(16, 0); ctx.quadraticCurveTo(26, 6, 22, 14); ctx.stroke();
 }
-function drawBoss(m, F, t){
+
+export function drawBoss(m, F, t){
   const aura = ctx.createRadialGradient(0, -10, 10, 0, -10, 90);
   aura.addColorStop(0, 'rgba(160,80,220,.35)'); aura.addColorStop(1, 'rgba(160,80,220,0)');
   ctx.fillStyle = aura; ctx.fillRect(-90, -100, 180, 180);
@@ -1662,32 +1642,46 @@ function drawBoss(m, F, t){
   ctx.beginPath(); ctx.moveTo(-20, 0); ctx.lineTo(-12, 8); ctx.lineTo(-6, 2); ctx.lineTo(0, 10); ctx.lineTo(6, 2); ctx.lineTo(12, 8); ctx.lineTo(20, 0); ctx.quadraticCurveTo(0, 22, -20, 0); ctx.fill();
 }
 
+
 // ---------- Loop ----------
-let last = performance.now();
-function frame(now){
+
+export let last = performance.now();
+
+export function frame(now){
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (G){
     if (state === 'play') update(dt);
     else if (G.mode === 'demo') demoUpdate(dt);
     render();
   }
-  if (bannerTimer > 0 && state === 'play'){ bannerTimer -= dt; if (bannerTimer <= 0) $('#banner').classList.remove('show'); }
+  if (bannerTimer > 0 && state === 'play'){ setBannerTimer(bannerTimer - (dt)); if (bannerTimer <= 0) $('#banner').classList.remove('show'); }
   requestAnimationFrame(frame);
 }
 
+
 window.addEventListener('resize', resize);
+
 if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
+
 makeDemo();
+
 resize();
+
 buildLegend();
+
 syncSound();
+
 setState('title');
+
 persist();
+
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { measureCoin(); });
+
 requestAnimationFrame(frame);
+
 // Test hook for automated balance/smoke tests. Only exposed when the page is opened with ?test in the URL.
+
 if (new URLSearchParams(location.search).has('test')){
   window.__gg = { get G(){ return G; }, get grid(){ return grid; }, get graves(){ return graves; }, get walls(){ return walls; }, get state(){ return state; },
     startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches };
 }
-})();

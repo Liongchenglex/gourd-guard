@@ -53,19 +53,19 @@ export const TYPES = {
   // Shell Turtle (5-16): rises from a puddle and walks backwards, shell first: a slow, tough, moving wall that shields what is behind it. Cannot be knocked back.
   turtle:    { hp:10, r:26, sp:0.03, coins:12, eat:0.3, pts:30, drop:3, noKnockback:true },
   // Bosses (docs/WORLDS.md §7). `boss:true`; spawned as type 'boss' with `kind` = the key. Never reach the wall.
-  gravekeeper: { boss:true, hp:20, r:34, sp:0.03, coins:40, eat:0, pts:250, drop:6, hold:0.28, teleportEvery:6, summonEvery:8,
-                 form2:{ hp:36, summonEvery:5.5, shoveEvery:12, shove:0.3 } },
-  poltergeist: { boss:true, hp:26, r:32, sp:0.03, coins:45, eat:0, pts:280, drop:6, hold:0.25, driftEvery:5, swapEvery:8,
-                 form2:{ hp:44, swapEvery:6.5, recolourEvery:12 } },
+  gravekeeper: { boss:true, hp:15, r:34, sp:0.03, coins:40, eat:0, pts:250, drop:6, hold:0.28, teleportEvery:6, summonEvery:8,
+                 form2:{ hp:30, summonEvery:5.5, shoveEvery:12, shove:0.3 } },
+  poltergeist: { boss:true, hp:20, r:32, sp:0.03, coins:45, eat:0, pts:280, drop:6, hold:0.25, driftEvery:5, swapEvery:8,
+                 form2:{ hp:36, swapEvery:6.5, recolourEvery:12 } },
   // Vampire Count: holds, turns into bats to change lane, summons bats, raises castle walls, and enters a healing mode the player breaks with N hits.
-  vampirecount: { boss:true, hp:32, r:34, sp:0.03, coins:50, eat:0, pts:320, drop:6, hold:0.3, laneEvery:9, batsEvery:10, bats:2, wallEvery:15, maxWalls:3, wallHp:15,
-                  healEvery:20, healRate:2, healHits:[4, 5, 6], stun:2, form2:{ hp:50, batsEvery:8, healEvery:16, calm:4, regen:1, regenEvery:2 } },
+  vampirecount: { boss:true, hp:24, r:34, sp:0.03, coins:50, eat:0, pts:320, drop:6, hold:0.3, laneEvery:9, batsEvery:10, bats:2, wallEvery:15, maxWalls:3, wallHp:15,
+                  healEvery:20, healRate:2, healHits:[4, 5, 6], stun:2, form2:{ hp:42, batsEvery:8, healEvery:16, calm:4, regen:1, regenEvery:2 } },
   // Twin Tides: two sea serpents on the sea row lobbing water bolts at walls. Both must die within `window` seconds or the dead one rises again after `revive` seconds.
-  twintides: { boss:true, hp:18, r:32, sp:0.03, coins:30, eat:0, pts:200, drop:3, hold:0.12, boltEvery:6, bolt:3, boltSp:0.3, window:8, revive:8,
-               form2:{ hp:28, boltEvery:4.5, boltSp:0.45, window:5, hold:0.5 } },   // form 2 comes halfway down the field (owner)
+  twintides: { boss:true, hp:14, r:32, sp:0.03, coins:30, eat:0, pts:200, drop:3, hold:0.12, boltEvery:6, bolt:3, boltSp:0.3, window:8, revive:8,
+               form2:{ hp:24, boltEvery:4.5, boltSp:0.45, window:5, hold:0.5 } },   // form 2 comes halfway down the field (owner)
   // The Hexwitch: drifts between lanes, conjures chameleons; form 2 also hexes monsters already on the field into chameleons.
-  hexwitch: { boss:true, hp:30, r:32, sp:0.03, coins:50, eat:0, pts:320, drop:6, hold:0.25, driftEvery:6, hexEvery:9, hexCount:[2, 3], chameleonChance:0.25,   // form 2: 25% chameleon / 75% reverse (owner); form 1 is reverse only
-              zoneEvery:14, zoneLast:10, zoneRise:4, zones:1, shapes:['box'], form2:{ hp:48, zones:2, shapes:['box', 'col', 'row'], hexEvery:7 } },
+  hexwitch: { boss:true, hp:22, r:32, sp:0.03, coins:50, eat:0, pts:320, drop:6, hold:0.25, driftEvery:6, hexEvery:9, hexCount:[2, 3], chameleonChance:0.25,   // form 2: 25% chameleon / 75% reverse (owner); form 1 is reverse only
+              zoneEvery:14, zoneLast:10, zoneRise:4, zones:1, shapes:['box'], form2:{ hp:40, zones:2, shapes:['box', 'col', 'row'], hexEvery:7 } },
 };
 
 /** Modifiers (docs/WORLDS.md §6): data-only stat tweaks any monster can carry. */

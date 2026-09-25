@@ -81,7 +81,7 @@ export function buildBg(world){
   let gr = g.createLinearGradient(0, 0, 0, hz + 30);
   gr.addColorStop(0, w.sky[0]); gr.addColorStop(0.6, w.sky[1]); gr.addColorStop(1, w.sky[2]);
   g.fillStyle = gr; g.fillRect(0, 0, W, hz + 30);
-  const mx = [405, 130, 420][world], my = hz * 0.52 + 14, mr = 30;
+  const mx = [405, 130, 420, 300, 150, 400][world % 6], my = hz * 0.52 + 14, mr = 30;
   const halo = g.createRadialGradient(mx, my, mr * 0.8, mx, my, mr * 3.2);
   halo.addColorStop(0, 'rgba(255,240,200,.28)'); halo.addColorStop(1, 'rgba(255,240,200,0)');
   g.fillStyle = halo; g.fillRect(mx - mr * 3.3, my - mr * 3.3, mr * 6.6, mr * 6.6);

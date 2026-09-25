@@ -4,7 +4,7 @@ import { BURN_EVERY, RAINBOW } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
 import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, LANE, grid, ROWS, GY } from './state.js';
-import { clamp, rnd } from './util.js';
+import { clamp, rnd, shuffle } from './util.js';
 import { damageWall } from './walls.js';
 
 // ---------- Monsters ----------
@@ -41,6 +41,17 @@ export function resolveMonster(key){
 export function spawnMonster(key, lane, minion, p){
   const { type, kind, T, variant } = resolveMonster(key);
   const mod = variant ? MODS[variant.mod] : null;
+  if (type === 'boss' && kind === 'twintides' && !minion){   // the twins spawn as a pair on the sea row
+    const lanes = shuffle([...Array(COLS).keys()]).slice(0, 2);
+    const a = spawnMonster('boss', lanes[0], true, p), b = spawnMonster('boss', lanes[1], true, p);
+    a.minion = b.minion = false; a.twin = b; b.twin = a;
+    return a;
+  }
+  let puddle = null;
+  if ((type === 'crawler' || type === 'diver') && G.puddles && G.puddles.length && p == null){   // rise from a random puddle
+    puddle = G.puddles[Math.floor(Math.random() * G.puddles.length)];
+    lane = puddle.lane; p = puddle.p;
+  }
   let hp = T.hp + (type === 'imp' || type === 'brute' || type === 'wisp' ? hpExtra() : 0) + (mod && mod.hp ? mod.hp : 0);
   const form = type === 'boss' ? (G.mode === 'story' ? (G.def.bossForm || 1) : (G.world >= 1 ? 2 : 1)) : 1;
   if (type === 'boss') hp = form === 2 ? T.form2.hp : T.hp + (G.mode === 'endless' ? 4 * G.world : 0);
@@ -54,7 +65,14 @@ export function spawnMonster(key, lane, minion, p){
     hidden:false, vanish:T.show || 0, carrier:type === 'rider', healT:T.healEvery || 0,
     driftT:T.driftEvery || 0, swapT:T.swapEvery || 0, recolourT:form === 2 && T.form2 && T.form2.recolourEvery ? T.form2.recolourEvery : 0,
     phase:'move', phaseT:T.move || 0, shield:type === 'knight', gargs:null, freed:false, shootT:T.shootEvery || 0, calmT:0, regenT:0,
-    laneT:T.laneEvery || 0, batsT:T.batsEvery || 0, wallT:T.wallEvery || 0, healT:T.healEvery || 0, healing:false, healHits:0, stunT:0 };
+    laneT:T.laneEvery || 0, batsT:T.batsEvery || 0, wallT:T.wallEvery || 0, healT:T.healEvery || 0, healing:false, healHits:0, stunT:0,
+    puddle, staggerT:T.stagger ? rnd(T.stagger[0], T.stagger[1]) : 0, lurch:1, upT:T.up || 0, boltT:T.boltEvery || 0, twin:null, trueDeath:false };
+  if (type === 'diver'){
+    if (puddle){ m.hidden = true; m.upT = T.down; }        // starts submerged, surfaces after `down`
+    else { m.sp = 0.04 * spMulNow(); m.walker = true; }    // no puddles on this level: it just walks in
+  }
+  if (puddle) for (let i = 0; i < 12; i++) spark(m.x, mY(m), '#7fd0e8', 120);
+  else if (G.def && G.def.sea && m.p <= 0 && type !== 'boss') for (let i = 0; i < 10; i++) spark(m.x, FIELD_TOP + 8, '#9fe0f0', 100);
   if (type === 'hauler'){   // its gargoyles walk ahead of it in the same lane
     m.gargs = [];
     for (let i = 0; i < T.push; i++) m.gargs.push(spawnMonster('gargoyle', lane, true, m.p + 0.07 * (i + 1)));
@@ -151,6 +169,32 @@ export function updateMonster(m, dt){
         }
         break;
       }
+      case 'sailor': {   // staggers between lanes and lurches at uneven speed
+        m.staggerT -= dt;
+        if (m.staggerT <= 0){
+          m.staggerT = rnd(TYPES.sailor.stagger[0], TYPES.sailor.stagger[1]);
+          m.lurch = rnd(0.3, 1.7);
+          if (m.p > 0.03 && m.p < 0.9 && Math.random() < 0.7){
+            const opts = [m.lane - 1, m.lane + 1].filter(l => l >= 0 && l < COLS);
+            m.lane = opts[Math.floor(Math.random() * opts.length)]; m.tx = LANE(m.lane);
+          }
+        }
+        sp *= m.lurch;
+        m.x += (m.tx - m.x) * Math.min(1, dt * 4);
+        break;
+      }
+      case 'diver': {   // surfaces from its puddle to hurl a bolt, then hides again
+        if (m.walker) break;
+        sp = 0;
+        m.upT -= dt;
+        if (m.upT <= 0){
+          m.hidden = !m.hidden;
+          m.upT = m.hidden ? TYPES.diver.down : TYPES.diver.up;
+          for (let i = 0; i < 10; i++) spark(m.x, mY(m), '#7fd0e8', 110);
+          if (!m.hidden){ G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:TYPES.diver.boltSp, dmg:TYPES.diver.bolt, dead:false, water:true }); SFX.knock(); }
+        }
+        break;
+      }
       case 'vampire': {   // heals when left alone
         m.calmT += dt;
         if (m.calmT >= TYPES.vampire.calm && m.hp < m.maxHp){
@@ -174,6 +218,20 @@ export function updateMonster(m, dt){
       case 'boss': {
         if (m.kind === 'poltergeist'){ updatePoltergeist(m, dt); if (m.p >= m.hold) sp = 0; break; }
         if (m.kind === 'vampirecount'){ if (updateVampireCount(m, dt) || m.p >= m.hold) sp = 0; break; }
+        if (m.kind === 'twintides'){   // sits on the sea row and hurls water bolts at random walls
+          if (m.p >= m.hold) sp = 0;
+          if (m.p > 0.05){
+            m.boltT -= dt;
+            if (m.boltT <= 0){
+              const T = TYPES.twintides;
+              m.boltT = m.form === 2 ? T.form2.boltEvery : T.boltEvery;
+              G.arrows.push({ lane:Math.floor(Math.random() * COLS), p:m.p + 0.04, sp:m.form === 2 ? T.form2.boltSp : T.boltSp, dmg:T.bolt, dead:false, water:true });
+              for (let i = 0; i < 10; i++) spark(m.x, mY(m) - 20, '#9fe0f0', 140); SFX.knock();
+            }
+          }
+          m.x = m.tx + Math.sin(m.ph * 1.4) * 4;
+          break;
+        }
         // Gravekeeper (docs/WORLDS.md §7): holds position, teleports between lanes, raises ghouls; form 2 shoves monsters forward
         const T = TYPES.gravekeeper;
         if (m.p >= m.hold) sp = 0;

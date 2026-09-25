@@ -19,8 +19,8 @@ export function updateHud(force){
   let prog;
   if (G.mode !== 'story') prog = 1 - G.bossTimer / 100;
   else if (G.def.boss){   // boss level: the bar fills a little until the boss shows, then tracks its health
-    const b = G.monsters.find(m => m.type === 'boss');
-    prog = G.bossDead ? 1 : b ? 0.1 + 0.9 * (1 - b.hp / b.maxHp) : 0.1 * Math.min(1, G.spawned / Math.max(1, Math.floor(G.total * 0.4)));
+    const bs = G.monsters.filter(m => m.type === 'boss'), hp = bs.reduce((a, b) => a + Math.max(0, b.hp), 0), mx = bs.reduce((a, b) => a + b.maxHp, 0);
+    prog = G.bossDead ? 1 : bs.length ? 0.1 + 0.9 * (1 - hp / mx) : 0.1 * Math.min(1, G.spawned / Math.max(1, Math.floor(G.total * 0.4)));
   } else prog = G.total ? G.resolved / G.total : 0;
   const label = G.mode === 'story' ? `Night ${G.def.label}` : `Score ${G.score.toLocaleString()}`;
   const wf = Math.round(wallFrac() * 100);

@@ -82,6 +82,7 @@ Hints: after ~6 s idle with no lit bunch, the game outlines one pumpkin with an 
 | Fire | red | Flame | Level 1-8 |
 | Grey | grey | Piercing (also passes castle walls, damaging them) | Level 3-6 |
 | Purple | purple | Spawn | World 5 (not yet reachable) |
+| Pink | pink | Chain: on a hit, lightning jumps to the nearest monster in a neighbouring lane for half power (one jump). Knockback like Green. | Level 4-4 |
 | Black | black | Blast: explodes on its first hit for full power and hits monsters in the two neighbouring lanes at the same height for half. Against a castle wall it does ×1.5 and splashes the lanes beside it. Knockback like Green. | Level 3-9 |
 | White | white | Boomerang: a throw that hits nothing flies back into the patch (top-most empty cell of its column, else the nearest column with space) and does not count as a miss. Knockback like Green. | Level 2-3 |
 | Rainbow | multicolor | Wildcard, no level | Rare (see below) |
@@ -144,7 +145,12 @@ Speed is in "field lengths per second" before level multipliers (so 0.055 ≈ 18
 | Gargoyle Hauler | 3 | 0.02 pushing, 0.075 free | 0.6 | 10 | 2 | Spawns with 2 Gargoyles (5 HP, eat 0.35, minions) ahead of it in its lane. Crawls while any survive, sprints once all are dead. Grey counters the line | 3-3 |
 | Skeleton Archer | 2 | 0.04 | 0.4 | 9 | 2 | Stops at 14% of the field and every 5 s fires an arrow down its lane that does 3 wall damage on arrival. Usually sits behind castle walls | 3-5 |
 | Vampire | 5 | 0.045 | 0.7 | 14 | 3 | Arrives with 2 bats in the neighbouring lanes. If not hit for 4 s, heals 1 HP every 3 s | 3-8 |
+| Puddle Crawler | 2 | 0.05 | 0.5 | 6 | 2 | Climbs out of a random puddle (its lane and depth) instead of walking in from the top | 4-2 |
+| Drunk Sailor | 3 | 0.05 × 0.3–1.7 | 0.6 | 8 | 2 | Every 1.4–2.8 s picks a new lurch speed and, 70% of the time, staggers to a neighbouring lane (anywhere on the field) | 4-3 |
+| Puddle Diver | 3 | 0 | 0 | 9 | 2 | Lives in a random puddle. Hidden and untargetable for 3 s, then surfaces for 2.5 s and hurls a water bolt down its lane (2 wall damage). With no puddles on the level it walks in at 0.04 instead | 4-7 |
+| Splitter Slime | 3 | 0.045 | 0.5 | 7 | 2 | On death spawns 2 Blobs (1 HP, 0.065, minions) in the lanes beside it | 4-6 |
 | Mummy | 2 | 0.045 | 0.6 | 5 | 2 | Only Fire (hits or burn ticks) kills it. Any other kill makes it collapse on the spot for 4 s, untargetable and not walking, then it stands up at full health. No rewards for a collapse | 1-9 |
+| The Twin Tides (world 4 boss) | 18 each (form 1) / 28 each (form 2) | 0.03 until they hold | 0 | 30 each | 3 each (incl. 1 rainbow) | Two serpents in distinct random lanes, holding at 12% (the sea row). Every 6 s (4.5 s in form 2) each hurls a water bolt at a random wall for 3. Killing one alone puts it **down** for 8 s (5 s in form 2), untargetable; if the other dies inside that window both die for good, otherwise the fallen one rises at full health. The progress bar tracks their combined health. Immune to knockback and freeze | 4-10 (form 1), 4-20 (form 2) |
 | The Vampire Count (world 3 boss) | 32 (form 1) / 50 (form 2) | 0.03 until it holds | 0 | 50 | 6 (incl. 1 rainbow) | Holds at 30%. Every 9 s bursts into bats and reforms in another lane. Every 10 s (8 s in form 2) calls 2 bats. Every 15 s raises a castle wall (the level's wall HP) if fewer than 3 stand. Every 20 s (16 s) enters a **healing trance**: stands still healing 2 HP/s and shows "heal ×N" (N = 4, 5 or 6); each hit counts down and at zero the trance breaks and it is stunned 2 s. Form 2 also heals 1 HP every 2 s whenever it has not been hit for 4 s. Immune to knockback and freeze | 3-10 (form 1), 3-20 (form 2) |
 | The Poltergeist (world 2 boss) | 26 (form 1) / 44 (form 2) | 0.03 until it holds | 0 | 45 | 6 (incl. 1 rainbow) | Holds at 25% of the field and drifts to a neighbouring lane every 5 s. Every 8 s (6.5 s in form 2) swaps two random pumpkins on the patch, animated so they can be followed. Form 2 also repaints one pumpkin to another loadout colour every 12 s. Immune to knockback and freeze | 2-10 (form 1), 2-20 (form 2) |
 | The Gravekeeper (world 1 boss) | 20 (form 1) / 36 (form 2) | 0.03 until it holds | 0 (never reaches the wall) | 40 | 6 (incl. 1 rainbow) | Walks to 28% of the field and stops. Every 6 s teleports to a different lane. Raises a ghoul in a random lane at its own depth every 8 s (form 1) or 5.5 s (form 2). Form 2 also shoves one monster 30% of the field forward every 12 s. Immune to knockback and freeze; can be slowed | 1-10 (form 1), 1-20 (form 2) |
@@ -182,6 +188,11 @@ World 2 (Foggy Hollow) starting numbers (2026-09-25, untuned): wave 11 → 21 ov
 
 World 3 (Crumbling Keep) starting numbers (2026-09-25, untuned): wave 12 → 22 over levels 1–10 and 23 → 37 over 11–20; spawn gap 3.54 s → 2.5 s; speed ×0.82 → ×0.928 by level 10, then +0.02 per level; pool Crypt Ghoul 10 and Keep Imp 5 from 3-1, Shield Knight 5 from 3-2, Gargoyle Hauler 3 from 3-3, Skeleton Archer 4 from 3-5, Siege Brute 3 from 3-7, Vampire 2 from 3-8; graves 0 (1–6), 1 (7–14), 2 (15–20).
 
+World 4 (Drowned Marsh) starting numbers (2026-09-25, untuned): wave 13 → 23 over levels 1–10 and 24 → 38 over 11–20; spawn gap 3.44 s → 2.4 s; speed ×0.84 → ×0.948 by level 10, then +0.02 per level; pool Drowned Ghoul 10 and Tide Imp 5 from 4-1, Puddle Crawler 5 from 4-2, Drunk Sailor 4 from 4-3, Bog Turtle 3 from 4-5, Splitter Slime 4 from 4-6, Puddle Diver 3 from 4-7, Sodden Mummy 3 from 4-9; graves 0 (1–5), 1 (6–12), 2 (13–20).
+
+### Puddles and the sea row (world 4 map gimmick)
+Level data gives `puddles` (count) and `sea` (boolean). Puddles are placed at level start in distinct random lanes at 30–60% of the field: 1 in levels 1–4, 2 in 5–9, 3 in 10–14, 4 in 15–20. Puddle Crawlers and Puddle Divers spawn from them. On sea levels (every even level from 4-6, plus both boss levels) the top 10% of the field is water and monsters surface from it with a splash; the Twin Tides live there.
+
 ### Castle walls (world 3 map gimmick)
 Level data gives `castles:{ n, hp }`: at level start *n* stone walls stand in distinct random lanes at 40–72% of the field: 1×6 HP in levels 1–4, 2×9 in 5–10, 3×12 in 11–15, 3×15 in 16–20 (owner, 2026-09-25: ramp 6 → 15). Monsters walk through them freely. A pumpkin flying up its lane hits the wall before anything behind it: it deals its power to the wall and stops. Grey deals its power and continues. Black deals ×1.5, stops, and splashes monsters and walls in the neighbouring lanes at that height for half. Bombs damage walls too. Broken walls crumble away. The Vampire Count raises new ones.
 
@@ -190,7 +201,7 @@ Level data lists fog banks as `[top, bottom]` fractions of the field. A monster 
 
 ### Unlocks and progression
 - Level 1 of a world opens when the previous world's level 10 has been beaten. Every other level opens when the level before it has been beaten. Beating level 10 therefore opens levels 11–20 and the next world at once.
-- Unlocks sit in levels 1–10 so nothing is missable. World 1: Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8. World 2: Lantern 2-2, White 2-3, Landmine 2-5. World 3: Bomb 3-4, Grey 3-6, Black 3-9.
+- Unlocks sit in levels 1–10 so nothing is missable. World 1: Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8. World 2: Lantern 2-2, White 2-3, Landmine 2-5. World 3: Bomb 3-4, Grey 3-6, Black 3-9. World 4: Pink 4-4 (no new tool).
 - Stars are keyed by global night index in the save; `save.unlocked` mirrors the highest open night for older code and the endless-mode loadout.
 
 ### Endless mode

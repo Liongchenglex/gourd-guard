@@ -2,8 +2,8 @@ import { TYPES, BOSS_NAMES } from '../data/monsters.js';
 import { BURN_AMT, BURN_EVERY, BURN_N, FREEZE_P, KB_CHANCE, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches } from './board.js';
-import { TILE_P, mS, mY, spMulNow } from './monsters.js';
-import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid } from './state.js';
+import { TILE_P, mS, mY, spMulNow, spawnMonster } from './monsters.js';
+import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS } from './state.js';
 import { TAU, clamp, fmt, rnd } from './util.js';
 import { lvOf, save, persist } from '../save.js';
 import { KILL_REWARD } from '../data/rules.js';
@@ -84,6 +84,20 @@ export function dropWeapon(m){
 }
 export function kill(m){
   if (m.dead) return;
+  if (m.type === 'boss' && m.kind === 'twintides' && !m.trueDeath){   // twins: one down alone rises again unless the other falls within the window
+    const other = m.twin, T = TYPES.twintides, win = m.form === 2 ? T.form2.window : T.window;
+    if (other && !other.dead && other.rise > 0){   // second kill inside the window: both die for real
+      m.trueDeath = true; other.trueDeath = true; other.rise = 0;
+      kill(other); kill(m); return;
+    }
+    if (other && !other.dead){
+      m.hp = 0; m.rise = win; m.eating = false;
+      addFloat(`Down! ${win}s to fell the other`, m.x, mY(m) - m.r - 34, '#9fe0f0', 18, 1.6);
+      for (let i = 0; i < 14; i++) chunk(m.x, mY(m), '#2a7a78', 200); SFX.knock();
+      return;
+    }
+    m.trueDeath = true;
+  }
   if (m.type === 'mummy' && m.lastHit !== 3){   // not Fire: it collapses and rises again later
     m.hp = 0; m.rise = TYPES.mummy.rise; m.eating = false; m.kb = 0; m.burnLeft = 0;
     addFloat('Down… not out', m.x, mY(m) - m.r - 30, '#d8cfb0', 16, 1);
@@ -96,7 +110,7 @@ export function kill(m){
   G.score += m.pts;
   const reward = m.type === 'boss' ? 'boss' : rollReward();
   const y = mY(m), s = mS(m);
-  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', boss:'#6a3a7a' }[m.type] || '#aaa';
+  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', boss:'#6a3a7a' }[m.type] || '#aaa';
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
   ring(m.x, y, m.r * s * 2.2, 'rgba(255,220,150,.8)');
   if (reward === 'boss' || reward === 'coins'){
@@ -108,7 +122,14 @@ export function kill(m){
   else if (reward === 'pumpkin') dropPumpkins(m, Math.max(1, Math.round(m.drop)));
   else if (reward === 'weapon') dropWeapon(m);
   SFX.kill();
-  if (m.type === 'boss'){ G.bossDead = true; G.shake = 1.2; banner(`${BOSS_NAMES[m.kind]} falls!`, 'Finish the stragglers and grab the pumpkins it dropped!', 2.4); SFX.win(); }
+  if (m.type === 'slime'){   // splits into blobs
+    for (let i = 0; i < TYPES.slime.splits; i++){ const l = Math.max(0, Math.min(COLS - 1, m.lane + (i ? 1 : -1))); const bl = spawnMonster('blob', l, true, Math.max(0, m.p - 0.02)); bl.age = 0.2; }
+    addFloat('Split!', m.x, y - 30, '#7fe0a0', 16, 0.9);
+  }
+  if (m.type === 'boss'){
+    const twinAlive = m.kind === 'twintides' && m.twin && !m.twin.dead;
+    if (!twinAlive){ G.bossDead = true; G.shake = 1.2; banner(`${BOSS_NAMES[m.kind]} ${m.kind === 'twintides' ? 'fall' : 'falls'}!`, 'Finish the stragglers and grab the pumpkins it dropped!', 2.4); SFX.win(); }
+  }
 }
 
 export function knockback(m){
@@ -131,6 +152,16 @@ export function hitMonster(pr, m){
   if (pr.type === 3){ m.burnLeft = Math.max(m.burnLeft, BURN_N[i]); m.burnAmt = Math.max(m.burnAmt, BURN_AMT[i]); m.burnTick = BURN_EVERY; }
   m.lastHit = pr.type;
   damage(m, POWER[i], PTYPES[pr.type].spark);
+  if (pr.type === 8){   // Pink: lightning jumps to the nearest monster in a neighbouring lane for half power
+    let best = null, bd = Infinity;
+    for (const o of G.monsters) if (o !== m && !o.dead && !o.hidden && o.rise <= 0 && Math.abs(o.lane - m.lane) === 1){ const d = Math.abs(mY(o) - y); if (d < bd){ bd = d; best = o; } }
+    if (best){
+      const y2 = mY(best), n = 6;
+      for (let k = 0; k <= n; k++){ const f = k / n; G.parts.push({ x:m.x + (best.x - m.x) * f + rnd(-8, 8), y:y + (y2 - y) * f + rnd(-8, 8), vx:0, vy:0, t:0, life:0.25, size:4, color:'#ffb3e6', kind:'dot', grav:0 }); }
+      ring(best.x, y2, 30, 'rgba(255,179,230,.9)');
+      best.lastHit = 8; damage(best, POWER[i] / 2, '#ffb3e6', true);
+    }
+  }
   if (pr.type === 7){   // Black: blast the neighbouring lanes at the same height for half power
     ring(pr.x, y, 70, 'rgba(255,154,58,.9)'); for (let k = 0; k < 24; k++) spark(pr.x, y, k % 2 ? '#ff9a3a' : '#3a3540', 260); G.shake = Math.max(G.shake, 0.4);
     for (const o of G.monsters.slice()) if (o !== m && !o.dead && !o.hidden && o.rise <= 0 && Math.abs(o.lane - m.lane) === 1 && Math.abs(mY(o) - y) < CS * 1.2){ o.lastHit = 7; damage(o, POWER[i] / 2, '#ff9a3a', true); }

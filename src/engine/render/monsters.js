@@ -37,7 +37,12 @@ export function drawMonster(m, t){
     case 'gargoyle': drawGargoyle(m, F, t); break;
     case 'archer': drawArcher(m, F, t); break;
     case 'vampire': drawVampire(m, F, t); break;
-    case 'boss': if (m.kind === 'poltergeist') drawPoltergeist(m, F, t); else if (m.kind === 'vampirecount') drawVampireCount(m, F, t); else drawBoss(m, F, t); break;
+    case 'crawler': drawCrawler(m, F, t); break;
+    case 'sailor': drawSailor(m, F, t); break;
+    case 'diver': drawDiver(m, F, t); break;
+    case 'slime': drawSlime(m, F, t); break;
+    case 'blob': drawBlob(m, F, t); break;
+    case 'boss': if (m.kind === 'poltergeist') drawPoltergeist(m, F, t); else if (m.kind === 'vampirecount') drawVampireCount(m, F, t); else if (m.kind === 'twintides') drawTwinTide(m, F, t); else drawBoss(m, F, t); break;
   }
   if (m.frozenT > 0){
     cx.globalAlpha = fade * 0.5; cx.fillStyle = '#d8f4ff'; cx.strokeStyle = '#ffffff'; cx.lineWidth = 2;
@@ -223,7 +228,12 @@ export function monsterIcon(key, px){
     case 'gargoyle': drawGargoyle(m, F, 1); break;
     case 'archer': drawArcher(m, F, 1); break;
     case 'vampire': drawVampire(m, F, 1); break;
-    case 'boss': if (kind === 'poltergeist') drawPoltergeist(m, F, 1); else if (kind === 'vampirecount') drawVampireCount(m, F, 1); else drawBoss(m, F, 1); break;
+    case 'crawler': drawCrawler(m, F, 1); break;
+    case 'sailor': drawSailor(m, F, 1); break;
+    case 'diver': drawDiver(m, F, 1); break;
+    case 'slime': drawSlime(m, F, 1); break;
+    case 'blob': drawBlob(m, F, 1); break;
+    case 'boss': if (kind === 'poltergeist') drawPoltergeist(m, F, 1); else if (kind === 'vampirecount') drawVampireCount(m, F, 1); else if (kind === 'twintides') drawTwinTide(m, F, 1); else drawBoss(m, F, 1); break;
   }
   cx = prev;
   return c;
@@ -340,4 +350,55 @@ export function drawVampireCount(m, F, t){   // taller vampire with a high colla
   cx.fillStyle = m.flash > 0 ? '#fff' : '#ff3a3a'; ell(cx, -5, -30, 3, 3); ell(cx, 5, -30, 3, 3);
   cx.fillStyle = '#fff'; tri(cx, -3, -22, 2.5); tri(cx, 3, -22, 2.5);
   if (m.stunT > 0){ cx.fillStyle = '#ffd35a'; for (let i = 0; i < 3; i++) ell(cx, -14 + i * 14, -54 + Math.sin(t * 8 + i) * 4, 3, 3); }
+}
+
+export function drawCrawler(m, F, t){   // dripping, weed-hung crawler on all fours
+  cx.fillStyle = F('#3a7a8a'); ell(cx, 0, 6, 18, 11); ell(cx, 0, -8, 12, 11);
+  cx.fillStyle = F('#2a5a4a'); for (let i = -2; i <= 2; i++){ cx.beginPath(); cx.moveTo(i * 6, -16); cx.lineTo(i * 6 + 2, -2 + Math.sin(t * 3 + i) * 2); cx.lineTo(i * 6 - 3, -4); cx.closePath(); cx.fill(); }   // weeds
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#bfefff'; ell(cx, -5, -9, 2.6, 2.6); ell(cx, 5, -9, 2.6, 2.6);
+  cx.strokeStyle = F('#3a7a8a'); cx.lineWidth = 5; cx.lineCap = 'round';
+  const w = Math.sin(m.ph * 6) * 4;
+  cx.beginPath(); cx.moveTo(-12, 8); cx.lineTo(-22, 16 + w); cx.moveTo(12, 8); cx.lineTo(22, 16 - w); cx.stroke();
+  cx.fillStyle = 'rgba(127,208,232,.7)'; ell(cx, 8, 18 + ((t * 20) % 8), 2, 3);   // drip
+}
+export function drawSailor(m, F, t){   // bottle in hand, striped shirt, listing to one side
+  const tilt = Math.sin(m.ph * 2) * 0.25;
+  cx.rotate(tilt);
+  cx.fillStyle = F('#6a5a4a'); ell(cx, 0, 8, 12, 15);
+  cx.fillStyle = F('#e8e0d0'); for (let i = 0; i < 3; i++) cx.fillRect(-10, -2 + i * 7, 20, 3);   // stripes
+  cx.fillStyle = F('#c9b8a0'); ell(cx, 0, -12, 10, 10);
+  cx.fillStyle = F('#2a3a6a'); cx.fillRect(-11, -22, 22, 6);                                    // cap
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#ff8a6a'; ell(cx, -4, -12, 2.2, 2.2); ell(cx, 4, -12, 2.2, 2.2);
+  cx.fillStyle = F('#2a3a2a'); cx.fillRect(14, -10, 5, 14); cx.fillRect(15, -16, 3, 7);          // bottle
+  cx.strokeStyle = F('#c9b8a0'); cx.lineWidth = 4; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo(10, 0); cx.lineTo(16, -6); cx.moveTo(-10, 0); cx.lineTo(-16, 8); cx.stroke();
+}
+export function drawDiver(m, F, t){   // frog-like head and shoulders rising from the water
+  cx.fillStyle = 'rgba(127,208,232,.5)'; ell(cx, 0, 12, 24, 7);
+  cx.fillStyle = F('#2a6a7a'); ell(cx, 0, 4, 16, 12); ell(cx, 0, -10, 13, 11);
+  cx.fillStyle = F('#3a8a9a'); ell(cx, -7, -18, 5, 5); ell(cx, 7, -18, 5, 5);
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#ffe27a'; ell(cx, -7, -18, 2.5, 2.5); ell(cx, 7, -18, 2.5, 2.5);
+  cx.strokeStyle = F('#2a6a7a'); cx.lineWidth = 5; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo(12, 0); cx.lineTo(22, -12 + Math.sin(t * 8) * 3); cx.stroke();   // throwing arm
+}
+export function drawSlime(m, F, t){   // wobbling green blob with two eyes
+  const wob = 1 + Math.sin(m.ph * 5) * 0.08;
+  cx.fillStyle = F('#5ad08a'); cx.beginPath(); cx.ellipse(0, 4, 20 * wob, 16 / wob, 0, 0, TAU); cx.fill();
+  cx.fillStyle = 'rgba(255,255,255,.35)'; ell(cx, -7, -4, 5, 3);
+  cx.fillStyle = '#1a3a2a'; ell(cx, -6, 2, 3, 3.5); ell(cx, 6, 2, 3, 3.5);
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#eafff0'; ell(cx, -6.5, 1, 1.2, 1.2); ell(cx, 5.5, 1, 1.2, 1.2);
+}
+export function drawBlob(m, F, t){
+  const wob = 1 + Math.sin(m.ph * 7) * 0.1;
+  cx.fillStyle = F('#7fe0a0'); cx.beginPath(); cx.ellipse(0, 3, 12 * wob, 10 / wob, 0, 0, TAU); cx.fill();
+  cx.fillStyle = '#1a3a2a'; ell(cx, -4, 1, 2, 2.4); ell(cx, 4, 1, 2, 2.4);
+}
+export function drawTwinTide(m, F, t){   // sea serpent rearing out of the water
+  cx.fillStyle = 'rgba(127,208,232,.45)'; ell(cx, 0, 26, 40, 9);
+  const g = cx.createRadialGradient(0, -10, 6, 0, -10, 70); g.addColorStop(0, 'rgba(60,160,180,.3)'); g.addColorStop(1, 'rgba(60,160,180,0)'); cx.fillStyle = g; cx.fillRect(-70, -80, 140, 130);
+  cx.strokeStyle = F('#1f6f78'); cx.lineWidth = 16; cx.lineCap = 'round';
+  cx.beginPath(); cx.moveTo(-26, 24); cx.quadraticCurveTo(-30, -10 + Math.sin(t * 2) * 4, 0, -14); cx.quadraticCurveTo(26, -18, 20, -44); cx.stroke();   // neck
+  cx.fillStyle = F('#2a8a90'); for (let i = 0; i < 4; i++) tri(cx, -22 + i * 12, -6 - i * 8, 5);   // fins along the neck
+  cx.fillStyle = F('#1f6f78'); ell(cx, 22, -48, 16, 12);                                          // head
+  cx.fillStyle = F('#2a8a90'); tri(cx, 14, -60, 6); tri(cx, 30, -60, 6);
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#bfefff'; ell(cx, 18, -50, 3.2, 3.2); ell(cx, 28, -50, 3.2, 3.2);
+  cx.fillStyle = '#0b2a30'; cx.beginPath(); cx.ellipse(26, -42, 8, 3 + Math.sin(t * 3) * 2, 0, 0, TAU); cx.fill();   // jaws
 }

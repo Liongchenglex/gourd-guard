@@ -9,10 +9,11 @@ export const PTYPES = [
   { key:'purple', name:'Purple', role:'can spawn a bonus pumpkin in your patch when it kills', base:'#8746c2', light:'#bb88ee', dark:'#4c2379', spark:'#d09bff' },
   { key:'white',  name:'White',  role:'flies back into your patch if it hits nothing', base:'#e9e4d8', light:'#ffffff', dark:'#9a948a', spark:'#ffffff' },
   { key:'black',  name:'Black',  role:'explodes on impact and splashes the columns beside it', base:'#3a3540', light:'#6e6878', dark:'#17141c', spark:'#ff9a3a' },
+  { key:'pink',   name:'Pink',   role:'chains lightning to the nearest monster in a neighbouring column', base:'#e05aa8', light:'#ff9ad6', dark:'#8a2a66', spark:'#ffb3e6' },
   { key:'rainbow',name:'Rainbow',role:'joins any bunch as any color', rainbow:true, spark:'#fff3a0' },
 ];
 
-export const RAINBOW = 8, NTYPES = 8;   // type indices: 0 Green, 1 Yellow, 2 Ice, 3 Fire, 4 Grey, 5 Purple, 6 White, 7 Black, 8 Rainbow
+export const RAINBOW = 9, NTYPES = 9;   // type indices: 0 Green, 1 Yellow, 2 Ice, 3 Fire, 4 Grey, 5 Purple, 6 White, 7 Black, 8 Pink, 9 Rainbow
 
 export const POWER     = [1, 1, 1.5, 1.5, 2];
 
@@ -48,6 +49,7 @@ export function lvDesc(t, L){
     if (t === 5){ parts.push(`${pct(SPAWN_P[i])} spawn on kill`); if (RAINBOW_P[i]) parts.push(`${pct(RAINBOW_P[i])} rainbow`); }
     if (t === 6) parts.push('returns on a miss');
     if (t === 7) parts.push('splashes neighbours for half');
+    if (t === 8) parts.push('chains to a neighbour for half');
   }
   return parts.join(', ');
 }

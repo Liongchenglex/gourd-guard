@@ -19,7 +19,7 @@ import { openLoadout, setState, showResult } from '../ui/screens.js';
 // ---------- Flow ----------
 
 export function makeDemo(){
-  setG({ mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[] });
+  setG({ mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[] });
   initBoard(1, 2);
   [[4,0],[4,1],[4,2],[3,1]].forEach(([r, c]) => { if (grid[r][c]) grid[r][c].c = 0; });
   resolveMatches();
@@ -51,9 +51,10 @@ export function startGame(mode, n, loadout){
     total:def ? def.total + (def.boss ? 1 : 0) : 0,
     spawned:0, spawnTimer:2.6, bossSpawned:false, bossTimer:100, diff:1, sproutT:0,
     monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], groups:{},
-    t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[],
+    t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[],
   });
   if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
+  if (def && def.puddles) placePuddles(def.puddles);
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def ? def.pattern : Math.floor(Math.random() * PATTERNS.length), def ? def.graves : 2);
   initWalls();
@@ -136,6 +137,11 @@ export function placeMine(lane){
   return true;
 }
 /** Castle walls at level start: n distinct random lanes, mid-field. */
+/** Puddles (world 4): n distinct random lanes, mid-field. Crawlers and divers use them. */
+export function placePuddles(n){
+  const lanes = shuffle([...Array(COLS).keys()]).slice(0, n);
+  for (const lane of lanes) G.puddles.push({ lane, p:rnd(0.3, 0.6) });
+}
 export function raiseCastles(n, hp){
   const lanes = shuffle([...Array(COLS).keys()]).slice(0, n);
   for (const lane of lanes) G.castles.push({ lane, p:rnd(0.4, 0.72), hp, maxHp:hp, flash:0, dead:false });
@@ -223,7 +229,7 @@ export function update(dt){
   g.mines = g.mines.filter(m => !m.dead);
   for (const a of g.arrows){   // skeleton archers' arrows fly down their lane into the wall
     a.p += a.sp * dt;
-    if (a.p >= 1){ a.dead = true; damageWall(a.lane, a.dmg); for (let i = 0; i < 8; i++) spark(LANE(a.lane), FENCE_Y - 10, '#d8d0c0', 120); SFX.chomp(); }
+    if (a.p >= 1){ a.dead = true; damageWall(a.lane, a.dmg); for (let i = 0; i < 8; i++) spark(LANE(a.lane), FENCE_Y - 10, a.water ? '#9fe0f0' : '#d8d0c0', 120); SFX.chomp(); }
   }
   g.arrows = g.arrows.filter(a => !a.dead);
   for (const w of g.castles) if (w.flash > 0) w.flash -= dt;

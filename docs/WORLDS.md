@@ -314,7 +314,7 @@ The second half of every world is authored level by level. Each line is data in 
 | 13 | Mummies only | L-shaped fog: top row + left column | Mirror sprites only | A full row of castle walls with archers behind it, plus the usual mix | Shoreline 3 rows down |
 | 14 | 6 graves | Left and right columns fogged | Everything spawns as a reverse chameleon (no true chameleons) | Gargoyle haulers, shield knights and archers only, behind two rows of walls | Puddle divers and crawlers only |
 | 15 | Whole top patch row is graves (a 4-row board) | Only the first two rows and the fence row are clear | Chameleons and reverse chameleons only | Left and right columns are castle walls | Shoreline 4 rows down, Sodden Mummies only |
-| 16 | Flaming Mummy | Fogwalker | Witch | Bulwark Knight | Shell Turtle |
+| 16 | Flaming Mummy: "Wrapped in Flame" | Fogwalker: "The Walking Mist" | Witch: "Hex in the Woods" | Bulwark Knight: "Iron Aura" | Shell Turtle: "Shell First" |
 | 17 | Mummies and Flaming Mummies only | Fogwalkers only | Mirror sprites only, all reverse-chameleonised | Level 14 plus Bulwark Knights | Shoreline 4 rows down; Bog Turtles, Shell Turtles and divers only |
 | 18 | Top and bottom patch rows are graves | Only the top (spawn) row is clear | Witches only (they may re-hex a monster into a new colour) | H-shaped castle walls, every monster | Shoreline 4 rows down; Shell Turtles, Sodden Mummies and divers only |
 | 19 | Columns 1, 4 and 7 are graves except their last row (reach them with chain lightning); those lanes spawn less | Only the fence row is clear | Chameleons plus everything else chameleonised | Castle walls everywhere except the first two rows | Shoreline 5 rows down; divers and Shell Turtles only |

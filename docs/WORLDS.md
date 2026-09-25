@@ -313,7 +313,7 @@ The second half of every world is authored level by level. Each line is data in 
 | 11 | as generated | as generated | as generated | as generated | as generated |
 | 12 | V-shaped graves | Wraiths only | Wind now blows on 2–3 columns or rows only (arrows mark them), through 20 | 4 castle walls | Shoreline 2 rows down |
 | 13 | Mummies only | L-shaped fog: top row + left column | Mirror sprites only | A full row of castle walls with archers behind it, plus the usual mix | Shoreline 3 rows down |
-| 14 | 6 graves | Left and right columns fogged | Everything spawns as a reverse chameleon (no true chameleons) | Gargoyle haulers, shield knights and archers only, behind two rows of walls | Puddle divers and crawlers only |
+| 14 | 6 graves | Left and right columns fogged | Everything spawns as a reverse chameleon (no true chameleons) | Gargoyle haulers, shield knights and archers only, behind two rows of walls | Puddle divers and crawlers only, with 6 puddles |
 | 15 | Whole top patch row is graves (a 4-row board) | Only the first two rows and the fence row are clear | Chameleons and reverse chameleons only | Left and right columns are castle walls | Shoreline 4 rows down, Sodden Mummies only |
 | 16 | Flaming Mummy: "Wrapped in Flame" | Fogwalker: "The Walking Mist" | Witch: "Hex in the Woods" | Bulwark Knight: "Iron Aura" | Shell Turtle: "Shell First" |
 | 17 | Mummies and Flaming Mummies only | Fogwalkers only | Mirror sprites only, all reverse-chameleonised | Level 14 plus Bulwark Knights | Shoreline 4 rows down; Bog Turtles, Shell Turtles and divers only |

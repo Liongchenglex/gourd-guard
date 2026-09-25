@@ -42,7 +42,6 @@ export function render(){
     if (fogOn && m.type !== 'boss' && m.p > -0.02 && g.def.fog.some(([a, b]) => m.p >= a && m.p <= b)) continue;   // inside a fog bank (bosses glow through)
     drawMonster(m, t);
   }
-  drawNets(t);
   drawCastles(t);
   drawScarecrows(t);
   drawArrows(t);
@@ -249,17 +248,6 @@ export function drawHealZone(m, t){
   const pulse = 0.5 + 0.5 * Math.sin(t * 3);
   ctx.fillStyle = `rgba(120,220,120,${0.10 + 0.06 * pulse})`; rrect(ctx, x, y, w, h, 16); ctx.fill();
   ctx.strokeStyle = `rgba(160,240,140,${0.45 + 0.3 * pulse})`; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 30; rrect(ctx, x, y, w, h, 16); ctx.stroke(); ctx.setLineDash([]);
-}
-/** Silver nets: a shimmering weave across the top of the lane, fading as time runs out. */
-export function drawNets(t){
-  for (const n of G.nets || []){
-    const x = LANE(n.lane), y0 = FIELD_TOP + 6, h = 44, a = Math.min(1, n.t / 1.5);
-    ctx.globalAlpha = 0.35 + 0.35 * a;
-    ctx.strokeStyle = n.throwBack ? '#ffe27a' : '#e8f0ff'; ctx.lineWidth = 1.5;
-    for (let i = 0; i <= 4; i++){ ctx.beginPath(); ctx.moveTo(x - CS * 0.46, y0 + i * h / 4); ctx.lineTo(x + CS * 0.46, y0 + i * h / 4 + Math.sin(t * 4 + i) * 2); ctx.stroke(); }
-    for (let i = 0; i <= 4; i++){ ctx.beginPath(); ctx.moveTo(x - CS * 0.46 + i * CS * 0.92 / 4, y0); ctx.lineTo(x - CS * 0.46 + i * CS * 0.92 / 4, y0 + h); ctx.stroke(); }
-    ctx.globalAlpha = 1;
-  }
 }
 /** Scarecrows (world 5 tool): a post with a straw figure and a health bar. */
 export function drawScarecrows(t){

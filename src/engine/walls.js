@@ -1,3 +1,4 @@
+import { banner } from '../ui/hud.js';
 import { SFX } from './audio.js';
 import { chunk } from './combat.js';
 import { endGame } from './game.js';
@@ -17,7 +18,7 @@ export function damageWall(c, amt){
     SFX.wallBreak();
     if (navigator.vibrate) try { navigator.vibrate([60, 40, 90]); } catch (e) {}
     G.brokeAt = c;
-    endGame(false);
+    banner('A wall is down!', 'Repair it or stop them before they get through.', 2.4);   // the night is lost only when a monster walks through the gap
   }
 }
 

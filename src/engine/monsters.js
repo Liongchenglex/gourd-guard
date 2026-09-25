@@ -1,9 +1,10 @@
+import { endGame } from './game.js';
 import { resolveMatches } from './board.js';
 import { TYPES, MODS, VARIANTS } from '../data/monsters.js';
 import { BURN_EVERY, RAINBOW } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
-import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, LANE, grid, ROWS, GY } from './state.js';
+import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, LANE, grid, ROWS, GY, walls } from './state.js';
 import { clamp, rnd, shuffle } from './util.js';
 import { damageWall } from './walls.js';
 
@@ -128,6 +129,13 @@ export function updateMonster(m, dt){
   if (m.eating){
     m.shield = false;   // a shield knight lowers its shield to chew
     const mul = m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1;
+    if (walls[m.lane].hp <= 0){   // the wall is down: it walks through the gap; the night is lost when it is in
+      m.breach = (m.breach || 0) + dt * mul;
+      m.p = Math.min(1.05, 1 + m.breach * 0.04);
+      if (m.breach >= 1.2 && !G.over){ G.brokeAt = m.lane; endGame(false); }
+      return;
+    }
+    m.breach = 0;
     for (const c of lanesOf(m)) damageWall(c, m.eat * mul * dt);
     if (mul > 0){ SFX.chomp(); if (Math.random() < dt * 5) chunk(m.x + rnd(-10, 10), FENCE_Y - 18, '#8a6440', 90); }
     return;
@@ -171,7 +179,7 @@ export function updateMonster(m, dt){
       case 'archer': {   // holds near the top and shoots arrows down its lane
         if (m.p >= TYPES.archer.hold){
           sp = 0; m.shootT -= dt;
-          if (m.shootT <= 0){ m.shootT = TYPES.archer.shootEvery; G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:0.4, dmg:TYPES.archer.arrow, dead:false }); SFX.knock(); }
+          if (m.shootT <= 0 && walls[m.lane].hp > 0){ m.shootT = TYPES.archer.shootEvery; G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:0.4, dmg:TYPES.archer.arrow, dead:false }); SFX.knock(); }   // holds fire at a wall that is already down
         }
         break;
       }
@@ -197,7 +205,7 @@ export function updateMonster(m, dt){
           m.hidden = !m.hidden;
           m.upT = m.hidden ? TYPES.diver.down : TYPES.diver.up;
           for (let i = 0; i < 10; i++) spark(m.x, mY(m), '#7fd0e8', 110);
-          if (!m.hidden){ G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:TYPES.diver.boltSp, dmg:TYPES.diver.bolt, dead:false, water:true }); SFX.knock(); }
+          if (!m.hidden && walls[m.lane].hp > 0){ G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:TYPES.diver.boltSp, dmg:TYPES.diver.bolt, dead:false, water:true }); SFX.knock(); }
         }
         break;
       }
@@ -239,7 +247,8 @@ export function updateMonster(m, dt){
             if (m.boltT <= 0){
               const T = TYPES.twintides;
               m.boltT = m.form === 2 ? T.form2.boltEvery : T.boltEvery;
-              G.arrows.push({ lane:Math.floor(Math.random() * COLS), p:m.p + 0.04, sp:m.form === 2 ? T.form2.boltSp : T.boltSp, dmg:T.bolt, dead:false, water:true });
+              const standing = [...Array(COLS).keys()].filter(l => walls[l].hp > 0);
+              if (standing.length) G.arrows.push({ lane:standing[Math.floor(Math.random() * standing.length)], p:m.p + 0.04, sp:m.form === 2 ? T.form2.boltSp : T.boltSp, dmg:T.bolt, dead:false, water:true });
               for (let i = 0; i < 10; i++) spark(m.x, mY(m) - 20, '#9fe0f0', 140); SFX.knock();
             }
           }

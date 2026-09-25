@@ -1,11 +1,11 @@
 import { MINTRO, TYPES, BOSS_NAMES, VARIANTS } from '../data/monsters.js';
 import { GEAR } from '../data/shop.js';
 import { PATTERNS } from '../data/patterns.js';
-import { NTYPES, PTYPES, POWER, NET_T } from '../data/pumpkins.js';
+import { NTYPES, PTYPES, POWER } from '../data/pumpkins.js';
 import { WORLDS, levelFor, typesForNight, highestOpen } from '../data/worlds/index.js';
 import { SFX, ensureAudio } from './audio.js';
 import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, landingCell, landingNear, flyInto, DIRV } from './board.js';
-import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle, addNet } from './combat.js';
+import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle } from './combat.js';
 import { mS, mY, updateMonster, TILE_P } from './monsters.js';
 import { bgWorld, buildBg } from './render/sprites.js';
 import { endlessSpawn, storySpawn } from './spawner.js';
@@ -19,7 +19,7 @@ import { openLoadout, setState, showResult } from '../ui/screens.js';
 // ---------- Flow ----------
 
 export function makeDemo(){
-  setG({ mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], nets:[], gustT:0, gustDir:null });
+  setG({ mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], gustT:0, gustDir:null });
   initBoard(1, 2);
   [[4,0],[4,1],[4,2],[3,1]].forEach(([r, c]) => { if (grid[r][c]) grid[r][c].c = 0; });
   resolveMatches();
@@ -52,7 +52,7 @@ export function startGame(mode, n, loadout){
     total:def ? def.total + (def.boss ? 1 : 0) : 0,
     spawned:0, spawnTimer:2.6, bossSpawned:false, bossTimer:100, diff:1, sproutT:0,
     monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], groups:{},
-    t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], nets:[],
+    t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
   });
   if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
@@ -258,7 +258,6 @@ export function update(dt){
       if (!pr.hit.size){
         const spot = pr.type === 6 ? (pr.lv >= 3 ? landingNear(pr.x, pr.vis) : landingCell(pr.x)) : null;   // White: boomerang back into the patch (level 3+: beside its colour)
         if (spot){ flyInto(spot[0], spot[1], pr.vis, pr.x, FIELD_TOP); addFloat('Back!', pr.x, FIELD_TOP + 30, '#ffffff', 16, 0.8); SFX.collect(); resolveMatches(); }
-        else if (pr.type === 10){ addNet(pr.lane, NET_T[pr.lv - 1], pr.lv >= 5); }   // Silver on a miss still leaves its net
         else g.missed++;
       }
       for (let i = 0; i < 8; i++) spark(pr.x, pr.y, PTYPES[pr.vis].spark, 110);
@@ -271,17 +270,8 @@ export function update(dt){
     if (v){ mine.dead = true; for (let i = 0; i < 30; i++) spark(v.x, FENCE_Y - 30, i % 2 ? '#ffd35a' : '#ff6a3a', 300); ring(v.x, FENCE_Y - 30, 50, 'rgba(255,200,90,.9)'); g.shake = 0.8; SFX.boom(); v.lastHit = -1; damage(v, 6, '#ffd35a'); }
   }
   g.mines = g.mines.filter(m => !m.dead);
-  for (const n of g.nets){ n.t -= dt; if (n.t <= 0) n.dead = true; }
-  g.nets = g.nets.filter(n => !n.dead);
   for (const a of g.arrows){   // skeleton archers' arrows fly down their lane into the wall
     a.p += a.sp * dt;
-    const net = g.nets.find(n => n.lane === a.lane);
-    if (net){   // caught by a silver net
-      a.dead = true; const ax = LANE(a.lane), ay = FIELD_TOP + a.p * (FIELD_BOT - FIELD_TOP);
-      for (let i = 0; i < 8; i++) spark(ax, ay, '#e8f0ff', 120); addFloat('Caught', ax, ay - 16, '#e8f0ff', 14, 0.7);
-      if (net.throwBack){ const tgt = g.monsters.filter(m => !m.dead && !m.hidden && m.rise <= 0 && m.lane === a.lane).sort((p1, p2) => Math.abs(p1.p - a.p) - Math.abs(p2.p - a.p))[0]; if (tgt){ tgt.lastHit = -1; damage(tgt, a.dmg, '#e8f0ff'); } }
-      continue;
-    }
     if (a.p >= 1){ a.dead = true; damageWall(a.lane, a.dmg); for (let i = 0; i < 8; i++) spark(LANE(a.lane), FENCE_Y - 10, a.water ? '#9fe0f0' : '#d8d0c0', 120); SFX.chomp(); }
   }
   g.arrows = g.arrows.filter(a => !a.dead);

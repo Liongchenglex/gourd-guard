@@ -11,12 +11,11 @@ export const PTYPES = [
   { key:'black',  name:'Black',  role:'explodes on impact and splashes the columns beside it', base:'#3a3540', light:'#6e6878', dark:'#17141c', spark:'#ff9a3a' },
   { key:'blue',   name:'Deep Blue', role:'chains lightning along the row it hits', base:'#2a3a8a', light:'#6a8aff', dark:'#101a4a', spark:'#9ab0ff' },
   { key:'pink',   name:'Pink',   role:'repairs the wall of its column on every hit and knocks monsters back often', base:'#e05aa8', light:'#ff9ad6', dark:'#8a2a66', spark:'#ffb3e6' },
-  { key:'silver', name:'Silver', role:'leaves a net across its column that catches arrows and bolts', base:'#b8c8e0', light:'#ffffff', dark:'#5a6a80', spark:'#e8f0ff' },
   { key:'rainbow',name:'Rainbow',role:'joins any bunch as any color', rainbow:true, spark:'#fff3a0' },
 ];
 
-export const RAINBOW = 11, NTYPES = 11;   // type indices: 0 Green, 1 Yellow, 2 Ice, 3 Fire, 4 Grey, 5 Purple, 6 White, 7 Black, 8 Storm, 9 Pink, 10 Silver, 11 Rainbow
-export const YELLOW = 1, BLUE = 8, PINK = 9, SILVER = 10, WHITE = 6, BLACK = 7;
+export const RAINBOW = 10, NTYPES = 10;   // type indices: 0 Green, 1 Yellow, 2 Ice, 3 Fire, 4 Grey, 5 Purple, 6 White, 7 Black, 8 Deep Blue, 9 Pink, 10 Rainbow
+export const YELLOW = 1, BLUE = 8, PINK = 9, WHITE = 6, BLACK = 7;
 // Per-level tables for the special types (docs/WORLDS.md §5)
 export const COIN_MULT  = [2, 2, 3, 3, 4];          // Yellow: coin multiplier on its kills (always pays coins)
 export const CHAIN_N     = [3, 3, 4, 5, 5];          // Deep Blue: monsters in the same row struck (including the one hit)
@@ -25,7 +24,6 @@ export const SPLASH_FRAC = [0.5, 0.5, 0.75, 0.75, 1];     // Black: splash damag
 export const SPLASH_ROWS = [1, 1, 1, 3, 3];               // Black: splash zone is 3 lanes × this many tile heights
 export const HEAL_AMT    = [1, 1, 2, 2, 3];          // Pink: wall repair per hit
 export const KB_PINK     = [0.5, 0.5, 0.5, 0.75, 0.75];   // Pink: knockback chance
-export const NET_T       = [4, 5, 6, 7, 8];          // Silver: net duration in seconds; level 5 nets throw caught projectiles back
 
 export const POWER     = [1, 1, 1.5, 1.5, 2];
 
@@ -64,7 +62,6 @@ export function lvDesc(t, L){
     if (t === 6) parts.push(i >= 2 ? 'returns beside its colour' : 'returns on a miss');
     if (t === 7) parts.push(`splashes 3×${SPLASH_ROWS[i]} for ${pct(SPLASH_FRAC[i])}${i >= 4 ? ' with knockback' : ''}`);
     if (t === 8) parts.push(`lightning hits ${CHAIN_N[i]} in the row at ${pct(CHAIN_FRAC[i])}`);
-    if (t === 10) parts.push(`net lasts ${NET_T[i]}s${i >= 4 ? ', throws back' : ''}`);
   }
   return parts.join(', ');
 }

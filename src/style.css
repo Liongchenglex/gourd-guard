@@ -56,6 +56,7 @@ canvas#cv{ position:absolute; inset:0; width:100%; height:100%; display:block; t
 .pv-block h3{ font-size:calc(var(--u)*13px); color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin:0 0 calc(var(--u)*6px); font-weight:600; }
 .pv-row{ display:flex; flex-wrap:wrap; gap:calc(var(--u)*10px); justify-content:center; }
 .pv-ic{ position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; min-width:calc(var(--u)*58px); }
+.pv-emoji{ width:calc(var(--u)*54px); height:calc(var(--u)*54px); display:grid; place-items:center; font-size:calc(var(--u)*34px); }
 .pv-ic canvas{ width:calc(var(--u)*54px); height:calc(var(--u)*54px); display:block; }
 .pv-ic.big canvas{ width:calc(var(--u)*80px); height:calc(var(--u)*80px); }
 .pv-ic small{ font-size:calc(var(--u)*11px); color:var(--muted); }

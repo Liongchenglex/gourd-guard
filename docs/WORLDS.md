@@ -32,6 +32,7 @@ Level addresses are written `world-level`, e.g. `3-12` = world 3, level 12. Leve
 | Pumpkins sprout in twos | Every sprout tick places 2 pumpkins in 2 random empty cells, independent colours. If only one empty cell is left, place one. If none, nothing. | Sprout interval and the "fewer than 10 pumpkins" catch-up rule get retuned by the bot. |
 | Kill rewards | Every kill rolls **one** reward: weapon 10%, pumpkin 30%, coins 60%. | Replaces "coins on every kill plus a fractional pumpkin drop". Coins per kill go up (~×1.7) so the economy stays level; the bot confirms. Weapon drops are new. |
 | Bosses don't reach the wall | Bosses stay back and pressure the player with summons, projectiles or board tricks. | Bramble King's wall-chewing is retired; the world 1 boss replaces it. |
+| A fallen wall is a gap, not a loss | When a wall's health hits 0 it is down, but the night is lost only when a monster **walks through the gap** (about 1.2 s at the fence). Repairing the wall in time closes it. Projectile monsters do not shoot at a wall that is already down. | Replaces "any wall at 0 loses the night" (owner, 2026-09-25). |
 | Monsters return across worlds | Any earlier monster may reappear in a later world when it fits the theme, always **stronger**: it carries one modifier from §6 and a themed skin. | New. |
 | Ghoul and Imp are in every world | Every world's fodder monsters are a Ghoul variant and an Imp variant with that world's skin and one modifier each. Ghoul: Bog Ghoul (W2, Armoured), Crypt Ghoul (W3, Stubborn), Drowned Ghoul (W4, Hungry), Wood Ghoul (W5, Swift). Imp: Marsh Imp (W2, Stubborn), Keep Imp (W3, Armoured), Tide Imp (W4, Swift), Broom Imp (W5, Hungry). All of them in W6. | New (owner, 2026-09-25). |
 
@@ -45,7 +46,7 @@ Level addresses are written `world-level`, e.g. `3-12` = world 3, level 12. Leve
 | 2 | Foggy Hollow | Marsh mist, will-o'-wisps, lanterns | Fog hides field rows; occasional graves | White (boomerang), Pink (heal) | Wisp, Wraith, Wisp Rider, Plague Doctor | Bog Ghoul (Armoured), Marsh Imp (Stubborn), Swift Bat | Poltergeist |
 | 3 | Witchwood | Enchanted autumn forest, witches | Wind gusts shift the patch; occasional graves | Purple (spawn) | Chameleon, Reverse Chameleon, Mirror Sprite | Wood Ghoul (Swift), Broom Imp (Hungry), Bat (Owl-bat), Wisp | Hexwitch |
 | 4 | Crumbling Keep | Vampire's castle under siege | Castle walls block shots; occasional graves | Grey (piercing), Black (blast) | Shield Knight, Gargoyle Hauler, Skeleton Archer, Vampire | Crypt Ghoul (Stubborn), Keep Imp (Armoured), Bat (swarm), Mossback (Siege Brute) | Vampire Count |
-| 5 | Drowned Marsh | Sunken shore, drowned sailors, sea row | Puddles spawn monsters; sea-row levels; occasional graves | Deep Blue (chain), Silver (net) | Puddle Crawler, Drunk Sailor, Puddle Diver, Splitter Slime | Drowned Ghoul (Hungry), Tide Imp (Swift), Mossback (Bog Turtle), Mummy (Sodden) | Twin Tides |
+| 5 | Drowned Marsh | Sunken shore, drowned sailors, sea row | Puddles spawn monsters; sea-row levels; occasional graves | Deep Blue (chain) | Puddle Crawler, Drunk Sailor, Puddle Diver, Splitter Slime | Drowned Ghoul (Hungry), Tide Imp (Swift), Mossback (Bog Turtle), Mummy (Sodden) | Twin Tides |
 | 6 | Hallow's End | All Hallows' night, everything at once | Graves only | none (full choice from all 11) | none | Everything from worlds 1–5, all with modifiers | Hollow King (5 stages) |
 
 Names are placeholders the owner is free to change.
@@ -83,7 +84,6 @@ Upgrade costs per type: level 2 = 40, level 3 = 80, level 4 = 130, level 5 = 200
 | Grey | grey | Piercing; passes castle walls | 4-6 |
 | Black | black | Blast | 4-9 |
 | Deep Blue | deep navy blue | Chain lightning along a row | 5-4 |
-| Silver | bright bluish silver | Net against arrows and bolts | 5-8 |
 | Purple | purple | Spawn | 3-3 |
 | Rainbow | multicolour | Wildcard, any colour, no level | rare from 1-1 |
 
@@ -192,16 +192,6 @@ Power = damage per hit. "Knockback" = chance per hit to push the monster back on
 | 3 | 1.5 | 50% | 2 |
 | 4 | 1.5 | 75% | 2 |
 | 5 | 2 | 75% | 3 |
-
-**Silver** (net: when it hits, or reaches the top of its column, it leaves a net across that column that catches every arrow, water bolt and reflected pumpkin while it lasts)
-
-| Level | Power | Knockback | Net lasts | Caught projectiles |
-|---|---|---|---|---|
-| 1 | 1 | none | 4 s | destroyed |
-| 2 | 1 | 25% | 5 s | destroyed |
-| 3 | 1.5 | 25% | 6 s | destroyed |
-| 4 | 1.5 | 50% | 7 s | destroyed |
-| 5 | 2 | 50% | 8 s | thrown back at the nearest monster in the column |
 
 **Rainbow**: no level. Acts as the colour and level of the bunch it is thrown in. Sources: 3% of sprouts and drops, Purple spawns (10–50% by level), one in every boss drop.
 
@@ -336,6 +326,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-25 | Owner: a fallen wall only loses the night once a monster walks through it; projectile monsters stop shooting at fallen walls. Silver pumpkin removed. Plague Doctor heals a 3×3 zone with a visible aura. |
 | 2026-09-25 | Owner: World 6 is deferred to a future release; worlds 1–5 are the Release 1 base to polish and tune. |
 | 2026-09-25 | Owner, after the tables: Gold removed (Yellow pays the coins by level); Pink lightning became Deep Blue (row lightning); new Pink healer at 2-8; new Silver net pumpkin at 5-8 for projectile monsters; world order is now Pumpkin Patch, Foggy Hollow, Witchwood, Crumbling Keep, Drowned Marsh, Hallow's End; the tool tray shows the full set with locks; dragging across the field collects drops. Owner's per-level numbers for Ice, Fire, Purple, Black, Deep Blue and White adopted. |
 | 2026-09-25 | Owner, after playing the whole game: pumpkin level 3 is the easy ceiling, levels 4–5 will be ad-gated, so levels 1–10 of each world must be comfortable at level ≤3. §5 rewritten as level-by-level tables with proposals for White, Black, Pink and Gold. |

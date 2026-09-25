@@ -1,5 +1,5 @@
 import { TYPES, BOSS_NAMES } from '../data/monsters.js';
-import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, NET_T, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SILVER, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW } from '../data/pumpkins.js';
+import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches } from './board.js';
 import { TILE_P, mS, mY, spMulNow, spawnMonster } from './monsters.js';
@@ -171,7 +171,6 @@ export function hitMonster(pr, m){
   if (pr.type === PINK){   // Pink: repairs the wall of the column it flew up
     const w = walls[pr.lane]; if (w.hp < w.max){ w.hp = Math.min(w.max, w.hp + HEAL_AMT[i]); addFloat(`Wall +${HEAL_AMT[i]}`, LANE(pr.lane), FENCE_Y - 40, '#ffb3e6', 16, 0.9); for (let k = 0; k < 6; k++) spark(LANE(pr.lane), FENCE_Y - 10, '#ffb3e6', 100); }
   }
-  if (pr.type === SILVER) addNet(pr.lane, NET_T[i], i >= 4);   // Silver: a net across the column
   if (pr.type === 5 && pr.grp && !pr.grp.spawned){   // Purple: every launched bunch spawns one pumpkin on its first hit
     pr.grp.spawned = true; purpleSpawn(m, y, i);
   }
@@ -226,12 +225,4 @@ export function purpleSpawn(m, y, i){
   const [r, c] = empties[Math.floor(Math.random() * empties.length)];
   flyInto(r, c, Math.random() < RAINBOW_P[i] ? RAINBOW : randColor(), m.x, y);
   addFloat('+1 pumpkin', m.x, y - 40, '#d09bff', 18, 1);
-}
-/** Silver net: catches every arrow and bolt in the lane while it lasts; level 5 nets throw them back at the nearest monster. */
-export function addNet(lane, dur, throwBack){
-  const n = G.nets.find(x => x.lane === lane);
-  if (n){ n.t = Math.max(n.t, dur); n.throwBack = n.throwBack || throwBack; }
-  else G.nets.push({ lane, t:dur, throwBack });
-  ring(LANE(lane), FIELD_TOP + 30, 30, 'rgba(232,240,255,.9)');
-  addFloat('Net up', LANE(lane), FIELD_TOP + 40, '#e8f0ff', 16, 0.9);
 }

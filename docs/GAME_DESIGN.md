@@ -85,7 +85,6 @@ Hints: after ~6 s idle with no lit bunch, the game outlines one pumpkin with an 
 | Purple | purple | Spawn: every launched Purple bunch spawns one pumpkin on its first hit; each kill may spawn another (25/40/50/60/70% by level); spawns are rainbow 10/20/30/40/50% | Level 3-3 |
 | Deep Blue | deep navy | Chain: lightning runs along the row of the monster hit and strikes the nearest 3/3/4/5/5 monsters (including it) at 25/50/50/75/75% power. Knockback like Green. | Level 5-4 |
 | Pink | pink | Heal: every hit repairs the wall of the column it flew up by 1/1/2/2/3. Knockback 50/50/50/75/75%. | Level 2-8 |
-| Silver | bright bluish silver | Net: on a hit or at the top of its column it leaves a net across the column for 4–8 s by level that catches arrows, water bolts and reflected pumpkins; level 5 nets throw them back at the nearest monster in the column. Knockback like Green. | Level 5-8 |
 | Black | black | Blast: explodes on its first hit for full power; the splash covers 3 lanes × 1 tile height (levels 1–3) or 3 × 3 (levels 4–5) at 50/50/75/75/100% power; level 5 splash also knocks back. Against a castle wall ×1.5. Knockback like Green. | Level 4-9 |
 | White | white | Boomerang: a throw that hits nothing flies back into the patch and does not count as a miss. Levels 1–2: top-most empty cell of its column (else the nearest column with space); levels 3+: an empty cell beside a same-colour pumpkin when one exists. Knockback like Green. | Level 2-3 |
 | Rainbow | multicolor | Wildcard, no level | Rare (see below) |
@@ -173,7 +172,7 @@ Speed is in "field lengths per second" before level multipliers (so 0.055 ≈ 18
 
 - Each column has its own wall: **18 health + 5 per Sturdy walls level** (max level 3 → 33).
 - A monster that reaches the wall stops and chews it at its *eat* rate (50% if slowed, 0 if frozen).
-- **If any single wall reaches 0, the night is lost.**
+- **A wall at 0 is down, not lost**: monsters at a fallen wall walk through the gap instead of chewing, and the night is lost about 1.2 s later when one is through (slowed monsters take longer, frozen ones don't move). Repairing the wall before that closes the gap. Archers, divers and the Twin Tides never shoot at a wall that is already down (owner, 2026-09-25).
 - Stars are based on total wall health left at the end: ≥85% = 3 stars, ≥50% = 2, else 1.
 
 ---
@@ -186,7 +185,7 @@ Per level the data gives: starting pattern, graves, wave size, spawn gap, speed 
 - Spawn gap is jittered ×0.6–1.4 with an 18% chance of a short gap ×0.3.
 - The boss appears once 40% of the wave has spawned. On boss levels spawning continues until the boss dies (see §7).
 - A level is won when the wave is exhausted (or the boss is dead) and no monster is left.
-- **Level preview**: choosing a level opens a card showing the monsters in its pool (NEW tags on first appearances), the boss if any, and the pumpkins in play. No counts (owner, 2026-09-25). Start from there.
+- **Level preview**: choosing a level opens a card showing the monsters in its pool (NEW tags on first appearances), the boss if any, and a "New this level" row only when the level unlocks a pumpkin or a tool. No counts and no loadout listing (owner, 2026-09-25). Start from there.
 - **Introduced monsters always appear**: every monster listed in a level's `intro` is forced into the spawn order right after the first spawn, so an introduction is never an empty promise.
 - **Loadout lock**: on a level that introduces a pumpkin, that pumpkin is pre-selected in the pick-5 screen and cannot be deselected.
 - **Intro cards**: the first time a pumpkin, tool, graves, monster or boss form appears, a card with its icon and one paragraph must be confirmed before the level starts (`save.seenIntro`). The bot's `startGame` path bypasses both screens.
@@ -216,7 +215,7 @@ Level data lists fog banks as `[top, bottom]` fractions of the field. A monster 
 
 ### Unlocks and progression
 - Level 1 of a world opens when the previous world's level 10 has been beaten. Every other level opens when the level before it has been beaten. Beating level 10 therefore opens levels 11–20 and the next world at once.
-- Unlocks sit in levels 1–10 so nothing is missable. World 1: Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8. World 2: Lantern 2-2, White 2-3, Landmine 2-5, Pink 2-8. World 3 (Witchwood): Scarecrow 3-2, Purple 3-3. World 4 (Crumbling Keep): Bomb 4-4, Grey 4-6, Black 4-9. World 5 (Drowned Marsh): Deep Blue 5-4, Silver 5-8. World order was changed by the owner on 2026-09-25; level addresses inside the monster and gimmick tables use the new numbering.
+- Unlocks sit in levels 1–10 so nothing is missable. World 1: Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8. World 2: Lantern 2-2, White 2-3, Landmine 2-5, Pink 2-8. World 3 (Witchwood): Scarecrow 3-2, Purple 3-3. World 4 (Crumbling Keep): Bomb 4-4, Grey 4-6, Black 4-9. World 5 (Drowned Marsh): Deep Blue 5-4. World order was changed by the owner on 2026-09-25; level addresses inside the monster and gimmick tables use the new numbering.
 - Stars are keyed by global night index in the save; `save.unlocked` mirrors the highest open night for older code and the endless-mode loadout.
 
 ### Endless mode

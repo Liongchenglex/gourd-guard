@@ -116,18 +116,25 @@ export function openPreview(n){
     const sm = document.createElement('small'); sm.textContent = `${BOSS_NAMES[def.boss]}${def.bossForm === 2 ? ', full form' : ''}`; d.appendChild(sm);
     bb.appendChild(d);
   }
-  const pk = $('#pvPumpkins'); pk.innerHTML = '';
-  for (const t of typesForNight(n)){
+  const pk = $('#pvPumpkins'); pk.innerHTML = '';   // only what this level unlocks (owner): a pumpkin or a tool
+  for (const key of def.unlockPumpkins){
+    const t = PTYPES.findIndex(p => p.key === key); if (t < 0) continue;
     const d = document.createElement('div'); d.className = 'pv-ic';
     d.appendChild(pumpkinIcon(t, true));
-    const sm = document.createElement('small'); sm.textContent = PTYPES[t].name; d.appendChild(sm);
-    if (def.unlockPumpkins.includes(PTYPES[t].key)){ const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'NEW'; d.appendChild(tag); }
+    const sm = document.createElement('small'); sm.textContent = `${PTYPES[t].name} pumpkin`; d.appendChild(sm);
     pk.appendChild(d);
   }
-  const info = [];   // no counts here (owner): just what is new or special
+  for (const key of def.unlockGear){
+    const g = GEAR.find(x => x.key === key); if (!g) continue;
+    const d = document.createElement('div'); d.className = 'pv-ic';
+    const ic = document.createElement('div'); ic.className = 'pv-emoji'; ic.textContent = g.icon; d.appendChild(ic);
+    const sm = document.createElement('small'); sm.textContent = g.name; d.appendChild(sm);
+    pk.appendChild(d);
+  }
+  $('#pvNewBlock').hidden = !pk.childElementCount;
+  const info = [];   // no counts here (owner): just what is special
   if (def.boss) info.push('Monsters keep coming until the boss falls.');
   if (def.sea) info.push('The sea reaches the top of the field.');
-  for (const key of def.unlockGear){ const g = GEAR.find(x => x.key === key); if (g) info.push(`New tool: ${g.name}.`); }
   $('#pvInfo').textContent = info.join(' ');
   setState('preview');
 }

@@ -323,6 +323,35 @@ Wins unchanged within noise; wall health up on the hard nights because two pumpk
 
 Reading: levels 1–8 sit at or above target. The curve breaks at 1-9 (Mummy arrives) and 1-10 (Gravekeeper: 0/3, walls 51%), then levels 11–20 hover at 1/3 against targets of 65% → 40%, with 1-20 at 0/3. The owner also reported 1-10 as too hard by hand. A player one upgrade tier behind loses 10, 15 and 20 every time, so upgrades already matter. First tuning candidates when the owner revisits: the Gravekeeper's summon rate and health at level 10, the Mummy's rise time, and the wave sizes from 1-9 on; the same profile should then be run on worlds 2–5.
 
+### Release 1 baseline sweep, all five worlds (2026-09-25, `--repeats 2`, expected profile with level ≤3 in the first half of each world, earlier worlds' perks on)
+
+Cells are wins out of 2 and mean wall health. Caveats: this ran before the level-16 monsters and the Hexwitch redesign, so levels 16–20 and the 3-10/3-20 fights are stale; and the bot cannot pick colours against chameleons or plan around wind, so world 3 (Witchwood) reads far harder for the bot than for a person.
+
+| Level | Target | Pumpkin Patch | Foggy Hollow | Witchwood | Crumbling Keep | Drowned Marsh |
+|---|---|---|---|---|---|---|
+| 1 | 95% | 2/2, 100% | 2/2, 96% | 1/2, 81% | 2/2, 94% | 2/2, 98% |
+| 2 | 95% | 2/2, 100% | 2/2, 98% | 2/2, 97% | 2/2, 87% | 2/2, 96% |
+| 3 | 95% | 2/2, 100% | 2/2, 96% | 2/2, 100% | 2/2, 87% | 2/2, 99% |
+| 4 | 95% | 2/2, 96% | 2/2, 92% | 2/2, 100% | 2/2, 96% | 2/2, 94% |
+| 5 | 95% | 2/2, 98% | 2/2, 91% | 0/2, 72% | 2/2, 75% | 1/2, 88% |
+| 6 | 85% | 2/2, 94% | 2/2, 92% | 1/2, 86% | 2/2, 75% | 2/2, 98% |
+| 7 | 85% | 2/2, 96% | 2/2, 94% | 1/2, 88% | 1/2, 80% | 2/2, 80% |
+| 8 | 85% | 2/2, 98% | 2/2, 89% | 0/2, 70% | 1/2, 60% | 2/2, 88% |
+| 9 | 85% | 1/2, 87% | 2/2, 96% | 0/2, 62% | 2/2, 84% | 0/2, 69% |
+| 10 | 75% | 0/2, 19% | 0/2, 48% | 0/2, 39% | 0/2, 60% | 0/2, 56% |
+| 11 | 65% | 2/2, 83% | 2/2, 87% | 0/2, 72% | 0/2, 66% | 1/2, 84% |
+| 12 | 65% | 0/2, 64% | 2/2, 90% | 1/2, 50% | 2/2, 59% | 0/2, 77% |
+| 13 | 65% | 1/2, 80% | 2/2, 77% | 0/2, 52% | 1/2, 83% | 1/2, 86% |
+| 14 | 65% | 1/2, 86% | 2/2, 88% | 0/2, 52% | 1/2, 76% | 0/2, 72% |
+| 15 | 65% | 0/2, 72% | 0/2, 64% | 0/2, 62% | 1/2, 58% | 0/2, 56% |
+| 16 | 50% | 2/2, 96% | 2/2, 80% | 0/2, 52% | 2/2, 72% | 0/2, 54% |
+| 17 | 50% | 0/2, 56% | 2/2, 90% | 0/2, 85% | 1/2, 82% | 0/2, 64% |
+| 18 | 50% | 2/2, 86% | 2/2, 95% | 0/2, 62% | 2/2, 80% | 0/2, 69% |
+| 19 | 50% | 0/2, 70% | 2/2, 88% | 0/2, 46% | 2/2, 91% | 0/2, 71% |
+| 20 | 40% | 0/2, 52% | 0/2, 30% | 0/2, 40% | 0/2, 52% | 0/2, 50% |
+
+Reading: the first five levels of every world are fine. Worlds 1, 2, 4 and 5 break at the level-10 boss (0/2 in all four) and stay around 1/2 through 11–19 against targets of 65% → 50%. World 3 collapses from 3-5 (chameleons) onward for the bot. Boss fights are the first thing to soften; the owner also plans to hand-author levels 11–19 with twists before tuning them.
+
 ---
 
 ## 12. Art, audio, tech

@@ -1,5 +1,3 @@
-
-
 // Starting layouts: X = pumpkin, . = empty (5 rows × 7 columns)
 
 export const PATTERNS = [

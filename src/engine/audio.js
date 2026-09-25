@@ -59,4 +59,3 @@ export const SFX = {
   lose(){ [0,-3,-7,-12].forEach((s, i) => tone(330 * Math.pow(2, s / 12), 0.42, 'sawtooth', 0.07, null, i * 0.18)); },
   boss(){ tone(70, 1.3, 'sawtooth', 0.11, 48); tone(104, 1.3, 'sawtooth', 0.07, 70); },
 };
-

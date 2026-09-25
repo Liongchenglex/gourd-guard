@@ -1,5 +1,3 @@
-
-
 export const W = 540, COLS = 7, ROWS = 5, CS = 74, GX = (W - COLS * CS) / 2;
 
 export const LANE = c => GX + c * CS + CS / 2;
@@ -14,7 +12,6 @@ export function layout(){
 }
 
 layout();
-
 
 // ---------- Game state ----------
 
@@ -31,7 +28,6 @@ export let bannerTimer = 0;
 export let gidSeq = 0;
 
 export const HOLD_TIME = 0.6;
-
 
 export const setG = v => { G = v; };
 export const setStateRaw = v => { state = v; };

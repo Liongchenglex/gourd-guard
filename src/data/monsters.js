@@ -1,5 +1,3 @@
-
-
 // ---------- Monsters ----------
 
 export const TYPES = {

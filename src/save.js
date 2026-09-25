@@ -33,4 +33,3 @@ if (save.seenHelp && !save.seenPowers){ save.seenHelp = false; }
 save.seenPowers = true;
 
 export function persist(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
-

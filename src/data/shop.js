@@ -1,5 +1,3 @@
-
-
 export const GEAR = [
   { key:'fence',  icon:'🧱', name:'Sturdy walls', desc:'Every column wall gets 5 more health per level.', max:3, cost:[40,80,130] },
   { key:'repair', icon:'🔨', name:'Wall repair',  desc:'Use it mid-battle to fully repair every wall. Carry up to 3.', max:3, cost:[40], consumable:true },

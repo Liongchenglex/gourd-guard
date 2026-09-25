@@ -3,7 +3,6 @@ import { PATTERNS } from '../patterns.js';
 
 export function gravesFor(n){ return n >= 13 ? 4 : n >= 10 ? 3 : n >= 6 ? 2 : n >= 3 ? 1 : 0; }
 
-
 export const WORLDS = [
   { name:'The Pumpkin Patch', sky:['#170d2a','#46213f','#a9523a'], ground:['#2b1b2a','#1a1219'], moon:'#ffe6ad', grass:'#3a2436' },
   { name:'Crooked Graveyard', sky:['#0a1322','#1b3145','#4d6b67'], ground:['#1a2427','#10171a'], moon:'#e2f4ff', grass:'#233236' },

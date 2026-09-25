@@ -1,5 +1,3 @@
-
-
 // ---------- Pumpkins ----------
 
 export const PTYPES = [
@@ -51,4 +49,3 @@ export function lvDesc(t, L){
 }
 
 export function typesForNight(n){ return [...Array(NTYPES).keys()].filter(t => PTYPES[t].unlock <= n); }
-

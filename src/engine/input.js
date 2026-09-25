@@ -41,7 +41,7 @@ export function attachInput(){
     ensureAudio();
     if (state !== 'play' || G.over) return;
     const p = toLogical(e);
-    if (p.y < 70) return;
+    if (p.y < 70) return;   // top bar; the tool tray below it is DOM buttons, taps between them fall through harmlessly
     const pos = cellAt(p.x, p.y);
     if (G.aim === 'bomb'){   // armed bomb: this tap picks a spot on the field
       if (p.y >= FIELD_TOP && p.y <= FENCE_Y) dropBomb(p.x, p.y); else { G.aim = null; updateHud(true); }

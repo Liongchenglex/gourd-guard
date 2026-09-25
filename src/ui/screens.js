@@ -75,6 +75,7 @@ export function setState(s){
   setStateRaw(s);
   for (const [k, sel] of Object.entries(OVS)) $(sel).classList.toggle('show', k === s);
   $('#hud').classList.toggle('on', s === 'play' || s === 'pause');
+  $('#tools').classList.toggle('on', s === 'play' || s === 'pause');
   if (s === 'title'){
     if (!G || G.mode !== 'demo') makeDemo();
     if (bgWorld !== 0) buildBg(0);

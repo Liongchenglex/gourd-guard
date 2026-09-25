@@ -19,7 +19,7 @@ The owner designs the rules; your job is to implement them faithfully, keep the 
 - World 4 (Drowned Marsh): 20 data levels in `world4.js` with puddles and sea-row levels, Pink 4-4, Drowned Ghoul/Tide Imp 4-1, Puddle Crawler 4-2, Drunk Sailor 4-3, Bog Turtle 4-5, Splitter Slime 4-6, Puddle Diver 4-7, Sodden Mummy 4-9, the Twin Tides at 4-10 and 4-20.
 - World 5 (Witchwood): 20 data levels in `world5.js` with wind gusts (`gust`), Scarecrow 5-2, Purple 5-3, Gold 5-10, Wood Ghoul/Broom Imp 5-1, Owl-bat 5-2, Wisp 5-4, Chameleon 5-5, Reverse Chameleon 5-7, Mirror Sprite 5-8, the Hexwitch at 5-10 and 5-20. World 6 is an empty stub.
 - **Testing toggle to remove before release**: the level select has a "Testing: unlock all levels" link (`save.testUnlock`, checked in `isOpen()`), added 2026-09-25 so the owner can play any level.
-- Known cosmetic issue: six tool buttons crowd the top bar on phones; fix in the UI/art pass (a tool tray), keeping 44 px targets.
+- Consumable tools live in a tray (`#tools`) under the top bar, right-aligned, 44 px buttons, wrapping if needed.
 - Every level tap opens a preview card (monsters, boss, pumpkins, graves, tools); first appearances show intro cards. Tools appear in the HUD/shop/drops only once introduced.
 - Neither world is tuned yet: the owner asked to build worlds first and tune later. Level 10 of world 1 felt too hard to the owner.
 - All art is drawn in code on a canvas; all sound is Web Audio. No external assets.

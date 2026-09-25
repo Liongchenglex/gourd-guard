@@ -1,7 +1,7 @@
 # Gourd Guard: Game Design Document
 
 Working title: **Gourd Guard** (placeholder; see "Name and IP" below).
-Status: playable prototype, single HTML file (`index.html`). Target: a 120-level mobile game (6 worlds × 20 levels). The Release 1 target design is locked in `docs/WORLDS.md`; this document describes the game as currently built.
+Status: playable prototype, Vite project (`src/`, built to `dist/`). Target: a 120-level mobile game (6 worlds × 20 levels). The Release 1 target design is locked in `docs/WORLDS.md`; this document describes the game as currently built.
 
 This document is the source of truth for the rules. When a rule changes in code, update it here in the same change.
 
@@ -221,7 +221,7 @@ Takeaway: single runs are noisy (night 5 and 10 each split 1–1). Comparisons a
 - All art is drawn in code on a canvas (vector shapes); pumpkins are pre-rendered to sprites. No external images.
 - All sound is synthesized with Web Audio. No audio files. (Music not yet added.)
 - Fonts: Creepster (titles) and Fredoka (UI) from Google Fonts, both SIL Open Font License.
-- Single HTML file, no dependencies. Mobile-first touch controls; works with mouse too.
+- Vite project of plain JavaScript ES modules (`src/engine`, `src/data`, `src/ui`), no runtime dependencies. Levels are data in `src/data/worlds/`. Mobile-first touch controls; works with mouse too.
 
 ---
 

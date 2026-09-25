@@ -156,7 +156,9 @@ Returning monsters (§3) carry exactly one modifier by default. World 6 and futu
 
 ## 7. Bosses
 
-Rule: bosses do not walk to the wall. Level 10 = first form, level 20 = full form.
+Rules:
+- Bosses do not walk to the wall. Level 10 = first form, level 20 = full form.
+- **Monsters keep coming until the boss is killed.** A boss level spawns its wave normally and the boss appears partway through it; once the wave is exhausted, monsters keep spawning at the level's gap until the boss dies. Spawning then stops, and the night is won when every remaining monster is dead. The progress bar on a boss level shows the boss's health, not the wave count.
 
 | World | Boss | Abilities | Full form adds |
 |---|---|---|---|
@@ -216,5 +218,6 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-25 | Owner: on boss levels monsters keep spawning until the boss is killed; the night is won once the boss and the remaining monsters are dead. |
 | 2026-09-25 | Owner: difficulty rises within each world (easy start, harder finish); the next world unlocks after the level-10 boss. Added the target win-rate curve and the rule that unlocks sit in levels 1–10. Black moved from 3-13 to 3-9 accordingly. |
 | 2026-09-25 | Draft compiled from `dump.md`. Owner decisions: 20 levels per world (120 total); bosses at levels 10 and 20; sprouts place 2 pumpkins in random cells; kill reward 10/30/60 confirmed; world 5 gimmick = wind gusts in four directions, one-cell shift, frequency as difficulty knob; boss placement as proposed; Vampire Count gains healing mode with an ×4/×5/×6 hit counter; Bomb targets the field 3×3; Mirror Sprite reflects into the player's wall and has an open phase; Lantern and Scarecrow weapons kept; Splitter Slime and Plague Doctor kept; earlier monsters return stronger in later worlds. Locked as R1. |

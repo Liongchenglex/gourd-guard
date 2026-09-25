@@ -64,11 +64,17 @@ RESULT_JS = """
 
 
 def profile(n, offset=0):
-    """Expected upgrade state for a player reaching global night n (world 1 = nights 1-20).
-    Levels are tuned to be winnable at this profile and hard below it, so upgrades matter (owner rule, 2026-09-25).
-    offset=-1 simulates a player who skipped the shop for one tier."""
-    lv = 1 if n <= 4 else 2 if n <= 9 else 3 if n <= 14 else 4 if n <= 19 else 5
-    fence = 0 if n <= 5 else 1 if n <= 10 else 2 if n <= 15 else 3
+    """Expected upgrade state for global night n (20 levels per world).
+    Owner rule (2026-09-25): players reach pumpkin level 3 easily; levels 4-5 will be ad-gated. So the first half of
+    every world assumes level <=3 and the second half assumes 4-5. Walls follow the same pace.
+    offset=-1 simulates a player one tier behind, +1 one ahead."""
+    w, l = (n - 1) // 20, (n - 1) % 20 + 1
+    if w == 0:
+        lv = 1 if l <= 3 else 2 if l <= 7 else 3 if l <= 10 else 4 if l <= 15 else 5
+        fence = 0 if l <= 5 else 1 if l <= 10 else 2 if l <= 15 else 3
+    else:
+        lv = 3 if l <= 10 else 4 if l <= 15 else 5
+        fence = 2 if l <= 10 else 3
     return max(1, min(5, lv + offset)), max(0, min(3, fence + offset))
 
 

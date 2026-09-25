@@ -15,7 +15,7 @@ The owner designs the rules; your job is to implement them faithfully, keep the 
 - Release 1 ground rules in: sprouts in twos, kill-reward roll (weapon 10% / pumpkin 30% / coins 60%), bosses never reach the wall, boss levels spawn until the boss dies.
 - World 1 (Pumpkin Patch): 20 data levels in `src/data/worlds/world1.js` with Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8, Mummy 1-9, the Gravekeeper at 1-10 and 1-20.
 - World 2 (Foggy Hollow): 20 data levels in `world2.js` with fog banks, Lantern 2-2, White 2-3, Landmine 2-5, Pink (healer) 2-8, Bog Ghoul/Wisp 2-1, Wraith 2-4, Swift Bat 2-6, Wisp Rider 2-7, Marsh Imp 2-8, Plague Doctor 2-9, the Poltergeist at 2-10 and 2-20. Monsters may carry modifiers (`MODS`) via variants (`VARIANTS`).
-- World order (owner, 2026-09-25): 1 Pumpkin Patch, 2 Foggy Hollow, 3 Witchwood (`world3.js`: wind, Scarecrow 3-2, Purple 3-3, chameleons, Mirror Sprite, Hexwitch), 4 Crumbling Keep (`world4.js`: castle walls, Bomb 4-4, Grey 4-6, Black 4-9, Vampire Count), 5 Drowned Marsh (`world5.js`: puddles and sea, Deep Blue 5-4, Silver 5-8, Twin Tides), 6 Hallow's End (stub).
+- World order (owner, 2026-09-25): 1 Pumpkin Patch, 2 Foggy Hollow, 3 Witchwood (`world3.js`: wind, Scarecrow 3-2, Purple 3-3, chameleons, Mirror Sprite, Hexwitch), 4 Crumbling Keep (`world4.js`: castle walls, Bomb 4-4, Grey 4-6, Black 4-9, Vampire Count), 5 Drowned Marsh (`world5.js`: puddles and sea, Deep Blue 5-4, Silver 5-8, Twin Tides), 6 Hallow's End (stub, **deferred to a future release**; do not build it unless the owner asks).
 - Pumpkin set: Green, Yellow (pays coins ×2–×4), Ice, Fire, Grey, Purple, White, Black, Deep Blue (row lightning), Pink (wall healer), Silver (net vs projectiles), Rainbow. Per-level tables: `docs/WORLDS.md` §5 and `src/data/pumpkins.js`.
 - **Testing toggle to remove before release**: the level select has a "Testing: unlock all levels" link (`save.testUnlock`, checked in `isOpen()`), added 2026-09-25 so the owner can play any level.
 - Consumable tools live in a tray (`#tools`) under the top bar: the full set is always shown, locked ones dimmed with a padlock until their level introduces them.
@@ -26,8 +26,8 @@ The owner designs the rules; your job is to implement them faithfully, keep the 
 - Shared mutable state (`G`, `grid`, `graves`, `walls`, `state`, `gest`) lives in `src/engine/state.js`; other modules read it through imports and write it only through its `setX()` functions.
 - Balance rule from the owner: levels are tuned to be winnable at the **expected upgrade profile** for that level (`profile()` in `tools/balance_bot.py`) and hard below it, so upgrading pumpkins matters. Check both with `--offset 0` and `--offset -1`.
 
-## Next milestone: Release 1 content
-Build `docs/WORLDS.md` one world at a time, each with its own bot runs. Next: world 6 (Hallow's End: graves only, every monster with modifiers, the Hollow King in 5 stages), then tuning of worlds 1–5 when the owner revisits.
+## Next milestone: polish and tune Release 1 (worlds 1–5)
+Build `docs/WORLDS.md` one world at a time, each with its own bot runs. Next: **polish and tune worlds 1–5** (Release 1). World 6 is deferred.
 - Levels must be data: every level's monsters, pacing, pattern, graves and unlocks come from `src/data/worlds/*.js` (schema in `src/data/levels.js`, target shape in `docs/WORLDS.md` §9).
 - Keep the engine free of level-specific numbers.
 

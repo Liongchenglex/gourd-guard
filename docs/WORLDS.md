@@ -12,9 +12,9 @@ Level addresses are written `world-level`, e.g. `3-12` = world 3, level 12. Leve
 
 | Item | Decision |
 |---|---|
-| Worlds | 6 |
+| Worlds | 6 designed; **Release 1 ships worlds 1–5**. World 6 (Hallow's End) is saved for a future release (owner, 2026-09-25). |
 | Levels per world | 20 |
-| Total levels | 120 |
+| Total levels | 120 designed, 100 in Release 1 |
 | Bosses | Level 10 of each world: boss, first form (fewer abilities). Level 20: same boss, full form. All other levels are normal waves. |
 | World unlock | Beating the level-10 boss unlocks the next world. Levels 11–20 are the hard half of a world: optional for progression, harder, with the full-form boss at 20. |
 | Difficulty curve | Every world starts easy and gets harder level by level. Target win rate for the bot (a stand-in for a mid-skill player with the expected upgrades): levels 1–5 ≈ 95%, 6–9 ≈ 85%, boss 10 ≈ 75%, 11–15 ≈ 65%, 16–19 ≈ 50%, boss 20 ≈ 40%. The curve resets at each new world because new mechanics arrive. |
@@ -336,6 +336,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-25 | Owner: World 6 is deferred to a future release; worlds 1–5 are the Release 1 base to polish and tune. |
 | 2026-09-25 | Owner, after the tables: Gold removed (Yellow pays the coins by level); Pink lightning became Deep Blue (row lightning); new Pink healer at 2-8; new Silver net pumpkin at 5-8 for projectile monsters; world order is now Pumpkin Patch, Foggy Hollow, Witchwood, Crumbling Keep, Drowned Marsh, Hallow's End; the tool tray shows the full set with locks; dragging across the field collects drops. Owner's per-level numbers for Ice, Fire, Purple, Black, Deep Blue and White adopted. |
 | 2026-09-25 | Owner, after playing the whole game: pumpkin level 3 is the easy ceiling, levels 4–5 will be ad-gated, so levels 1–10 of each world must be comfortable at level ≤3. §5 rewritten as level-by-level tables with proposals for White, Black, Pink and Gold. |
 | 2026-09-25 | Owner, after playing: wind gusts slide pumpkins all the way until blocked (full push), replacing the one-cell nudge. |

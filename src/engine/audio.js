@@ -252,6 +252,43 @@ export const SFX = {
     }
   },
 
+  // ---- menus and buttons (docs/AUDIO.md §4) ----
+  ui(kind){
+    switch (kind){
+      case 'tap': tone(900, 0.05, 'sine', 0.05, 700); break;                                             // any menu button
+      case 'go': tone(660, 0.08, 'triangle', 0.06, null); tone(880, 0.12, 'triangle', 0.06, null, 0.07); break;   // start / next / got it
+      case 'back': tone(660, 0.08, 'triangle', 0.05, null); tone(520, 0.12, 'triangle', 0.05, null, 0.07); break; // back / quit
+      case 'level': tone(1046, 0.1, 'triangle', 0.07, 1300); noise(0.04, 0.08, 3000, 2); break;          // level tile
+      case 'pick': tone(700, 0.08, 'sine', 0.06, 1000); break;                                            // pumpkin picked
+      case 'unpick': tone(1000, 0.08, 'sine', 0.05, 700); break;                                          // pumpkin dropped from the loadout
+      case 'locked': tone(190, 0.1, 'square', 0.05, 150); break;                                          // tapping a locked pick
+    }
+  },
+
+  // ---- menus and buttons (docs/AUDIO.md §4) ----
+  ui(kind){
+    switch (kind){
+      case 'tap': tone(900, 0.05, 'sine', 0.05, 700); break;                                             // any menu button
+      case 'go': tone(660, 0.08, 'triangle', 0.06, null); tone(880, 0.12, 'triangle', 0.06, null, 0.07); break;   // start / next / got it
+      case 'back': tone(660, 0.08, 'triangle', 0.05, null); tone(520, 0.12, 'triangle', 0.05, null, 0.07); break; // back / quit
+      case 'level': tone(1046, 0.1, 'triangle', 0.07, 1300); noise(0.04, 0.08, 3000, 2); break;          // level tile
+      case 'pick': tone(700, 0.08, 'sine', 0.06, 1000); break;                                            // pumpkin picked
+      case 'unpick': tone(1000, 0.08, 'sine', 0.05, 700); break;                                          // pumpkin dropped from the loadout
+      case 'locked': tone(190, 0.1, 'square', 0.05, 150); break;                                          // tapping a locked pick
+    }
+  },
+  // ---- chewing the wall: one clearly audible bite every third of a second, flavoured by who is chewing ----
+  chew(type){
+    if (!gate('chew', 330)) return;
+    switch (type){
+      case 'knight': case 'bulwark': case 'gargoyle': noise(0.08, 0.22, 2200, 1.5); tone(400, 0.08, 'square', 0.05, 250); break;   // metal or stone scraping wood
+      case 'slime': case 'blob': case 'crawler': case 'diver': noise(0.1, 0.22, 350, 2.5); tone(180, 0.08, 'sine', 0.06, 120); break;   // wet
+      case 'turtle': tone(240, 0.1, 'triangle', 0.09, 160); noise(0.06, 0.16, 600, 1.5); break;                                         // hollow knock
+      case 'bat': noise(0.05, 0.18, 2500, 2); noise(0.05, 0.14, 2200, 2, 0.08); break;                                                 // quick nibbles
+      default: noise(0.09, 0.28, 700, 1.2, 0, 300); tone(150, 0.09, 'square', 0.07, 90);                                              // wood being gnawed
+    }
+  },
+
   // ---- walls, wind, fog, level ----
   wallHit(){ if (!gate('wall', 120)) return; noise(0.1, 0.22, 800, 1); tone(200, 0.1, 'square', 0.05, 150); },
   wallDown(){ SFX.wallBreak(); },

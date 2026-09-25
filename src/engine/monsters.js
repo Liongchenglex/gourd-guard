@@ -153,7 +153,7 @@ export function updateMonster(m, dt){
     const eaters = G.monsters.filter(o => !o.dead && o.eating && o.lane === m.lane), k = eaters.indexOf(m);
     m.x = m.tx + (k - (eaters.length - 1) / 2) * 15;   // chewers share the wall side by side
     for (const c of lanesOf(m)) damageWall(c, m.eat * mul * dt);
-    if (mul > 0){ SFX.chomp(); if (Math.random() < dt * 5) chunk(m.x + rnd(-10, 10), FENCE_Y - 18, '#8a6440', 90); }
+    if (mul > 0){ SFX.chew(m.type); if (Math.random() < dt * 5) chunk(m.x + rnd(-10, 10), FENCE_Y - 18, '#8a6440', 90); }
     return;
   }
   if (m.frozenT <= 0){

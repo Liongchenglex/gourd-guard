@@ -241,7 +241,7 @@ export function openLoadout(avail, next, required){
     b.title = PTYPES[t].role;
     if (loadoutMust.includes(t)){ const why = loadoutWhy.find(m => m.t === t).why, tag = document.createElement('span'); tag.className = 'tag' + (why === 'New this level' ? '' : ' info'); tag.textContent = why === 'New this level' ? 'NEW' : 'i'; tag.title = why; b.appendChild(tag); b.classList.add('must'); }
     b.onclick = () => {
-      if (loadoutMust.includes(t)){ SFX.bad(); return; }   // introduced this level: stays in
+      if (loadoutMust.includes(t)) return;   // introduced this level: stays in (the tap sound says so)
       if (loadoutSel.has(t)) loadoutSel.delete(t);
       else if (loadoutSel.size < 5) loadoutSel.add(t);
       syncLoadout();
@@ -364,6 +364,16 @@ export function wireButtons(){
   $('#lmBtn').onclick = useMine;
   $('#bmBtn').onclick = useBomb;
   $('#scBtn').onclick = useScarecrow;
+  document.addEventListener('click', e => {   // one sound per menu tap, chosen by what was tapped (docs/AUDIO.md §4)
+    const b = e.target.closest('button'); if (!b || b.disabled || !b.closest('.ov')) return;
+    ensureAudio();
+    if (b.classList.contains('lv')) SFX.ui('level');
+    else if (b.classList.contains('pick')) SFX.ui(b.classList.contains('must') ? 'locked' : b.getAttribute('aria-pressed') === 'true' ? 'pick' : 'unpick');
+    else if (b.classList.contains('btn') && !b.classList.contains('alt') && !b.classList.contains('small')) SFX.ui('go');
+    else if (b.classList.contains('alt') || /back|quit/i.test(b.textContent)) SFX.ui('back');
+    else if (b.classList.contains('btn')) SFX.ui('go');
+    else SFX.ui('tap');
+  });
   $('#bPvBack').onclick = openLevels;
   $('#bPvGo').onclick = () => { ensureAudio(); startPreviewedNight(); };
   $('#bIntroOk').onclick = () => { ensureAudio(); showNextIntro(); };

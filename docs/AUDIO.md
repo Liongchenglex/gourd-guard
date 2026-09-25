@@ -79,6 +79,7 @@ Conventions: every hit has a **pumpkin layer** (what was thrown) and a **monster
 | Sea | Lapping waves ambience on shore levels |
 | Level start / win / lose | Owl hoot and a chord; short fanfare; low tolling |
 | Coins, perk unlock, star | Coin tick; bright rising jingle; ding |
+| Menus | Level tile: pluck. Pumpkin picked: rising blip; dropped: falling blip; locked: dull buzz. Start, Next, Got it: two rising notes. Back and Quit: two falling notes. Any other button: soft click |
 
 ## 5. Music (to design after the effects)
 

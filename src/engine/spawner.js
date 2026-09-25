@@ -1,4 +1,4 @@
-import { WORLDS, poolFor } from '../data/worlds/index.js';
+import { WORLDS, levelFor } from '../data/worlds/index.js';
 import { SFX } from './audio.js';
 import { spawnMonster } from './monsters.js';
 import { buildBg } from './render/sprites.js';
@@ -32,7 +32,7 @@ export function endlessSpawn(dt){
   G.diff = 1 + G.t / 25;
   G.spawnTimer -= dt;
   if (G.spawnTimer <= 0){
-    spawnMonster(pickFrom(poolFor(Math.min(12, Math.floor(G.diff) + 2))));
+    spawnMonster(pickFrom(levelFor(Math.min(12, Math.floor(G.diff) + 2)).pool));
     G.spawnTimer = Math.max(0.9, 3.2 - G.diff * 0.15) * rnd(0.6, 1.4);
   }
   G.bossTimer -= dt;

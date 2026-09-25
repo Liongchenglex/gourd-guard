@@ -1,7 +1,7 @@
 import { MFIRST, MINTRO, TYPES } from '../data/monsters.js';
 import { PATTERNS } from '../data/patterns.js';
 import { NTYPES, PTYPES, typesForNight } from '../data/pumpkins.js';
-import { WORLDS, gravesFor, levelDef } from '../data/worlds/index.js';
+import { WORLDS, levelFor } from '../data/worlds/index.js';
 import { SFX, ensureAudio } from './audio.js';
 import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnPumpkin } from './board.js';
 import { addFloat, damage, hitMonster, spark } from './combat.js';
@@ -43,7 +43,7 @@ export function beginEndless(){
 
 export function startGame(mode, n, loadout){
   ensureAudio();
-  const def = mode === 'story' ? levelDef(n) : null;
+  const def = mode === 'story' ? levelFor(n) : null;
   setG({
     mode, n:n || 1, def, world:def ? def.world : 0, loadout:loadout.slice(),
     coins:0, score:0, kills:0, resolved:0, throws:0, missed:0,
@@ -64,7 +64,7 @@ export function startGame(mode, n, loadout){
     if (newP >= 0) parts.push(`New pumpkin: ${PTYPES[newP].name}! It ${PTYPES[newP].role}.`);
     for (const [t, lv] of Object.entries(MFIRST)) if (lv === n) parts.push(MINTRO[t]);
     if (def.boss) parts.push('A boss waits at the end of this night.');
-    if (def.graves && def.graves > gravesFor(n - 1)) parts.push(n === 3 ? 'Graves now appear in your patch. They block slides.' : 'One more grave in the patch.');
+    if (def.graves && def.graves > (n > 1 ? levelFor(n - 1).graves : 0)) parts.push(n === 3 ? 'Graves now appear in your patch. They block slides.' : 'One more grave in the patch.');
     if (n === 1) parts.push('Swipe a pumpkin to slide it. Bunch 3 of a color.');
     banner(`Night ${n}`, parts.length ? parts.join(' ') : WORLDS[G.world].name, parts.length > 1 ? 4.2 : 3);
   } else banner('Endless night', 'How long can the walls hold?', 2.4);

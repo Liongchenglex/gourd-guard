@@ -69,7 +69,7 @@ export function addBtn(box, label, fn, cls){ const b = document.createElement('b
 
 export const OVS = { title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult', preview:'#ovPreview', intro:'#ovIntro' };
 
-export let shopReturn = 'levels', helpNext = null, loadoutNext = null, loadoutAvail = [], loadoutSel = new Set(), loadoutMust = [];
+export let shopReturn = 'levels', helpNext = null, loadoutNext = null, loadoutAvail = [], loadoutSel = new Set(), loadoutMust = [], loadoutWhy = [];
 
 export function setState(s){
   setStateRaw(s);
@@ -199,7 +199,7 @@ export function openLevels(){
 }
 
 export function openLoadout(avail, next, required){
-  loadoutAvail = avail; loadoutNext = next; loadoutMust = required || [];
+  loadoutAvail = avail; loadoutNext = next; loadoutMust = (required || []).map(m => m.t); loadoutWhy = required || [];
   const pref = [...loadoutMust, ...(save.loadout || []).filter(t => avail.includes(t) && !loadoutMust.includes(t))];
   for (const t of avail) if (pref.length < 5 && !pref.includes(t)) pref.push(t);
   loadoutSel = new Set(pref.slice(0, 5));
@@ -210,7 +210,7 @@ export function openLoadout(avail, next, required){
     const nm = document.createElement('b'); nm.textContent = PTYPES[t].name; b.appendChild(nm);
     const sm = document.createElement('small'); sm.textContent = `Level ${lvOf(t)}`; b.appendChild(sm);
     b.title = PTYPES[t].role;
-    if (loadoutMust.includes(t)){ const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'NEW'; b.appendChild(tag); b.classList.add('must'); }
+    if (loadoutMust.includes(t)){ const why = loadoutWhy.find(m => m.t === t).why, tag = document.createElement('span'); tag.className = 'tag' + (why === 'New this level' ? '' : ' info'); tag.textContent = why === 'New this level' ? 'NEW' : 'i'; tag.title = why; b.appendChild(tag); b.classList.add('must'); }
     b.onclick = () => {
       if (loadoutMust.includes(t)){ SFX.bad(); return; }   // introduced this level: stays in
       if (loadoutSel.has(t)) loadoutSel.delete(t);
@@ -228,6 +228,8 @@ export function syncLoadout(){
   const n = loadoutSel.size;
   $('#loCount').textContent = n === 5 ? 'Ready.' : `${n} of 5 picked`;
   $('#bLoGo').disabled = n !== 5;
+  const why = loadoutWhy.filter(w => w.why !== 'New this level').map(w => `${PTYPES[w.t].name} is locked in: ${w.why.toLowerCase()}.`).join(' ');
+  $('#loWhy').textContent = why; $('#loWhy').hidden = !why;
 }
 
 export function openShop(ret){ shopReturn = ret || 'levels'; renderShop(); setState('shop'); }

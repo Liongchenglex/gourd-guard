@@ -32,7 +32,10 @@ export function makeDemo(){
 
 export function beginNight(n){
   const av = typesForNight(Math.max(n, highestOpen()));   // unlocks are global progress: anything unlocked is usable on any level (owner)
-  const must = levelFor(n).unlockPumpkins.map(k => PTYPES.findIndex(p => p.key === k)).filter(t => t >= 0);   // this level's new pumpkin(s) are locked into the loadout
+  const def = levelFor(n);
+  const must = def.unlockPumpkins.map(k => ({ t:PTYPES.findIndex(p => p.key === k), why:'New this level' })).filter(m => m.t >= 0);   // this level's new pumpkin(s) are locked into the loadout
+  const hasMummies = def.pool.some(([k]) => k === 'mummy' || (VARIANTS[k] && VARIANTS[k].base === 'mummy'));
+  if (hasMummies && !must.some(m => m.t === 3)) must.push({ t:3, why:'Mummies only die to Fire' });   // owner: Fire is auto-selected and locked on mummy levels
   if (av.length > 5) openLoadout(av, lo => startGame('story', n, lo), must);
   else startGame('story', n, av);
 }

@@ -187,7 +187,7 @@ Per level the data gives: starting pattern, graves, wave size, spawn gap, speed 
 - A level is won when the wave is exhausted (or the boss is dead) and no monster is left.
 - **Level preview**: choosing a level opens a card showing the monsters in its pool (NEW tags on first appearances), the boss if any, and a "New this level" row only when the level unlocks a pumpkin or a tool. No counts and no loadout listing (owner, 2026-09-25). Start from there.
 - **Introduced monsters always appear**: every monster listed in a level's `intro` is forced into the spawn order right after the first spawn, so an introduction is never an empty promise.
-- **Loadout lock**: on a level that introduces a pumpkin, that pumpkin is pre-selected in the pick-5 screen and cannot be deselected.
+- **Loadout lock**: on a level that introduces a pumpkin, that pumpkin is pre-selected in the pick-5 screen with a NEW tag and cannot be deselected. On any level whose pool contains Mummies (or a Mummy variant), Fire is pre-selected and locked with an ⓘ badge and the line "Fire is locked in: mummies only die to Fire" (owner, 2026-09-25).
 - **Intro cards**: the first time a pumpkin, tool, graves, monster or boss form appears, a card with its icon and one paragraph must be confirmed before the level starts (`save.seenIntro`). The bot's `startGame` path bypasses both screens.
 - Level banners still summarise the same things at the start of the level.
 

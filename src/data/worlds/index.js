@@ -13,7 +13,7 @@ import world6 from './world6.js';
 export const WORLDS = [
   { name:'Pumpkin Patch', sky:['#170d2a','#46213f','#a9523a'], ground:['#2b1b2a','#1a1219'], moon:'#ffe6ad', grass:'#3a2436' },
   { name:'Foggy Hollow', sky:['#0b1420','#1c3340','#4f6f66'], ground:['#18262a','#0f1719'], moon:'#dff5ff', grass:'#213732' },
-  { name:'Hollow Manor',      sky:['#12060c','#3a0f1c','#86291d'], ground:['#271417','#170b0e'], moon:'#ffb893', grass:'#3a1c20' },
+  { name:'Crumbling Keep',    sky:['#12060c','#3a0f1c','#86291d'], ground:['#2a2226','#171214'], moon:'#ffb893', grass:'#3a2a2a' },
 ];
 
 /** Display names for the six worlds (docs/WORLDS.md §3). Worlds without levels yet show as "coming soon". */

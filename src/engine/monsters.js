@@ -52,7 +52,16 @@ export function spawnMonster(key, lane, minion, p){
     slowT:0, frozenT:0, burnLeft:0, burnAmt:0, burnTick:0, kb:0, eating:false, dead:false, minion:!!minion, summon:4, hop:0, drift:rnd(2.5, 4.5), rise:0, lastHit:null,
     hold:T.hold || 1, teleport:T.teleportEvery || 0, shove:form === 2 && T.form2 && T.form2.shoveEvery ? T.form2.shoveEvery : 0,
     hidden:false, vanish:T.show || 0, carrier:type === 'rider', healT:T.healEvery || 0,
-    driftT:T.driftEvery || 0, swapT:T.swapEvery || 0, recolourT:form === 2 && T.form2 && T.form2.recolourEvery ? T.form2.recolourEvery : 0 };
+    driftT:T.driftEvery || 0, swapT:T.swapEvery || 0, recolourT:form === 2 && T.form2 && T.form2.recolourEvery ? T.form2.recolourEvery : 0,
+    phase:'move', phaseT:T.move || 0, shield:type === 'knight', gargs:null, freed:false, shootT:T.shootEvery || 0, calmT:0, regenT:0,
+    laneT:T.laneEvery || 0, batsT:T.batsEvery || 0, wallT:T.wallEvery || 0, healT:T.healEvery || 0, healing:false, healHits:0, stunT:0 };
+  if (type === 'hauler'){   // its gargoyles walk ahead of it in the same lane
+    m.gargs = [];
+    for (let i = 0; i < T.push; i++) m.gargs.push(spawnMonster('gargoyle', lane, true, m.p + 0.07 * (i + 1)));
+  }
+  if (type === 'vampire'){   // arrives with a couple of bats in neighbouring lanes
+    for (let i = 0; i < T.bats; i++){ const l = Math.max(0, Math.min(COLS - 1, lane + (i ? 1 : -1))); spawnMonster('bat', l, true, Math.max(-0.02, m.p)); }
+  }
   G.monsters.push(m);
   return m;
 }
@@ -122,6 +131,34 @@ export function updateMonster(m, dt){
         break;
       }
       case 'rider': m.x = m.tx + (m.carrier ? Math.sin(m.ph * 4) * 5 : 0); break;
+      case 'knight': {   // march / rest cycle; shield up while marching
+        m.phaseT -= dt;
+        if (m.phaseT <= 0){ m.phase = m.phase === 'move' ? 'stop' : 'move'; m.phaseT = m.phase === 'move' ? TYPES.knight.move : TYPES.knight.stop; }
+        m.shield = m.phase === 'move' && !m.eating;
+        if (m.phase === 'stop') sp = 0;
+        break;
+      }
+      case 'hauler': {
+        if (!m.freed && m.gargs && m.gargs.every(g => g.dead)){ m.freed = true; m.sp = TYPES.hauler.freeSp * spMulNow(); addFloat('Unburdened!', m.x, mY(m) - m.r - 26, '#ffd35a', 16, 1); }
+        m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
+        break;
+      }
+      case 'archer': {   // holds near the top and shoots arrows down its lane
+        if (m.p >= TYPES.archer.hold){
+          sp = 0; m.shootT -= dt;
+          if (m.shootT <= 0){ m.shootT = TYPES.archer.shootEvery; G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:0.4, dmg:TYPES.archer.arrow, dead:false }); SFX.knock(); }
+        }
+        break;
+      }
+      case 'vampire': {   // heals when left alone
+        m.calmT += dt;
+        if (m.calmT >= TYPES.vampire.calm && m.hp < m.maxHp){
+          m.regenT -= dt;
+          if (m.regenT <= 0){ m.regenT = TYPES.vampire.regenEvery; m.hp = Math.min(m.maxHp, m.hp + TYPES.vampire.regen); addFloat('+' + TYPES.vampire.regen, m.x, mY(m) - m.r - 20, '#ff6a6a', 14, 0.7); }
+        }
+        m.x = m.tx + Math.sin(m.ph * 1.2) * 3;
+        break;
+      }
       case 'doctor': {   // heals every other monster in its column
         m.healT -= dt;
         if (m.healT <= 0 && m.p > 0.05){
@@ -135,6 +172,7 @@ export function updateMonster(m, dt){
       }
       case 'boss': {
         if (m.kind === 'poltergeist'){ updatePoltergeist(m, dt); if (m.p >= m.hold) sp = 0; break; }
+        if (m.kind === 'vampirecount'){ if (updateVampireCount(m, dt) || m.p >= m.hold) sp = 0; break; }
         // Gravekeeper (docs/WORLDS.md §7): holds position, teleports between lanes, raises ghouls; form 2 shoves monsters forward
         const T = TYPES.gravekeeper;
         if (m.p >= m.hold) sp = 0;
@@ -217,4 +255,50 @@ function updatePoltergeist(m, dt){
       }
     }
   }
+}
+
+/** The Vampire Count (world 3 boss). Returns true while it must stand still (healing trance or stun). */
+function updateVampireCount(m, dt){
+  const T = TYPES.vampirecount;
+  if (m.stunT > 0){ m.stunT -= dt; return true; }
+  if (m.healing){ m.hp = Math.min(m.maxHp, m.hp + T.healRate * dt); return true; }
+  if (m.p < 0.05) return false;
+  if (m.form === 2){   // full form also heals when left alone
+    m.calmT += dt;
+    if (m.calmT >= T.form2.calm && m.hp < m.maxHp){
+      m.regenT -= dt;
+      if (m.regenT <= 0){ m.regenT = T.form2.regenEvery; m.hp = Math.min(m.maxHp, m.hp + T.form2.regen); addFloat('+' + T.form2.regen, m.x, mY(m) - m.r - 30, '#ff6a6a', 14, 0.7); }
+    }
+  }
+  m.laneT -= dt;
+  if (m.laneT <= 0){   // bursts into bats and reforms in another lane
+    m.laneT = T.laneEvery;
+    const opts = [...Array(COLS).keys()].filter(l => l !== m.lane);
+    for (let i = 0; i < 16; i++) spark(m.x, mY(m), i % 2 ? '#3a1a2a' : '#8a5aa8', 160);
+    m.lane = opts[Math.floor(Math.random() * opts.length)]; m.x = m.tx = LANE(m.lane); m.age = 0.2;
+    for (let i = 0; i < 16; i++) spark(m.x, mY(m), i % 2 ? '#3a1a2a' : '#8a5aa8', 160);
+  }
+  m.batsT -= dt;
+  if (m.batsT <= 0){
+    m.batsT = m.form === 2 ? T.form2.batsEvery : T.batsEvery;
+    for (let i = 0; i < T.bats; i++) spawnMonster('bat', pickLane(), true, Math.max(0, m.p - 0.02));
+    SFX.boss();
+  }
+  m.wallT -= dt;
+  if (m.wallT <= 0){
+    m.wallT = T.wallEvery;
+    if (G.castles.filter(w => !w.dead).length < T.maxWalls){
+      const used = new Set(G.castles.filter(w => !w.dead).map(w => w.lane));
+      const free = [...Array(COLS).keys()].filter(l => !used.has(l));
+      if (free.length){ const lane = free[Math.floor(Math.random() * free.length)]; G.castles.push({ lane, p:rnd(0.45, 0.7), hp:8, maxHp:8, flash:0, dead:false }); ring(LANE(lane), FIELD_TOP + 0.55 * (FIELD_BOT - FIELD_TOP), 40, 'rgba(200,180,220,.9)'); addFloat('A wall rises', m.x, mY(m) - m.r - 30, '#d8cfe0', 16, 1); }
+    }
+  }
+  m.healT -= dt;
+  if (m.healT <= 0){   // healing trance: the player must land N hits to break it
+    m.healT = m.form === 2 ? T.form2.healEvery : T.healEvery;
+    m.healing = true; m.healHits = T.healHits[Math.floor(Math.random() * T.healHits.length)];
+    addFloat(`Healing: hit it ×${m.healHits}`, m.x, mY(m) - m.r - 34, '#ff6a6a', 18, 1.4); SFX.boss();
+    return true;
+  }
+  return false;
 }

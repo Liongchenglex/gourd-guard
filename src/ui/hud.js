@@ -25,7 +25,7 @@ export function updateHud(force){
   const label = G.mode === 'story' ? `Night ${G.def.label}` : `Score ${G.score.toLocaleString()}`;
   const wf = Math.round(wallFrac() * 100);
   const tools = toolsForNight(G.mode === 'story' ? G.n : highestOpen());
-  const sig = [wf, coins, Math.round(prog * 100), label, save.fw, save.repair, save.buster, save.lantern, save.mine, G.aim, tools.join(','), Math.round(G.fogClear || 0)].join('|');
+  const sig = [wf, coins, Math.round(prog * 100), label, save.fw, save.repair, save.buster, save.lantern, save.mine, save.bomb, G.aim, tools.join(','), Math.round(G.fogClear || 0)].join('|');
   if (sig === hudSig && !force) return;
   const coinsChanged = hudSig && hudSig.split('|')[1] !== String(coins);
   hudSig = sig;
@@ -41,6 +41,7 @@ export function updateHud(force){
   $('#gbCount').textContent = save.buster; $('#gbBtn').disabled = save.buster <= 0; $('#gbBtn').classList.toggle('aim', G.aim === 'buster');
   $('#rpBtn').hidden = !tools.includes('repair'); $('#fwBtn').hidden = !tools.includes('fw'); $('#gbBtn').hidden = !tools.includes('buster');
   $('#lnCount').textContent = save.lantern; $('#lnBtn').disabled = save.lantern <= 0 || (G.fogClear || 0) > 0; $('#lnBtn').hidden = !tools.includes('lantern');
+  $('#bmCount').textContent = save.bomb; $('#bmBtn').disabled = save.bomb <= 0; $('#bmBtn').classList.toggle('aim', G.aim === 'bomb'); $('#bmBtn').hidden = !tools.includes('bomb');
   $('#lmCount').textContent = save.mine; $('#lmBtn').disabled = save.mine <= 0; $('#lmBtn').classList.toggle('aim', G.aim === 'mine'); $('#lmBtn').hidden = !tools.includes('mine');
   if (coinsChanged){ const cb = $('#coinBox'); cb.classList.add('bump'); setTimeout(() => cb.classList.remove('bump'), 120); }
 }

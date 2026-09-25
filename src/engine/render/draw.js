@@ -1,12 +1,12 @@
 import { GEAR } from '../../data/shop.js';
 import { PTYPES, RAINBOW } from '../../data/pumpkins.js';
 import { emptyCells, findCell, groupCells, heldGid } from '../board.js';
-import { dropHop } from '../combat.js';
+import { dropHop, castleY } from '../combat.js';
 import { mS, mY } from '../monsters.js';
 import { K, coinTarget, ctx } from './canvas.js';
 import { drawMonster } from './monsters.js';
 import { bg, fogSprite, sprites } from './sprites.js';
-import { ell, mix, rrect, shade } from './util.js';
+import { ell, mix, rrect, shade, tri } from './util.js';
 import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, GX, GY, H, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, state, walls } from '../state.js';
 import { TAU, clamp, mulberry } from '../util.js';
 import { save } from '../../save.js';
@@ -39,6 +39,8 @@ export function render(){
     if (fogOn && m.type !== 'boss' && m.p > -0.02 && g.def.fog.some(([a, b]) => m.p >= a && m.p <= b)) continue;   // inside a fog bank (bosses glow through)
     drawMonster(m, t);
   }
+  drawCastles(t);
+  drawArrows(t);
   if (g.def && g.def.fog && g.def.fog.length) drawFog(t, g.def.fog, g.fogClear > 0);
   drawMines(t);
   drawDrops(t);
@@ -199,6 +201,32 @@ export function drawFog(t, bands, cleared){
       for (let i = 0; i < 7; i++){ const x = ((i * 113 + t * 18) % (W + 240)) - 120, fw = 260; ctx.drawImage(fogSprite, x, y0 - 30 + Math.sin(t * 0.7 + i) * 10, fw, y1 - y0 + 60); }
       ctx.globalAlpha = 1;
     }
+  }
+}
+/** Castle walls (world 3): a stone segment across the lane with a health bar. */
+export function drawCastles(t){
+  for (const w of G.castles || []){
+    if (w.dead) continue;
+    const x = LANE(w.lane), y = castleY(w), hw = CS * 0.46;
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ell(ctx, x, y + 20, hw, 7);
+    ctx.fillStyle = w.flash > 0 ? '#e8e8f0' : '#6c6f78'; rrect(ctx, x - hw, y - 16, hw * 2, 34, 4); ctx.fill();
+    ctx.fillStyle = w.flash > 0 ? '#ffffff' : '#8a8d96';
+    for (let i = 0; i < 4; i++) ctx.fillRect(x - hw + 3 + i * (hw * 2 / 4), y - 24, hw * 2 / 4 - 6, 10);   // crenellations
+    ctx.strokeStyle = 'rgba(20,20,26,.7)'; ctx.lineWidth = 2;
+    for (let r = 0; r < 2; r++){ ctx.beginPath(); ctx.moveTo(x - hw, y - 5 + r * 12); ctx.lineTo(x + hw, y - 5 + r * 12); ctx.stroke(); }
+    for (let i = 0; i < 3; i++){ ctx.beginPath(); ctx.moveTo(x - hw + (i + 0.5) * hw * 0.66, y - 16); ctx.lineTo(x - hw + (i + 0.5) * hw * 0.66, y + 18); ctx.stroke(); }
+    const bw = hw * 1.6, bx = x - bw / 2, by = y + 24;
+    ctx.fillStyle = 'rgba(0,0,0,.6)'; rrect(ctx, bx - 1, by - 1, bw + 2, 7, 3); ctx.fill();
+    ctx.fillStyle = '#d8d0c8'; rrect(ctx, bx, by, Math.max(0, bw * w.hp / w.maxHp), 5, 2.5); ctx.fill();
+  }
+}
+/** Archers' arrows. */
+export function drawArrows(t){
+  for (const a of G.arrows || []){
+    const x = LANE(a.lane), y = FIELD_TOP + a.p * (FIELD_BOT - FIELD_TOP);
+    ctx.strokeStyle = '#3a2a1c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y - 14); ctx.lineTo(x, y + 10); ctx.stroke();
+    ctx.fillStyle = '#d8d0c0'; tri(ctx, x, y + 14, 5);
+    ctx.fillStyle = '#c8b090'; ctx.fillRect(x - 4, y - 16, 8, 5);
   }
 }
 /** Landmines waiting at the wall line. */

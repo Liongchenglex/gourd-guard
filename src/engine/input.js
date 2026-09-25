@@ -2,9 +2,9 @@ import { updateHud } from '../ui/hud.js';
 import { ensureAudio } from './audio.js';
 import { bestLitGroup, collectDrop, findCell, slideOne } from './board.js';
 import { dropHop, launchGroup } from './combat.js';
-import { useFirework, useRepair, useBuster, bustGrave, useLantern, useMine, placeMine } from './game.js';
+import { useFirework, useRepair, useBuster, bustGrave, useLantern, useMine, placeMine, useBomb, dropBomb } from './game.js';
 import { cv } from './render/canvas.js';
-import { COLS, CS, G, GX, GY, H, ROWS, W, gest, graves, grid, setGest, state } from './state.js';
+import { COLS, CS, G, GX, GY, H, ROWS, W, gest, graves, grid, setGest, state, FIELD_TOP, FENCE_Y } from './state.js';
 import { setState } from '../ui/screens.js';
 
 // ---------- Input ----------
@@ -43,6 +43,10 @@ export function attachInput(){
     const p = toLogical(e);
     if (p.y < 70) return;
     const pos = cellAt(p.x, p.y);
+    if (G.aim === 'bomb'){   // armed bomb: this tap picks a spot on the field
+      if (p.y >= FIELD_TOP && p.y <= FENCE_Y) dropBomb(p.x, p.y); else { G.aim = null; updateHud(true); }
+      e.preventDefault(); return;
+    }
     if (G.aim === 'mine'){   // armed landmine: this tap picks a column (anywhere on the field or patch)
       const lane = Math.floor((p.x - GX) / CS);
       if (lane >= 0 && lane < COLS) placeMine(lane); else { G.aim = null; updateHud(true); }
@@ -87,6 +91,7 @@ export function attachInput(){
     else if (e.key === 'g') useBuster();
     else if (e.key === 'l') useLantern();
     else if (e.key === 'm') useMine();
+    else if (e.key === 'b') useBomb();
   });
 
 }

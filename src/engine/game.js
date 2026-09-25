@@ -1,17 +1,17 @@
 import { MINTRO, TYPES, BOSS_NAMES, VARIANTS } from '../data/monsters.js';
 import { GEAR } from '../data/shop.js';
 import { PATTERNS } from '../data/patterns.js';
-import { NTYPES, PTYPES } from '../data/pumpkins.js';
+import { NTYPES, PTYPES, POWER } from '../data/pumpkins.js';
 import { WORLDS, levelFor, typesForNight, highestOpen } from '../data/worlds/index.js';
 import { SFX, ensureAudio } from './audio.js';
 import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, landingCell, flyInto } from './board.js';
-import { addFloat, damage, hitMonster, spark, chunk, ring } from './combat.js';
-import { mS, mY, updateMonster } from './monsters.js';
+import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle } from './combat.js';
+import { mS, mY, updateMonster, TILE_P } from './monsters.js';
 import { bgWorld, buildBg } from './render/sprites.js';
 import { endlessSpawn, storySpawn } from './spawner.js';
-import { COLS, CS, FENCE_Y, FIELD_TOP, G, GY, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, setG, setGest, state, walls } from './state.js';
-import { rnd } from './util.js';
-import { initWalls } from './walls.js';
+import { COLS, CS, FENCE_Y, FIELD_TOP, G, GY, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, setG, setGest, state, walls, GX, FIELD_BOT } from './state.js';
+import { rnd, shuffle, clamp } from './util.js';
+import { initWalls, damageWall } from './walls.js';
 import { persist, save } from '../save.js';
 import { banner, updateHud } from '../ui/hud.js';
 import { openLoadout, setState, showResult } from '../ui/screens.js';
@@ -19,7 +19,7 @@ import { openLoadout, setState, showResult } from '../ui/screens.js';
 // ---------- Flow ----------
 
 export function makeDemo(){
-  setG({ mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0 });
+  setG({ mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[] });
   initBoard(1, 2);
   [[4,0],[4,1],[4,2],[3,1]].forEach(([r, c]) => { if (grid[r][c]) grid[r][c].c = 0; });
   resolveMatches();
@@ -51,8 +51,9 @@ export function startGame(mode, n, loadout){
     total:def ? def.total + (def.boss ? 1 : 0) : 0,
     spawned:0, spawnTimer:2.6, bossSpawned:false, bossTimer:100, diff:1, sproutT:0,
     monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], groups:{},
-    t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[],
+    t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[],
   });
+  if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def ? def.pattern : Math.floor(Math.random() * PATTERNS.length), def ? def.graves : 2);
   initWalls();
@@ -134,6 +135,29 @@ export function placeMine(lane){
   SFX.collect(); G.aim = null; updateHud(true);
   return true;
 }
+/** Castle walls at level start: n distinct random lanes, mid-field. */
+export function raiseCastles(n, hp){
+  const lanes = shuffle([...Array(COLS).keys()]).slice(0, n);
+  for (const lane of lanes) G.castles.push({ lane, p:rnd(0.4, 0.72), hp, maxHp:hp, flash:0, dead:false });
+}
+/** Bomb: first press arms it (tap the field next), second press or a tap elsewhere cancels. */
+export function useBomb(){
+  if (state !== 'play' || G.over || save.bomb <= 0) return;
+  G.aim = G.aim === 'bomb' ? null : 'bomb';
+  if (G.aim) addFloat('Tap the field', W / 2, GY - 30, '#ffd35a', 18, 1.2);
+  updateHud(true);
+}
+export function dropBomb(x, y){
+  if (save.bomb <= 0) return false;
+  save.bomb--; persist();
+  const lane0 = clamp(Math.floor((x - GX) / CS), 0, COLS - 1), p0 = (y - FIELD_TOP) / (FIELD_BOT - FIELD_TOP), reach = 1.5 * TILE_P();
+  G.flash = 0.6; G.shake = 1; SFX.boom();
+  for (let k = 0; k < 40; k++) spark(x, y, k % 3 ? '#ffd35a' : '#ff6a3a', 320); ring(x, y, CS * 1.5, 'rgba(255,200,90,.9)');
+  for (const m of G.monsters.slice()) if (!m.dead && !m.hidden && m.rise <= 0 && Math.abs(m.lane - lane0) <= 1 && Math.abs(m.p - p0) <= reach){ m.lastHit = -1; damage(m, 4, '#ffd35a'); }
+  for (const w of G.castles) if (!w.dead && Math.abs(w.lane - lane0) <= 1 && Math.abs(w.p - p0) <= reach) damageCastle(w, 4);
+  G.aim = null; updateHud(true);
+  return true;
+}
 export function useRepair(){
   if (state !== 'play' || G.over || save.repair <= 0) return;
   if (walls.every(w => w.hp >= w.max)){ addFloat('Walls are already full', W / 2, FENCE_Y - 40, '#ffd35a', 18, 1); SFX.bad(); return; }
@@ -159,6 +183,19 @@ export function update(dt){
     pr.y += pr.vy * dt; pr.rot += dt * pr.spin;
     pr.trail.push(pr.x, pr.y); if (pr.trail.length > 14) pr.trail.splice(0, 2);
     if (pr.y < FENCE_Y + 10){
+      for (const w of g.castles){   // castle walls intercept pumpkins (Grey pierces, Black blasts)
+        if (w.dead || pr.hitWalls.has(w) || w.lane !== pr.lane || pr.y > castleY(w) + 20) continue;
+        pr.hitWalls.add(w);
+        const i = pr.lv - 1;
+        damageCastle(w, pr.type === 7 ? POWER[i] * 1.5 : POWER[i]);
+        if (pr.type === 7){
+          ring(pr.x, castleY(w), 70, 'rgba(255,154,58,.9)'); for (let k = 0; k < 20; k++) spark(pr.x, castleY(w), '#ff9a3a', 240);
+          for (const o of g.monsters.slice()) if (!o.dead && !o.hidden && o.rise <= 0 && Math.abs(o.lane - w.lane) <= 1 && Math.abs(mY(o) - castleY(w)) < CS * 1.2){ o.lastHit = 7; damage(o, POWER[i] / 2, '#ff9a3a', true); }
+          for (const w2 of g.castles) if (w2 !== w && !w2.dead && Math.abs(w2.lane - w.lane) === 1 && Math.abs(castleY(w2) - castleY(w)) < CS * 1.2) damageCastle(w2, POWER[i] / 2);
+        }
+        if (pr.type !== 4){ pr.dead = true; pr.hit.add(w); }
+      }
+      if (pr.dead) continue;
       const targets = g.monsters.filter(m => !m.dead && !(m.rise > 0) && !m.hidden && !pr.hit.has(m) && Math.abs(pr.x - m.x) < m.hw).sort((a, b) => b.p - a.p);
       for (const m of targets){
         if (Math.abs(pr.y - mY(m)) < pr.r + m.r * mS(m) * 0.8 || pr.y < mY(m)){
@@ -184,6 +221,13 @@ export function update(dt){
     if (v){ mine.dead = true; for (let i = 0; i < 30; i++) spark(v.x, FENCE_Y - 30, i % 2 ? '#ffd35a' : '#ff6a3a', 300); ring(v.x, FENCE_Y - 30, 50, 'rgba(255,200,90,.9)'); g.shake = 0.8; SFX.boom(); v.lastHit = -1; damage(v, 6, '#ffd35a'); }
   }
   g.mines = g.mines.filter(m => !m.dead);
+  for (const a of g.arrows){   // skeleton archers' arrows fly down their lane into the wall
+    a.p += a.sp * dt;
+    if (a.p >= 1){ a.dead = true; damageWall(a.lane, a.dmg); for (let i = 0; i < 8; i++) spark(LANE(a.lane), FENCE_Y - 10, '#d8d0c0', 120); SFX.chomp(); }
+  }
+  g.arrows = g.arrows.filter(a => !a.dead);
+  for (const w of g.castles) if (w.flash > 0) w.flash -= dt;
+  g.castles = g.castles.filter(w => !w.dead);
   g.monsters = g.monsters.filter(m => !m.dead);
   for (const d of g.drops){
     d.t += dt;

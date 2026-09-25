@@ -20,7 +20,7 @@ export function launchGroup(ref){
   const type = grp.color, lv = lvOf(type), guar = grp.size >= 5;
   for (const { r, c, cell } of cells){
     const x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;
-    G.projs.push({ x, y, vy:-900, type, vis:cell.c, lv, guar, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false });
+    G.projs.push({ x, y, vy:-900, type, vis:cell.c, lv, guar, lane:c, hitWalls:new Set(), rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false });
     grid[r][c] = null;
   }
   SFX.launch(cells.length);
@@ -31,6 +31,16 @@ export function launchGroup(ref){
 
 export function damage(m, amt, color, small){
   if (m.dead) return;
+  if (m.shield){   // shield knight marching: the hit bounces off
+    m.flash = 0.1; addFloat('Blocked', m.x, mY(m) - m.r * mS(m) - 14, '#d8d8e0', 15, 0.6); SFX.knock();
+    return;
+  }
+  m.calmT = 0;   // vampires and the Count stop regenerating for a while after any hit
+  if (m.healing){   // Vampire Count trance: count the hit
+    m.healHits--;
+    if (m.healHits <= 0){ m.healing = false; m.stunT = TYPES.vampirecount.stun; addFloat('Trance broken!', m.x, mY(m) - m.r - 34, '#ffd35a', 20, 1.2); ring(m.x, mY(m), 60, 'rgba(255,211,90,.9)'); SFX.win(); }
+    else addFloat(`×${m.healHits} more`, m.x, mY(m) - m.r - 34, '#ff6a6a', 16, 0.8);
+  }
   if (m.carrier){   // wisp rider: the first hit breaks the carrier instead of hurting the rider
     m.carrier = false; m.flash = 0.15; m.sp = TYPES.rider.walkSp * spMulNow() * rnd(0.92, 1.08);
     for (let i = 0; i < 12; i++) spark(m.x, mY(m) - 10, '#cfe8f2', 120);
@@ -86,7 +96,7 @@ export function kill(m){
   G.score += m.pts;
   const reward = m.type === 'boss' ? 'boss' : rollReward();
   const y = mY(m), s = mS(m);
-  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', boss:'#6a3a7a' }[m.type];
+  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', boss:'#6a3a7a' }[m.type] || '#aaa';
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
   ring(m.x, y, m.r * s * 2.2, 'rgba(255,220,150,.8)');
   if (reward === 'boss' || reward === 'coins'){
@@ -102,7 +112,7 @@ export function kill(m){
 }
 
 export function knockback(m){
-  if (m.dead || m.type === 'boss' || m.noKnockback) return;
+  if (m.dead || m.type === 'boss' || m.noKnockback || m.shield) return;
   m.kb = Math.max(m.kb, TILE_P()); m.eating = false;
   ring(m.x, mY(m), 34, 'rgba(255,240,200,.9)');
   SFX.knock();
@@ -121,6 +131,11 @@ export function hitMonster(pr, m){
   if (pr.type === 3){ m.burnLeft = Math.max(m.burnLeft, BURN_N[i]); m.burnAmt = Math.max(m.burnAmt, BURN_AMT[i]); m.burnTick = BURN_EVERY; }
   m.lastHit = pr.type;
   damage(m, POWER[i], PTYPES[pr.type].spark);
+  if (pr.type === 7){   // Black: blast the neighbouring lanes at the same height for half power
+    ring(pr.x, y, 70, 'rgba(255,154,58,.9)'); for (let k = 0; k < 24; k++) spark(pr.x, y, k % 2 ? '#ff9a3a' : '#3a3540', 260); G.shake = Math.max(G.shake, 0.4);
+    for (const o of G.monsters.slice()) if (o !== m && !o.dead && !o.hidden && o.rise <= 0 && Math.abs(o.lane - m.lane) === 1 && Math.abs(mY(o) - y) < CS * 1.2){ o.lastHit = 7; damage(o, POWER[i] / 2, '#ff9a3a', true); }
+    for (const w of G.castles) if (!w.dead && Math.abs(w.lane - m.lane) === 1 && Math.abs(castleY(w) - y) < CS * 1.2) damageCastle(w, POWER[i] / 2);
+  }
   if (kb && !m.dead) knockback(m);
   if (m.dead && pr.type === 5 && Math.random() < SPAWN_P[i]){
     const empties = emptyCells();
@@ -142,3 +157,15 @@ export function chunk(x, y, color, spd){ const a = Math.random() * TAU, s = rnd(
 export function ring(x, y, r, color){ G.parts.push({ x, y, r, t:0, life:0.4, color, kind:'ring' }); }
 
 export function addFloat(text, x, y, color, size, life){ if (!G) return; G.floats.push({ text, x, y, color, size, t:0, life:life || 0.8 }); }
+
+/** Castle walls (world 3): y position and damage. */
+export function castleY(w){ return FIELD_TOP + w.p * (FIELD_BOT - FIELD_TOP); }
+export function damageCastle(w, amt){
+  if (w.dead) return;
+  w.hp -= amt; w.flash = 0.12;
+  const y = castleY(w);
+  addFloat(fmt(amt), LANE(w.lane) + rnd(-8, 8), y - 30, '#d8d0c8', 16, 0.7);
+  for (let i = 0; i < 6; i++) chunk(LANE(w.lane), y, '#8a8d96', 160);
+  if (w.hp <= 0.001){ w.dead = true; for (let i = 0; i < 22; i++) chunk(LANE(w.lane), y, i % 2 ? '#8a8d96' : '#55585f', 260); ring(LANE(w.lane), y, 44, 'rgba(220,220,230,.9)'); SFX.smash(); G.shake = Math.max(G.shake, 0.5); }
+  else SFX.knock();
+}

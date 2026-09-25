@@ -32,7 +32,12 @@ export function drawMonster(m, t){
     case 'rider': drawRider(m, F, t); break;
     case 'doctor': drawDoctor(m, F, t); break;
     case 'mummy': drawMummy(m, F, t); break;
-    case 'boss': if (m.kind === 'poltergeist') drawPoltergeist(m, F, t); else drawBoss(m, F, t); break;
+    case 'knight': drawKnight(m, F, t); break;
+    case 'hauler': drawHauler(m, F, t); break;
+    case 'gargoyle': drawGargoyle(m, F, t); break;
+    case 'archer': drawArcher(m, F, t); break;
+    case 'vampire': drawVampire(m, F, t); break;
+    case 'boss': if (m.kind === 'poltergeist') drawPoltergeist(m, F, t); else if (m.kind === 'vampirecount') drawVampireCount(m, F, t); else drawBoss(m, F, t); break;
   }
   if (m.frozenT > 0){
     cx.globalAlpha = fade * 0.5; cx.fillStyle = '#d8f4ff'; cx.strokeStyle = '#ffffff'; cx.lineWidth = 2;
@@ -57,6 +62,7 @@ export function drawMonster(m, t){
       if (fill > 0){ cx.save(); cx.beginPath(); cx.rect(px - d / 2, by - d / 2, d * fill, d); cx.clip(); cx.fillStyle = '#ff5a4d'; ell(cx, px, by, d / 2, d / 2); cx.restore(); }
     }
   }
+  if (m.healing){ cx.fillStyle = '#ff6a6a'; cx.font = 'bold 22px Fredoka, system-ui, sans-serif'; cx.textAlign = 'center'; cx.fillText(`heal ×${m.healHits}`, m.x, by - 14); cx.textAlign = 'left'; }
   cx.globalAlpha = 1;
 }
 
@@ -212,7 +218,12 @@ export function monsterIcon(key, px){
     case 'rider': drawRider(m, F, 1); break;
     case 'doctor': drawDoctor(m, F, 1); break;
     case 'mummy': drawMummy(m, F, 1); break;
-    case 'boss': if (kind === 'poltergeist') drawPoltergeist(m, F, 1); else drawBoss(m, F, 1); break;
+    case 'knight': drawKnight(m, F, 1); break;
+    case 'hauler': drawHauler(m, F, 1); break;
+    case 'gargoyle': drawGargoyle(m, F, 1); break;
+    case 'archer': drawArcher(m, F, 1); break;
+    case 'vampire': drawVampire(m, F, 1); break;
+    case 'boss': if (kind === 'poltergeist') drawPoltergeist(m, F, 1); else if (kind === 'vampirecount') drawVampireCount(m, F, 1); else drawBoss(m, F, 1); break;
   }
   cx = prev;
   return c;
@@ -266,4 +277,67 @@ export function drawPoltergeist(m, F, t){   // translucent ghost with trailing t
   const sw = Math.sin(t * 2.2) * 10;
   cx.beginPath(); cx.moveTo(-28, -4); cx.lineTo(-52, 6 + sw); cx.stroke(); cx.beginPath(); cx.moveTo(28, -4); cx.lineTo(52, 6 - sw); cx.stroke();
   cx.fillStyle = F('#dfe9f5'); ell(cx, -54, 8 + sw, 7, 6); ell(cx, 54, 8 - sw, 7, 6);
+}
+
+export function drawKnight(m, F, t){   // armoured walker; the shield swings up in front while marching
+  cx.fillStyle = F('#6f7380'); ell(cx, 0, 4, 13, 16);                                // body
+  cx.fillStyle = F('#8c90a0'); ell(cx, 0, -16, 11, 11);                              // helm
+  cx.fillStyle = '#1a1c24'; cx.fillRect(-8, -18, 16, 4);                             // visor slit
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#ffd35a'; ell(cx, -4, -16, 1.6, 1.6); ell(cx, 4, -16, 1.6, 1.6);
+  cx.fillStyle = F('#c9584a'); cx.beginPath(); cx.moveTo(-3, -27); cx.lineTo(3, -27); cx.lineTo(0, -34); cx.closePath(); cx.fill();   // plume
+  if (m.shield){                                                                     // shield raised, covering the front
+    cx.fillStyle = F('#b4b8c8'); rrect(cx, -16, -12, 32, 30, 8); cx.fill();
+    cx.strokeStyle = F('#4a4e5c'); cx.lineWidth = 2; rrect(cx, -16, -12, 32, 30, 8); cx.stroke();
+    cx.fillStyle = F('#c9584a'); ell(cx, 0, 3, 5, 5);
+  } else {                                                                           // shield lowered to the side
+    cx.fillStyle = F('#b4b8c8'); rrect(cx, 10, 0, 12, 22, 5); cx.fill();
+    cx.strokeStyle = F('#4a4e5c'); cx.lineWidth = 2; rrect(cx, 10, 0, 12, 22, 5); cx.stroke();
+  }
+}
+export function drawHauler(m, F, t){   // hunched figure with a rope over its shoulder, leaning forward
+  const lean = m.freed ? 0 : 6;
+  cx.fillStyle = F('#7a6a5a'); ell(cx, lean, 6, 14, 15);
+  cx.fillStyle = F('#8a7a6a'); ell(cx, lean + 2, -12, 10, 10);
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#ffe27a'; ell(cx, lean - 2, -13, 2.5, 3); ell(cx, lean + 6, -13, 2.5, 3);
+  cx.strokeStyle = F('#c8b090'); cx.lineWidth = 3; cx.lineCap = 'round';
+  if (!m.freed){ cx.beginPath(); cx.moveTo(lean + 8, -4); cx.lineTo(lean + 26, -18); cx.stroke(); }          // tow rope
+  cx.strokeStyle = F('#7a6a5a'); cx.lineWidth = 5;
+  cx.beginPath(); cx.moveTo(lean - 10, 4); cx.lineTo(lean - 18, 14); cx.moveTo(lean + 10, 4); cx.lineTo(lean + 18, 14); cx.stroke();
+}
+export function drawGargoyle(m, F, t){   // crouched stone beast with folded wings
+  cx.fillStyle = F('#7a7c86'); ell(cx, 0, 8, 18, 12);
+  cx.fillStyle = F('#8a8d96'); ell(cx, 0, -8, 12, 11);
+  cx.fillStyle = F('#5f616a'); tri(cx, -8, -18, 5); tri(cx, 8, -18, 5);                     // horns
+  cx.beginPath(); cx.moveTo(-16, 0); cx.lineTo(-30, -14); cx.lineTo(-26, 6); cx.closePath(); cx.fill();   // wings
+  cx.beginPath(); cx.moveTo(16, 0); cx.lineTo(30, -14); cx.lineTo(26, 6); cx.closePath(); cx.fill();
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#ff9a3a'; ell(cx, -4, -9, 2.2, 2.2); ell(cx, 4, -9, 2.2, 2.2);
+  cx.strokeStyle = 'rgba(20,20,26,.5)'; cx.lineWidth = 1.5; cx.beginPath(); cx.moveTo(-6, 4); cx.lineTo(2, 14); cx.stroke();   // crack
+}
+export function drawArcher(m, F, t){   // skeleton with a bow
+  cx.fillStyle = F('#d8d0c0'); ell(cx, 0, 4, 10, 14); ell(cx, 0, -14, 9, 10);
+  cx.fillStyle = '#1a1414'; ell(cx, -3.5, -15, 2.4, 3); ell(cx, 3.5, -15, 2.4, 3);
+  cx.strokeStyle = F('#b8b0a0'); cx.lineWidth = 2; for (let i = 0; i < 3; i++){ cx.beginPath(); cx.moveTo(-8, -2 + i * 6); cx.lineTo(8, -2 + i * 6); cx.stroke(); }   // ribs
+  cx.strokeStyle = F('#6b4a2b'); cx.lineWidth = 3; cx.beginPath(); cx.arc(12, 0, 16, -Math.PI * 0.55, Math.PI * 0.55); cx.stroke();   // bow
+  cx.strokeStyle = '#e8e0d0'; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(12, -15); cx.lineTo(12, 15); cx.stroke();
+  cx.strokeStyle = F('#d8d0c0'); cx.lineWidth = 4; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo(-8, 0); cx.lineTo(-14, 12); cx.moveTo(8, 0); cx.lineTo(12, 0); cx.stroke();
+}
+export function drawVampire(m, F, t){   // caped figure, pale face, red eyes
+  cx.fillStyle = F('#2a0f1a'); cx.beginPath(); cx.moveTo(-20, 22); cx.lineTo(-14, -8); cx.quadraticCurveTo(0, -14, 14, -8); cx.lineTo(20, 22); cx.closePath(); cx.fill();   // cape
+  cx.fillStyle = F('#5a1a2a'); ell(cx, 0, 6, 10, 14);
+  cx.fillStyle = F('#e8dcd8'); ell(cx, 0, -14, 9, 10);
+  cx.fillStyle = F('#1a1014'); cx.beginPath(); cx.moveTo(-9, -20); cx.quadraticCurveTo(0, -30, 9, -20); cx.lineTo(9, -16); cx.quadraticCurveTo(0, -22, -9, -16); cx.fill();   // hair
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#ff3a3a'; ell(cx, -3.5, -14, 2.2, 2.2); ell(cx, 3.5, -14, 2.2, 2.2);
+  cx.fillStyle = '#fff'; tri(cx, -2.5, -8, 2); tri(cx, 2.5, -8, 2);   // fangs (inverted look via small triangles)
+}
+export function drawVampireCount(m, F, t){   // taller vampire with a high collar; glows red while healing
+  if (m.healing){ const g = cx.createRadialGradient(0, -10, 6, 0, -10, 90); g.addColorStop(0, 'rgba(255,60,60,.45)'); g.addColorStop(1, 'rgba(255,60,60,0)'); cx.fillStyle = g; cx.fillRect(-90, -100, 180, 180); }
+  else { const g = cx.createRadialGradient(0, -10, 6, 0, -10, 80); g.addColorStop(0, 'rgba(120,20,60,.3)'); g.addColorStop(1, 'rgba(120,20,60,0)'); cx.fillStyle = g; cx.fillRect(-80, -90, 160, 170); }
+  cx.fillStyle = F('#1a0a12'); cx.beginPath(); cx.moveTo(-34, 40); cx.lineTo(-24, -20); cx.lineTo(-30, -48); cx.lineTo(-10, -30); cx.lineTo(0, -26); cx.lineTo(10, -30); cx.lineTo(30, -48); cx.lineTo(24, -20); cx.lineTo(34, 40); cx.closePath(); cx.fill();   // cape with collar
+  cx.fillStyle = F('#5a1a2a'); ell(cx, 0, 10, 16, 26);
+  cx.fillStyle = F('#c9584a'); rrect(cx, -6, -8, 12, 30, 3); cx.fill();   // waistcoat
+  cx.fillStyle = F('#e8dcd8'); ell(cx, 0, -30, 12, 14);
+  cx.fillStyle = F('#1a1014'); cx.beginPath(); cx.moveTo(-12, -38); cx.quadraticCurveTo(0, -52, 12, -38); cx.lineTo(12, -32); cx.quadraticCurveTo(0, -40, -12, -32); cx.fill();
+  cx.fillStyle = m.flash > 0 ? '#fff' : '#ff3a3a'; ell(cx, -5, -30, 3, 3); ell(cx, 5, -30, 3, 3);
+  cx.fillStyle = '#fff'; tri(cx, -3, -22, 2.5); tri(cx, 3, -22, 2.5);
+  if (m.stunT > 0){ cx.fillStyle = '#ffd35a'; for (let i = 0; i < 3; i++) ell(cx, -14 + i * 14, -54 + Math.sin(t * 8 + i) * 4, 3, 3); }
 }

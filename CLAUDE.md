@@ -34,6 +34,9 @@ Build `docs/WORLDS.md` one rule or world at a time, each with its own bot runs. 
 - `.venv/bin/python tools/balance_bot.py --nights 1,5,10,15 --repeats 3 --url …`: human-paced bot plays full nights and prints one JSON line per run plus a per-night summary (win rate, mean wall %). Single runs are noise; **3 repeats per night is the minimum** for any balance claim. Run it after any rule or number change and record results in the design doc's balance section.
 - `node tools/check_levels.mjs`: proves `world1.js` still reproduces the prototype's level formulas. Delete it once world 1 is redesigned for Release 1.
 
+## Phone playtests
+After each milestone the owner plays it on their phone. `npm run build`, then `.venv/bin/python tools/bundle_single.py` writes `dist/gourd-guard.html` (CSS and JS inlined, no document wrapper). Publish that file as a private artifact, **updating the existing artifact URL** (see memory) so the owner's save data carries over.
+
 ## Working rules
 - **Rules change → design doc changes in the same edit.** Never let code and `GAME_DESIGN.md` disagree.
 - Ask the owner before changing a rule they set. When a rule is ambiguous, propose a default, state it, and note it in the doc.

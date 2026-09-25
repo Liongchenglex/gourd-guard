@@ -21,6 +21,7 @@ Level addresses are written `world-level`, e.g. `3-12` = world 3, level 12. Leve
 | Unlock placement | Pumpkin, monster and weapon unlocks sit in levels 1–10 of a world so no player misses them; the level-20 boss and levels 11–19 reward coins and stars. |
 | Colour ramp | World 1 starts with Green + Yellow only. From the 6th unlocked type (3-6) the player picks exactly 5 per level. |
 | Difficulty modes | R2 (see §10). R1 ships one difficulty per level. |
+| Upgrade expectation | Players reach pumpkin **level 3 easily** with coins. **Levels 4 and 5 will be gated behind ads** when the game is monetised. So levels 1–10 of every world are tuned to be comfortable at pumpkin level 3 or below, and levels 11–20 are where levels 4–5 pay off. The bot's expected profile must follow this: level ≤3 through the first half of a world, 4–5 only in the second half (owner, 2026-09-25). |
 
 ---
 
@@ -69,23 +70,119 @@ Names are placeholders the owner is free to change.
 
 ## 5. Pumpkin types
 
-Existing level tables (power 1/1/1.5/1.5/2, shop costs 40/80/130/200) stay unless the bot says otherwise.
+Upgrade costs per type: level 2 = 40, level 3 = 80, level 4 = 130, level 5 = 200 coins. Levels 4 and 5 will be ad-gated (see §1).
 
-| Type | Look | Role | Effect | Introduced |
-|---|---|---|---|---|
-| Green | green | Normal | Damage; knockback chance from level 2 | 1-1 |
-| Yellow | yellow | Normal | Same as Green, separate level | 1-1 |
-| Ice | ice blue | Freeze | Slow; freeze chance from level 3 | 1-3 |
-| Fire | red | Flame | Burn ticks; the only thing that kills a Mummy for good | 1-8 |
-| White | white | Boomerang | If it hits nothing it flies back into the patch (top-most empty cell of its column, else nearest column with space) instead of being wasted | 2-3 |
-| Grey | grey | Piercing | Hits every monster in its column; passes castle walls | 3-6 (right after the Gargoyle Hauler at 3-3) |
-| Black | black | Blast | Explodes on the first hit; splashes the lanes to the left and right at the same height | 3-9 |
-| Pink | pink plasma | Chain | Lightning jumps from the hit monster to the nearest monster in a neighbouring column at half power | 4-4 |
-| Purple | purple | Spawn | A kill may spawn a pumpkin into the patch | 5-3 |
-| Gold | gold, with top hat, monocle and coin belt so it reads differently from Yellow | Coins | A Gold kill always gives coins (skips the reward roll) and gives ×2 coins (value tuned by the bot) | 5-10 |
-| Rainbow | multicolour | Wildcard | Any colour, no level | rare from 1-1 |
+| Type | Look | Role | Introduced |
+|---|---|---|---|
+| Green | green | Normal | 1-1 |
+| Yellow | yellow | Normal, separate level from Green | 1-1 |
+| Ice | ice blue | Freeze | 1-3 |
+| Fire | red | Flame; the only thing that kills a Mummy for good | 1-8 |
+| White | white | Boomerang | 2-3 |
+| Grey | grey | Piercing; passes castle walls | 3-6 |
+| Black | black | Blast | 3-9 |
+| Pink | pink plasma | Chain | 4-4 |
+| Purple | purple | Spawn | 5-3 |
+| Gold | gold with top hat, monocle and coin belt | Coins | 5-10 |
+| Rainbow | multicolour | Wildcard, any colour, no level | rare from 1-1 |
 
 Loadout choice (exactly 5) starts at 3-6 when Grey becomes the 6th type.
+
+### Level-by-level effects
+
+Power = damage per hit. "Knockback" = chance per hit to push the monster back one tile (a bunch of 5+ always knocks back; bosses and Stubborn monsters never). Values without a mark are what the game does today. 💡 = proposed, not built yet; edit freely.
+
+**Green, Yellow** (normal)
+
+| Level | Power | Knockback |
+|---|---|---|
+| 1 | 1 | none |
+| 2 | 1 | 25% |
+| 3 | 1.5 | 25% |
+| 4 | 1.5 | 50% |
+| 5 | 2 | 50% |
+
+**Ice** (slows; frozen monsters stop and don't eat; bosses can be slowed but not frozen; never knocks back on its own)
+
+| Level | Power | Slow lasts | Freeze chance |
+|---|---|---|---|
+| 1 | 1 | 1 s | none |
+| 2 | 1 | 1.5 s | none |
+| 3 | 1.5 | 2 s | 25% |
+| 4 | 1.5 | 2.5 s | 50% |
+| 5 | 2 | 3 s | 50% |
+
+**Fire** (burn ticks every 1 s; a new hit refreshes to the larger count and amount; never knocks back on its own)
+
+| Level | Power | Burn ticks × damage | Total burn |
+|---|---|---|---|
+| 1 | 1 | 2 × 0.1 | 0.2 |
+| 2 | 1 | 2 × 0.2 | 0.4 |
+| 3 | 1.5 | 3 × 0.2 | 0.6 |
+| 4 | 1.5 | 4 × 0.2 | 0.8 |
+| 5 | 2 | 5 × 0.2 | 1.0 |
+
+**Grey** (hits every monster in its column and passes castle walls, damaging them; each hit rolls knockback separately)
+
+| Level | Power | Knockback |
+|---|---|---|
+| 1 | 1 | none |
+| 2 | 1 | 25% |
+| 3 | 1.5 | 25% |
+| 4 | 1.5 | 50% |
+| 5 | 2 | 50% |
+
+**Purple** (a kill may spawn a pumpkin straight into an empty patch cell)
+
+| Level | Power | Knockback | Spawn chance on kill | Spawn is rainbow |
+|---|---|---|---|---|
+| 1 | 1 | none | 25% | never |
+| 2 | 1 | 25% | 50% | never |
+| 3 | 1.5 | 25% | 100% | never |
+| 4 | 1.5 | 50% | 100% | 25% |
+| 5 | 2 | 50% | 100% | 50% |
+
+**White** (a throw that hits nothing flies back into the patch instead of being wasted)
+
+| Level | Power | Knockback | Return |
+|---|---|---|---|
+| 1 | 1 | none | returns to the top-most empty cell of its column |
+| 2 | 1 | 25% | same |
+| 3 | 1.5 | 25% | 💡 returns beside a same-colour pumpkin when one has a free neighbour |
+| 4 | 1.5 | 50% | 💡 same |
+| 5 | 2 | 50% | 💡 the returned pumpkin comes back lit if it lands in a bunch, and the throw is refunded as +1 coin |
+
+**Black** (explodes on its first hit; splashes monsters in the two neighbouring lanes at the same height; ×1.5 against castle walls)
+
+| Level | Power | Knockback | Splash damage |
+|---|---|---|---|
+| 1 | 1 | none | 50% of power |
+| 2 | 1 | 25% | 50% |
+| 3 | 1.5 | 25% | 💡 75% |
+| 4 | 1.5 | 50% | 💡 75% |
+| 5 | 2 | 50% | 💡 100%, and the splash also knocks back |
+
+**Pink** (lightning jumps from the hit monster to the nearest monster in a neighbouring lane)
+
+| Level | Power | Knockback | Chain |
+|---|---|---|---|
+| 1 | 1 | none | 1 jump at 50% power |
+| 2 | 1 | 25% | 1 jump at 50% |
+| 3 | 1.5 | 25% | 💡 2 jumps at 50% |
+| 4 | 1.5 | 50% | 💡 2 jumps at 75% |
+| 5 | 2 | 50% | 💡 3 jumps at 75% |
+
+**Gold** (a kill made with Gold skips the reward roll and always pays coins)
+
+| Level | Power | Knockback | Coins on a Gold kill |
+|---|---|---|---|
+| 1 | 1 | none | ×2 |
+| 2 | 1 | 25% | ×2 |
+| 3 | 1.5 | 25% | 💡 ×3 |
+| 4 | 1.5 | 50% | 💡 ×3 |
+| 5 | 2 | 50% | 💡 ×4, and the kill also drops a pumpkin |
+
+**Rainbow**: no level. Acts as the colour and level of the bunch it is thrown in. Sources: 3% of sprouts and drops, Purple level 4–5 spawns, one in every boss drop.
 
 ---
 
@@ -218,6 +315,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-25 | Owner, after playing the whole game: pumpkin level 3 is the easy ceiling, levels 4–5 will be ad-gated, so levels 1–10 of each world must be comfortable at level ≤3. §5 rewritten as level-by-level tables with proposals for White, Black, Pink and Gold. |
 | 2026-09-25 | Owner, after playing: wind gusts slide pumpkins all the way until blocked (full push), replacing the one-cell nudge. |
 | 2026-09-25 | Owner: the Ghoul and the Imp are reused in every world as the fodder monsters, each with a world skin and one modifier. World 2 design approved with Bog Ghoul at 2-1 and Swift Bat at 2-6; Poltergeist drifts between lanes rather than teleporting. |
 | 2026-09-25 | Owner: on boss levels monsters keep spawning until the boss is killed; the night is won once the boss and the remaining monsters are dead. |

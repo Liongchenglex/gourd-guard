@@ -11,14 +11,16 @@ The owner designs the rules; your job is to implement them faithfully, keep the 
 3. `src/`: the game. `engine/` (board, combat, monsters, walls, spawner, input, audio, render/), `data/` (pumpkins, monsters, patterns, shop, `worlds/world1..6.js` level tables), `ui/` (screens, hud), `save.js`, `main.js` (boot only). Plain JavaScript ES modules built with Vite; no runtime dependencies.
 
 ## Current state
-- Game is feature-complete for 15 nights: sliding + push controls, bunches with rainbow wildcard, 6 pumpkin types with 5 levels each, gradual unlocks, loadout of 5 from night 8, graves, per-column walls, sprouts/drops, shop, endless mode, synthesized sound.
-- Restructured (2026-09-25) from one HTML file into `src/` modules with behaviour verified identical by the bot. Levels are data: `src/data/worlds/world1.js` holds the 15 prototype nights; `world2..6.js` are empty and waiting for Release 1 content (`docs/WORLDS.md`).
+- Restructured (2026-09-25) into `src/` modules, behaviour verified by the bot. Levels are data.
+- Release 1 ground rules in: sprouts in twos, kill-reward roll (weapon 10% / pumpkin 30% / coins 60%), bosses never reach the wall, boss levels spawn until the boss dies.
+- World 1 (Pumpkin Patch) exists as 20 data levels in `src/data/worlds/world1.js` with Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8, Mummy 1-9, the Gravekeeper at 1-10 and 1-20. Worlds 2–6 are empty stubs and show as "coming soon".
 - All art is drawn in code on a canvas; all sound is Web Audio. No external assets.
 - Save data lives in localStorage key `gourdguard.v1` (keep migrations backward-compatible; the game already refunds removed upgrades).
 - Shared mutable state (`G`, `grid`, `graves`, `walls`, `state`, `gest`) lives in `src/engine/state.js`; other modules read it through imports and write it only through its `setX()` functions.
+- Balance rule from the owner: levels are tuned to be winnable at the **expected upgrade profile** for that level (`profile()` in `tools/balance_bot.py`) and hard below it, so upgrading pumpkins matters. Check both with `--offset 0` and `--offset -1`.
 
 ## Next milestone: Release 1 content
-Build `docs/WORLDS.md` one rule or world at a time, each with its own bot runs. Order: new ground rules (§2) → world 1 as 20 data levels → worlds 2–6 with their gimmicks, pumpkins, monsters and bosses.
+Build `docs/WORLDS.md` one world at a time, each with its own bot runs. Next: tune world 1 against the target curve, then world 2 (fog, White pumpkin, Wisp/Wraith/Wisp Rider/Plague Doctor, Poltergeist).
 - Levels must be data: every level's monsters, pacing, pattern, graves and unlocks come from `src/data/worlds/*.js` (schema in `src/data/levels.js`, target shape in `docs/WORLDS.md` §9).
 - Keep the engine free of level-specific numbers.
 

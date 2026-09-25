@@ -399,7 +399,7 @@ Same bot caveats as above (no colour picking, no plan for wind). Follow-up (2026
 ## 12. Art, audio, tech
 
 - All art is drawn in code on a canvas (vector shapes); pumpkins are pre-rendered to sprites. No external images.
-- All sound is synthesized with Web Audio. No audio files. (Music not yet added.)
+- All sound is synthesised with Web Audio, no audio files: a pumpkin layer and a monster layer on every hit, a death sound per monster, boss sounds for arriving, casting, being hit and dying, a sound per tool, soft pops for sprouts, and different sounds for bunches of 3 and of 5+. The full table is `docs/AUDIO.md`. Music not yet added.
 - Fonts: Creepster (titles) and Fredoka (UI) from Google Fonts, both SIL Open Font License.
 - Vite project of plain JavaScript ES modules (`src/engine`, `src/data`, `src/ui`), no runtime dependencies. Levels are data in `src/data/worlds/`. Mobile-first touch controls; works with mouse too.
 

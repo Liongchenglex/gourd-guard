@@ -1,3 +1,4 @@
+import { SFX, ensureAudio } from './engine/audio.js';
 import './style.css';
 import { bestLitGroup, bestMove, collectDrop, emptyCells, groupCells, resolveMatches, slideOne } from './engine/board.js';
 import { launchGroup } from './engine/combat.js';
@@ -53,5 +54,5 @@ requestAnimationFrame(frame);
 
 if (new URLSearchParams(location.search).has('test')){
   window.__gg = { get G(){ return G; }, get grid(){ return grid; }, get graves(){ return graves; }, get walls(){ return walls; }, get state(){ return state; },
-    startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches };
+    startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio };
 }

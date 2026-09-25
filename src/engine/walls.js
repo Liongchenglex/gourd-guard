@@ -11,6 +11,7 @@ export function initWalls(){ const m = wallMax(); setWalls(Array.from({ length:C
 
 export function damageWall(c, amt){
   const w = walls[c]; if (!w || w.hp <= 0 || G.over) return;
+  if (amt >= 1) SFX.wallHit();   // projectiles and blasts; chewing has its own chomp
   w.hp = Math.max(0, w.hp - amt); w.flash = Math.min(1, w.flash + amt * 0.6);
   if (w.hp <= 0){
     G.shake = 1.2;

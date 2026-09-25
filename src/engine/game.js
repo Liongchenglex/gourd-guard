@@ -84,7 +84,7 @@ export function startGame(mode, n, loadout){
     if (def.boss) parts.push(def.boss === 'twintides' ? `${BOSS_NAMES[def.boss]} wait in this night. Monsters keep coming until both fall.` : `${BOSS_NAMES[def.boss]} waits in this night. Monsters keep coming until it falls.`);
     if (def.graves && def.graves > (n > 1 ? levelFor(n - 1).graves : 0)) parts.push(n === 3 ? 'Graves now appear in your patch. They block slides.' : 'One more grave in the patch.');
     if (n === 1) parts.push('Swipe a pumpkin to slide it. Bunch 3 of a color.');
-    banner(`Night ${def.label}`, parts.length ? parts.join(' ') : WORLDS[G.world].name, parts.length > 1 ? 4.2 : 3);
+    banner(`Night ${def.label}`, parts.length ? parts.join(' ') : WORLDS[G.world].name, parts.length > 1 ? 4.2 : 3); SFX.levelStart();
   } else banner('Endless night', 'How long can the walls hold?', 2.4);
 }
 
@@ -98,7 +98,7 @@ export function endGame(win){
 export function useFirework(){
   if (state !== 'play' || G.over || save.fw <= 0) return;
   save.fw--; persist();
-  SFX.boom(); G.shake = 1; G.flash = 1;
+  SFX.tool('fw'); G.shake = 1; G.flash = 1;
   for (let i = 0; i < 5; i++){ const x = rnd(60, W - 60), y = rnd(FIELD_TOP, FIELD_TOP + 160); const col = ['#ffd35a', '#ff6a3a', '#d09bff', '#aee8ff', '#a6f06a'][i]; for (let k = 0; k < 24; k++) spark(x, y, col, 260); }
   for (const m of G.monsters.slice()) if (!m.dead && !(m.rise > 0)){ m.lastHit = -1; damage(m, 3, '#ffd35a'); }
   updateHud(true);
@@ -110,6 +110,7 @@ export function useBuster(){
   if (!graves.some(row => row.some(Boolean))){ addFloat('No graves to dig', W / 2, GY - 30, '#ffd35a', 18, 1); SFX.bad(); return; }
   G.aim = G.aim === 'buster' ? null : 'buster';
   if (G.aim) addFloat('Tap a grave', W / 2, GY - 30, '#ffd35a', 18, 1.2);
+  if (G.aim) SFX.tool('aim');
   updateHud(true);
 }
 export function bustGrave(r, c){
@@ -118,7 +119,7 @@ export function bustGrave(r, c){
   const x = LANE(c), y = GY + r * CS + CS / 2;
   for (let i = 0; i < 18; i++) chunk(x, y, i % 2 ? '#8a8d96' : '#3b2a1c', 220);
   ring(x, y, 40, 'rgba(255,220,150,.9)');
-  SFX.smash(); G.shake = 0.4; G.aim = null;
+  SFX.tool('buster'); G.shake = 0.4; G.aim = null;
   updateHud(true);
   return true;
 }
@@ -128,13 +129,14 @@ export function useLantern(){
   save.lantern--; persist();
   G.fogClear = 10; G.flash = 0.4;
   for (let i = 0; i < 40; i++) spark(rnd(40, W - 40), rnd(FIELD_TOP, FENCE_Y), '#ffe27a', 120);
-  SFX.repair(); updateHud(true);
+  SFX.tool('lantern'); updateHud(true);
 }
 /** Landmine: first press arms it (tap a column next), second press or a tap elsewhere cancels. */
 export function useMine(){
   if (state !== 'play' || G.over || save.mine <= 0) return;
   G.aim = G.aim === 'mine' ? null : 'mine';
   if (G.aim) addFloat('Tap a column', W / 2, GY - 30, '#ffd35a', 18, 1.2);
+  if (G.aim) SFX.tool('aim');
   updateHud(true);
 }
 export function placeMine(lane){
@@ -142,7 +144,7 @@ export function placeMine(lane){
   save.mine--; persist();
   G.mines.push({ lane, t:0, dead:false });
   for (let i = 0; i < 10; i++) spark(LANE(lane), FENCE_Y - 30, '#ffd35a', 100);
-  SFX.collect(); G.aim = null; updateHud(true);
+  SFX.tool('mine'); G.aim = null; updateHud(true);
   return true;
 }
 /** Castle walls at level start: n distinct random lanes, mid-field. */
@@ -181,7 +183,7 @@ export function gust(dir, only){
     cell.ox = (c - nc) * CS; cell.oy = (r - nr) * CS; moved++;
   }
   if (gest) setGest(null);
-  SFX.slide(); G.shake = Math.max(G.shake, 0.2);
+  SFX.wind('gust'); G.shake = Math.max(G.shake, 0.2);
   resolveMatches();
   return moved;
 }
@@ -190,6 +192,7 @@ export function useScarecrow(){
   if (state !== 'play' || G.over || save.scarecrow <= 0) return;
   G.aim = G.aim === 'scarecrow' ? null : 'scarecrow';
   if (G.aim) addFloat('Tap a column', W / 2, GY - 30, '#ffd35a', 18, 1.2);
+  if (G.aim) SFX.tool('aim');
   updateHud(true);
 }
 export function placeScarecrow(lane){
@@ -198,7 +201,7 @@ export function placeScarecrow(lane){
   const p = 0.84;
   G.scarecrows.push({ lane, p, x:LANE(lane), y:FIELD_TOP + p * (FIELD_BOT - FIELD_TOP), hp:12, maxHp:12, dead:false });
   for (let i = 0; i < 12; i++) spark(LANE(lane), FIELD_TOP + p * (FIELD_BOT - FIELD_TOP), '#c8b060', 120);
-  SFX.collect(); G.aim = null; updateHud(true);
+  SFX.tool('scarecrow'); G.aim = null; updateHud(true);
   return true;
 }
 /** Seconds between sprouts: the player's setting, one less with the 2-20 perk. */
@@ -212,13 +215,14 @@ export function useBomb(){
   if (state !== 'play' || G.over || save.bomb <= 0) return;
   G.aim = G.aim === 'bomb' ? null : 'bomb';
   if (G.aim) addFloat('Tap the field', W / 2, GY - 30, '#ffd35a', 18, 1.2);
+  if (G.aim) SFX.tool('aim');
   updateHud(true);
 }
 export function dropBomb(x, y){
   if (save.bomb <= 0) return false;
   save.bomb--; persist();
   const lane0 = clamp(Math.floor((x - GX) / CS), 0, COLS - 1), p0 = (y - FIELD_TOP) / (FIELD_BOT - FIELD_TOP), reach = 1.5 * TILE_P();
-  G.flash = 0.6; G.shake = 1; SFX.boom();
+  G.flash = 0.6; G.shake = 1; SFX.tool('bomb');
   for (let k = 0; k < 40; k++) spark(x, y, k % 3 ? '#ffd35a' : '#ff6a3a', 320); ring(x, y, CS * 1.5, 'rgba(255,200,90,.9)');
   for (const m of G.monsters.slice()) if (!m.dead && !m.hidden && m.rise <= 0 && Math.abs(m.lane - lane0) <= 1 && Math.abs(m.p - p0) <= reach){ m.lastHit = -1; damage(m, 4, '#ffd35a'); }
   for (const w of G.castles) if (!w.dead && Math.abs(w.lane - lane0) <= 1 && Math.abs(w.p - p0) <= reach) damageCastle(w, 4);
@@ -230,7 +234,7 @@ export function useRepair(){
   if (walls.every(w => w.hp >= w.max)){ addFloat('Walls are already full', W / 2, FENCE_Y - 40, '#ffd35a', 18, 1); SFX.bad(); return; }
   save.repair--; persist();
   for (let c = 0; c < COLS; c++){ walls[c].hp = walls[c].max; for (let i = 0; i < 5; i++) spark(LANE(c), FENCE_Y - 10, '#ffe27a', 140); }
-  SFX.repair();
+  SFX.tool('repair');
   updateHud(true);
 }
 
@@ -275,8 +279,8 @@ export function update(dt){
       pr.dead = true;
       if (!pr.hit.size){
         const spot = pr.type === 6 ? (pr.lv >= 3 ? landingNear(pr.x, pr.vis) : landingCell(pr.x)) : null;   // White: boomerang back into the patch (level 3+: beside its colour)
-        if (spot){ flyInto(spot[0], spot[1], pr.vis, pr.x, FIELD_TOP); addFloat('Back!', pr.x, FIELD_TOP + 30, '#ffffff', 16, 0.8); SFX.collect(); resolveMatches(); }
-        else g.missed++;
+        if (spot){ flyInto(spot[0], spot[1], pr.vis, pr.x, FIELD_TOP); addFloat('Back!', pr.x, FIELD_TOP + 30, '#ffffff', 16, 0.8); SFX.extra('return'); resolveMatches(); }
+        else { g.missed++; SFX.extra('miss'); }
       }
       for (let i = 0; i < 8; i++) spark(pr.x, pr.y, PTYPES[pr.vis].spark, 110);
     }
@@ -285,12 +289,12 @@ export function update(dt){
   if (g.fogClear > 0) g.fogClear -= dt;
   for (const mine of g.mines){   // landmines wait at the wall line and blast the first monster to reach them
     const v = g.monsters.find(m => !m.dead && m.rise <= 0 && m.lane === mine.lane && m.p >= 0.93 && m.type !== 'boss');
-    if (v){ mine.dead = true; for (let i = 0; i < 30; i++) spark(v.x, FENCE_Y - 30, i % 2 ? '#ffd35a' : '#ff6a3a', 300); ring(v.x, FENCE_Y - 30, 50, 'rgba(255,200,90,.9)'); g.shake = 0.8; SFX.boom(); v.lastHit = -1; damage(v, 6, '#ffd35a'); }
+    if (v){ mine.dead = true; for (let i = 0; i < 30; i++) spark(v.x, FENCE_Y - 30, i % 2 ? '#ffd35a' : '#ff6a3a', 300); ring(v.x, FENCE_Y - 30, 50, 'rgba(255,200,90,.9)'); g.shake = 0.8; SFX.tool('mineBoom'); v.lastHit = -1; damage(v, 6, '#ffd35a'); }
   }
   g.mines = g.mines.filter(m => !m.dead);
   for (const a of g.arrows){   // skeleton archers' arrows fly down their lane into the wall
     a.p += a.sp * dt;
-    if (a.p >= 1){ a.dead = true; damageWall(a.lane, a.dmg); for (let i = 0; i < 8; i++) spark(LANE(a.lane), FENCE_Y - 10, a.water ? '#9fe0f0' : '#d8d0c0', 120); SFX.chomp(); }
+    if (a.p >= 1){ a.dead = true; damageWall(a.lane, a.dmg); for (let i = 0; i < 8; i++) spark(LANE(a.lane), FENCE_Y - 10, a.water ? '#9fe0f0' : '#d8d0c0', 120); SFX.monsterAct('arrow', 'land'); }
   }
   g.arrows = g.arrows.filter(a => !a.dead);
   for (const w of g.castles) if (w.flash > 0) w.flash -= dt;
@@ -304,7 +308,7 @@ export function update(dt){
         const vertical = g.gustDir === 'up' || g.gustDir === 'down', count = 2 + Math.floor(Math.random() * 2), max = vertical ? COLS : ROWS;
         const start = Math.floor(Math.random() * (max - count + 1)); g.gustSet = [...Array(count).keys()].map(i => start + i);
       }
-      addFloat(`Wind ${ {left:'←', right:'→', up:'↑', down:'↓'}[g.gustDir] }`, W / 2, GY - 30, '#ffd9a0', 22, 1.8);
+      addFloat(`Wind ${ {left:'←', right:'→', up:'↑', down:'↓'}[g.gustDir] }`, W / 2, GY - 30, '#ffd9a0', 22, 1.8); SFX.wind('warn');
     }
     if (g.gustDir != null && Math.random() < dt * 40){
       const [dr, dc] = DIRV[g.gustDir];

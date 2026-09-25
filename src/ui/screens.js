@@ -32,7 +32,7 @@ export function showResult(win){
       if (nextP && g.n < LEVELS) msg += ` Next night unlocks the ${nextP.name} pumpkin.`;
       if (g.def.levelNo === 10) msg += ' The rest of this world is open, and the next world will follow.';
       const perk = PERKS.find(p => perkNight(p) === g.n);
-      if (perk) msg += ` Perk unlocked: ${perk.name}. ${perk.desc} (Switch it off in the pause menu if you prefer.)`;
+      if (perk){ msg += ` Perk unlocked: ${perk.name}. ${perk.desc} (Switch it off in the pause menu if you prefer.)`; SFX.perk(); }
       stars = [0,1,2].map(i => `<span class="${i < st ? '' : 'off'}">★</span>`).join('');
       stats.push(['Monsters stopped', g.kills], ['Walls left', pct(wf)], ['Coins found', g.coins], ['Night bonus', bonus]);
       if (g.n < LEVELS) addBtn(box, 'Next level', () => openPreview(g.n + 1));

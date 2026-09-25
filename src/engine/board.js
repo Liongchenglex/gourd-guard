@@ -205,7 +205,6 @@ export function spawnPumpkin(){
   const cell = newCell(randSprout()); cell.grow = 0;
   grid[r][c] = cell;
   for (let i = 0; i < 6; i++) spark(LANE(c), GY + r * CS + CS / 2, '#a6f06a', 90);
-  SFX.sprout();
   resolveMatches();
   return true;
 }
@@ -215,6 +214,7 @@ export function spawnSprouts(){
   let placed = 0;
   const n = SPROUT_COUNT + (perkOn('triple') && Math.random() < 0.5 ? 1 : 0);   // 3-20 perk: half the sprouts bring three
   for (let i = 0; i < n; i++) if (spawnPumpkin()) placed++;
+  if (placed) SFX.sprout(placed);   // one soft pop per pumpkin that came in
   return placed > 0;
 }
 export function landingCell(x){

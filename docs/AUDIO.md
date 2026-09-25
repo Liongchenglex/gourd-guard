@@ -1,6 +1,6 @@
 # Gourd Guard: Audio Design
 
-**Status: DRAFT for owner review (2026-09-26).** Sound effects first, music after. The owner has not yet chosen the source (synthesised in code, recorded files, or mixed); the tables describe what each sound should be like, whichever way it is made.
+**Status: sound effects implemented (2026-09-26) as synthesised Web Audio in `src/engine/audio.js`, following the tables below.** Every entry is a small recipe built from tones and filtered noise, so there are no audio files, licences or downloads. If recorded sounds are wanted later, the same hooks (`SFX.pumpkinHit`, `SFX.monsterHit`, `SFX.monsterDie`, `SFX.monsterAct`, `SFX.bossSfx`, `SFX.tool`, `SFX.sprout`, `SFX.match`…) can play files instead. Music is not built yet (§5). Fog and sea ambience loops are not built yet either.
 
 Conventions: every hit has a **pumpkin layer** (what was thrown) and a **monster layer** (what was hit), played together. Kills add a short death sound. Variants (Bog Ghoul, Swift Bat…) reuse their base monster's sound, pitched a little by modifier: Swift higher, Armoured and Hungry lower, Stubborn unchanged.
 

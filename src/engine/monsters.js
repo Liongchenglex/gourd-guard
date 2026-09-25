@@ -90,7 +90,7 @@ export function spawnMonster(key, lane, minion, p){
     if (puddle){ m.hidden = true; m.upT = T.down; }        // starts submerged, surfaces after `down`
     else { m.sp = 0.04 * spMulNow(); m.walker = true; }    // no puddles on this level: it just walks in
   }
-  if (puddle) for (let i = 0; i < 12; i++) spark(m.x, mY(m), '#7fd0e8', 120);
+  if (puddle){ for (let i = 0; i < 12; i++) spark(m.x, mY(m), '#7fd0e8', 120); if (type !== 'diver') SFX.monsterAct(type, 'rise'); }
   else if (G.def && G.def.sea && m.p <= 0 && type !== 'boss') for (let i = 0; i < 10; i++) spark(m.x, FIELD_TOP + 8, '#9fe0f0', 100);
   if (type === 'hauler'){   // its gargoyles walk ahead of it in the same lane
     m.gargs = [];
@@ -122,7 +122,7 @@ export function updateMonster(m, dt){
   if (m.flash > 0) m.flash -= dt;
   if (m.rise > 0){   // collapsed mummy: lies still, untargetable, then stands back up at full health
     m.rise -= dt;
-    if (m.rise <= 0){ m.rise = 0; m.hp = (m.type === 'mummy' || m.type === 'firemummy') ? 1 : m.maxHp; m.flash = 0.2; addFloat('Rises again', m.x, mY(m) - m.r - 30, '#d8cfb0', 16, 0.9); }   // mummies come back with 1 HP (owner)
+    if (m.rise <= 0){ m.rise = 0; m.hp = (m.type === 'mummy' || m.type === 'firemummy') ? 1 : m.maxHp; m.flash = 0.2; addFloat('Rises again', m.x, mY(m) - m.r - 30, '#d8cfb0', 16, 0.9); if (m.type === 'boss') SFX.bossSfx(m.kind, 'revive'); else SFX.monsterAct('mummy', 'rise'); }   // mummies come back with 1 HP (owner)
     return;
   }
   let sp = m.sp;
@@ -132,7 +132,7 @@ export function updateMonster(m, dt){
   if (m.burnLeft > 0){
     m.burnTick -= dt;
     if (Math.random() < dt * 16) G.parts.push({ x:m.x + rnd(-m.r * 0.6, m.r * 0.6), y:mY(m) + rnd(-4, 10), vx:rnd(-10, 10), vy:-rnd(50, 90), t:0, life:0.5, size:rnd(3, 6), color:'#ff8a3a', kind:'flame', grav:0 });
-    if (m.burnTick <= 0){ m.burnLeft--; m.burnTick = BURN_EVERY; m.lastHit = 3; damage(m, m.burnAmt, '#ff9a4a', true); if (m.dead) return; }
+    if (m.burnTick <= 0){ m.burnLeft--; m.burnTick = BURN_EVERY; m.lastHit = 3; SFX.extra('burn'); damage(m, m.burnAmt, '#ff9a4a', true); if (m.dead) return; }
   }
   if (m.kb > 0){
     const st = Math.min(m.kb, dt * 2.2);
@@ -145,7 +145,7 @@ export function updateMonster(m, dt){
     const mul = m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1;
     if (walls[m.lane].hp <= 0){   // the wall is down: it walks through the gap; the night is lost when it is in
       m.breach = (m.breach || 0) + dt * mul;
-      m.p = Math.min(1.05, 1 + m.breach * 0.04);
+      m.p = Math.min(1.05, 1 + m.breach * 0.04); SFX.alarm();
       if (m.breach >= 1.2 && !G.over){ G.brokeAt = m.lane; endGame(false); }
       return;
     }
@@ -172,7 +172,7 @@ export function updateMonster(m, dt){
       case 'wraith': {   // fades out for T.hide seconds every T.show seconds; keeps walking, cannot be seen or hit
         m.vanish -= dt;
         if (m.vanish <= 0 && m.p > 0.05 && m.p < 0.9){
-          m.hidden = !m.hidden; m.vanish = m.hidden ? TYPES.wraith.hide : TYPES.wraith.show;
+          m.hidden = !m.hidden; m.vanish = m.hidden ? TYPES.wraith.hide : TYPES.wraith.show; SFX.monsterAct('wraith', m.hidden ? 'vanish' : 'return');
           for (let i = 0; i < 10; i++) spark(m.x, mY(m), '#cfe8f2', 90);
         }
         if (m.hidden && m.p >= 0.9){ m.hidden = false; m.vanish = TYPES.wraith.show; }
@@ -188,14 +188,14 @@ export function updateMonster(m, dt){
         break;
       }
       case 'hauler': {
-        if (!m.freed && m.gargs && m.gargs.every(g => g.dead)){ m.freed = true; m.sp = TYPES.hauler.freeSp * spMulNow(); addFloat('Unburdened!', m.x, mY(m) - m.r - 26, '#ffd35a', 16, 1); }
+        if (!m.freed && m.gargs && m.gargs.every(g => g.dead)){ m.freed = true; m.sp = TYPES.hauler.freeSp * spMulNow(); addFloat('Unburdened!', m.x, mY(m) - m.r - 26, '#ffd35a', 16, 1); SFX.monsterAct('hauler', 'freed'); }
         m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
         break;
       }
       case 'archer': {   // holds near the top and shoots arrows down its lane
         if (m.p >= TYPES.archer.hold){
           sp = 0; m.shootT -= dt;
-          if (m.shootT <= 0 && walls[m.lane].hp > 0){ m.shootT = TYPES.archer.shootEvery; G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:0.4, dmg:TYPES.archer.arrow, dead:false }); SFX.knock(); }   // holds fire at a wall that is already down
+          if (m.shootT <= 0 && walls[m.lane].hp > 0){ m.shootT = TYPES.archer.shootEvery; G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:0.4, dmg:TYPES.archer.arrow, dead:false }); SFX.monsterAct('archer', 'shoot'); }   // holds fire at a wall that is already down
         }
         break;
       }
@@ -219,15 +219,15 @@ export function updateMonster(m, dt){
         m.upT -= dt;
         if (m.upT <= 0){
           m.hidden = !m.hidden;
-          m.upT = m.hidden ? TYPES.diver.down : TYPES.diver.up;
+          m.upT = m.hidden ? TYPES.diver.down : TYPES.diver.up; SFX.monsterAct('diver', m.hidden ? 'submerge' : 'surface');
           for (let i = 0; i < 10; i++) spark(m.x, mY(m), '#7fd0e8', 110);
-          if (!m.hidden && walls[m.lane].hp > 0){ G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:TYPES.diver.boltSp, dmg:TYPES.diver.bolt, dead:false, water:true }); SFX.knock(); }
+          if (!m.hidden && walls[m.lane].hp > 0){ G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:TYPES.diver.boltSp, dmg:TYPES.diver.bolt, dead:false, water:true }); SFX.monsterAct('diver', 'bolt'); }
         }
         break;
       }
       case 'firemummy': {   // sets ordinary mummies alight as it passes
         for (const o of G.monsters) if (o.type === 'mummy' && !o.dead && o.rise <= 0 && Math.abs(o.lane - m.lane) <= 1 && Math.abs(o.p - m.p) < TILE_P()){
-          o.type = 'firemummy'; o.flash = 0.3; addFloat('Alight!', o.x, mY(o) - o.r - 24, '#ff8a3a', 16, 0.9); for (let i = 0; i < 10; i++) spark(o.x, mY(o), '#ff8a3a', 120);
+          o.type = 'firemummy'; o.flash = 0.3; addFloat('Alight!', o.x, mY(o) - o.r - 24, '#ff8a3a', 16, 0.9); SFX.monsterAct('firemummy', 'ignite'); for (let i = 0; i < 10; i++) spark(o.x, mY(o), '#ff8a3a', 120);
         }
         if (Math.random() < dt * 14) G.parts.push({ x:m.x + rnd(-m.r * 0.6, m.r * 0.6), y:mY(m) + rnd(-10, 6), vx:rnd(-10, 10), vy:-rnd(50, 90), t:0, life:0.5, size:rnd(3, 6), color:'#ff8a3a', kind:'flame', grav:0 });
         m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
@@ -238,14 +238,14 @@ export function updateMonster(m, dt){
         if (m.hexT <= 0 && m.p > 0.05){
           m.hexT = TYPES.witch.hexEvery;
           const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.rise <= 0 && o.p > 0);   // anything but bosses and true chameleons; may re-hex an already hexed monster; witches hex each other (owner)
-          if (pick.length) hexMonster(pick[Math.floor(Math.random() * pick.length)], Math.random() >= TYPES.witch.chameleonChance);
+          if (pick.length){ hexMonster(pick[Math.floor(Math.random() * pick.length)], Math.random() >= TYPES.witch.chameleonChance); SFX.monsterAct('witch', 'hex'); }
         }
         m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
         break;
       }
       case 'mirror': {   // mirror up / mirror down cycle
         m.mirrorT -= dt;
-        if (m.mirrorT <= 0){ m.reflecting = !m.reflecting; m.mirrorT = m.reflecting ? TYPES.mirror.reflect : TYPES.mirror.open; }
+        if (m.mirrorT <= 0){ m.reflecting = !m.reflecting; m.mirrorT = m.reflecting ? TYPES.mirror.reflect : TYPES.mirror.open; if (m.reflecting) SFX.monsterAct('mirror', 'up'); }
         m.x = m.tx + Math.sin(m.ph * 2) * 3;
         break;
       }
@@ -253,7 +253,7 @@ export function updateMonster(m, dt){
         m.calmT += dt;
         if (m.calmT >= TYPES.vampire.calm && m.hp < m.maxHp){
           m.regenT -= dt;
-          if (m.regenT <= 0){ m.regenT = TYPES.vampire.regenEvery; m.hp = Math.min(m.maxHp, m.hp + TYPES.vampire.regen); addFloat('+' + TYPES.vampire.regen, m.x, mY(m) - m.r - 20, '#ff6a6a', 14, 0.7); }
+          if (m.regenT <= 0){ m.regenT = TYPES.vampire.regenEvery; m.hp = Math.min(m.maxHp, m.hp + TYPES.vampire.regen); SFX.monsterAct('vampire', 'heal'); addFloat('+' + TYPES.vampire.regen, m.x, mY(m) - m.r - 20, '#ff6a6a', 14, 0.7); }
         }
         m.x = m.tx + Math.sin(m.ph * 1.2) * 3;
         break;
@@ -266,7 +266,7 @@ export function updateMonster(m, dt){
           for (const o of G.monsters) if (o !== m && !o.dead && Math.abs(o.lane - m.lane) <= 1 && Math.abs(o.p - m.p) <= reach && o.rise <= 0 && o.hp < o.maxHp){
             o.hp = Math.min(o.maxHp, o.hp + TYPES.doctor.heal); addFloat('+' + TYPES.doctor.heal, o.x, mY(o) - o.r - 20, '#9fe07a', 14, 0.7);
           }
-          ring(m.x, mY(m), 40, 'rgba(160,230,120,.8)');
+          ring(m.x, mY(m), 40, 'rgba(160,230,120,.8)'); SFX.monsterAct('doctor', 'heal');
         }
         break;
       }
@@ -288,7 +288,7 @@ export function updateMonster(m, dt){
                 G.arrows.push({ lane, p:p0, sp:m.form === 2 ? T.form2.boltSp : T.boltSp, dmg:T.bolt, dead:false, water:true });
                 for (let i = 0; i < 12; i++) spark(LANE(lane), FIELD_TOP + p0 * (FIELD_BOT - FIELD_TOP), '#9fe0f0', 160);
               }
-              SFX.knock();
+              SFX.bossSfx('twintides', 'bolt');
             }
           }
           m.x = m.tx + Math.sin(m.ph * 1.4) * 4;
@@ -302,11 +302,11 @@ export function updateMonster(m, dt){
           if (m.summon <= 0){
             m.summon = m.form === 2 ? T.form2.summonEvery : T.summonEvery;
             const g = spawnMonster('ghoul', pickLane(), true, Math.max(0, m.p - 0.02));
-            puff(g.x, mY(g)); SFX.boss();
+            puff(g.x, mY(g)); SFX.bossSfx('gravekeeper', 'summon');
           }
           m.teleport -= dt;
           if (m.teleport <= 0){
-            m.teleport = T.teleportEvery;
+            m.teleport = T.teleportEvery; SFX.bossSfx('gravekeeper', 'teleport');
             const opts = [...Array(COLS).keys()].filter(l => l !== m.lane);
             puff(m.x, mY(m));
             m.lane = opts[Math.floor(Math.random() * opts.length)]; m.x = m.tx = LANE(m.lane); m.age = 0;
@@ -317,7 +317,7 @@ export function updateMonster(m, dt){
             if (m.shove <= 0){
               m.shove = T.form2.shoveEvery;
               const pick = G.monsters.filter(o => o !== m && !o.dead && o.rise <= 0 && !o.eating && o.p > 0 && o.p < 0.6);
-              if (pick.length){ const o = pick[Math.floor(Math.random() * pick.length)]; ring(o.x, mY(o), 36, 'rgba(200,170,255,.9)'); o.p = Math.min(0.95, o.p + T.form2.shove); ring(o.x, mY(o), 36, 'rgba(200,170,255,.9)'); }
+              if (pick.length){ const o = pick[Math.floor(Math.random() * pick.length)]; ring(o.x, mY(o), 36, 'rgba(200,170,255,.9)'); o.p = Math.min(0.95, o.p + T.form2.shove); ring(o.x, mY(o), 36, 'rgba(200,170,255,.9)'); SFX.bossSfx('gravekeeper', 'shove'); }
             }
           }
         }
@@ -357,7 +357,7 @@ function updatePoltergeist(m, dt){
         ring(LANE(c1), GY + r1 * CS + CS / 2, 30, 'rgba(200,220,255,.9)');
       }
       addFloat('Swapped!', m.x, mY(m) - m.r - 30, '#cfe8f2', 16, 0.9);
-      SFX.knock();
+      SFX.bossSfx('poltergeist', 'swap');
       setTimeout(resolveMatches, 600);
     }
   }
@@ -373,7 +373,7 @@ function updatePoltergeist(m, dt){
             const others = G.loadout.filter(t => t !== cell.c);
             cell.c = others[Math.floor(Math.random() * others.length)]; cell.pop = 1;
           }
-          addFloat('Repainted!', m.x, mY(m) - m.r - 30, '#cfe8f2', 16, 0.9);
+          addFloat('Repainted!', m.x, mY(m) - m.r - 30, '#cfe8f2', 16, 0.9); SFX.bossSfx('poltergeist', 'repaint');
           resolveMatches();
         }
       }
@@ -396,7 +396,7 @@ function updateVampireCount(m, dt){
   }
   m.laneT -= dt;
   if (m.laneT <= 0){   // bursts into bats and reforms in another lane
-    m.laneT = T.laneEvery;
+    m.laneT = T.laneEvery; SFX.bossSfx('vampirecount', 'burst');
     const opts = [...Array(COLS).keys()].filter(l => l !== m.lane);
     for (let i = 0; i < 16; i++) spark(m.x, mY(m), i % 2 ? '#3a1a2a' : '#8a5aa8', 160);
     m.lane = opts[Math.floor(Math.random() * opts.length)]; m.x = m.tx = LANE(m.lane); m.age = 0.2;
@@ -406,7 +406,7 @@ function updateVampireCount(m, dt){
   if (m.batsT <= 0){
     m.batsT = m.form === 2 ? T.form2.batsEvery : T.batsEvery;
     for (let i = 0; i < T.bats; i++) spawnMonster('bat', pickLane(), true, Math.max(0, m.p - 0.02));
-    SFX.boss();
+    SFX.bossSfx('vampirecount', 'bats');
   }
   m.wallT -= dt;
   if (m.wallT <= 0){
@@ -415,14 +415,14 @@ function updateVampireCount(m, dt){
       const used = new Set(G.castles.filter(w => !w.dead).map(w => w.lane));
       const free = [...Array(COLS).keys()].filter(l => !used.has(l));
       if (free.length){ const lane = free[Math.floor(Math.random() * free.length)]; const whp = G.mode === 'story' && G.def.castles ? G.def.castles.hp : T.wallHp;
-      G.castles.push({ lane, p:rnd(0.45, 0.7), hp:whp, maxHp:whp, flash:0, dead:false }); ring(LANE(lane), FIELD_TOP + 0.55 * (FIELD_BOT - FIELD_TOP), 40, 'rgba(200,180,220,.9)'); addFloat('A wall rises', m.x, mY(m) - m.r - 30, '#d8cfe0', 16, 1); }
+      G.castles.push({ lane, p:rnd(0.45, 0.7), hp:whp, maxHp:whp, flash:0, dead:false }); ring(LANE(lane), FIELD_TOP + 0.55 * (FIELD_BOT - FIELD_TOP), 40, 'rgba(200,180,220,.9)'); addFloat('A wall rises', m.x, mY(m) - m.r - 30, '#d8cfe0', 16, 1); SFX.bossSfx('vampirecount', 'wall'); }
     }
   }
   m.healT -= dt;
   if (m.healT <= 0){   // healing trance: the player must land N hits to break it
     m.healT = m.form === 2 ? T.form2.healEvery : T.healEvery;
     m.healing = true; m.healHits = T.healHits[Math.floor(Math.random() * T.healHits.length)];
-    addFloat(`Healing: hit it ×${m.healHits}`, m.x, mY(m) - m.r - 34, '#ff6a6a', 18, 1.4); SFX.boss();
+    addFloat(`Healing: hit it ×${m.healHits}`, m.x, mY(m) - m.r - 34, '#ff6a6a', 18, 1.4); SFX.bossSfx('vampirecount', 'trance');
     return true;
   }
   return false;
@@ -453,7 +453,7 @@ function updateHexwitch(m, dt){
     const pick = shuffle(G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.rise <= 0 && o.p > 0));   // same targets as a witch
     const n = T.hexCount[0] + Math.floor(Math.random() * (T.hexCount[1] - T.hexCount[0] + 1));
     for (const o of pick.slice(0, n)) hexMonster(o, m.form === 2 ? Math.random() >= T.chameleonChance : true);   // form 1: reverse only (owner); form 2: 25% chameleon, 75% reverse
-    if (pick.length) SFX.boss();
+    if (pick.length) SFX.bossSfx('hexwitch', 'hex');
   }
   m.zoneT -= dt;
   if (m.zoneT <= 0){
@@ -463,7 +463,7 @@ function updateHexwitch(m, dt){
       const shape = shapes[Math.floor(Math.random() * shapes.length)];
       G.hexZones.push({ shape, lane:Math.floor(Math.random() * COLS), p:rnd(0.25, 0.8), t:T.zoneLast });
     }
-    addFloat('Hex zone!', m.x, mY(m) - m.r - 30, '#d09bff', 18, 1.2); SFX.boss();
+    addFloat('Hex zone!', m.x, mY(m) - m.r - 30, '#d09bff', 18, 1.2); SFX.bossSfx('hexwitch', 'zone');
   }
 }
 /** Is a monster inside a Hexwitch zone? (box: 3 lanes × 3 tile heights; col: whole column; row: 3 tile heights across the field) */

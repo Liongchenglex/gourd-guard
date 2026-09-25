@@ -27,7 +27,7 @@ export function storySpawn(dt){
   }
   if (d.boss && !G.bossSpawned && G.spawned >= Math.floor(d.total * 0.4)){
     spawnMonster('boss'); G.bossSpawned = true;
-    banner(BOSS_NAMES[d.boss] || 'Boss', (BOSS_INTRO[d.boss] || {})[d.bossForm] || 'Monsters keep coming until it falls.', 3); SFX.boss();
+    banner(BOSS_NAMES[d.boss] || 'Boss', (BOSS_INTRO[d.boss] || {})[d.bossForm] || 'Monsters keep coming until it falls.', 3); SFX.bossSfx(d.boss, 'arrive');
   }
 }
 
@@ -39,7 +39,7 @@ export function endlessSpawn(dt){
     G.spawnTimer = Math.max(0.9, 3.2 - G.diff * 0.15) * rnd(0.6, 1.4);
   }
   G.bossTimer -= dt;
-  if (G.bossTimer <= 0){ spawnMonster('boss'); G.bossTimer = 100; banner(BOSS_NAME, 'It rises from the graves.', 2.4); SFX.boss(); }
+  if (G.bossTimer <= 0){ spawnMonster('boss'); G.bossTimer = 100; banner(BOSS_NAME, 'It rises from the graves.', 2.4); SFX.bossSfx('gravekeeper', 'arrive'); }
   const w = G.t > 240 ? 2 : G.t > 120 ? 1 : 0;
   if (w !== G.world){ G.world = w; buildBg(w); banner(WORLDS[w].name, 'The night gets darker.', 2.2); }
 }

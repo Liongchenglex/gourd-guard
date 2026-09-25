@@ -32,6 +32,7 @@ Level addresses are written `world-level`, e.g. `3-12` = world 3, level 12. Leve
 | Kill rewards | Every kill rolls **one** reward: weapon 10%, pumpkin 30%, coins 60%. | Replaces "coins on every kill plus a fractional pumpkin drop". Coins per kill go up (~×1.7) so the economy stays level; the bot confirms. Weapon drops are new. |
 | Bosses don't reach the wall | Bosses stay back and pressure the player with summons, projectiles or board tricks. | Bramble King's wall-chewing is retired; the world 1 boss replaces it. |
 | Monsters return across worlds | Any earlier monster may reappear in a later world when it fits the theme, always **stronger**: it carries one modifier from §6 and a themed skin. | New. |
+| The Ghoul is in every world | Every world's basic fodder monster is a Ghoul variant with that world's skin and one modifier: Bog Ghoul (W2, Armoured), Crypt Ghoul (W3, Stubborn), Drowned Ghoul (W4, Hungry), Wood Ghoul (W5, Swift), all of them in W6. | New (owner, 2026-09-25). |
 
 ---
 
@@ -40,10 +41,10 @@ Level addresses are written `world-level`, e.g. `3-12` = world 3, level 12. Leve
 | # | Name | Theme | Map gimmick | New pumpkins | New monsters | Returning monsters (stronger) | Boss |
 |---|---|---|---|---|---|---|---|
 | 1 | Pumpkin Patch | Harvest moon over a country graveyard | Graves on the patch | Green, Yellow, Ice, Fire | Ghoul, Bat, Imp, Mossback, Mummy | – | Gravekeeper |
-| 2 | Foggy Hollow | Marsh mist, will-o'-wisps, lanterns | Fog hides field rows; occasional graves | White (boomerang) | Wisp, Wraith, Wisp Rider, Plague Doctor | Ghoul (Bog Ghoul), Bat | Poltergeist |
-| 3 | Crumbling Keep | Vampire's castle under siege | Castle walls block shots; occasional graves | Grey (piercing), Black (blast) | Shield Knight, Gargoyle Hauler, Skeleton Archer, Vampire | Bat (swarm), Mossback (Siege Brute), Imp | Vampire Count |
-| 4 | Drowned Marsh | Sunken shore, drowned sailors, sea row | Puddles spawn monsters; sea-row levels; occasional graves | Pink (chain) | Puddle Crawler, Drunk Sailor, Puddle Diver, Splitter Slime | Ghoul (Drowned), Mossback (Bog Turtle), Mummy (Sodden) | Twin Tides |
-| 5 | Witchwood | Enchanted autumn forest, witches | Wind gusts shift the patch; occasional graves | Purple (spawn), Gold (coins) | Chameleon, Reverse Chameleon, Mirror Sprite | Bat (Owl-bat), Imp (Broom Imp), Wisp | Hexwitch |
+| 2 | Foggy Hollow | Marsh mist, will-o'-wisps, lanterns | Fog hides field rows; occasional graves | White (boomerang) | Wisp, Wraith, Wisp Rider, Plague Doctor | Bog Ghoul (Armoured), Swift Bat | Poltergeist |
+| 3 | Crumbling Keep | Vampire's castle under siege | Castle walls block shots; occasional graves | Grey (piercing), Black (blast) | Shield Knight, Gargoyle Hauler, Skeleton Archer, Vampire | Crypt Ghoul (Stubborn), Bat (swarm), Mossback (Siege Brute), Imp | Vampire Count |
+| 4 | Drowned Marsh | Sunken shore, drowned sailors, sea row | Puddles spawn monsters; sea-row levels; occasional graves | Pink (chain) | Puddle Crawler, Drunk Sailor, Puddle Diver, Splitter Slime | Drowned Ghoul (Hungry), Mossback (Bog Turtle), Mummy (Sodden) | Twin Tides |
+| 5 | Witchwood | Enchanted autumn forest, witches | Wind gusts shift the patch; occasional graves | Purple (spawn), Gold (coins) | Chameleon, Reverse Chameleon, Mirror Sprite | Wood Ghoul (Swift), Bat (Owl-bat), Imp (Broom Imp), Wisp | Hexwitch |
 | 6 | Hallow's End | All Hallows' night, everything at once | Graves only | none (full choice from all 10) | none | Everything from worlds 1–5, all with modifiers | Hollow King (5 stages) |
 
 Names are placeholders the owner is free to change.
@@ -218,6 +219,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-25 | Owner: the Ghoul is reused in every world as the fodder monster, each with a world skin and one modifier. World 2 design approved with Bog Ghoul at 2-1 and Swift Bat at 2-6; Poltergeist drifts between lanes rather than teleporting. |
 | 2026-09-25 | Owner: on boss levels monsters keep spawning until the boss is killed; the night is won once the boss and the remaining monsters are dead. |
 | 2026-09-25 | Owner: difficulty rises within each world (easy start, harder finish); the next world unlocks after the level-10 boss. Added the target win-rate curve and the rule that unlocks sit in levels 1–10. Black moved from 3-13 to 3-9 accordingly. |
 | 2026-09-25 | Draft compiled from `dump.md`. Owner decisions: 20 levels per world (120 total); bosses at levels 10 and 20; sprouts place 2 pumpkins in random cells; kill reward 10/30/60 confirmed; world 5 gimmick = wind gusts in four directions, one-cell shift, frequency as difficulty knob; boss placement as proposed; Vampire Count gains healing mode with an ×4/×5/×6 hit counter; Bomb targets the field 3×3; Mirror Sprite reflects into the player's wall and has an open phase; Lantern and Scarecrow weapons kept; Splitter Slime and Plague Doctor kept; earlier monsters return stronger in later worlds. Locked as R1. |

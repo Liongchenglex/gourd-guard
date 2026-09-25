@@ -284,6 +284,33 @@ Pass criterion was wins within 1 and mean walls within 10 points per night; both
 
 Wins unchanged within noise; wall health up on the hard nights because two pumpkins per sprout means more throws. No errors in 12 runs. A 60-kill probe of the reward roll landed at 60% coins, 28% pumpkins, 12% weapons. These nights were then replaced by the 20-level world 1 table (§9), which has its own sweep below.
 
+### World 1 first-cut sweep (2026-09-25, `--repeats 3 --interval 850`, 60 runs, no errors). Untuned; the owner chose to build all worlds before tuning.
+
+| Level | Target win % | Expected profile: wins / mean walls / mean coins | One tier behind: wins / walls |
+|---|---|---|---|
+| 1-1 | 95% | 3/3, 100%, 17 coins | – |
+| 1-2 | 95% | 3/3, 100%, 18 coins | – |
+| 1-3 | 95% | 3/3, 100%, 21 coins | – |
+| 1-4 | 95% | 3/3, 99%, 26 coins | – |
+| 1-5 | 95% | 3/3, 98%, 30 coins | 3/3, 94% |
+| 1-6 | 85% | 3/3, 96%, 39 coins | – |
+| 1-7 | 85% | 3/3, 97%, 46 coins | – |
+| 1-8 | 85% | 3/3, 94%, 54 coins | – |
+| 1-9 | 85% | 1/3, 82%, 44 coins | – |
+| 1-10 | 75% | 0/3, 51%, 99 coins | 0/3, 43% |
+| 1-11 | 65% | 2/3, 86%, 50 coins | – |
+| 1-12 | 65% | 2/3, 88%, 56 coins | – |
+| 1-13 | 65% | 1/3, 73%, 72 coins | – |
+| 1-14 | 65% | 1/3, 78%, 55 coins | – |
+| 1-15 | 65% | 1/3, 83%, 63 coins | 0/3, 61% |
+| 1-16 | 50% | 0/3, 71%, 87 coins | – |
+| 1-17 | 50% | 1/3, 81%, 80 coins | – |
+| 1-18 | 50% | 0/3, 62%, 81 coins | – |
+| 1-19 | 50% | 1/3, 69%, 85 coins | – |
+| 1-20 | 40% | 0/3, 51%, 205 coins | 0/3, 45% |
+
+Reading: levels 1–8 sit at or above target. The curve breaks at 1-9 (Mummy arrives) and 1-10 (Gravekeeper: 0/3, walls 51%), then levels 11–20 hover at 1/3 against targets of 65% → 40%, with 1-20 at 0/3. The owner also reported 1-10 as too hard by hand. A player one upgrade tier behind loses 10, 15 and 20 every time, so upgrades already matter. First tuning candidates when the owner revisits: the Gravekeeper's summon rate and health at level 10, the Mummy's rise time, and the wave sizes from 1-9 on; the same profile should then be run on worlds 2–5.
+
 ---
 
 ## 12. Art, audio, tech

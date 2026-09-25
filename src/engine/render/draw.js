@@ -228,13 +228,16 @@ export function drawPuddles(t){
   }
 }
 /** Sea row (world 4): water across the top of the field. */
-export function drawSea(t){
-  const y0 = FIELD_TOP - 6, h = Math.max(0.1, shoreP()) * (FIELD_BOT - FIELD_TOP) + 6;
-  const gr = ctx.createLinearGradient(0, y0, 0, y0 + h);
-  gr.addColorStop(0, 'rgba(30,110,130,.9)'); gr.addColorStop(1, 'rgba(20,70,90,0)');
+export function drawSea(t){   // water from the top of the field down to the shoreline, with a foam edge so the spawn line is visible
+  const y0 = FIELD_TOP - 6, h = Math.max(0.1, shoreP()) * (FIELD_BOT - FIELD_TOP) + 6, y1 = y0 + h;
+  const gr = ctx.createLinearGradient(0, y0, 0, y1);
+  gr.addColorStop(0, 'rgba(30,110,130,.92)'); gr.addColorStop(0.7, 'rgba(24,90,110,.8)'); gr.addColorStop(1, 'rgba(40,130,150,.75)');
   ctx.fillStyle = gr; ctx.fillRect(0, y0, W, h);
-  ctx.strokeStyle = 'rgba(180,235,245,.5)'; ctx.lineWidth = 2;
-  for (let i = 0; i < 3; i++){ ctx.beginPath(); for (let x = 0; x <= W; x += 12) ctx.lineTo(x, y0 + 10 + i * 12 + Math.sin(x * 0.05 + t * 2 + i) * 3); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(180,235,245,.35)'; ctx.lineWidth = 2;
+  for (let i = 0; i < Math.floor(h / 26); i++){ ctx.beginPath(); for (let x = 0; x <= W; x += 12) ctx.lineTo(x, y0 + 14 + i * 26 + Math.sin(x * 0.05 + t * 2 + i) * 3); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(235,250,255,.9)'; ctx.lineWidth = 3;   // foam at the shoreline
+  ctx.beginPath(); for (let x = 0; x <= W; x += 8) ctx.lineTo(x, y1 + Math.sin(x * 0.08 + t * 3) * 3); ctx.stroke();
+  ctx.fillStyle = 'rgba(235,250,255,.5)'; for (let x = 6; x < W; x += 22) ell(ctx, x + Math.sin(t * 2 + x) * 2, y1 + 4 + Math.cos(t * 3 + x) * 2, 4, 2);
 }
 /** Castle walls (world 3): a stone segment across the lane with a health bar. */
 export function drawCastles(t){

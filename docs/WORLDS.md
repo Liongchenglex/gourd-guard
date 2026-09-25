@@ -319,7 +319,7 @@ The second half of every world is authored level by level. Each line is data in 
 | 18 | Top and bottom patch rows are graves | Only the top (spawn) row is clear | Witches only (they may re-hex a monster into a new colour) | H-shaped castle walls, every monster | Shoreline 4 rows down; Shell Turtles, Sodden Mummies and divers only |
 | 19 | Columns 1, 4 and 7 are graves except their last row (reach them with chain lightning); those lanes spawn less | Only the fence row is clear | Chameleons plus everything else chameleonised | Castle walls everywhere except the first two rows | Shoreline 5 rows down; divers and Shell Turtles only |
 
-Rules that came with it: on shoreline levels every monster surfaces at the water's edge and puddles still exist below it; Puddle Divers may lurk anywhere in the sea; witches can change an already hexed monster's colour.
+Rules that came with it: authored levels have no random graves (world 1's drawn layouts stay); the level 19s spawn about 30% fewer monsters, more slowly; on shoreline levels every monster surfaces at the water's edge (shorelines are 1, 2, 3, 3, 3 and 4 rows down on 5-12/13/15/17/18/19, the foam line marks the spawn line) and puddles still exist below it; Puddle Divers may lurk anywhere in the sea; witches can change an already hexed monster's colour.
 
 ---
 

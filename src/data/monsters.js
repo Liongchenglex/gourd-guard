@@ -15,7 +15,7 @@ export const TYPES = {
   wraith: { hp:2,  r:21, sp:0.05,  coins:7,  eat:0.5, pts:22, drop:2, show:4, hide:2.5 },
   // Wisp Rider (world 2): fast while its carrier lives; the first hit breaks the carrier (no damage), then it walks at `walkSp`.
   rider:  { hp:2,  r:18, sp:0.11,  coins:7,  eat:0.5, pts:24, drop:2, walkSp:0.05 },
-  // Plague Doctor (world 2): slow; every `healEvery` seconds heals every other monster in its column by `heal`.
+  // Plague Doctor (world 2): slow; every `healEvery` seconds heals every other monster in the 3×3 zone around it (3 lanes × 3 tile heights) by `heal`.
   doctor: { hp:3,  r:22, sp:0.035, coins:9,  eat:0.5, pts:26, drop:2, healEvery:2, heal:0.5 },
   // Shield Knight (world 3): walks in bursts; shield up (no damage taken) while moving, down while stopped.
   knight: { hp:3,  r:22, sp:0.06,  coins:9,  eat:0.6, pts:26, drop:2, move:1.6, stop:1.3 },
@@ -115,7 +115,7 @@ export const MINTRO = {
   mummy:'New foe: mummies. Only Fire finishes them. Anything else just knocks them down for a while.',
   wraith:'New foe: wraiths. They fade out for a few seconds at a time. You cannot hit what you cannot see; throw where they will be.',
   rider:'New foe: wisp riders. Fast while the wisp carries them. One hit breaks the wisp and they drop to a walk.',
-  doctor:'New foe: plague doctors. Slow, but they keep healing every monster in their column. Kill them first.',
+  doctor:'New foe: plague doctors. Slow, but they keep healing every monster inside their green zone. Kill them first.',
   knight:'New foe: shield knights. The shield is up while they march and down while they rest. Hit them when they stop.',
   hauler:'New foe: gargoyle haulers. They push a line of stone gargoyles ahead of them, slowly. Break every gargoyle and the hauler sprints.',
   archer:'New foe: skeleton archers. They stop near the top and shoot arrows at your wall. Reach them behind the castle walls.',

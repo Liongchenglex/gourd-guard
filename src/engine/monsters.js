@@ -220,7 +220,8 @@ export function updateMonster(m, dt){
         m.healT -= dt;
         if (m.healT <= 0 && m.p > 0.05){
           m.healT = TYPES.doctor.healEvery;
-          for (const o of G.monsters) if (o !== m && !o.dead && o.lane === m.lane && o.rise <= 0 && o.hp < o.maxHp){
+          const reach = 1.5 * TILE_P();   // 3 lanes × 3 tile heights around the doctor
+          for (const o of G.monsters) if (o !== m && !o.dead && Math.abs(o.lane - m.lane) <= 1 && Math.abs(o.p - m.p) <= reach && o.rise <= 0 && o.hp < o.maxHp){
             o.hp = Math.min(o.maxHp, o.hp + TYPES.doctor.heal); addFloat('+' + TYPES.doctor.heal, o.x, mY(o) - o.r - 20, '#9fe07a', 14, 0.7);
           }
           ring(m.x, mY(m), 40, 'rgba(160,230,120,.8)');

@@ -34,6 +34,7 @@ export function render(){
   drawPreview(t);
   if (g.def && g.def.sea) drawSea(t);
   drawPuddles(t);
+  for (const m of g.monsters) if (m.type === 'doctor' && !m.dead && m.p > 0) drawHealZone(m, t);
   const ms = g.monsters.slice().sort((a, b) => a.p - b.p);
   const fogOn = g.def && g.def.fog && g.def.fog.length && !(g.fogClear > 0);
   for (const m of ms){
@@ -241,6 +242,13 @@ export function drawCastles(t){
     ctx.fillStyle = 'rgba(0,0,0,.6)'; rrect(ctx, bx - 1, by - 1, bw + 2, 7, 3); ctx.fill();
     ctx.fillStyle = '#d8d0c8'; rrect(ctx, bx, by, Math.max(0, bw * w.hp / w.maxHp), 5, 2.5); ctx.fill();
   }
+}
+/** Plague Doctor's healing zone: 3 lanes × 3 tile heights, pulsing green. */
+export function drawHealZone(m, t){
+  const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
+  const pulse = 0.5 + 0.5 * Math.sin(t * 3);
+  ctx.fillStyle = `rgba(120,220,120,${0.10 + 0.06 * pulse})`; rrect(ctx, x, y, w, h, 16); ctx.fill();
+  ctx.strokeStyle = `rgba(160,240,140,${0.45 + 0.3 * pulse})`; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 30; rrect(ctx, x, y, w, h, 16); ctx.stroke(); ctx.setLineDash([]);
 }
 /** Silver nets: a shimmering weave across the top of the lane, fading as time runs out. */
 export function drawNets(t){

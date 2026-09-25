@@ -144,7 +144,7 @@ Speed is in "field lengths per second" before level multipliers (so 0.055 ≈ 18
 | Wisp | 2 | 0.05 | 0.5 | 7 | 2 | The old lane drifter under its new name: drifts to a neighbouring column every 3.2–5 s (mid-field only) | 2-1 |
 | Wraith | 2 | 0.05 | 0.5 | 7 | 2 | Every 4 s it fades out for 2.5 s: invisible and untargetable, still walking. Reappears when it reaches the wall. Flickers just before fading | 2-4 |
 | Wisp Rider | 2 | 0.11 carried, 0.05 walking | 0.5 | 7 | 2 | Fast while its wisp carries it. The first hit of any kind breaks the wisp (no damage), then it walks | 2-7 |
-| Plague Doctor | 3 | 0.035 | 0.5 | 9 | 2 | Every 2 s heals every other monster in its column by 0.5 | 2-9 |
+| Plague Doctor | 3 | 0.035 | 0.5 | 9 | 2 | Every 2 s heals every other monster inside its 3×3 zone (3 lanes × 3 tile heights, drawn as a pulsing green box) by 0.5 (owner, 2026-09-25: zone instead of column) | 2-9 |
 | Shield Knight | 3 | 0.06 in bursts | 0.6 | 9 | 2 | Marches 1.6 s, rests 1.3 s. Shield up while marching: every hit (pumpkins, burns, fireworks) is blocked and no knockback. Shield down while resting and while chewing the fence | 3-2 |
 | Gargoyle Hauler | 3 | 0.02 pushing, 0.075 free | 0.6 | 10 | 2 | Spawns with 2 Gargoyles (5 HP, eat 0.35, minions) ahead of it in its lane. Crawls while any survive, sprints once all are dead. Grey counters the line | 3-3 |
 | Skeleton Archer | 2 | 0.04 | 0.4 | 9 | 2 | Stops at 14% of the field and every 5 s fires an arrow down its lane that does 3 wall damage on arrival. Usually sits behind castle walls | 3-5 |

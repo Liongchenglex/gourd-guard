@@ -285,7 +285,6 @@ export function drawDoctor(m, F, t){   // plague doctor: wide hat, beaked mask, 
   cx.fillStyle = F('#d8cfa8'); cx.beginPath(); cx.moveTo(-4, -12); cx.lineTo(0, 2); cx.lineTo(6, -12); cx.closePath(); cx.fill();   // beak
   cx.fillStyle = m.flash > 0 ? '#fff' : '#c9f0a0'; ell(cx, -5, -16, 2.6, 2.6); ell(cx, 5, -16, 2.6, 2.6);
   cx.fillStyle = F('#1c1c16'); ell(cx, 0, -25, 20, 4); rrect(cx, -10, -40, 20, 16, 3); cx.fill();   // hat
-  const pulse = (t * 0.5) % 1; cx.strokeStyle = `rgba(160,230,120,${1 - pulse})`; cx.lineWidth = 2; cx.beginPath(); cx.arc(0, 0, 22 + pulse * 18, 0, TAU); cx.stroke();
 }
 export function drawPoltergeist(m, F, t){   // translucent ghost with trailing tatters and two grabbing hands
   const aura = cx.createRadialGradient(0, -10, 6, 0, -10, 80); aura.addColorStop(0, 'rgba(200,220,255,.35)'); aura.addColorStop(1, 'rgba(200,220,255,0)');

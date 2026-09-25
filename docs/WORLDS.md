@@ -270,7 +270,7 @@ Stats (HP, speed, eat rate, coins) come from bot runs; this table fixes behaviou
 
 | Monster | Behaviour | Counter |
 |---|---|---|
-| Chameleon | Coloured like one of the player's loadout colours; only that colour damages it | matching colour |
+| Chameleon | Coloured like one of the player's loadout colours; only that colour damages it. 2 HP (reverse ones have 3) | matching colour |
 | Reverse Chameleon | Coloured like a loadout colour; immune to that colour, anything else works. Visually distinct: inverted markings, hollow eyes | any other colour |
 | Mirror Sprite | Alternates between a reflecting phase and an open phase (stop-go like the Shield Knight). While reflecting, a pumpkin that hits it bounces back down and hits the player's wall as a projectile | hit during the open phase |
 | Witch (3-16) | Every 6 s turns one monster on the field (other witches included) into a reverse chameleon (75%) or a chameleon (25%) | kill her early |
@@ -394,6 +394,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-26 | Owner: chameleons have 2 HP; 3-10 spawns no chameleons; Hexwitch zones are 3×3, a 1-tall row or a 1-wide column. |
 | 2026-09-26 | Owner: two more pumpkins: Turquoise (3-6, bunches of 2 at half power) and Brown (5-7, grows small → medium → big); a rainbow intro card at 1-9. |
 | 2026-09-26 | Owner: Bog Ghoul back to 1 HP (Stubborn instead of Armoured); witches and the Hexwitch's full form hex 25% chameleon / 75% reverse; boss levels named; the owner is happy with the difficulty design at this point. |
 | 2026-09-26 | Owner: several monsters chew the same wall; twins' full form sits mid-field and throws from any column via a tail; mummies rise with 1 HP; Poltergeist full form juggles three pumpkins and repaints three; restart goes through the pumpkin picker; witches hex each other. |

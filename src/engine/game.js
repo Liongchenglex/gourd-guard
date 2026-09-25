@@ -143,7 +143,8 @@ export function placePuddles(n){
   const lanes = shuffle([...Array(COLS).keys()]).slice(0, n);
   for (const lane of lanes) G.puddles.push({ lane, p:rnd(0.3, 0.6) });
 }
-/** Wind gust: every pumpkin moves one cell in `dir`, leading edge first, blocked by the edge, graves and stuck pumpkins. */
+/** Wind gust: every pumpkin slides in `dir` until the edge, a grave or another pumpkin stops it (the push rule on every
+ *  row or column at once). Leading edge first, so lines compress against the far side. */
 export function gust(dir){
   const [dr, dc] = DIRV[dir];
   const rows = [...Array(ROWS).keys()], cols = [...Array(COLS).keys()];
@@ -152,10 +153,15 @@ export function gust(dir){
   let moved = 0;
   for (const r of rows) for (const c of cols){
     const cell = grid[r][c]; if (!cell || cell.fly) continue;
-    const nr = r + dr, nc = c + dc;
-    if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS || graves[nr][nc] || grid[nr][nc]) continue;
+    let nr = r, nc = c;
+    while (true){
+      const tr = nr + dr, tc = nc + dc;
+      if (tr < 0 || tr >= ROWS || tc < 0 || tc >= COLS || graves[tr][tc] || grid[tr][tc]) break;
+      nr = tr; nc = tc;
+    }
+    if (nr === r && nc === c) continue;
     grid[nr][nc] = cell; grid[r][c] = null;
-    cell.ox = -dc * CS; cell.oy = -dr * CS; moved++;
+    cell.ox = (c - nc) * CS; cell.oy = (r - nr) * CS; moved++;
   }
   if (gest) setGest(null);
   SFX.slide(); G.shake = Math.max(G.shake, 0.2);

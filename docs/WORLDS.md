@@ -61,7 +61,7 @@ Names are placeholders the owner is free to change.
 
 **World 4: Puddles and sea.** Puddle cells are marked field tiles. Monsters may rise from any puddle instead of the top of the field. On sea levels the whole top row is water and monsters surface anywhere along it. The Puddle Diver hides in a puddle between attacks and is immune while submerged.
 
-**World 5: Wind gusts.** A gust has a direction: left, right, up or down. Leaves blow across the patch for 2 s in that direction as a warning. Then **every pumpkin moves one cell** in the gust direction, resolved as a board-wide push: pumpkins nearest the leading edge move first, and a pumpkin stays put if the edge, a grave, or a pumpkin that itself cannot move blocks it. Lit state is recomputed after the gust. It is the push rule applied to every row (or column) at once, limited to one step. A full slide until blocked was rejected because it would pile the whole patch against one side and kill the puzzle. Gust frequency is the difficulty knob (e.g. every 20 s in early levels, every 10 s late).
+**World 5: Wind gusts.** A gust has a direction: left, right, up or down. Leaves blow across the patch for 2 s in that direction as a warning. Then **every pumpkin slides in the gust direction until it is stopped** by the edge, a grave or another pumpkin: the push rule applied to every row (or column) at once, leading edge first, so lines compress against the far side (`pumpkin, blank, pumpkin, blank` blown right becomes `blank, blank, pumpkin, pumpkin`). Lit state is recomputed after the gust. Gust frequency is the difficulty knob (e.g. every 20 s in early levels, every 10 s late).
 
 **World 6: Graves only.** The challenge is the monster mix.
 
@@ -203,7 +203,6 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 | Burning Mummy | Only Ice kills it. Burns other mummies along the way. To define in R2: does "burn" kill them, or turn them into Burning Mummies (spreading)? Natural home: world 4 or 6. |
 | Medium / Hard per level | Variables: longer sprout interval, 1 pumpkin per sprout instead of 2, no wall (any monster reaching the bottom loses), more graves, more monsters, stacked modifiers, more frequent gusts. Data-wise these are overrides on a level. |
 | Quests | Optional objectives per level (e.g. "keep every wall above 50%", "kill 5 with Fire"). Meaning to confirm. |
-| Full-slide gust variant | Wind that slides pumpkins until blocked, as a Hard-mode option. |
 | Gravedigger 💡 | Plants a new grave on the patch when it reaches the wall. |
 | Spider 💡 | Webs a random patch cell when it reaches mid-field. |
 | Pumpkin Thief 💡 | Steals a pumpkin from the patch at the wall, then retreats. |
@@ -219,6 +218,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-25 | Owner, after playing: wind gusts slide pumpkins all the way until blocked (full push), replacing the one-cell nudge. |
 | 2026-09-25 | Owner: the Ghoul and the Imp are reused in every world as the fodder monsters, each with a world skin and one modifier. World 2 design approved with Bog Ghoul at 2-1 and Swift Bat at 2-6; Poltergeist drifts between lanes rather than teleporting. |
 | 2026-09-25 | Owner: on boss levels monsters keep spawning until the boss is killed; the night is won once the boss and the remaining monsters are dead. |
 | 2026-09-25 | Owner: difficulty rises within each world (easy start, harder finish); the next world unlocks after the level-10 boss. Added the target win-rate curve and the rule that unlocks sit in levels 1–10. Black moved from 3-13 to 3-9 accordingly. |

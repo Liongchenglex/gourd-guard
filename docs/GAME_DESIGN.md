@@ -148,7 +148,7 @@ Speed is in "field lengths per second" before level multipliers (so 0.055 ≈ 18
 | Shield Knight | 3 | 0.06 in bursts | 0.6 | 9 | 2 | Marches 1.6 s, rests 1.3 s. Shield up while marching: every hit (pumpkins, burns, fireworks) is blocked and no knockback. Shield down while resting and while chewing the fence | 3-2 |
 | Gargoyle Hauler | 3 | 0.02 pushing, 0.075 free | 0.6 | 10 | 2 | Spawns with 2 Gargoyles (5 HP, eat 0.35, minions) ahead of it in its lane. Crawls while any survive, sprints once all are dead. Grey counters the line | 3-3 |
 | Skeleton Archer | 2 | 0.04 | 0.4 | 9 | 2 | Stops at 14% of the field and every 5 s fires an arrow down its lane that does 3 wall damage on arrival. Usually sits behind castle walls | 3-5 |
-| Vampire | 5 | 0.045 | 0.7 | 14 | 3 | Arrives ringed by 4 bats: left, right, ahead and behind. If not hit for 4 s, heals 1 HP every 3 s | 4-8 |
+| Vampire | 5 | 0.045 | 0.7 | 14 | 3 | Arrives ringed by 4 bats: left, right, ahead and behind. If not hit for 2 s, heals 1 HP every 2 s (owner, 2026-09-26) | 4-8 |
 | Puddle Crawler | 2 | 0.05 | 0.5 | 6 | 2 | Climbs out of a random puddle (its lane and depth) instead of walking in from the top | 4-2 |
 | Drunk Sailor | 3 | 0.05 × 0.3–1.7 | 0.6 | 8 | 2 | Every 1.4–2.8 s picks a new lurch speed and, 70% of the time, staggers to a neighbouring lane (anywhere on the field) | 4-3 |
 | Puddle Diver | 3 | 0 | 0 | 9 | 2 | Lives in a random puddle. Hidden and untargetable for 3 s, then surfaces for 2.5 s and hurls a water bolt down its lane (2 wall damage). With no puddles on the level it walks in at 0.04 instead | 4-7 |
@@ -158,7 +158,7 @@ Speed is in "field lengths per second" before level multipliers (so 0.055 ≈ 18
 | Mirror Sprite | 2 | 0.045 | 0.5 | 9 | 2 | Mirror up for 2 s, down for 2.5 s, and always down while chewing the fence (owner, 2026-09-25). While up, a pumpkin that hits it is reflected: it flies back down the lane and damages the player's wall for its power. Hit it while the mirror is down | 3-8 |
 | Flaming Mummy | 2 | 0.045 | 0.6 | 7 | 2 | Only Ice (hits) kills it; any other kill knocks it down for 4 s and it rises with 1 HP. An ordinary Mummy within one lane and one tile of it catches fire and becomes a Flaming Mummy. Ice is auto-locked into the loadout | 1-16 |
 | Fogwalker | 1 | 0.05 | 0.4 | 6 | 2 | Carries a fog band 0.12 of the field tall across every lane at its height; everything inside (itself included) is hidden unless a Lantern is burning | 2-16 |
-| Witch | 3 | 0.04 | 0.5 | 9 | 2 | Every 6 s turns a random monster, other witches included, into a reverse chameleon (75%) or a chameleon (25%); an already hexed monster can be re-hexed to a new colour | 3-16 |
+| Witch | 3 | 0.04 | 0.5 | 9 | 2 | Every 6 s turns a random monster, other witches included but never a true Chameleon, Reverse Chameleon or boss, into a reverse chameleon (75%) or a chameleon (25%); an already hexed monster can be re-hexed to a new colour | 3-16 |
 | Bulwark Knight | 5 | 0.04 | 0.7 | 12 | 3 | 3×3 aura (steel box): monsters inside have hp and max hp doubled on entry and halved on leaving; a ×2 label shows beside their health dots | 4-16 |
 | Shell Turtle | 10 | 0.03 | 0.3 | 12 | 3 | Rises from a puddle, walks backwards shell-first, immune to knockback: a moving wall in front of whatever follows it | 5-16 |
 | Mummy | 2 | 0.045 | 0.6 | 5 | 2 | Only Fire (hits or burn ticks) kills it. Any other kill makes it collapse on the spot for 4 s, untargetable and not walking, then it stands up at full health. No rewards for a collapse | 1-9 |

@@ -25,7 +25,7 @@ export const TYPES = {
   // Skeleton Archer (world 3): stops near the top and fires an arrow down its lane every `shootEvery` s for `arrow` wall damage.
   archer: { hp:2,  r:20, sp:0.04,  coins:9,  eat:0.4, pts:24, drop:2, hold:0.14, shootEvery:5, arrow:3 },
   // Vampire (world 3 elite): arrives with `bats` bats; regenerates `regen` HP every `regenEvery` s when not hit for `calm` s.
-  vampire:{ hp:5,  r:24, sp:0.045, coins:14, eat:0.7, pts:40, drop:3, bats:4, regen:1, regenEvery:3, calm:4 },   // four bats: left, right, ahead, behind (owner, 2026-09-26)
+  vampire:{ hp:5,  r:24, sp:0.045, coins:14, eat:0.7, pts:40, drop:3, bats:4, regen:1, regenEvery:2, calm:2 },   // four bats: left, right, ahead, behind; heals 1 every 2 s after 2 s calm (owner, 2026-09-26)
   // Puddle Crawler (world 4): climbs out of a random puddle instead of walking in from the top.
   crawler: { hp:2,  r:20, sp:0.05,  coins:6,  eat:0.5, pts:18, drop:2 },
   // Drunk Sailor (world 4): staggers between lanes every `stagger` seconds and lurches at uneven speed.

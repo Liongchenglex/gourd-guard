@@ -36,7 +36,7 @@ export function render(){
   const fogOn = g.def && g.def.fog && g.def.fog.length && !(g.fogClear > 0);
   for (const m of ms){
     if (m.hidden) continue;                                             // wraith: invisible
-    if (fogOn && m.p > -0.02 && g.def.fog.some(([a, b]) => m.p >= a && m.p <= b)) continue;   // inside a fog bank
+    if (fogOn && m.type !== 'boss' && m.p > -0.02 && g.def.fog.some(([a, b]) => m.p >= a && m.p <= b)) continue;   // inside a fog bank (bosses glow through)
     drawMonster(m, t);
   }
   if (g.def && g.def.fog && g.def.fog.length) drawFog(t, g.def.fog, g.fogClear > 0);
@@ -191,12 +191,12 @@ export function drawFog(t, bands, cleared){
   for (const [a, b] of bands){
     const y0 = H0 + a * (H1 - H0), y1 = H0 + b * (H1 - H0), pad = 26;
     const gr = ctx.createLinearGradient(0, y0 - pad, 0, y1 + pad);
-    const al = cleared ? 0.18 : 0.94;
-    gr.addColorStop(0, 'rgba(190,205,215,0)'); gr.addColorStop(0.18, `rgba(190,205,215,${al})`); gr.addColorStop(0.82, `rgba(170,190,205,${al})`); gr.addColorStop(1, 'rgba(170,190,205,0)');
+    const al = cleared ? 0.16 : 0.93;
+    gr.addColorStop(0, 'rgba(150,172,190,0)'); gr.addColorStop(0.2, `rgba(158,180,198,${al})`); gr.addColorStop(0.5, `rgba(176,196,210,${al})`); gr.addColorStop(0.8, `rgba(150,172,190,${al})`); gr.addColorStop(1, 'rgba(140,162,180,0)');
     ctx.fillStyle = gr; ctx.fillRect(0, y0 - pad, W, y1 - y0 + pad * 2);
     if (fogSprite){
-      ctx.globalAlpha = cleared ? 0.08 : 0.35;
-      for (let i = 0; i < 5; i++){ const x = ((i * 137 + t * 14) % (W + 200)) - 100, fw = 220; ctx.drawImage(fogSprite, x, y0 - 20 + Math.sin(t * 0.7 + i) * 8, fw, y1 - y0 + 40); }
+      ctx.globalAlpha = cleared ? 0.08 : 0.5;
+      for (let i = 0; i < 7; i++){ const x = ((i * 113 + t * 18) % (W + 240)) - 120, fw = 260; ctx.drawImage(fogSprite, x, y0 - 30 + Math.sin(t * 0.7 + i) * 10, fw, y1 - y0 + 60); }
       ctx.globalAlpha = 1;
     }
   }

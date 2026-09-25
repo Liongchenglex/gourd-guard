@@ -175,7 +175,7 @@ World 1 starting numbers (2026-09-25, to be tuned by the bot): wave 9 → 20 ove
 World 2 (Foggy Hollow) starting numbers (2026-09-25, untuned): wave 11 → 21 over levels 1–10 and 22 → 36 over 11–20; spawn gap 3.64 s → 2.5 s; speed ×0.8 → ×0.908 by level 10, then +0.02 per level; pool Bog Ghoul 10 and Wisp 5 from 2-1, Wraith 5 from 2-4, Swift Bat 5 from 2-6, Wisp Rider 4 from 2-7, Marsh Imp 5 from 2-8, Plague Doctor 3 from 2-9; graves 0 (1–5), 1 (6–12), 2 (13–20).
 
 ### Fog (world 2 map gimmick)
-Level data lists fog banks as `[top, bottom]` fractions of the field. A monster whose position is inside a bank is not drawn (nor its health), but it keeps walking, chewing and making sounds, and pumpkins hit it as normal. Banks: one thin bank in levels 1–4, one wider bank 5–9, two banks 10–14, two wider banks 15–20. The Lantern tool thins every bank for 10 s and shows what is inside.
+Level data lists fog banks as `[top, bottom]` fractions of the field. A monster whose position is inside a bank is not drawn (nor its health), except bosses, which glow through; it keeps walking, chewing and making sounds, and pumpkins hit it as normal. Banks: one thin bank in levels 1–4, one wider bank 5–9, two banks 10–14, two wider banks 15–20. The Lantern tool thins every bank for 10 s and shows what is inside.
 
 ### Unlocks and progression
 - Level 1 of a world opens when the previous world's level 10 has been beaten. Every other level opens when the level before it has been beaten. Beating level 10 therefore opens levels 11–20 and the next world at once.

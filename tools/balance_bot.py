@@ -106,10 +106,11 @@ def main():
                 page.goto(PAGE)
                 time.sleep(0.8)
                 lv, fence = profile(n, args.offset)
-                page.evaluate("""([lv, fence, rep, fw, sprout]) => Object.assign(window.__gg.save, {
+                page.evaluate("""([lv, fence, rep, fw, sprout, n]) => Object.assign(window.__gg.save, {
                     seenHelp:true, seenFlick:true, fw, repair:rep, fence, spawnEvery:sprout,
+                    stars:Object.fromEntries([20, 40, 60, 80, 100].filter(k => k < n).map(k => [k, 3])),   // earlier worlds' level-20 perks are earned
                     lv:{ green:lv, yellow:lv, ice:lv, fire:lv, grey:lv, purple:lv, white:lv, black:lv, blue:lv, pink:lv } })""",
-                    [lv, fence, args.repairs, args.fireworks, args.sprout])
+                    [lv, fence, args.repairs, args.fireworks, args.sprout, n])
                 loadout = sorted([t for t in range(10) if UNLOCK[t] <= n], key=lambda t: UNLOCK[t])[-5:]   # the five most recent types
                 page.evaluate(BOT_JS, args.interval)
                 page.evaluate("([n, lo]) => window.__gg.startGame('story', n, lo)", [n, loadout])

@@ -1,3 +1,4 @@
+import { perkOn } from '../data/perks.js';
 import { MINTRO, TYPES, BOSS_NAMES, VARIANTS } from '../data/monsters.js';
 import { GEAR } from '../data/shop.js';
 import { PATTERNS } from '../data/patterns.js';
@@ -9,7 +10,7 @@ import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle
 import { mS, mY, updateMonster, TILE_P } from './monsters.js';
 import { bgWorld, buildBg } from './render/sprites.js';
 import { endlessSpawn, storySpawn } from './spawner.js';
-import { COLS, CS, FENCE_Y, FIELD_TOP, G, GY, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, setG, setGest, state, walls, GX, FIELD_BOT } from './state.js';
+import { COLS, CS, FENCE_Y, FIELD_TOP, G, GY, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, setG, setGest, state, walls, GX, FIELD_BOT, HOLD_TIME_QUICK } from './state.js';
 import { rnd, shuffle, clamp, TAU } from './util.js';
 import { initWalls, damageWall } from './walls.js';
 import { persist, save } from '../save.js';
@@ -188,6 +189,8 @@ export function placeScarecrow(lane){
   SFX.collect(); G.aim = null; updateHud(true);
   return true;
 }
+/** Seconds between sprouts: the player's setting, one less with the 2-20 perk. */
+export function sproutEvery(){ return Math.max(1, save.spawnEvery - (perkOn('sprout') ? 1 : 0)); }
 export function raiseCastles(n, hp){
   const lanes = shuffle([...Array(COLS).keys()]).slice(0, n);
   for (const lane of lanes) G.castles.push({ lane, p:rnd(0.4, 0.72), hp, maxHp:hp, flash:0, dead:false });
@@ -228,7 +231,7 @@ export function update(dt){
   if (!g.over){
     const low = ROWS * COLS - emptyCells().length < 10;
     g.sproutT += dt * (low ? 2 : 1);
-    if (g.sproutT >= save.spawnEvery){ if (spawnSprouts()) g.sproutT = 0; else g.sproutT = save.spawnEvery; }
+    if (g.sproutT >= sproutEvery()){ if (spawnSprouts()) g.sproutT = 0; else g.sproutT = sproutEvery(); }
   }
   for (const m of g.monsters) if (!m.dead && !g.over) updateMonster(m, dt);
   for (const pr of g.projs){
@@ -319,7 +322,7 @@ export function update(dt){
   if (landed) resolveMatches();
   if (gest && !gest.done && gest.ref && Math.hypot(gest.x - gest.sx, gest.y - gest.sy) < 16 && findCell(gest.ref)){
     gest.held += dt;
-    if (gest.held >= HOLD_TIME){ gest.done = true; smash(gest.ref); if (navigator.vibrate) try { navigator.vibrate(30); } catch (e) {} }
+    if (gest.held >= (perkOn('smash') ? HOLD_TIME_QUICK : HOLD_TIME)){ gest.done = true; smash(gest.ref); if (navigator.vibrate) try { navigator.vibrate(30); } catch (e) {} }
   }
   if (g.idle > 6 && !g.over){
     g.hintT -= dt;

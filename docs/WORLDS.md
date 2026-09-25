@@ -296,6 +296,20 @@ Weapons drop from kills (10% roll) and can also be bought in the shop. The HUD a
 
 ---
 
+## 8b. Level-20 perks
+
+Beating level 10 opens the next world; beating **level 20** grants a permanent perk (owner, 2026-09-25). Perks stack, apply on every level, and can each be switched off in the pause menu. The bot's expected profile assumes the perks of earlier worlds are on.
+
+| Beat | Perk | Effect |
+|---|---|---|
+| 1-20 | Quick smash | Hold 0.35 s instead of 0.6 s to smash a pumpkin |
+| 2-20 | Eager sprouts | Sprout interval −1 s |
+| 3-20 | Bumper crop | 50% of sprout ticks bring 3 pumpkins, the other 50% bring 2 |
+| 4-20 | Rainbow harvest | Rainbow chance on sprouts and drops 3% → 10% |
+| 5-20 | Focused patch | The loadout may be 4 colours instead of 5 (a level's locked pumpkin still counts) |
+
+---
+
 ## 9. Data shape this implies
 
 One data file per world. It declares gimmick settings, monster pool, unlock schedule and 20 levels. Each level lists: pattern, graves, sprout settings, wave list (monster, count, modifiers), gimmick parameters (fog bands, castle wall count, puddle cells, sea row, gust interval and directions), boss flag, unlocks and rewards. Monsters are behaviour + stats + optional modifier, so a returning monster is one line. The restructure has to support this shape before any world content is built.
@@ -326,6 +340,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-25 | Owner: level-20 perks (§8b): quick smash, sprouts −1 s, 50% triple sprouts, 10% rainbows, pick 4. Fire auto-locked on mummy levels. Unlocks usable on every level. |
 | 2026-09-25 | Owner: a fallen wall only loses the night once a monster walks through it; projectile monsters stop shooting at fallen walls. Silver pumpkin removed. Plague Doctor heals a 3×3 zone with a visible aura. |
 | 2026-09-25 | Owner: World 6 is deferred to a future release; worlds 1–5 are the Release 1 base to polish and tune. |
 | 2026-09-25 | Owner, after the tables: Gold removed (Yellow pays the coins by level); Pink lightning became Deep Blue (row lightning); new Pink healer at 2-8; new Silver net pumpkin at 5-8 for projectile monsters; world order is now Pumpkin Patch, Foggy Hollow, Witchwood, Crumbling Keep, Drowned Marsh, Hallow's End; the tool tray shows the full set with locks; dragging across the field collects drops. Owner's per-level numbers for Ice, Fire, Purple, Black, Deep Blue and White adopted. |

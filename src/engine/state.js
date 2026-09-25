@@ -27,7 +27,7 @@ export let bannerTimer = 0;
 
 export let gidSeq = 0;
 
-export const HOLD_TIME = 0.6;
+export const HOLD_TIME = 0.6, HOLD_TIME_QUICK = 0.35;   // the 1-20 perk uses the quick one
 
 export const setG = v => { G = v; };
 export const setStateRaw = v => { state = v; };

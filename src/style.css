@@ -129,6 +129,7 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
   padding:calc(var(--u)*10px) calc(var(--u)*6px); display:flex; flex-direction:column; align-items:center; gap:calc(var(--u)*3px); cursor:pointer; }
 .pick{ position:relative; }
 .pick.must{ border-style:dashed; }
+#perkList{ display:flex; flex-wrap:wrap; gap:calc(var(--u)*8px); justify-content:center; }
 .why{ color:var(--candle); font-size:calc(var(--u)*13px); margin:calc(var(--u)*4px) 0; }
 .pick .tag.info{ background:var(--candle); color:#2a1400; border-radius:50%; width:calc(var(--u)*16px); height:calc(var(--u)*16px); display:grid; place-items:center; padding:0; font-family:Georgia, serif; font-style:italic; }
 .pick .tag{ position:absolute; top:-6px; right:-4px; background:var(--heart); color:#fff; font-size:calc(var(--u)*9px); font-weight:700; border-radius:calc(var(--u)*8px); padding:1px 5px; }

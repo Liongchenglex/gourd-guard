@@ -45,7 +45,7 @@ export const RAINBOW_P = [0.1, 0.2, 0.3, 0.4, 0.5];   // Purple: chance a spawn 
 
 export const LV_COST   = [40, 80, 130, 200];
 
-export const WILD_CHANCE = 0.03;
+export const WILD_CHANCE = 0.03, WILD_CHANCE_PERK = 0.10;   // rainbow chance on sprouts and drops; the 4-20 perk uses the higher one
 
 export function pct(v){ return Math.round(v * 100) + '%'; }
 

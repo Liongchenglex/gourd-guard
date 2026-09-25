@@ -1,3 +1,5 @@
+import { sproutEvery } from '../game.js';
+import { perkOn } from '../../data/perks.js';
 import { GEAR } from '../../data/shop.js';
 import { PTYPES, RAINBOW } from '../../data/pumpkins.js';
 import { emptyCells, findCell, groupCells, heldGid } from '../board.js';
@@ -7,7 +9,7 @@ import { K, coinTarget, ctx } from './canvas.js';
 import { drawMonster } from './monsters.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, mix, rrect, shade, tri } from './util.js';
-import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, GX, GY, H, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, state, walls } from '../state.js';
+import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, GX, GY, H, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, state, walls, HOLD_TIME_QUICK } from '../state.js';
 import { TAU, clamp, mulberry } from '../util.js';
 import { save } from '../../save.js';
 
@@ -338,7 +340,7 @@ export function drawCell(r, c, cell, t, hg){
 export function drawSproutBar(){
   if (G.mode === 'demo') return;
   const y = GY + ROWS * CS + 8, w = COLS * CS - 16, x = GX + 8;
-  const full = emptyCells().length === 0, f = clamp(G.sproutT / save.spawnEvery, 0, 1);
+  const full = emptyCells().length === 0, f = clamp(G.sproutT / sproutEvery(), 0, 1);
   ctx.fillStyle = 'rgba(255,255,255,.1)'; rrect(ctx, x, y, w, 5, 2.5); ctx.fill();
   ctx.fillStyle = full ? 'rgba(255,90,77,.7)' : '#94d65e'; rrect(ctx, x, y, Math.max(5, w * f), 5, 2.5); ctx.fill();
 }
@@ -346,7 +348,7 @@ export function drawSproutBar(){
 export function drawHoldRing(){
   if (!gest || gest.done || !gest.ref || gest.held < 0.12) return;
   const pos = findCell(gest.ref); if (!pos) return;
-  const f = clamp((gest.held - 0.12) / (HOLD_TIME - 0.12), 0, 1);
+  const f = clamp((gest.held - 0.12) / ((perkOn('smash') ? HOLD_TIME_QUICK : HOLD_TIME) - 0.12), 0, 1);
   const x = LANE(pos.c), y = GY + pos.r * CS + CS / 2;
   ctx.lineWidth = 5; ctx.lineCap = 'round';
   ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.arc(x, y, CS * 0.44, 0, TAU); ctx.stroke();

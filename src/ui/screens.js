@@ -1,3 +1,4 @@
+import { PERKS, perkEarned, perkOn, perkNight } from '../data/perks.js';
 import { SPAWN_STEPS } from '../data/patterns.js';
 import { LV_COST, NTYPES, PTYPES, lvDesc, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
@@ -30,6 +31,8 @@ export function showResult(win){
       const nk = ALL_LEVELS[g.n] && (ALL_LEVELS[g.n].unlockPumpkins || [])[0], nextP = nk && PTYPES.find(p => p.key === nk);
       if (nextP && g.n < LEVELS) msg += ` Next night unlocks the ${nextP.name} pumpkin.`;
       if (g.def.levelNo === 10) msg += ' The rest of this world is open, and the next world will follow.';
+      const perk = PERKS.find(p => perkNight(p) === g.n);
+      if (perk) msg += ` Perk unlocked: ${perk.name}. ${perk.desc} (Switch it off in the pause menu if you prefer.)`;
       stars = [0,1,2].map(i => `<span class="${i < st ? '' : 'off'}">★</span>`).join('');
       stats.push(['Monsters stopped', g.kills], ['Walls left', pct(wf)], ['Coins found', g.coins], ['Night bonus', bonus]);
       if (g.n < LEVELS) addBtn(box, 'Next level', () => openPreview(g.n + 1));
@@ -82,7 +85,7 @@ export function setState(s){
     $('#bestTxt').textContent = save.best ? `Best endless score: ${save.best.toLocaleString()}` : '';
   }
   if (s !== 'play'){ setGest(null); $('#banner').classList.remove('show'); setBannerTimer(0); }
-  if (s === 'pause') syncSpawn();
+  if (s === 'pause'){ syncSpawn(); renderPerks(); }
   syncSound();
   setHudSig('');
   if (s === 'play' || s === 'pause') updateHud(true);
@@ -173,6 +176,17 @@ function showNextIntro(){
   setState('intro');
 }
 
+/** Pause menu: earned level-20 perks with on/off toggles. */
+export function renderPerks(){
+  const box = $('#perkList'); box.innerHTML = '';
+  for (const p of PERKS){
+    if (!perkEarned(p.key)) continue;
+    const on = perkOn(p.key);
+    const b = document.createElement('button'); b.className = 'btn small' + (on ? '' : ' alt'); b.textContent = `${p.name}: ${on ? 'on' : 'off'}`; b.title = p.desc;
+    b.onclick = () => { save.perksOff[p.key] = on; persist(); renderPerks(); };
+    box.appendChild(b);
+  }
+}
 export function openLevels(){
   $('#lvCoins').textContent = save.coins.toLocaleString();
   $('#bUnlockAll').textContent = save.testUnlock ? 'Testing: relock levels' : 'Testing: unlock all levels';
@@ -226,8 +240,9 @@ export function openLoadout(avail, next, required){
 export function syncLoadout(){
   for (const b of document.querySelectorAll('#picks .pick')) b.setAttribute('aria-pressed', loadoutSel.has(+b.dataset.t) ? 'true' : 'false');
   const n = loadoutSel.size;
-  $('#loCount').textContent = n === 5 ? 'Ready.' : `${n} of 5 picked`;
-  $('#bLoGo').disabled = n !== 5;
+  const min = perkOn('pick4') ? 4 : 5;   // 5-20 perk: four colours are enough
+  $('#loCount').textContent = n >= min ? 'Ready.' : `${n} of ${min} picked`;
+  $('#bLoGo').disabled = n < min;
   const why = loadoutWhy.filter(w => w.why !== 'New this level').map(w => `${PTYPES[w.t].name} is locked in: ${w.why.toLowerCase()}.`).join(' ');
   $('#loWhy').textContent = why; $('#loWhy').hidden = !why;
 }
@@ -322,7 +337,7 @@ export function wireButtons(){
 
   $('#bLoBack').onclick = () => openLevels();
 
-  $('#bLoGo').onclick = () => { if (loadoutSel.size !== 5) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo); };
+  $('#bLoGo').onclick = () => { if (loadoutSel.size < (perkOn('pick4') ? 4 : 5)) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo); };
 
   $('#bShopBack').onclick = () => { if (shopReturn === 'result') setState('result'); else openLevels(); };
 

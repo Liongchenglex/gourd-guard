@@ -1,7 +1,8 @@
+import { perkOn } from '../data/perks.js';
 import { PATTERNS } from '../data/patterns.js';
 import { SPROUT_COUNT } from '../data/rules.js';
 import { GEAR } from '../data/shop.js';
-import { PTYPES, RAINBOW, WILD_CHANCE } from '../data/pumpkins.js';
+import { PTYPES, RAINBOW, WILD_CHANCE, WILD_CHANCE_PERK } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { addFloat, chunk, dropHop, spark } from './combat.js';
 import { COLS, CS, G, GX, GY, LANE, ROWS, gest, graves, grid, nextGid, setGraves, setGrid } from './state.js';
@@ -13,7 +14,7 @@ export function newCell(c){ return { c, lit:false, gids:[], bsize:0, ox:0, oy:0,
 
 export function randColor(){ const L = G && G.loadout ? G.loadout : [0, 1]; return L[Math.floor(Math.random() * L.length)]; }
 
-export function randSprout(){ return Math.random() < WILD_CHANCE ? RAINBOW : randColor(); }
+export function randSprout(){ return Math.random() < (perkOn('rainbow') ? WILD_CHANCE_PERK : WILD_CHANCE) ? RAINBOW : randColor(); }
 
 export const inside = (a, b) => a >= 0 && a < ROWS && b >= 0 && b < COLS;
 
@@ -205,7 +206,8 @@ export function spawnPumpkin(){
 /** One sprout tick: SPROUT_COUNT pumpkins in separate random empty cells; fewer if the patch runs out. */
 export function spawnSprouts(){
   let placed = 0;
-  for (let i = 0; i < SPROUT_COUNT; i++) if (spawnPumpkin()) placed++;
+  const n = SPROUT_COUNT + (perkOn('triple') && Math.random() < 0.5 ? 1 : 0);   // 3-20 perk: half the sprouts bring three
+  for (let i = 0; i < n; i++) if (spawnPumpkin()) placed++;
   return placed > 0;
 }
 export function landingCell(x){

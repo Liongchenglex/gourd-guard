@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Bundle dist/ into one HTML fragment for publishing as a private artifact (phone playtests).
 
-Usage: python3 tools/bundle_single.py [out]   (default: dist/gourd-guard.html)
+Usage: python3 tools/bundle_single.py [out] [dist_dir]   (defaults: dist/gourd-guard.html, dist/)
 Inlines the built CSS and JS; drops the <!DOCTYPE>/<html>/<head>/<body> wrappers because the
 artifact host supplies its own. Run `npm run build` first.
 """
 import pathlib, re, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-DIST = ROOT / 'dist'
+DIST = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / 'dist'
 html = (DIST / 'index.html').read_text()
 def inline_css(m):
     return '<style>\n' + (DIST / m.group(1).lstrip('./')).read_text() + '\n</style>'

@@ -29,6 +29,11 @@ with sync_playwright() as p:
         page.click('#bStory'); page.click('.lv >> nth=0')
         if page.is_visible('#bHelpOk'):
             page.click('#bHelpOk')
+        page.wait_for_selector('#bPvGo', state='visible'); page.click('#bPvGo')   # level preview
+        for _ in range(8):                                                        # intro cards, if any
+            time.sleep(0.3)
+            if page.is_visible('#bIntroOk'): page.click('#bIntroOk')
+            else: break
         time.sleep(0.8)
         box = page.query_selector('#cv').bounding_box()
         sc = box['width'] / W

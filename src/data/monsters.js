@@ -17,6 +17,13 @@ export const TYPES = {
 
 export const BOSS_NAME = 'The Gravekeeper';
 
+export const MNAME = { ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wraith:'Wraith', mummy:'Mummy', boss:BOSS_NAME };
+
+export const BOSS_INTRO = { 1:'It stops a third of the way down and never reaches the wall, but it teleports between lanes and raises ghouls. Monsters keep coming until it falls.',
+  2:'Its full form: more health, faster summons, and every few seconds it drags a monster forward. Monsters keep coming until it falls.' };
+
+export const GRAVES_INTRO = 'Graves now appear in your patch. They never move and block slides and pushes. Plan bunches around them.';
+
 export const MINTRO = {
   bat:'New foe: bats. Quick, but one hit does it.',
   imp:'New foe: imps. They take 2 hits and hop in sudden bursts.',

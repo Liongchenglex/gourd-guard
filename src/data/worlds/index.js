@@ -1,6 +1,7 @@
 import { expandLevel } from '../levels.js';
 import { PTYPES, NTYPES } from '../pumpkins.js';
 import { save } from '../../save.js';
+import { GEAR } from '../shop.js';
 import world1 from './world1.js';
 import world2 from './world2.js';
 import world3 from './world3.js';
@@ -39,6 +40,17 @@ export function firstNightOf(w){
 export function unlockNightOf(key){
   const i = ALL_LEVELS.findIndex(d => (d.unlockPumpkins || []).includes(key));
   return i < 0 ? Infinity : i + 1;
+}
+
+/** Night on which a consumable tool (GEAR key) is introduced, or Infinity if no level introduces it yet. */
+export function gearUnlockNightOf(key){
+  const i = ALL_LEVELS.findIndex(d => (d.unlockGear || []).includes(key));
+  return i < 0 ? Infinity : i + 1;
+}
+
+/** Consumable tool keys introduced by night n (shown in the HUD and shop, and droppable from kills). */
+export function toolsForNight(n){
+  return GEAR.filter(g => g.consumable && gearUnlockNightOf(g.key) <= n).map(g => g.key);
 }
 
 /** Pumpkin type indices available on night n: the starting pair plus every type unlocked by a level ≤ n. */

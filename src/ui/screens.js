@@ -1,7 +1,9 @@
 import { SPAWN_STEPS } from '../data/patterns.js';
 import { LV_COST, NTYPES, PTYPES, lvDesc, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
-import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, firstNightOf } from '../data/worlds/index.js';
+import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, firstNightOf, typesForNight, gearUnlockNightOf } from '../data/worlds/index.js';
+import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAME, GRAVES_INTRO } from '../data/monsters.js';
+import { monsterIcon } from '../engine/render/monsters.js';
 import { SFX, ensureAudio } from '../engine/audio.js';
 import { beginEndless, beginNight, makeDemo, startGame, useFirework, useRepair, useBuster } from '../engine/game.js';
 import { bgWorld, buildBg, pumpkinIcon } from '../engine/render/sprites.js';
@@ -30,7 +32,7 @@ export function showResult(win){
       if (g.def.levelNo === 10) msg += ' The rest of this world is open, and the next world will follow.';
       stars = [0,1,2].map(i => `<span class="${i < st ? '' : 'off'}">★</span>`).join('');
       stats.push(['Monsters stopped', g.kills], ['Walls left', pct(wf)], ['Coins found', g.coins], ['Night bonus', bonus]);
-      if (g.n < LEVELS) addBtn(box, 'Next night', () => beginNight(g.n + 1));
+      if (g.n < LEVELS) addBtn(box, 'Next level', () => openPreview(g.n + 1));
       addBtn(box, 'Shop', () => openShop('result'), 'alt');
       addBtn(box, 'Levels', openLevels, 'alt');
     } else {
@@ -38,7 +40,7 @@ export function showResult(win){
       title = 'A wall fell';
       msg = 'The monsters broke through. Your coins are kept, and the shop can make your pumpkins and walls stronger.';
       stats.push(['Monsters stopped', g.kills], ['Coins found', g.coins]);
-      addBtn(box, 'Try again', () => beginNight(g.n));
+      addBtn(box, 'Try again', () => openPreview(g.n));
       addBtn(box, 'Shop', () => openShop('result'), 'alt');
       addBtn(box, 'Levels', openLevels, 'alt');
     }
@@ -65,7 +67,7 @@ export function addBtn(box, label, fn, cls){ const b = document.createElement('b
 
 // ---------- UI ----------
 
-export const OVS = { title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult' };
+export const OVS = { title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult', preview:'#ovPreview', intro:'#ovIntro' };
 
 export let shopReturn = 'levels', helpNext = null, loadoutNext = null, loadoutAvail = [], loadoutSel = new Set();
 
@@ -89,6 +91,75 @@ export function setState(s){
 
 export function withHelp(fn){ if (!save.seenHelp){ helpNext = fn; save.seenHelp = true; persist(); setState('help'); } else fn(); }
 
+let previewNight = 1, introQueue = [], introNext = null;
+
+/** Pre-level card (owner request, 2026-09-25): which monsters, the boss, your pumpkins, graves. Start goes through unseen intros first. */
+export function openPreview(n){
+  previewNight = n;
+  const def = levelFor(n), prevGraves = n > 1 ? levelFor(n - 1).graves : 0;
+  $('#pvTitle').textContent = `Level ${def.label}`;
+  $('#pvSub').textContent = WORLD_NAMES[def.worldNo - 1];
+  const mons = $('#pvMonsters'); mons.innerHTML = '';
+  for (const [t] of def.pool){
+    const d = document.createElement('div'); d.className = 'pv-ic';
+    d.appendChild(monsterIcon(t, 108));
+    const sm = document.createElement('small'); sm.textContent = MNAME[t] || t; d.appendChild(sm);
+    if (def.intro.includes(t)){ const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'NEW'; d.appendChild(tag); }
+    mons.appendChild(d);
+  }
+  $('#pvBossBlock').hidden = !def.boss;
+  const bb = $('#pvBoss'); bb.innerHTML = '';
+  if (def.boss){
+    const d = document.createElement('div'); d.className = 'pv-ic big';
+    d.appendChild(monsterIcon('boss', 160));
+    const sm = document.createElement('small'); sm.textContent = `${BOSS_NAME}${def.bossForm === 2 ? ', full form' : ''}`; d.appendChild(sm);
+    bb.appendChild(d);
+  }
+  const pk = $('#pvPumpkins'); pk.innerHTML = '';
+  for (const t of typesForNight(n)){
+    const d = document.createElement('div'); d.className = 'pv-ic';
+    d.appendChild(pumpkinIcon(t, true));
+    const sm = document.createElement('small'); sm.textContent = PTYPES[t].name; d.appendChild(sm);
+    if (def.unlockPumpkins.includes(PTYPES[t].key)){ const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'NEW'; d.appendChild(tag); }
+    pk.appendChild(d);
+  }
+  const info = [];
+  info.push(def.boss ? 'Monsters keep coming until the boss falls.' : `${def.total} monsters.`);
+  if (def.graves) info.push(`${def.graves} grave${def.graves > 1 ? 's' : ''} in the patch${def.graves > prevGraves ? ' (more than before)' : ''}.`);
+  for (const key of def.unlockGear){ const g = GEAR.find(x => x.key === key); if (g) info.push(`New tool: ${g.name}.`); }
+  $('#pvInfo').textContent = info.join(' ');
+  setState('preview');
+}
+
+/** Intro cards for anything the player has not met yet on night n, then start the night. */
+function startPreviewedNight(){
+  const n = previewNight, def = levelFor(n), prevGraves = n > 1 ? levelFor(n - 1).graves : 0;
+  const cards = [];
+  for (const key of def.unlockPumpkins){
+    const t = PTYPES.findIndex(p => p.key === key);
+    if (t >= 0) cards.push({ key:'p:' + key, icon:pumpkinIcon(t, true), title:`New pumpkin: ${PTYPES[t].name}`, text:`It ${PTYPES[t].role}. Bunch three or more to throw it.` });
+  }
+  for (const key of def.unlockGear){
+    const g = GEAR.find(x => x.key === key);
+    if (g) cards.push({ key:'g:' + key, icon:g.icon, title:`New tool: ${g.name}`, text:`${g.desc} You get one to start with. More drop from monsters and sell in the shop.` });
+  }
+  if (def.graves && !prevGraves) cards.push({ key:'graves', icon:'🪦', title:'Graves', text:GRAVES_INTRO });
+  for (const t of def.intro) cards.push({ key:'m:' + t, icon:monsterIcon(t, 160), title:`New monster: ${MNAME[t] || t}`, text:MINTRO[t] || '' });
+  if (def.boss) cards.push({ key:`b:${def.boss}:${def.bossForm}`, icon:monsterIcon('boss', 200), title:def.bossForm === 2 ? `${BOSS_NAME}, full form` : `Boss: ${BOSS_NAME}`, text:BOSS_INTRO[def.bossForm] });
+  introQueue = cards.filter(c => !save.seenIntro[c.key]);
+  introNext = () => beginNight(n);
+  showNextIntro();
+}
+function showNextIntro(){
+  const card = introQueue.shift();
+  if (!card){ const f = introNext; introNext = null; if (f) f(); return; }
+  save.seenIntro[card.key] = true; persist();
+  const ic = $('#inIcon'); ic.innerHTML = '';
+  if (typeof card.icon === 'string') ic.textContent = card.icon; else ic.appendChild(card.icon);
+  $('#inTitle').textContent = card.title; $('#inText').textContent = card.text;
+  setState('intro');
+}
+
 export function openLevels(){
   $('#lvCoins').textContent = save.coins.toLocaleString();
   const list = $('#lvList'); list.innerHTML = '';
@@ -105,7 +176,7 @@ export function openLevels(){
       b.disabled = locked;
       b.setAttribute('aria-label', locked ? `Level ${d.world}-${d.level}, locked` : `Level ${d.world}-${d.level}, ${st} of 3 stars`);
       b.innerHTML = locked ? `<span>🔒</span><small></small>` : `<span>${d.boss ? '💀' : d.level}</span><small>${'★'.repeat(st)}${'<span style="opacity:.25">★</span>'.repeat(3 - st)}</small>`;
-      b.onclick = () => withHelp(() => beginNight(n));
+      b.onclick = () => withHelp(() => openPreview(n));
       row.appendChild(b);
     });
     sec.appendChild(row); list.appendChild(sec);
@@ -168,16 +239,18 @@ export function renderShop(){
   }
   const list = $('#shopList'); list.innerHTML = '';
   for (const it of GEAR){
-    const lvl = save[it.key], maxed = lvl >= it.max;
+    const lvl = save[it.key] || 0, maxed = lvl >= it.max;
     const cost = it.consumable ? it.cost[0] : it.cost[lvl];
+    const gu = it.consumable ? gearUnlockNightOf(it.key) : 1, gLocked = gu > highestOpen();
     const d = document.createElement('div'); d.className = 'item';
     const pips = Array.from({ length:it.max }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('');
     d.innerHTML = `<div class="ic" aria-hidden="true">${it.icon}</div><div class="tx"><b>${it.name}</b><p>${it.desc}</p><div class="pips" aria-label="${lvl} of ${it.max}">${pips}</div></div>`;
     const b = document.createElement('button'); b.className = 'btn small';
-    if (maxed){ b.textContent = it.consumable ? 'Full' : 'Maxed'; b.disabled = true; }
+    if (gLocked){ b.textContent = gu === Infinity ? 'Later world' : `Level ${levelFor(gu).label}`; b.disabled = true; }
+    else if (maxed){ b.textContent = it.consumable ? 'Full' : 'Maxed'; b.disabled = true; }
     else { b.innerHTML = `<span class="coin"></span>${cost}`; b.disabled = save.coins < cost; b.setAttribute('aria-label', `Buy ${it.name} for ${cost} coins`); }
     b.onclick = () => {
-      if (save.coins < cost || save[it.key] >= it.max) return;
+      if (gLocked || save.coins < cost || save[it.key] >= it.max) return;
       save.coins -= cost; save[it.key]++; persist(); ensureAudio(); SFX.coin(); renderShop();
     };
     d.appendChild(b); list.appendChild(d);
@@ -238,6 +311,9 @@ export function wireButtons(){
 
   $('#fwBtn').onclick = useFirework;
   $('#gbBtn').onclick = useBuster;
+  $('#bPvBack').onclick = openLevels;
+  $('#bPvGo').onclick = () => { ensureAudio(); startPreviewedNight(); };
+  $('#bIntroOk').onclick = () => { ensureAudio(); showNextIntro(); };
 
   $('#rpBtn').onclick = useRepair;
 

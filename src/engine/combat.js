@@ -8,6 +8,7 @@ import { TAU, clamp, fmt, rnd } from './util.js';
 import { lvOf, save, persist } from '../save.js';
 import { KILL_REWARD } from '../data/rules.js';
 import { GEAR } from '../data/shop.js';
+import { toolsForNight, highestOpen } from '../data/worlds/index.js';
 import { banner } from '../ui/hud.js';
 
 export function launchGroup(ref){
@@ -50,12 +51,17 @@ export function dropPumpkins(m, n){
  *  weapon already at its carry limit pays coins instead. */
 export function rollReward(){
   const r = Math.random();
-  if (r < KILL_REWARD.weapon) return GEAR.some(g => g.consumable && (save[g.key] || 0) < g.max) ? 'weapon' : 'coins';
+  if (r < KILL_REWARD.weapon) return droppableTools().length ? 'weapon' : 'coins';
   if (r < KILL_REWARD.weapon + KILL_REWARD.pumpkin) return 'pumpkin';
   return 'coins';
 }
+/** Tools that can drop right now: introduced by the current night and below their carry limit. */
+function droppableTools(){
+  const open = toolsForNight(G.mode === 'story' ? G.n : highestOpen());
+  return GEAR.filter(g => g.consumable && open.includes(g.key) && (save[g.key] || 0) < g.max);
+}
 export function dropWeapon(m){
-  const options = GEAR.filter(g => g.consumable && (save[g.key] || 0) < g.max);
+  const options = droppableTools();
   const gear = options[Math.floor(Math.random() * options.length)];
   const y = clamp(mY(m), FIELD_TOP + 20, FIELD_BOT - 30);
   G.drops.push({ kind:'weapon', item:gear.key, x:clamp(m.x, 26, W - 26), y, t:0, life:7, ph:Math.random() * TAU, dead:false });

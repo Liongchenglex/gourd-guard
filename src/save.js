@@ -8,7 +8,7 @@ export const lvOf = t => clamp(save.lv[PTYPES[t].key] || 1, 1, 5);
 
 export const SAVE_KEY = 'gourdguard.v1';
 
-export const save = { unlocked:1, stars:{}, coins:0, fence:0, fw:1, repair:1, buster:0, best:0, muted:false, seenHelp:false, seenFlick:false, spawnEvery:5,
+export const save = { unlocked:1, stars:{}, coins:0, fence:0, fw:0, repair:0, buster:0, seenIntro:{}, best:0, muted:false, seenHelp:false, seenFlick:false, spawnEvery:5,
   lv:{ green:1, yellow:1, ice:1, fire:1, grey:1, purple:1 }, loadout:[0,1,2,3,4] };
 
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && typeof s === 'object') Object.assign(save, s); } catch (e) {}
@@ -19,7 +19,9 @@ for (const t of PTYPES.slice(0, NTYPES)) if (!save.lv[t.key]) save.lv[t.key] = 1
 
 if (!SPAWN_STEPS.includes(save.spawnEvery)) save.spawnEvery = 5;
 
-if (typeof save.repair !== 'number') save.repair = 1;
+if (typeof save.repair !== 'number') save.repair = 0;
+
+if (!save.seenIntro || typeof save.seenIntro !== 'object') save.seenIntro = {};
 
 if (typeof save.buster !== 'number') save.buster = 0;
 

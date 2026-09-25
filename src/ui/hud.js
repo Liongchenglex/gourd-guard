@@ -1,3 +1,4 @@
+import { toolsForNight, highestOpen } from '../data/worlds/index.js';
 import { scale } from '../engine/render/canvas.js';
 import { FIELD_BOT, FIELD_TOP, G, setBannerTimer } from '../engine/state.js';
 import { $, clamp } from '../engine/util.js';
@@ -23,7 +24,8 @@ export function updateHud(force){
   } else prog = G.total ? G.resolved / G.total : 0;
   const label = G.mode === 'story' ? `Night ${G.def.label}` : `Score ${G.score.toLocaleString()}`;
   const wf = Math.round(wallFrac() * 100);
-  const sig = [wf, coins, Math.round(prog * 100), label, save.fw, save.repair, save.buster, G.aim].join('|');
+  const tools = toolsForNight(G.mode === 'story' ? G.n : highestOpen());
+  const sig = [wf, coins, Math.round(prog * 100), label, save.fw, save.repair, save.buster, G.aim, tools.join(',')].join('|');
   if (sig === hudSig && !force) return;
   const coinsChanged = hudSig && hudSig.split('|')[1] !== String(coins);
   hudSig = sig;
@@ -37,6 +39,7 @@ export function updateHud(force){
   $('#fwCount').textContent = save.fw; $('#fwBtn').disabled = save.fw <= 0;
   $('#rpCount').textContent = save.repair; $('#rpBtn').disabled = save.repair <= 0;
   $('#gbCount').textContent = save.buster; $('#gbBtn').disabled = save.buster <= 0; $('#gbBtn').classList.toggle('aim', G.aim === 'buster');
+  $('#rpBtn').hidden = !tools.includes('repair'); $('#fwBtn').hidden = !tools.includes('fw'); $('#gbBtn').hidden = !tools.includes('buster');
   if (coinsChanged){ const cb = $('#coinBox'); cb.classList.add('bump'); setTimeout(() => cb.classList.remove('bump'), 120); }
 }
 

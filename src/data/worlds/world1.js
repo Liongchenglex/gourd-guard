@@ -2,7 +2,7 @@
 // Field meanings: ../levels.js. Starting numbers from 2026-09-25; the balance bot tunes them against the
 // target win-rate curve (docs/WORLDS.md §1): levels 1–5 ≈ 95%, 6–9 ≈ 85%, boss 10 ≈ 75%, 11–15 ≈ 65%, 16–19 ≈ 50%, boss 20 ≈ 40%.
 export default [
-  { world:1, level: 1, theme:0, pattern:0, graves:0, total: 9, interval:3.84, spMul:0.76, boss:null, bossForm:1, pool:[['ghoul', 10]], unlockPumpkins:[], unlockGear:[], intro:[] },
+  { world:1, level: 1, theme:0, pattern:0, graves:0, total: 9, interval:3.84, spMul:0.76, boss:null, bossForm:1, pool:[['ghoul', 10]], unlockPumpkins:[], unlockGear:['repair'], intro:[] },
   { world:1, level: 2, theme:0, pattern:1, graves:0, total:10, interval:3.78, spMul:0.772, boss:null, bossForm:1, pool:[['ghoul', 10], ['bat', 6]], unlockPumpkins:[], unlockGear:[], intro:['bat'] },
   { world:1, level: 3, theme:0, pattern:2, graves:1, total:12, interval:3.72, spMul:0.784, boss:null, bossForm:1, pool:[['ghoul', 10], ['bat', 6]], unlockPumpkins:['ice'], unlockGear:[], intro:[] },
   { world:1, level: 4, theme:0, pattern:3, graves:1, total:13, interval:3.66, spMul:0.796, boss:null, bossForm:1, pool:[['ghoul', 10], ['bat', 6], ['imp', 6]], unlockPumpkins:[], unlockGear:[], intro:['imp'] },

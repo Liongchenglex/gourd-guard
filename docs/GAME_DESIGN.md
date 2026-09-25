@@ -160,7 +160,9 @@ Per level the data gives: starting pattern, graves, wave size, spawn gap, speed 
 - Spawn gap is jittered ×0.6–1.4 with an 18% chance of a short gap ×0.3.
 - The boss appears once 40% of the wave has spawned. On boss levels spawning continues until the boss dies (see §7).
 - A level is won when the wave is exhausted (or the boss is dead) and no monster is left.
-- Level banners announce new pumpkins, new tools (with one free unit), new monsters, bosses and new graves.
+- **Level preview**: choosing a level opens a card showing the monsters in its pool (NEW tags on first appearances), the boss if any, the pumpkins in play, the monster count or "until the boss falls", graves and new tools. Start from there.
+- **Intro cards**: the first time a pumpkin, tool, graves, monster or boss form appears, a card with its icon and one paragraph must be confirmed before the level starts (`save.seenIntro`). The bot's `startGame` path bypasses both screens.
+- Level banners still summarise the same things at the start of the level.
 
 World 1 starting numbers (2026-09-25, to be tuned by the bot): wave 9 → 20 over levels 1–10 and 22 → 36 over 11–20; spawn gap 3.84 s → 2.7 s; speed ×0.76 → ×0.868 by level 10, then +0.02 per level to ×1.068; pool adds Bat at 1-2, Imp at 1-4, Mossback at 1-6 (weight 3 + 0.2 × level), Mummy at 1-9.
 
@@ -182,7 +184,8 @@ Difficulty `1 + t/25`; the Gravekeeper every 100 s (form 2 once the world change
   - **Sturdy walls**: +5 wall health per level, 3 levels, 40 / 80 / 130.
   - **Wall repair** (consumable): fully repairs every wall. 40 coins, carry up to 3, player starts with 1.
   - **Firework** (consumable): 3 damage to every monster. 30 coins, carry up to 5, player starts with 1.
-  - **Grave buster** (consumable): tap the button, then tap a grave to dig it out. 30 coins, carry up to 3, one free at level 1-6. Tapping anywhere else cancels.
+  - **Grave buster** (consumable, 🧨 icon): tap the button, then tap a grave to dig it out. 30 coins, carry up to 3, one free at level 1-6. Tapping anywhere else cancels.
+  - **Tools are gated by introduction**: a consumable exists only from the level that introduces it (Wall repair 1-1, Firework 1-5, Grave buster 1-6, from level data `unlockGear`). Before that it is hidden in the HUD, locked in the shop, and never drops from kills. New players start with 0 of everything and receive one unit on the introducing level.
 - Progress, coins, levels, loadout and settings are saved in the browser (localStorage key `gourdguard.v1`).
 
 ---

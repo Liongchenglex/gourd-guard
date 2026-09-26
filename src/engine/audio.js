@@ -8,7 +8,10 @@ export function ensureAudio(){
   try {
     if (!AC){
       const A = window.AudioContext || window.webkitAudioContext; if (!A) return;
-      AC = new A(); master = AC.createGain(); master.gain.value = 0.45; master.connect(AC.destination);
+      AC = new A(); master = AC.createGain(); master.gain.value = 1.0;
+      // Limiter: every sound is mixed hot (BOOST) so it carries on a phone speaker; the compressor keeps stacked layers from clipping.
+      const comp = AC.createDynamicsCompressor(); comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 10; comp.attack.value = 0.002; comp.release.value = 0.12;
+      master.connect(comp); comp.connect(AC.destination);
       noiseBuf = AC.createBuffer(1, Math.floor(AC.sampleRate * 1), AC.sampleRate);
       const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     }
@@ -16,20 +19,28 @@ export function ensureAudio(){
   } catch (e) {}
 }
 
+// Mix levels. BOOST lifts every primitive out of the -30 dBFS range the first draft sat in (measured peaks were 0.02-0.05,
+// inaudible on a phone at normal volume). layerGain/jitter are set briefly by the hit layers: monster reactions play a touch
+// louder than the pumpkin impact so both read, and a little random detune keeps repeated hits from sounding like a loop.
+const BOOST = 5;
+let layerGain = 1, jitter = 0;
+function layer(gain, detune, fn){ layerGain = gain; jitter = detune; try { fn(); } finally { layerGain = 1; jitter = 0; } }
+const jit = f => jitter ? f * (1 + (Math.random() - 0.5) * 2 * jitter) : f;
+
 export function tone(f, d, type, v, f2, delay){
   if (!AC || save.muted) return;
-  const t0 = AC.currentTime + (delay || 0);
+  const t0 = AC.currentTime + (delay || 0); const k = jit(1); f *= k; if (f2) f2 *= k; v = (v || 0.15) * BOOST * layerGain;
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = type || 'sine'; o.frequency.setValueAtTime(f, t0);
   if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + d);
-  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(v || 0.15, t0 + 0.012);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(v, t0 + 0.012);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
   o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + d + 0.05);
 }
 
 export function noise(d, v, f, q, delay, f2){
   if (!AC || save.muted) return;
-  const t0 = AC.currentTime + (delay || 0);
+  const t0 = AC.currentTime + (delay || 0); const k = jit(1); f *= k; if (f2) f2 *= k; v = v * BOOST * layerGain;
   const s = AC.createBufferSource(); s.buffer = noiseBuf;
   const bq = AC.createBiquadFilter(); bq.type = 'bandpass'; bq.frequency.setValueAtTime(f, t0); bq.Q.value = q || 1;
   if (f2) bq.frequency.exponentialRampToValueAtTime(f2, t0 + d);
@@ -89,6 +100,9 @@ export const SFX = {
   // ---- pumpkins hitting monsters (type = pumpkin index; size for Brown; rainbow adds a sparkle) ----
   pumpkinHit(type, size, rainbow){
     if (!gate('phit', 40)) return;
+    layer(1, 0.05, () => this._phit(type, size, rainbow));
+  },
+  _phit(type, size, rainbow){
     switch (type){
       case 1: thump(); coinChime(0.02); break;                                                         // Yellow
       case 2: tone(1800, 0.14, 'sine', 0.05, 2600); noise(0.12, 0.16, 4000, 2, 0.02, 2000); break;    // Ice
@@ -120,6 +134,9 @@ export const SFX = {
   // ---- monsters: hit (blocked = clang/tock), death, own actions ----
   monsterHit(type, blocked){
     if (!gate('mhit', 40)) return;
+    setTimeout(() => layer(1.6, 0.07, () => this._mhit(type, blocked)), 45);   // the flinch lands just after the thump so both are heard
+  },
+  _mhit(type, blocked){
     if (blocked){ if (type === 'knight') clang(); else { tone(300, 0.06, 'square', 0.05, 200); } return; }
     switch (type){
       case 'ghoul': groan(120, 0.09); break;
@@ -149,6 +166,9 @@ export const SFX = {
     }
   },
   monsterDie(type){
+    setTimeout(() => layer(1.5, 0.06, () => this._mdie(type)), 60);
+  },
+  _mdie(type){
     switch (type){
       case 'ghoul': groan(110, 0.1, 0.45); break;
       case 'bat': tone(2000, 0.05, 'square', 0.04, 2600); break;
@@ -280,6 +300,9 @@ export const SFX = {
   // ---- chewing the wall: one clearly audible bite every third of a second, flavoured by who is chewing ----
   chew(type){
     if (!gate('chew', 330)) return;
+    layer(1.2, 0.08, () => this._chew(type));
+  },
+  _chew(type){
     switch (type){
       case 'knight': case 'bulwark': case 'gargoyle': noise(0.08, 0.22, 2200, 1.5); tone(400, 0.08, 'square', 0.05, 250); break;   // metal or stone scraping wood
       case 'slime': case 'blob': case 'crawler': case 'diver': noise(0.1, 0.22, 350, 2.5); tone(180, 0.08, 'sine', 0.06, 120); break;   // wet

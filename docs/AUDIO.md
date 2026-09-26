@@ -85,3 +85,5 @@ Conventions: every hit has a **pumpkin layer** (what was thrown) and a **monster
 ## 5. Music (to design after the effects)
 
 One loop per world plus a boss variant that layers on top of it, with per-world instrumentation to match the theme. Separate music and effects sliders in the pause menu; music ducks under banners and boss arrivals.
+
+**Mix (2026-09-26).** The first synthesised pass measured peaks of 0.02–0.05 (about −30 dBFS) and the monster layer played at the same instant as the pumpkin thump, so on a phone only the thump was heard. Now every primitive is mixed ×5 hotter into a limiter (compressor −14 dB, ratio 10), the monster hit and death layers play 45–60 ms after the impact at 1.5–1.6× gain, and hit, death and chew sounds carry ±5–8% random detune. Measured peaks after: 0.5–0.75 for single sounds, 0.75 for a thump plus ghoul together.

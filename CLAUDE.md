@@ -23,7 +23,7 @@ The owner designs the rules; your job is to implement them faithfully, keep the 
 - Every world has a level-16 monster (Flaming Mummy, Fogwalker, Witch, Bulwark Knight, Shell Turtle) and a level-20 perk (`src/data/perks.js`). The Hexwitch works with hex zones (`G.hexZones`).
 - Every level tap opens a preview card (monsters, boss, pumpkins, graves, tools); first appearances show intro cards. Tools appear in the HUD/shop/drops only once introduced.
 - Neither world is tuned yet: the owner asked to build worlds first and tune later. Level 10 of world 1 felt too hard to the owner.
-- All art is drawn in code on a canvas; all sound is synthesised Web Audio per `docs/AUDIO.md` (hooks in `src/engine/audio.js`). No external assets. Music not built yet.
+- All art is drawn in code on a canvas. Sound is recorded CC0 samples (`assets/sfx`, credits in `assets/sfx/SOURCES.md`, bank generated into `src/data/sfxbank.js` by `tools/sfx_build.py`) plus a small synthesiser for musical accents and fallback, per `docs/AUDIO.md`. Music not built yet.
 - Save data lives in localStorage key `gourdguard.v1` (keep migrations backward-compatible; the game already refunds removed upgrades).
 - Shared mutable state (`G`, `grid`, `graves`, `walls`, `state`, `gest`) lives in `src/engine/state.js`; other modules read it through imports and write it only through its `setX()` functions.
 - Balance rule from the owner: levels are tuned to be winnable at the **expected upgrade profile** for that level (`profile()` in `tools/balance_bot.py`) and hard below it, so upgrading pumpkins matters. Check both with `--offset 0` and `--offset -1`.
@@ -54,7 +54,7 @@ After each milestone the owner plays it on their phone. `npm run build`, then `.
 - Balance changes must be justified with bot runs (before/after), not guesses.
 - Mobile first: touch targets ≥44 px, works one-handed, respects safe areas, no hover-only UI.
 - Performance: keep 60 fps on mid-range phones; pre-render sprites; avoid per-frame allocations in hot loops.
-- Original IP only: don't use the names, art or text of "Pumpkins vs. Monsters" or Plants vs. Zombies; don't describe the game as a remake. Art stays original (drawn in code unless the owner provides assets).
+- Original IP only: don't use the names, art or text of "Pumpkins vs. Monsters" or Plants vs. Zombies; don't describe the game as a remake. Art stays original (drawn in code unless the owner provides assets). Sounds must be CC0 or owner-licensed and listed in `assets/sfx/SOURCES.md`.
 - Keep the game fully playable offline with no network requests other than Google Fonts (and plan to self-host fonts for the mobile build).
 
 ## Longer-term plan (see design doc §15)

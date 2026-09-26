@@ -1,0 +1,64 @@
+key	uuid	source	use
+pumpkin1	5a30b657-f738-4947-92bd-ed2a04c9b75f	ESM_HG pumpkin break impact 01	Green/Purple/White/Pink hit
+pumpkin2	32b1b39a-9dda-4561-9945-1870c29648bc	ESM_HG pumpkin break impact 02	generic hit alt
+ice	c2336302-71eb-47be-bbfa-e43213c44b87	Ice Spell Quick Freeze	Ice hit
+fire	f4d53ec5-7fff-4286-b155-9e1077a82e3b	Fire Throw whoosh cast 03	Fire hit
+boom	3ae14be9-7244-463c-9a22-b18ad6d83c5e	cartoon explosion flutter 01	Black hit, bomb
+zap	ee30835b-3d30-4cb4-beb5-ee6aa655c04b	shock spell beam 05	Deep Blue hit
+zapchain	d1e0170b-edf0-41f5-ad08-7e454f02db98	lightning zap strike whoosh 02	row lightning, diver bolt
+rock	df0f3aac-de8d-40f8-91ed-173dab4f1030	rock heavy impact 01	Grey hit, Brown big
+ping	a7433da8-1a7d-4103-bc25-346c1d28f349	Card Game bubble magic ping	Turquoise tap, mirror reflect
+coin	6cecb3db-dcbf-4c0f-bb46-fe9fc149ea68	organic pick up coin 1	Yellow hit, coin collect
+twinkle	dc805696-ffde-4676-99f7-cef782d39383	Kids Game level up twinkle	rainbow, perk, star
+sprout	0073832c-63d5-40b1-b398-32775a41c247	farming crop pull garden pop	sprouts
+throw	e5769733-c8f6-40cc-914a-d8192a0f26c1	combat whoosh swing throw fast 03	launch
+ghoul1	16c0e2a6-332a-4f90-831c-fca3556455f3	humanoid hurt quick grunt 01	ghoul/mummy/hauler hit
+ghouldie	0e75f784-0526-47e3-8d11-5e9cab23398c	Mark death moan 02	ghoul/mummy death
+zombie	7f0ea4f2-2ef2-4a84-801c-16d762ffa67c	ESM_HG zombie growl yelp pain cry layered	slice: ghoul variants, bog ghoul
+bats	f4eb64ec-2427-4f78-9e81-655a74c8095e	ESM_HG bats screech squeak	slice: bat hit/death
+giant1	4b7f1888-8be7-4036-a4d5-c5aa15a3a48c	Frost Giant pain 2	brute/bulwark hit
+giantdie	636d0930-2b6e-4241-abb1-b3d57efabcaf	Frost Giant death 3	brute/bulwark/hauler death
+wight	69c338e0-2c5e-4ea8-b694-71e29ac8777e	Wight choke	wisp/wraith/fogwalker hit
+wraithdie	897c791c-024c-4a5c-b396-2b97e57a024d	Wraith death 2	ghost death, poltergeist
+imp	c1e5c494-64e3-46b2-bdbd-d2f060a60606	Roc squeal chirp yelp 1	imp/rider hit
+goblindie	189af9dd-b876-49ed-bb22-04a8e937ff6e	goblin death 03	imp/rider death
+witch1	10a46c48-0db6-440c-afbe-86c12f0b2d8f	witch evil sneering 01	witch hit, hex
+witch2	5a412502-e26a-4ad4-971b-13cdf11e1a93	witch evil sneering 03	witch death, Hexwitch
+vamphiss	42e0a97f-ed3f-4dee-bede-ecd2739f4bae	Balor breath exhale hiss	vampire hit
+basilisk	53c52ac7-1a61-4fdd-aa64-639bf31e6ee6	Basilisk attack 2 hiss	chameleon hit, Vampire Count hit
+basiliskdie	c55bc754-d5b5-44f2-ae5e-ce41bded3665	Basilisk death 2	vampire/chameleon death
+slime	2b672637-16ca-414a-986c-2e49716a147f	Muddy item drop squish	slime/blob hit
+slimedie	bf1503ce-3b76-4ebf-a3c7-91f38fbe5ad4	slime smash squish splat 01c	slice: slime/blob death
+plop	a39cac6c-5dc5-48bb-8d53-219a0a99f118	Mud plop 5	crawler/diver hit
+clank	7b6d92d7-e5f3-429a-8fd7-50ce96bc9ec6	shield armored hit clank 05	knight hit/blocked
+armorbreak	a7e0261e-1af7-45d2-8371-6d5397e203b3	armor shatter break shield	knight/bulwark death
+clang	e3073b98-61b8-4a0e-8994-5fed6bc50615	metal clang smack resonance 03	gargoyle hit, castle chew
+stonebreak	2f63039e-4351-49d2-ae64-5dc620c663cd	break stone container 1	gargoyle death, grave buster
+glass	8542adac-f609-4e21-8b3e-32237380423c	glass break 2	mirror sprite death
+splash	00519ed2-948e-462c-a332-2465f6e9a8b2	water splash small bubbles 7	diver surface, turtle, Twin Tides
+bubbles	34fc74ca-af23-446a-8daa-2f87216d88e6	bubbles splash low	diver submerge
+cloth	87e19284-495b-4789-aafb-b686d13f9eb5	cloth swish 01	mummy hit, scarecrow
+human1	222a065d-8345-43b2-8959-bcb6a70f80ea	FightGrunt 54993	doctor/sailor/archer hit
+knock	51c1d0e7-3dba-4f17-87a9-39139b74a77e	crunchy tap knock hollow box 03	turtle hit, wood chew
+balor	f77b0f14-e0e3-4b63-9ba6-7d70e8784754	Balor monster pain 3	Gravekeeper hit
+balordie	1b98b2dd-9efd-4d5e-a8d1-b922feeb71c8	Balor monster pain 4	Gravekeeper death
+bear	91eebd46-abcb-4d62-90cc-e11fe082196e	bear roar	form 2 roar, Vampire Count death
+shark	44accdf6-f4dd-4ff4-ad2f-47e9194fa113	sea monster shark roar 03	Twin Tides hit
+kraken	30835337-effd-46e3-b791-289239dd3d1b	kraken tentacles roar	Twin Tides intro/death
+darkcast	94ce281a-5785-4ee6-8ab3-ab92c978ac42	dark whoosh shadow spell cast 08	hex, poltergeist swap, trance
+conjure	2d49fd57-a312-47b5-945e-43950444c691	Kids Game magic conjure whoosh	teleport, mirror up
+firework	02dfbe38-dd98-47d9-b9ce-b01b25b300fe	firework whistle bottle rocket pop	firework
+hammer	fa5be30e-3556-4f66-ab2b-cc9024295ffa	BarricadeHammer	wall repair
+woodbreak	ff5a172c-ee8a-43b0-acc6-d7b88526ab8c	item break wood 01	wall down
+shovel	5ec3db2a-442c-4886-adfe-ba1b0d5106e8	ShovelDigDirt	grave buster
+dig	fe2fd266-62c0-404c-b824-120674ceba0a	digging dirt shovel 01	mummy/crawler rise
+arrow	ea7c8a94-2283-4546-9ca0-618c3bb44921	bow release ping twang	archer shot
+wind	8e3a11fd-f235-4501-bc61-558ecaac27dc	wind whoosh gust medium 05	gusts
+mine	d0f00512-be48-4c53-aa2e-4dc92917f947	electric mine trap trigger explosion 2	landmine
+torch	321f5f35-5938-4c02-abd6-b7820319b013	fire whoosh ignition flames 04	lantern
+uitap	8bbe9669-4a45-4738-8c02-c2bbd7387957	menu button 2 tonal click	menu tap
+uiback	c82181a3-0120-4bc3-914f-85acecb63d65	kids game menu disappear click	back
+uigo	3275cd99-0dd8-4e90-b583-efebe0ac2c23	menu selection tonal click	go, level tile
+win	d9a53ad7-9585-4637-ac18-95e6b075fdba	Kids Game collect bonus fanfare 02	night won
+lose	9a32c24f-0813-4123-9553-b2ecb3f9d70e	Kids Game lose minor 01	night lost
+heal	b550bf44-0a20-48b7-b7b2-b3625678af56	positive chime power up buff	Pink heal, doctor heal

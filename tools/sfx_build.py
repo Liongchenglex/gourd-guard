@@ -26,6 +26,8 @@ BANK = {
   'whoosh':    [('throw_0.mp3',0,.35), ('throw_2.mp3',0,.5)],
   'whooshlong':[('throw_1.mp3',0,1.0)],
   'reverse':   [('vanish_0.mp3',.05,.6), ('vanish_1.mp3',.05,.6)],
+  'swish':     [('swish_1.mp3',0,.4), ('swish_0.mp3',0,.4), ('swipe_1.mp3',0,.4), ('swipe_2.mp3',0,.4)],   # pumpkin swipe (owner: the old noise sweep felt dull)
+  'whistle':   [('slidepop_0.mp3',0,.45)],   # cartoon slide whistle for row pushes
   # monsters
   'ghoul':     [('cartoongrunt_1.mp3',0,.4), ('cartoongrunt_2.mp3',0,.4), ('cutemonster_2.mp3',0,.35), ('cutemonster_1.mp3',0,.6)],   # cute, short (owner)
   'ghouldie':  [('cutemonster_0.mp3',0,.9), ('ghouldie_0.mp3',0,.6)],

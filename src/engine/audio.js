@@ -151,8 +151,8 @@ const boomSynth = () => { noise(0.9, 0.45, 300, 0.6, 0, 120); tone(90, 0.6, 'sin
 
 export const SFX = {
   // ---- board and legacy names still used around the code ----
-  slide(){ noise(0.14, 0.14, 700, 1, 0, 260); },
-  push(){ noise(0.16, 0.16, 500, 1, 0, 200); tone(150, 0.12, 'triangle', 0.06, 110); },
+  slide(){ S('swish', 0.55, { rate: 1.25, jit: 0.12 }) || noise(0.14, 0.14, 700, 1, 0, 260); S('pop', 0.3, { rate: 1.35, delay: 0.09 }); },   // a quick swish and a landing pop (owner: exciting, not dull)
+  push(){ S('whistle', 0.45, { rate: 1.1 }) || S('swish', 0.55, { rate: 0.95 }) || noise(0.16, 0.16, 500, 1, 0, 200); S('thud', 0.35, { rate: 1.1, delay: 0.12 }); },   // a cartoon slide whistle as the row shoves over
   bad(){ S('uibad', 0.5) || tone(190, 0.1, 'square', 0.05, 150); },
   launch(n){
     if (!gate('launch', 60)) return;

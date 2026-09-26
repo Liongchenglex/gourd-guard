@@ -186,3 +186,12 @@ Files under `raw/kenney/` come from kenney.nl asset packs, all CC0: Impact Sound
 | siren2_0.mp3 | dub_siren_lfo_square_short_9 | leonseptavaux | https://freesound.org/s/716153/ | CC0 |
 | siren2_1.mp3 | Sirens.wav | Music15tree | https://freesound.org/s/491448/ | CC0 |
 | siren2_2.mp3 | Woo Siren.wav | 8bitmyketison | https://freesound.org/s/699849/ | CC0 |
+| swipe_1.mp3 | BB_1 quick metallic swipe.wav | Yarmonics | https://freesound.org/s/441849/ | CC0 |
+| swipe_2.mp3 | Broomstick whoosh 3 - Quiet - OKM1 | Sadiquecat | https://freesound.org/s/816262/ | CC0 |
+| swipe_3.mp3 | Fast swipe.wav | ParadoxTheSock | https://freesound.org/s/412595/ | CC0 |
+| swish_0.mp3 | Swish Clap.wav | Teaganbear | https://freesound.org/s/672568/ | CC0 |
+| swish_1.mp3 | Swish wipe HZA 16-05-2022.wav | hz37 | https://freesound.org/s/667419/ | CC0 |
+| swish_2.mp3 | Basketball Swish | vhschool2019 | https://freesound.org/s/716930/ | CC0 |
+| slidepop_0.mp3 | classic dizzy take slide whistle.wav | martian | https://freesound.org/s/403002/ | CC0 |
+| slidepop_1.mp3 | 8. Toaster rise | AlixTwix6 | https://freesound.org/s/800536/ | CC0 |
+| slidepop_2.mp3 | cello slide.wav | edschaefer | https://freesound.org/s/341869/ | CC0 |

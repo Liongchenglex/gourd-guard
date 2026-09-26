@@ -134,6 +134,7 @@ export function kill(m){
   const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', chameleon:'#6ab04a', rchameleon:'#3a3a4a', mirror:'#c8d8f0', firemummy:'#ff8a3a', fogwalker:'#b8c8d8', witch:'#6a3a8a', bulwark:'#8090a8', turtle:'#4a7a5a', boss:'#6a3a7a' }[m.type] || '#aaa';
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
   ring(m.x, y, m.r * s * 2.2, 'rgba(255,220,150,.8)');
+  if (G.vfx) G.vfx.push({ kind:'pop', m:{ type:m.type, kind:m.kind, ph:m.ph, eating:m.eating, hop:m.hop, tint:m.tint, age:5, rise:0, flash:0, slowT:0, frozenT:0, r:m.r }, x:m.x, y, s, t:0, dur:0.35 });   // the last frame squashes and fades (baked characters only)
   if (reward === 'boss' || reward === 'coins' || reward === 'gold'){
     const mult = reward === 'gold' ? COIN_MULT[(m.lastHitLv || 1) - 1] : 1;
     G.coins += Math.round(m.coins * mult);

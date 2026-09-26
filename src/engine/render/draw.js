@@ -8,6 +8,7 @@ import { dropHop, castleY } from '../combat.js';
 import { mS, mY, TILE_P } from '../monsters.js';
 import { K, coinTarget, ctx } from './canvas.js';
 import { drawMonster } from './monsters.js';
+import { charKey, drawChar } from './anim.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, mix, rrect, shade, tri } from './util.js';
 import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, GX, GY, H, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, state, walls, HOLD_TIME_QUICK } from '../state.js';
@@ -51,6 +52,7 @@ export function render(){
     if (fogOn && m.type !== 'boss' && m.p > -0.02 && (bands.some(([a, b]) => m.p >= a && m.p <= b) || fogCols.includes(m.lane))) continue;   // inside a fog bank (bosses glow through)
     drawMonster(m, t);
   }
+  drawVfx();
   drawTails(t);
   drawCastles(t);
   drawScarecrows(t);
@@ -458,4 +460,21 @@ export function drawStar(x, y, r, rot){
   ctx.beginPath();
   for (let i = 0; i < 10; i++){ const a = rot + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
   ctx.closePath(); ctx.fill(); ctx.stroke();
+}
+
+/** Baked-character effects: a dying monster's last frame popping, or a clip played on its own (the Gravekeeper dissolving). */
+function drawVfx(){
+  if (!G.vfx) return;
+  for (const v of G.vfx){
+    const p = Math.min(1, v.t / v.dur);
+    if (v.kind === 'pop'){
+      const key = charKey(v.m); if (!key) continue;
+      ctx.save(); ctx.translate(v.x, v.y); ctx.scale(v.s * (1 + p * 0.5), v.s * (1 - p * 0.85)); ctx.globalAlpha = 1 - p;
+      if (v.m.type === 'imp') ctx.translate(0, -(v.m.hop || 0) * 14);
+      drawChar(ctx, v.m, key, ['#ffffff', 0.3]); ctx.restore();
+    } else if (v.kind === 'clip'){
+      ctx.save(); ctx.translate(v.x, v.y); ctx.scale(v.s, v.s);
+      drawChar(ctx, {}, v.key, null, [v.clip, Math.floor(p * 7.999)]); ctx.restore();
+    }
+  }
 }

@@ -1,4 +1,5 @@
 import { buildBg, buildSprites } from './sprites.js';
+import { setBakeScale } from './anim.js';
 import { G, H, W, layout, setH } from '../state.js';
 import { $, clamp } from '../util.js';
 
@@ -18,6 +19,7 @@ export function resize(){
   scale = Math.min(aw / W, ah / H);
   dpr = Math.min(window.devicePixelRatio || 1, 2);
   K = scale * dpr;
+  setBakeScale(K);
   wrap.style.width = (W * scale) + 'px';
   wrap.style.height = (H * scale) + 'px';
   wrap.style.setProperty('--u', scale.toFixed(4));

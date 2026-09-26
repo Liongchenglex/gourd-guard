@@ -9,6 +9,7 @@ import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches
 import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle } from './combat.js';
 import { mS, mY, updateMonster, TILE_P, applyBulwarks } from './monsters.js';
 import { bgWorld, buildBg } from './render/sprites.js';
+import { poolKey, prebake } from './render/anim.js';
 import { endlessSpawn, storySpawn } from './spawner.js';
 import { COLS, CS, FENCE_Y, FIELD_TOP, G, GY, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, setG, setGest, state, walls, GX, FIELD_BOT, HOLD_TIME_QUICK } from './state.js';
 import { rnd, shuffle, clamp, TAU } from './util.js';
@@ -20,7 +21,7 @@ import { openLoadout, setState, showResult } from '../ui/screens.js';
 // ---------- Flow ----------
 
 export function makeDemo(){
-  setG({ mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], gustT:0, gustDir:null });
+  setG({ mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], gustT:0, gustDir:null });
   initBoard(1, 2);
   [[4,0],[4,1],[4,2],[3,1]].forEach(([r, c]) => { if (grid[r][c]) grid[r][c].c = 0; });
   resolveMatches();
@@ -56,10 +57,11 @@ export function startGame(mode, n, loadout){
     coins:0, score:0, kills:0, resolved:0, throws:0, missed:0,
     total:def ? def.total + (def.boss ? 1 : 0) : 0,
     spawned:0, spawnTimer:2.6, bossSpawned:false, bossTimer:100, diff:1, sproutT:0,
-    monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], groups:{},
+    monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], groups:{},
     t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
   });
+  if (def) prebake([...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...(def.boss ? [def.boss] : []), 'ghoul']);   // bake this level's sprite strips now, not on first sight
   if (def && def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
   else if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def && def.puddles) placePuddles(def.puddles);
@@ -374,6 +376,7 @@ export function commonFx(dt){
     if (p.kind !== 'ring'){ p.x += p.vx * dt; p.y += p.vy * dt; p.vy += (p.grav || 0) * dt; p.vx *= 1 - dt * 1.5; if (p.rot != null) p.rot += dt * 8; }
   }
   g.parts = g.parts.filter(p => p.t < p.life);
+  if (g.vfx){ for (const v of g.vfx) v.t += dt; g.vfx = g.vfx.filter(v => v.t < v.dur); }
   for (const f of g.floats){ f.t += dt; f.y -= 38 * dt; }
   g.floats = g.floats.filter(f => f.t < f.life);
   for (const c of g.coinFx){ c.t += dt; if (c.t >= c.dur && !c.done){ c.done = true; SFX.coin(); } }

@@ -393,6 +393,17 @@ Same bot caveats as above (no colour picking, no plan for wind). Follow-up (2026
 | 4-10 | 0/2 | 0/3, 70% | 0/3, 67% |
 | 5-10 | 0/2 | 0/3, 63% | 0/3, 55% |
 
+### 5-15 "The Drowned" softened (2026-09-26, `--repeats 3`, expected profile, Fire locked in)
+
+The owner found the all-Sodden-Mummy level too dense. Bot fix first: the bot had never carried Fire on mummy levels (it takes the five most recently unlocked types), so its earlier 5-15 figures were 0 kills; it now mirrors the game's Fire and Ice loadout locks.
+
+| 5-15 | Wins | Mean walls | Kills per run | Seconds survived |
+|---|---|---|---|---|
+| Before: 30 mummies, gap 2.6 s | 0/3 | 57% | 7, 10, 3 | 69, 64, 68 |
+| After: 22 mummies, gap 3.4 s | 0/3 | 54% | 10, 10, 13 | 82, 98, 86 |
+
+The bot still loses (it misses about 40% of throws and cannot keep Fire on the lane the mummies rise in), but it lasts noticeably longer; the owner judges the level by hand.
+
 Second follow-up (2026-09-26): the owner reverted the ×1.35 spawn slowdown after cutting boss health (form 1 about −25%). Result at the expected profile: still 0/15 with mean walls 55–70%, in line with the slowed runs, so the boss-health cut roughly offsets the faster spawns for the bot. The bot cannot colour-pick or plan around gusts, so the owner's own runs decide; nothing further changed.
 
 
@@ -400,7 +411,9 @@ Second follow-up (2026-09-26): the owner reverted the ×1.35 spawn slowdown afte
 
 ## 12. Art, audio, tech
 
-- All art is drawn in code on a canvas (vector shapes); pumpkins are pre-rendered to sprites. No external images.
+- All art is drawn in code on a canvas. No external images.
+  - **Art direction (owner, 2026-09-26): "Toy Plastic"**, chosen on the style sheet (https://claude.ai/artifact/KvCFtEpbEbQBMKkWKyWSAd): glossy volume shading with a bevel, bounce light and a thin dark-tone edge, surface materials (pumpkin mottle, skin speckle, cloth weave, bandage strips, brushed metal, gel, wood, moss), MapleStory-like faces (huge eye whites, small pupils, fangs), and every monster a posed figure with real anatomy. Spec: `docs/superpowers/specs/2026-09-26-toy-plastic-sprites-design.md`.
+  - **Pipeline**: `render/paint.js` (the painter and materials) → `render/chars.js` (pose-driven drawings; world 1 so far: pumpkins, Bat, Imp, Ghoul, Mossback, Mummy, Flaming Mummy, Gravekeeper) → `render/anim.js` bakes each character's clips (walk, chew, mummy collapse, boss cast / teleport / stab) into strip canvases at the canvas scale, once per level while the level card is open, and blits frames during play. Hit flash, frozen blue and world-variant tints are applied through a scratch canvas. Death pops and the Gravekeeper's teleport-out play as `G.vfx` entries; the engine only sets `m.anim` hints, no rule changed. Worlds 2–5 still use the old live vector drawings until they are redrawn in this language.
 - All sound is synthesised with Web Audio, no audio files: a pumpkin layer and a monster layer on every hit, a death sound per monster, boss sounds for arriving, casting, being hit and dying, a sound per tool, soft pops for sprouts, and different sounds for bunches of 3 and of 5+. The full table is `docs/AUDIO.md`. Music not yet added.
 - Fonts: Creepster (titles) and Fredoka (UI) from Google Fonts, both SIL Open Font License.
 - Vite project of plain JavaScript ES modules (`src/engine`, `src/data`, `src/ui`), no runtime dependencies. Levels are data in `src/data/worlds/`. Mobile-first touch controls; works with mouse too.

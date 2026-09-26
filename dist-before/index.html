@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gourd Guard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="./assets/index-DRwQdLSL.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-of8CD7y0.css">
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv" aria-label="Game board"></canvas>
+
+  <div id="hud">
+    <button class="icon-btn" id="pauseBtn" aria-label="Pause">❚❚</button>
+    <div id="walls" aria-label="Wall health">100%<small>walls</small></div>
+    <div id="mid"><div id="lvlLabel">Night 1</div><div class="bar"><i id="prog"></i></div></div>
+    <div id="coinBox"><span class="coin"></span><span id="coinTxt">0</span></div>
+  </div>
+  <div id="tools">
+    <button class="icon-btn" id="rpBtn" aria-label="Repair all walls">🔨<span class="n" id="rpCount">0</span></button>
+    <button class="icon-btn" id="fwBtn" aria-label="Launch firework">🎆<span class="n" id="fwCount">0</span></button>
+    <button class="icon-btn" id="gbBtn" aria-label="Grave buster: tap, then tap a grave">🧨<span class="n" id="gbCount">0</span></button>
+    <button class="icon-btn" id="lnBtn" aria-label="Lantern: clear the fog for a while">🏮<span class="n" id="lnCount">0</span></button>
+    <button class="icon-btn" id="lmBtn" aria-label="Landmine: tap, then tap a column">💣<span class="n" id="lmCount">0</span></button>
+    <button class="icon-btn" id="bmBtn" aria-label="Bomb: tap, then tap the field">💥<span class="n" id="bmCount">0</span></button>
+    <button class="icon-btn" id="scBtn" aria-label="Scarecrow: tap, then tap a column">🌾<span class="n" id="scCount">0</span></button>
+  </div>
+  <div id="banner"><div class="big" id="bnBig"></div><div class="sub" id="bnSub"></div></div>
+
+  <div class="ov clear" id="ovTitle">
+    <h1 class="logo">Gourd<br>Guard</h1>
+    <p class="tag">Slide the pumpkins. Bunch them up. Hold the walls.</p>
+    <div class="stack">
+      <button class="btn" id="bStory">Play story</button>
+      <button class="btn alt" id="bEndless">Endless night</button>
+      <div class="best" id="bestTxt"></div>
+      <div class="row" style="margin-top:0">
+        <button class="link" id="bHelpT">How to play</button>
+        <button class="link" id="bSoundT">Sound: on</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ov" id="ovLevels">
+    <div class="card">
+      <h2>Choose a night</h2>
+      <div class="bankline"><span class="coin"></span><span id="lvCoins">0</span></div>
+      <div id="lvList"></div>
+      <div class="row">
+        <button class="btn small alt" id="bLvBack">Back</button>
+        <button class="btn small" id="bLvShop">Shop</button>
+      </div>
+      <button class="link" id="bUnlockAll">Testing: unlock all levels</button>
+    </div>
+  </div>
+
+  <div class="ov" id="ovLoadout">
+    <div class="card">
+      <h2>Pick 5 pumpkins</h2>
+      <p>Only the pumpkins you pick will sprout and drop tonight.</p>
+      <div class="picks" id="picks"></div>
+      <p id="loCount"></p>
+      <p id="loWhy" class="why" hidden></p>
+      <div class="row">
+        <button class="btn small alt" id="bLoBack">Back</button>
+        <button class="btn small" id="bLoGo">Start night</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ov" id="ovShop">
+    <div class="card">
+      <h2>Pumpkin shed</h2>
+      <div class="bankline"><span class="coin"></span><span id="shopCoins">0</span></div>
+      <h3>Pumpkin levels</h3>
+      <div id="shopPumpkins"></div>
+      <h3>Walls and gear</h3>
+      <div id="shopList"></div>
+      <div class="row"><button class="btn small alt" id="bShopBack">Done</button></div>
+    </div>
+  </div>
+
+  <div class="ov" id="ovPreview">
+    <div class="card">
+      <h2 id="pvTitle">Level 1-1</h2>
+      <p id="pvSub"></p>
+      <div class="pv-block"><h3>Monsters tonight</h3><div class="pv-row" id="pvMonsters"></div></div>
+      <div class="pv-block" id="pvBossBlock"><h3>Boss</h3><div class="pv-row" id="pvBoss"></div></div>
+      <div class="pv-block" id="pvNewBlock"><h3>New this level</h3><div class="pv-row" id="pvPumpkins"></div></div>
+      <p id="pvInfo"></p>
+      <div class="row">
+        <button class="btn small alt" id="bPvBack">Back</button>
+        <button class="btn small" id="bPvGo">Start</button>
+      </div>
+    </div>
+  </div>
+  <div class="ov" id="ovIntro">
+    <div class="card intro">
+      <div class="intro-ic" id="inIcon"></div>
+      <h2 id="inTitle"></h2>
+      <p id="inText"></p>
+      <div class="row"><button class="btn" id="bIntroOk">Got it</button></div>
+    </div>
+  </div>
+  <div class="ov" id="ovHelp">
+    <div class="card">
+      <h2>How to play</h2>
+      <div class="steps">
+        <div><span class="k">1</span><span>Monsters walk down the seven columns. Each column has its own wall. Monsters that reach it start eating it, and if any wall falls, the night is lost.</span></div>
+        <div><span class="k">2</span><span>Swipe a pumpkin to slide it until it hits the edge, a grave, or another pumpkin. If it is already touching a pumpkin that way, it pushes the whole line in front of it.</span></div>
+        <div><span class="k">3</span><span>When 3 or more of the same color touch, they light up. Flick a lit pumpkin upward, or tap it, and its whole bunch flies up, each pumpkin up its own column.</span></div>
+        <div><span class="k">4</span><span>A bunch of 5 or more always knocks monsters back one space (bosses are too heavy).</span></div>
+        <div><span class="k">5</span><span>Pumpkins sprout every few seconds (set the timing in the pause menu). Fallen monsters drop pumpkins: tap them to send them over the wall.</span></div>
+        <div><span class="k">6</span><span>Graves show up in later nights. They never move and block slides. Press and hold a pumpkin to smash it.</span></div>
+        <div><span class="k">7</span><span>New pumpkins unlock as you go. Level each one up in the shop, and once six are unlocked pick the 5 you want to bring.</span></div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="row"><button class="btn" id="bHelpOk">Got it</button></div>
+    </div>
+  </div>
+
+  <div class="ov" id="ovPause">
+    <div class="card stack">
+      <h2>Paused</h2>
+      <button class="btn" id="bResume">Resume</button>
+      <button class="btn alt" id="bRestart">Restart</button>
+      <button class="btn alt" id="bQuit">Quit to menu</button>
+      <div class="setting">
+        <span>New pumpkin every</span>
+        <div class="stepper">
+          <button class="step" id="spMinus" aria-label="Sprout pumpkins faster">−</button>
+          <b id="spVal" aria-live="polite">5s</b>
+          <button class="step" id="spPlus" aria-label="Sprout pumpkins slower">+</button>
+        </div>
+      </div>
+      <div id="perkList"></div>
+      <button class="link" id="bSoundP">Sound: on</button>
+    </div>
+  </div>
+
+  <div class="ov" id="ovResult">
+    <div class="card">
+      <h2 id="rTitle">Night saved</h2>
+      <div class="stars" id="rStars"></div>
+      <p id="rMsg"></p>
+      <div class="stats" id="rStats"></div>
+      <div class="row" id="rBtns"></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

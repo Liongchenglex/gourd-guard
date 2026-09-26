@@ -114,6 +114,14 @@ def main():
                 loadout = sorted([t for t in range(12) if UNLOCK[t] <= n], key=lambda t: UNLOCK[t])[-5:]   # the five most recent types
                 page.evaluate(BOT_JS, args.interval)
                 page.evaluate("([n, lo]) => window.__gg.startGame('story', n, lo)", [n, loadout])
+                # The game locks Fire into the loadout on mummy levels and Ice on flaming-mummy levels (see beginNight); mirror that,
+                # otherwise the bot cannot kill anything on an all-mummy level (5-15 measured 0 kills before this was added).
+                pool = page.evaluate("() => (window.__gg.G.def && window.__gg.G.def.pool || []).map(e => e[0])")
+                need = [t for t, kinds in ((3, ('mummy', 'Mummy')), (2, ('firemummy',))) if any(any(k in kind for k in kinds) and (t != 3 or 'firemummy' not in kind) for kind in pool)]
+                if any(t not in loadout for t in need):
+                    for t in need:
+                        if t not in loadout: loadout = [x for x in loadout if x != min(loadout, key=lambda x: UNLOCK[x] if x not in need else 10**9)] + [t]
+                    page.evaluate("([n, lo]) => window.__gg.startGame('story', n, lo)", [n, loadout])
                 t0 = time.time()
                 while time.time() - t0 < args.timeout and page.evaluate("window.__gg.state") != 'result':
                     time.sleep(0.5)

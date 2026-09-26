@@ -2,6 +2,8 @@ import { PTYPES } from '../../data/pumpkins.js';
 import { WORLDS } from '../../data/worlds/index.js';
 import { K, dpr } from './canvas.js';
 import { ell, rrect, tri } from './util.js';
+import { pumpkin } from './chars.js';
+import { pal } from './paint.js';
 import { COLS, CS, FENCE_Y, FIELD_TOP, GX, GY, H, ROWS, W } from '../state.js';
 import { TAU, mulberry } from '../util.js';
 
@@ -14,48 +16,9 @@ export const RAINBOW_RIBS = [
 ];
 
 export function paintPumpkin(g, cx, cy, R, col, lit){
-  g.fillStyle = 'rgba(0,0,0,.35)'; ell(g, cx, cy + R * 0.8, R * 0.9, R * 0.2);
-  const ribs = [[-0.55, 0.5], [0.55, 0.5], [-0.28, 0.58], [0.28, 0.58], [0, 0.6]];
-  ribs.forEach(([ox, rw], i) => {
-    const c = col.rainbow ? RAINBOW_RIBS[i] : col;
-    const grd = g.createRadialGradient(cx + ox * R - R * 0.18, cy - R * 0.35, R * 0.08, cx + ox * R, cy, R * 0.95);
-    grd.addColorStop(0, c.light); grd.addColorStop(0.55, c.base); grd.addColorStop(1, c.dark);
-    g.fillStyle = grd;
-    g.beginPath(); g.ellipse(cx + ox * R, cy + R * 0.05, rw * R, R * 0.78, 0, 0, TAU); g.fill();
-    g.strokeStyle = 'rgba(0,0,0,.2)'; g.lineWidth = R * 0.04; g.stroke();
-  });
-  if (col.rainbow){
-    g.fillStyle = 'rgba(255,255,255,.55)';
-    for (const [sx, sy, s] of [[-0.45, -0.3, 0.09], [0.4, 0.25, 0.07], [0.1, -0.45, 0.06]]){ ell(g, cx + sx * R, cy + sy * R, s * R, s * R * 0.35); ell(g, cx + sx * R, cy + sy * R, s * R * 0.35, s * R); }
-  }
-  g.fillStyle = '#5a3a1a';
-  g.beginPath(); g.moveTo(cx - R * 0.09, cy - R * 0.6);
-  g.quadraticCurveTo(cx - R * 0.06, cy - R * 0.95, cx + R * 0.16, cy - R * 1.02);
-  g.lineTo(cx + R * 0.22, cy - R * 0.9);
-  g.quadraticCurveTo(cx + R * 0.07, cy - R * 0.84, cx + R * 0.1, cy - R * 0.6); g.closePath(); g.fill();
-  g.fillStyle = '#3f7a2a'; ell(g, cx - R * 0.3, cy - R * 0.78, R * 0.22, R * 0.09, -0.45);
-  if (col.gold){   // top hat, monocle and a coin on the belt so Gold reads differently from Yellow
-    g.fillStyle = '#1a1418'; g.fillRect(cx - R * 0.62, cy - R * 0.86, R * 1.0, R * 0.1); g.fillRect(cx - R * 0.42, cy - R * 1.28, R * 0.6, R * 0.45);
-    g.fillStyle = '#c9102a'; g.fillRect(cx - R * 0.42, cy - R * 0.96, R * 0.6, R * 0.09);
-    g.strokeStyle = '#fff0a0'; g.lineWidth = R * 0.05; g.beginPath(); g.arc(cx + R * 0.3, cy - R * 0.12, R * 0.2, 0, TAU); g.stroke();
-    g.beginPath(); g.moveTo(cx + R * 0.48, cy - R * 0.02); g.lineTo(cx + R * 0.62, cy + R * 0.28); g.stroke();
-    g.fillStyle = '#ffe680'; ell(g, cx, cy + R * 0.5, R * 0.12, R * 0.12); g.fillStyle = '#b8860b'; ell(g, cx, cy + R * 0.5, R * 0.06, R * 0.06);
-  }
-  if (lit){
-    const fg = g.createRadialGradient(cx, cy + R * 0.08, 0, cx, cy + R * 0.08, R * 0.75);
-    fg.addColorStop(0, '#fff8c8'); fg.addColorStop(0.45, '#ffd04a'); fg.addColorStop(1, '#ff8a1f');
-    g.fillStyle = fg;
-    tri(g, cx - R * 0.3, cy - R * 0.17, R * 0.2); tri(g, cx + R * 0.3, cy - R * 0.17, R * 0.2);
-    tri(g, cx, cy + R * 0.03, R * 0.09);
-    g.beginPath(); g.moveTo(cx - R * 0.52, cy + R * 0.14);
-    g.quadraticCurveTo(cx, cy + R * 0.74, cx + R * 0.52, cy + R * 0.14);
-    g.lineTo(cx + R * 0.34, cy + R * 0.26); g.lineTo(cx + R * 0.22, cy + R * 0.16);
-    g.lineTo(cx + R * 0.1, cy + R * 0.3); g.lineTo(cx - R * 0.04, cy + R * 0.18);
-    g.lineTo(cx - R * 0.18, cy + R * 0.3); g.lineTo(cx - R * 0.3, cy + R * 0.18);
-    g.closePath(); g.fill();
-  } else if (!col.rainbow){
-    g.fillStyle = 'rgba(255,255,255,.28)'; ell(g, cx - R * 0.32, cy - R * 0.32, R * 0.1, R * 0.2, 0.35);
-  }
+  g.save(); g.translate(cx, cy);
+  pumpkin(g, col.rainbow ? RAINBOW_RIBS.map(c => pal(c.base)) : pal(col.base), lit, R);
+  g.restore();
 }
 
 export function pumpkinIcon(t, lit, px){

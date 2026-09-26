@@ -67,7 +67,7 @@ export function spawnMonster(key, lane, minion, p){
   if (lane == null) lane = pickLane();
   const x = LANE(lane);
   const m = { type, kind, lane, x, tx:x, p:p != null ? p : -0.02, hp, maxHp:hp, r:T.r, hw:CS * 0.42, form,
-    variant:variant ? variant.name : null, tint:variant ? variant.tint : null, noKnockback:!!(mod && mod.noKnockback),
+    variant:variant ? variant.name : null, vkey:variant ? key : null, tint:variant ? variant.tint : null, noKnockback:!!(mod && mod.noKnockback),
     sp:T.sp * spMulNow() * rnd(0.92, 1.08) * (mod && mod.speed ? mod.speed : 1), coins:T.coins, eat:T.eat * (mod && mod.eat ? mod.eat : 1), pts:T.pts, drop:T.drop, ph:Math.random() * 10, age:0, flash:0,
     slowT:0, frozenT:0, burnLeft:0, burnAmt:0, burnTick:0, kb:0, eating:false, dead:false, minion:!!minion, summon:4, hop:0, drift:rnd(2.5, 4.5), rise:0, lastHit:null,
     hold:T.hold || 1, teleport:T.teleportEvery || 0, shove:form === 2 && T.form2 && T.form2.shoveEvery ? T.form2.shoveEvery : 0,
@@ -120,6 +120,7 @@ function puff(x, y){ for (let i = 0; i < 14; i++) spark(x, y, i % 2 ? '#c9b6ff' 
 export function updateMonster(m, dt){
   m.age += dt; m.ph += dt;
   if (m.flash > 0) m.flash -= dt;
+  if (m.anim){ m.anim.t += dt; if (m.anim.t >= m.anim.dur) m.anim = null; }   // a skill animation playing over the top (render/anim.js)
   if (m.rise > 0){   // collapsed mummy: lies still, untargetable, then stands back up at full health
     m.rise -= dt;
     if (m.rise <= 0){ m.rise = 0; m.hp = (m.type === 'mummy' || m.type === 'firemummy') ? 1 : m.maxHp; m.flash = 0.2; addFloat('Rises again', m.x, mY(m) - m.r - 30, '#d8cfb0', 16, 0.9); if (m.type === 'boss') SFX.bossSfx(m.kind, 'revive'); else SFX.monsterAct('mummy', 'rise'); }   // mummies come back with 1 HP (owner)
@@ -302,13 +303,13 @@ export function updateMonster(m, dt){
           if (m.summon <= 0){
             m.summon = m.form === 2 ? T.form2.summonEvery : T.summonEvery;
             const g = spawnMonster('ghoul', pickLane(), true, Math.max(0, m.p - 0.02));
-            puff(g.x, mY(g)); SFX.bossSfx('gravekeeper', 'summon');
+            puff(g.x, mY(g)); SFX.bossSfx('gravekeeper', 'summon'); m.anim = { clip:'stab', t:0, dur:0.7 };
           }
           m.teleport -= dt;
           if (m.teleport <= 0){
             m.teleport = T.teleportEvery; SFX.bossSfx('gravekeeper', 'teleport');
             const opts = [...Array(COLS).keys()].filter(l => l !== m.lane);
-            puff(m.x, mY(m));
+            puff(m.x, mY(m)); if (G.vfx) G.vfx.push({ kind:'clip', key:'gravekeeper', clip:'teleport', x:m.x, y:mY(m), s:mS(m), t:0, dur:0.5 });   // it dissolves where it stood; the arrival plays in reverse (age restarts)
             m.lane = opts[Math.floor(Math.random() * opts.length)]; m.x = m.tx = LANE(m.lane); m.age = 0;
             puff(m.x, mY(m));
           }
@@ -317,7 +318,7 @@ export function updateMonster(m, dt){
             if (m.shove <= 0){
               m.shove = T.form2.shoveEvery;
               const pick = G.monsters.filter(o => o !== m && !o.dead && o.rise <= 0 && !o.eating && o.p > 0 && o.p < 0.6);
-              if (pick.length){ const o = pick[Math.floor(Math.random() * pick.length)]; ring(o.x, mY(o), 36, 'rgba(200,170,255,.9)'); o.p = Math.min(0.95, o.p + T.form2.shove); ring(o.x, mY(o), 36, 'rgba(200,170,255,.9)'); SFX.bossSfx('gravekeeper', 'shove'); }
+              if (pick.length){ const o = pick[Math.floor(Math.random() * pick.length)]; ring(o.x, mY(o), 36, 'rgba(200,170,255,.9)'); o.p = Math.min(0.95, o.p + T.form2.shove); ring(o.x, mY(o), 36, 'rgba(200,170,255,.9)'); SFX.bossSfx('gravekeeper', 'shove'); m.anim = { clip:'cast', t:0, dur:0.6 }; }
             }
           }
         }

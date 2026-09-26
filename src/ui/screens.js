@@ -5,6 +5,7 @@ import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, firstNightOf, typesForNight, gearUnlockNightOf } from '../data/worlds/index.js';
 import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS } from '../data/monsters.js';
 import { monsterIcon } from '../engine/render/monsters.js';
+import { poolKey, prebakeAsync } from '../engine/render/anim.js';
 import { SFX, ensureAudio, musicStop, musicSync } from '../engine/audio.js';
 import { beginEndless, beginNight, makeDemo, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
 import { bgWorld, buildBg, pumpkinIcon } from '../engine/render/sprites.js';
@@ -104,6 +105,7 @@ export function openPreview(n){
   $('#pvTitle').textContent = `Level ${def.label}`;
   $('#pvSub').textContent = WORLD_NAMES[def.worldNo - 1];
   const mons = $('#pvMonsters'); mons.innerHTML = '';
+  prebakeAsync([...def.pool.map(([t]) => poolKey(t, VARIANTS)), ...(def.boss ? [def.boss] : []), 'ghoul']);   // bake this level's sprite strips while the card is read
   for (const [t] of def.pool){
     const d = document.createElement('div'); d.className = 'pv-ic';
     d.appendChild(monsterIcon(t, 108));

@@ -232,7 +232,7 @@ export const SFX = {
       case 'bat': S('bat', 0.45, { rate: 1.1 }) || (tone(1800, 0.06, 'square', 0.035, 2400), noise(0.05, 0.08, 2500, 1.5)); break;
       case 'imp': S('imp', 0.4) || tone(700, 0.12, 'sawtooth', 0.05, 1100); break;
       case 'rider': S('imp', 0.35) || tone(700, 0.08, 'sawtooth', 0.03, 900, 0.04); S('cloth', 0.35); break;
-      case 'brute': S('bigcute', 0.5, { rate: 0.85 }) || S('giant', 0.5) || (tone(80, 0.25, 'sawtooth', 0.09, 60), noise(0.15, 0.2, 150, 1)); break;
+      case 'brute': S('giant', 0.55, { rate: 0.85, jit: 0.06 }) || (tone(80, 0.25, 'sawtooth', 0.09, 60), noise(0.15, 0.2, 150, 1)); S('heavy', 0.3, { rate: 0.9 }); break;   // Mossback: a low grunt over a heavy thud, tough not squeaky (owner)
       case 'hauler': case 'bulwark': S('giant', 0.6) || (tone(80, 0.25, 'sawtooth', 0.09, 60), noise(0.15, 0.2, 150, 1)); break;
       case 'mummy': S('cloth', 0.5) || cloth(); S('groan', 0.35, { rate: 1.1, delay: 0.03 }); break;
       case 'firemummy': S('cloth', 0.5) || cloth(); S('groan', 0.35, { rate: 1.1, delay: 0.03 }); noise(0.06, 0.14, 2500, 3, 0.05); break;
@@ -259,7 +259,7 @@ export const SFX = {
       case 'ghoul': S('ghouldie', 0.5) || groan(110, 0.1, 0.45); break;
       case 'bat': S('batdie', 0.45, { rate: 1.3 }) || S('pop', 0.4) || tone(2000, 0.05, 'square', 0.04, 2600); break;
       case 'imp': case 'rider': S('impdie', 0.45) || tone(900, 0.2, 'sawtooth', 0.06, 1500); break;
-      case 'brute': S('bigcute', 0.5, { rate: 0.7 }) || S('giantdie', 0.5) || (tone(70, 0.4, 'sawtooth', 0.1, 40), noise(0.3, 0.25, 120, 1)); break;
+      case 'brute': S('giantdie', 0.6, { rate: 0.85 }) || (tone(70, 0.4, 'sawtooth', 0.1, 40), noise(0.3, 0.25, 120, 1)); S('heavy', 0.4, { rate: 0.8, delay: 0.1 }); break;
       case 'hauler': S('giantdie', 0.65) || (tone(70, 0.4, 'sawtooth', 0.1, 40), noise(0.3, 0.25, 120, 1)); break;
       case 'bulwark': S('giantdie', 0.6); S('armorbreak', 0.5, { delay: 0.05 }) || noise(0.3, 0.25, 120, 1); break;
       case 'mummy': case 'firemummy': S('ghouldie', 0.55, { rate: 0.85 }) || noise(0.25, 0.2, 500, 0.6, 0, 150); S('dig', 0.35, { delay: 0.1 }); break;

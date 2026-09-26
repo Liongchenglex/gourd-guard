@@ -8,6 +8,8 @@ import { CS } from '../state.js';
 
 let cx = ctx;   // drawing context; monsterIcon() swaps it for an offscreen canvas
 import { ell, mix, rrect, tri } from './util.js';
+import { CHARS, charKey, hasCostume } from './chars.js';
+import { charIcon, drawChar } from './anim.js';
 import { clamp, TAU } from '../util.js';
 
 export function drawMonster(m, t){
@@ -15,9 +17,17 @@ export function drawMonster(m, t){
   if (m.eating && m.frozenT <= 0) y += Math.sin(m.ph * 14) * 2.5;
   const fade = m.demo ? 1 : Math.min(1, m.age / 0.5);
   const blue = m.slowT > 0 || m.frozenT > 0;
+  const key = charKey(m);
   cx.save();
   cx.translate(m.x, y); cx.scale(s, s);
   cx.globalAlpha = fade;
+  if (key){   // world 1 cast: baked Toy Plastic frames (render/anim.js); the frame carries its own shadow
+    if (m.type === 'imp') cx.translate(0, -m.hop * 14);
+    if (m.rise > 0 && !CHARS[key].clips.collapse){ cx.translate(0, m.r * 0.6); cx.scale(1.15, 0.35); cx.globalAlpha = fade * 0.85; }   // a hexed ghoul lies flat until it rises
+    if (m.type === 'boss' && !m.demo && m.age < 0.5) cx.globalAlpha = 1;   // the teleport-in clip fades itself
+    const tint = m.flash > 0 ? ['#ffffff', 0.85] : blue ? ['#7fd0ff', 0.5] : m.tint && !hasCostume(key, m.vkey) ? [m.tint, 0.45] : null;
+    drawChar(cx, m, key, tint);
+  } else {
   cx.fillStyle = 'rgba(0,0,0,.35)';
   if (m.type === 'bat') ell(cx, 0, m.r + 18, m.r * 0.6, 4);
   else ell(cx, 0, m.r * 0.95, m.r * (m.type === 'imp' ? 0.9 - m.hop * 0.25 : 1), m.r * 0.22);
@@ -56,6 +66,7 @@ export function drawMonster(m, t){
     case 'boss': if (m.kind === 'poltergeist') drawPoltergeist(m, F, t); else if (m.kind === 'vampirecount') drawVampireCount(m, F, t); else if (m.kind === 'twintides') drawTwinTide(m, F, t); else if (m.kind === 'hexwitch') drawHexwitch(m, F, t); else drawBoss(m, F, t); break;
   }
 
+  }
   if (m.frozenT > 0){
     cx.globalAlpha = fade * 0.5; cx.fillStyle = '#d8f4ff'; cx.strokeStyle = '#ffffff'; cx.lineWidth = 2;
     rrect(cx, -m.r * 1.15, -m.r * 1.45, m.r * 2.3, m.r * 2.6, 10); cx.fill(); cx.stroke();
@@ -227,6 +238,7 @@ export function monsterIcon(key, px){
   const c = document.createElement('canvas'); c.width = c.height = px || 96;
   const v = VARIANTS[key];
   const kind = v ? v.base : key, T = TYPES[kind], isBoss = !!T.boss, type = isBoss ? 'boss' : kind;
+  if (CHARS[kind]){ const ic = charIcon(kind, px || 96, v ? key : null); if (v && v.tint && !hasCostume(kind, key)){ const g = ic.getContext('2d'); g.globalCompositeOperation = 'source-atop'; g.fillStyle = v.tint + '73'; g.fillRect(0, 0, ic.width, ic.height); } return ic; }
   const m = { type, kind, r:T.r, ph:1.3, flash:0, hop:0.4, slowT:0, frozenT:0, rise:0, eating:false, age:5, demo:true, x:0, p:0.5, hp:T.hp, maxHp:T.hp, form:1, carrier:true, tint:v ? v.tint : null, vanish:5, colourLock:kind === 'chameleon' ? 0 : null, colourImmune:kind === 'rchameleon' ? 1 : null, reflecting:kind === 'mirror' };
   const prev = cx; cx = c.getContext('2d');
   const box = isBoss ? 150 : T.r * 3.2;

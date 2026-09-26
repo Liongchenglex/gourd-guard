@@ -90,13 +90,20 @@ BANK = {
   'wind':      [('wind_0.mp3',.1,2.6)],
   'heal':      [('heal_0.mp3',0,1.25)],
   # interface and results
-  'uitap':     [(K+'click_001.ogg',0,.3)],
-  'uigo':      [(K+'confirmation_001.ogg',0,.6)],
-  'uiback':    [(K+'back_001.ogg',0,.5)],
-  'uilevel':   [(K+'select_001.ogg',0,.4)],
-  'uipick':    [(K+'drop_001.ogg',0,.4)],
-  'uiunpick':  [(K+'drop_002.ogg',0,.4)],
-  'uibad':     [(K+'error_002.ogg',0,.5)],
+  'uitap':     [('woodclick_1.mp3',0,.15), ('woodclick_0.mp3',0,.15)],   # organic wooden click (owner: PvZ 2 feel, not retro)
+  'uigo':      [('plop_1.mp3',0,.4), ('bloop_0.mp3',0,.5)],   # water bloop for start / next
+  'uiback':    [('pageturn_0.mp3',0,.6)],   # page turn going back
+  'uilevel':   [('plop_2.mp3',0,.25), ('plop_0.mp3',0,.25)],   # plop on a level tile
+  'uipick':    [('pop_1.mp3',0,.25)],   # bubble pop picking a pumpkin
+  'uiunpick':  [('plop_1.mp3',0,.4)],   # plop dropping it
+  'uibad':     [('knock_0.mp3',0,.26)],   # dull wooden thunk on a locked pick
+
+
+
+
+
+
+
   'uistar':    [(K+'confirmation_002.ogg',0,.7)],
   'win':       [('win8bit_0.mp3',0,1.9)],   # 8-bit fanfare, Mario-like (owner)
   'lose':      [('lose_0.mp3',0,2.0)],

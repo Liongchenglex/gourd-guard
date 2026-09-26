@@ -79,7 +79,7 @@ Conventions: every hit has a **pumpkin layer** (what was thrown) and a **monster
 | Sea | Lapping waves ambience on shore levels |
 | Level start / win / lose | Owl hoot and a chord; short fanfare; low tolling |
 | Coins, perk unlock, star | Coin tick; bright rising jingle; ding |
-| Menus | Level tile: pluck. Pumpkin picked: rising blip; dropped: falling blip; locked: dull buzz. Start, Next, Got it: two rising notes. Back and Quit: two falling notes. Any other button: soft click |
+| Menus | Organic, PvZ 2 style (owner): wooden click on any button, a water bloop for Start, Next and Got it, a page turn for Back and Quit, a plop on level tiles, a bubble pop picking a pumpkin and a low plop dropping it, a dull wooden thunk on a locked pick |
 | Chewing the wall | A clearly audible bite about three times a second while any monster chews: wood being gnawed by default, metal or stone scraping for knights, bulwarks and gargoyles, wet chomps for slimes, blobs, crawlers and divers, a hollow knock for turtles, quick nibbles for bats |
 
 ## 5. Music (to design after the effects)

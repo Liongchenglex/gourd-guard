@@ -195,3 +195,15 @@ Files under `raw/kenney/` come from kenney.nl asset packs, all CC0: Impact Sound
 | slidepop_0.mp3 | classic dizzy take slide whistle.wav | martian | https://freesound.org/s/403002/ | CC0 |
 | slidepop_1.mp3 | 8. Toaster rise | AlixTwix6 | https://freesound.org/s/800536/ | CC0 |
 | slidepop_2.mp3 | cello slide.wav | edschaefer | https://freesound.org/s/341869/ | CC0 |
+| bloop_0.mp3 | waterbloop.mp3 | kstargio | https://freesound.org/s/611642/ | CC0 |
+| bloop_1.mp3 | Arcade Bleep Sound | Kodack | https://freesound.org/s/258020/ | CC0 |
+| bloop_2.mp3 | megatone.wav | Tissman | https://freesound.org/s/455858/ | CC0 |
+| bloop_3.mp3 | [SFX] short beep beep | waveplaySFX | https://freesound.org/s/415506/ | CC0 |
+| plop_0.mp3 | Plop / Bonk Sound | Squirrel_404 | https://freesound.org/s/664624/ | CC0 |
+| plop_1.mp3 | plop.wav | edschaefer | https://freesound.org/s/341868/ | CC0 |
+| plop_2.mp3 | Plop Effect | marokki | https://freesound.org/s/569679/ | CC0 |
+| woodclick_0.mp3 | Videogame Menu BUTTON CLICK | Christopherderp | https://freesound.org/s/342200/ | CC0 |
+| woodclick_1.mp3 | Wooden Click | BenjaminNelan | https://freesound.org/s/321083/ | CC0 |
+| woodclick_2.mp3 | Small Wood Piece Sound | qubodup | https://freesound.org/s/822567/ | CC0 |
+| pageturn_0.mp3 | Page Turning | XanTheRock | https://freesound.org/s/537872/ | CC0 |
+| pageturn_1.mp3 | Book Turn Page 1.wav | esperri | https://freesound.org/s/119126/ | CC0 |

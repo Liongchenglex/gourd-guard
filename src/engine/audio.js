@@ -153,7 +153,7 @@ export const SFX = {
   // ---- board and legacy names still used around the code ----
   slide(){ S('swish', 0.55, { rate: 1.25, jit: 0.12 }) || noise(0.14, 0.14, 700, 1, 0, 260); S('pop', 0.3, { rate: 1.35, delay: 0.09 }); },   // a quick swish and a landing pop (owner: exciting, not dull)
   push(){ S('whistle', 0.45, { rate: 1.1 }) || S('swish', 0.55, { rate: 0.95 }) || noise(0.16, 0.16, 500, 1, 0, 200); S('thud', 0.35, { rate: 1.1, delay: 0.12 }); },   // a cartoon slide whistle as the row shoves over
-  bad(){ S('uibad', 0.5) || tone(190, 0.1, 'square', 0.05, 150); },
+  bad(){ S('uibad', 0.5, { rate: 0.6 }) || tone(190, 0.1, 'square', 0.05, 150); },
   launch(n){
     if (!gate('launch', 60)) return;
     if (!S('whoosh', 0.5 + Math.min(0.3, n * 0.05), { rate: 1.05 - n * 0.03 })) noise(0.3, 0.3 + Math.min(0.2, n * 0.04), 500, 1.4, 0, 2800 + n * 200);
@@ -351,7 +351,7 @@ export const SFX = {
       case 'fw': S('rocket', 0.6) || noise(0.25, 0.2, 400, 1, 0, 2500); S('boom', 0.8, { delay: 0.55 }) || boomSynth(); break;
       case 'buster': S('dig', 0.5) || noise(0.15, 0.25, 500, 1, 0, 200); S('stonebreak', 0.6, { delay: 0.1 }) || (noise(0.1, 0.3, 1500, 1, 0.15, 500), tone(200, 0.15, 'square', 0.06, 100, 0.15)); break;
       case 'lantern': S('torch', 0.55) || (noise(0.08, 0.2, 2500, 1.5), tone(600, 0.4, 'sine', 0.04, 900, 0.08)); break;
-      case 'mine': S('uitap', 0.5, { rate: 0.8 }) || tone(1500, 0.03, 'square', 0.05, 1200); break;
+      case 'mine': S('woodtap', 0.5, { rate: 0.8 }) || S('uitap', 0.5, { rate: 0.8 }) || tone(1500, 0.03, 'square', 0.05, 1200); break;
       case 'mineBoom': S('explode', 0.8) || boomSynth(); S('boom', 0.5, { delay: 0.03 }); break;
       case 'bomb': S('boom', 1, { rate: 0.85 }) || boomSynth(); S('explode', 0.6, { delay: 0.05 }); break;
       case 'scarecrow': S('creak', 0.5) || [0, 0.15].forEach(d => { tone(120, 0.12, 'sine', 0.1, 80, d); noise(0.06, 0.18, 800, 1, d); }); S('cloth', 0.4, { delay: 0.1 }); break;
@@ -362,13 +362,13 @@ export const SFX = {
   // ---- menus and buttons (docs/AUDIO.md §4) ----
   ui(kind){
     switch (kind){
-      case 'tap': S('uitap', 0.35) || tone(900, 0.05, 'sine', 0.05, 700); break;                                             // any menu button
-      case 'go': S('uigo', 0.5) || (tone(660, 0.08, 'triangle', 0.06, null), tone(880, 0.12, 'triangle', 0.06, null, 0.07)); break;   // start / next / got it
-      case 'back': S('uiback', 0.45) || (tone(660, 0.08, 'triangle', 0.05, null), tone(520, 0.12, 'triangle', 0.05, null, 0.07)); break; // back / quit
-      case 'level': S('uilevel', 0.5) || (tone(1046, 0.1, 'triangle', 0.07, 1300), noise(0.04, 0.08, 3000, 2)); break;          // level tile
-      case 'pick': S('uipick', 0.5) || tone(700, 0.08, 'sine', 0.06, 1000); break;                                            // pumpkin picked
-      case 'unpick': S('uiunpick', 0.45) || tone(1000, 0.08, 'sine', 0.05, 700); break;                                       // pumpkin dropped from the loadout
-      case 'locked': S('uibad', 0.45) || tone(190, 0.1, 'square', 0.05, 150); break;                                          // tapping a locked pick
+      case 'tap': S('uitap', 0.5, { jit: 0.1 }) || tone(900, 0.05, 'sine', 0.05, 700); break;                                             // any menu button
+      case 'go': S('uigo', 0.55, { rate: 1.1 }) || S('whoosh', 0.3, { rate: 1.3 }) || (tone(660, 0.08, 'triangle', 0.06, null), tone(880, 0.12, 'triangle', 0.06, null, 0.07)); break;   // start / next / got it
+      case 'back': S('uiback', 0.5) || S('reverse', 0.3) || (tone(660, 0.08, 'triangle', 0.05, null), tone(520, 0.12, 'triangle', 0.05, null, 0.07)); break; // back / quit
+      case 'level': S('uilevel', 0.55, { rate: 1.05, jit: 0.08 }) || (tone(1046, 0.1, 'triangle', 0.07, 1300), noise(0.04, 0.08, 3000, 2)); break;          // level tile
+      case 'pick': S('uipick', 0.5, { rate: 1.2 }) || tone(700, 0.08, 'sine', 0.06, 1000); break;                                            // pumpkin picked
+      case 'unpick': S('uiunpick', 0.45, { rate: 0.85 }) || tone(1000, 0.08, 'sine', 0.05, 700); break;                                       // pumpkin dropped from the loadout
+      case 'locked': S('uibad', 0.5, { rate: 0.6 }) || tone(190, 0.1, 'square', 0.05, 150); break;                                          // tapping a locked pick
     }
   },
   // ---- chewing the wall: one clearly audible bite every third of a second, flavoured by who is chewing ----

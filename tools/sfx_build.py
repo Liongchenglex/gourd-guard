@@ -105,7 +105,7 @@ BANK = {
 
 
   'uistar':    [(K+'confirmation_002.ogg',0,.7)],
-  'win':       [('win8bit_0.mp3',0,1.9)],   # 8-bit fanfare, Mario-like (owner)
+  'win':       [('winchime_0.mp3',0,1.6)],   # bright bell chime, Mario Kart-like (owner)
   'lose':      [('lose_0.mp3',0,2.0)],
 }
 

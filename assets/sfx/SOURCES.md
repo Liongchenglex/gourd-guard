@@ -207,3 +207,7 @@ Files under `raw/kenney/` come from kenney.nl asset packs, all CC0: Impact Sound
 | woodclick_2.mp3 | Small Wood Piece Sound | qubodup | https://freesound.org/s/822567/ | CC0 |
 | pageturn_0.mp3 | Page Turning | XanTheRock | https://freesound.org/s/537872/ | CC0 |
 | pageturn_1.mp3 | Book Turn Page 1.wav | esperri | https://freesound.org/s/119126/ | CC0 |
+| winchime_0.mp3 | Correct Bell | Fupicat | https://freesound.org/s/538147/ | CC0 |
+| fanfare_0.mp3 | monophonic synth fanfare sound | _def | https://freesound.org/s/751890/ | CC0 |
+| fanfare_1.mp3 | result-7.mp3 | DZeDeNZ | https://freesound.org/s/522246/ | CC0 |
+| fanfare_2.mp3 | Notification | Fupicat | https://freesound.org/s/538149/ | CC0 |

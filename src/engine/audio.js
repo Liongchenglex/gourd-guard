@@ -145,7 +145,7 @@ const splash = (v = 0.2, d = 0.25) => { noise(d, v, 600, 0.8, 0, 200); noise(d *
 const squelch = (v = 0.16, f = 300) => { noise(0.15, v, f, 3); tone(f * 0.7, 0.12, 'sine', 0.06, f * 0.4); };
 const cackle = (n = 3, f0 = 640, d = 0, v = 0.06) => { for (let i = 0; i < n; i++){ tone(f0 * Math.pow(0.94, i), 0.07, 'square', v, f0 * Math.pow(0.94, i) * 0.85, d + i * 0.1); noise(0.05, 0.08, 1500, 1.5, d + i * 0.1); } };
 const shimmer = (d = 0, v = 0.04) => [1200, 1600, 2000, 2400, 3000, 2400, 3200].forEach((f, i) => tone(f, 0.1, 'sine', v, null, d + i * 0.035));
-const bell = (f = 220, d = 0) => { tone(f, 1.2, 'sine', 0.12, null, d); tone(f * 1.5, 0.9, 'sine', 0.05, null, d); tone(f * 2.76, 0.5, 'sine', 0.03, null, d); };
+const bell = (f = 220, d = 0, v = 0.06) => { tone(f, 1.2, 'sine', v, null, d); tone(f * 1.5, 0.9, 'sine', v * 0.4, null, d); tone(f * 2.76, 0.5, 'sine', v * 0.25, null, d); };
 const woosh = (up = false, v = 0.25) => noise(0.3, v, up ? 300 : 2000, 1.2, 0, up ? 2000 : 300);
 const boomSynth = () => { noise(0.9, 0.45, 300, 0.6, 0, 120); tone(90, 0.6, 'sine', 0.22, 40); };
 
@@ -170,7 +170,7 @@ export const SFX = {
   wallBreak(kind){ if (kind === 'castle'){ S('stonecrash', 0.9) || boomSynth(); S('boom', 0.35, { rate: 0.7, delay: 0.05 }); return; } S('woodbreak', 0.9) || (tone(140, 0.5, 'sawtooth', 0.14, 45), noise(0.5, 0.35, 300, 0.7)); },
   repair(){ [0, 0.14, 0.28].forEach(d => S('hammer', 0.55, { delay: d })); [0,4,7].forEach((s, i) => tone(392 * Math.pow(2, s / 12), 0.16, 'square', 0.04, null, 0.36 + i * 0.07)); },
   boom(){ S('boom', 0.9) || boomSynth(); },
-  win(){ S('win', 0.8) || [0,4,7,12,16,19,24,24].forEach((s, i) => tone(392 * Math.pow(2, s / 12), i === 7 ? 0.5 : 0.11, 'square', 0.07, null, i * 0.09 + (i === 7 ? 0.1 : 0))); },
+  win(){ S('win', 0.7); [523, 659, 784, 1046].forEach((f, i) => bell(f, 0.12 + i * 0.11)); S('sparkle', 0.4, { delay: 0.35 }); },   // a bright bell chime with a rising bell arpeggio, Mario Kart-like (owner)
   lose(){ S('lose', 0.8) || [0,-3,-7,-12].forEach((s, i) => tone(330 * Math.pow(2, s / 12), 0.42, 'sawtooth', 0.07, null, i * 0.18)); },
   boss(){ S('roarbig', 0.8) || (tone(70, 1.3, 'sawtooth', 0.11, 48), tone(104, 1.3, 'sawtooth', 0.07, 70)); },
 
@@ -196,7 +196,7 @@ export const SFX = {
       case 1: S('thud', 0.6) || thump(); S('coin', 0.45, { delay: 0.02 }) || coinChime(0.02); break;                       // Yellow
       case 2: S('ice', 0.55) || (tone(1800, 0.14, 'sine', 0.05, 2600), noise(0.12, 0.16, 4000, 2, 0.02, 2000)); break;    // Ice
       case 3: S('fire', 0.6) || (noise(0.25, 0.22, 800, 0.9, 0, 200), [0, 0.07, 0.13].forEach(d => noise(0.03, 0.12, 2500, 3, d))); break;   // Fire
-      case 4: S('heavy', 0.6) || (thump(), tone(2400, 0.1, 'sine', 0.035, 1200, 0.03)); break;                             // Grey
+      case 4: S('thud', 0.6) || thump(); break;                                                                             // Grey: plain pumpkin thud on every monster it pierces (owner)
       case 7: S('boom', 0.9) || (noise(0.5, 0.4, 300, 0.6, 0, 90), tone(70, 0.45, 'sine', 0.2, 35)); break;                // Black
       case 8: S('zap', 0.6) || (noise(0.14, 0.3, 3000, 1.2, 0, 600), tone(900, 0.1, 'sawtooth', 0.06, 100)); break;       // Deep Blue
       case 10: S('pop', 0.5) || tap(); break;                                                                             // Turquoise
@@ -211,7 +211,7 @@ export const SFX = {
       case 'heal': S('heal', 0.5) || (noise(0.06, 0.18, 1200, 1.5), [660, 880, 1100].forEach((f, i) => tone(f, 0.16, 'sine', 0.05, null, 0.08 + i * 0.07))); break;
       case 'chain': if (gate('chain', 30)) S('zap', 0.4, { rate: 1.3 }) || noise(0.08, 0.14, 2600, 1.2, 0, 900); break;
       case 'splash': if (gate('splash', 30)) S('splash', 0.5) || tone(60, 0.2, 'sine', 0.1, 35); break;
-      case 'pierce': if (gate('pierce', 30)) S('glassping', 0.35, { rate: 1.4 }) || tone(2000, 0.08, 'sine', 0.025, 1100); break;
+      case 'pierce': break;   // no extra sound: each pierced monster just gets the normal pumpkin hit (owner)
       case 'spawn': S('warp', 0.4) || (tone(700, 0.08, 'sine', 0.07, 1100), sparkle(0.08)); break;
       case 'return': S('whooshlong', 0.5, { rate: 1.1 }) || (woosh(true, 0.18), tone(400, 0.12, 'sine', 0.05, 300, 0.3)); break;
       case 'miss': if (gate('miss', 80)) S('reverse', 0.35) || noise(0.35, 0.08, 1400, 1, 0, 400); break;

@@ -9,6 +9,7 @@ import { mS, mY, TILE_P } from '../monsters.js';
 import { K, coinTarget, ctx } from './canvas.js';
 import { drawMonster } from './monsters.js';
 import { charKey, drawChar } from './anim.js';
+import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon } from './tools.js';
 import { castleSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
@@ -180,11 +181,9 @@ export function drawDrops(t){
     ctx.beginPath(); ctx.arc(d.x, y, 25, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(left / d.life, 0, 1)); ctx.stroke();
     const sz = CS * 0.66;
     if (d.kind === 'weapon'){
-      ctx.fillStyle = '#2a1636'; ctx.beginPath(); ctx.arc(d.x, y, 19, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#2a1636'; ctx.beginPath(); ctx.arc(d.x, y, 20, 0, TAU); ctx.fill();
       ctx.strokeStyle = '#ffd35a'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = '22px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(GEAR.find(g => g.key === d.item).icon, d.x, y + 1);
-      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      const ic = toolIcon(d.item, 36); ctx.drawImage(ic, d.x - 17, y - 17, 34, 34);
     } else ctx.drawImage(sprites[d.c][0], d.x - sz / 2, y - sz / 2 - 2, sz, sz);
     ctx.globalAlpha = 1;
   }
@@ -290,20 +289,7 @@ export function drawHealZone(m, t){
   drawHealZoneFx(ctx, x, y, w, h, t);
 }
 /** Scarecrows (world 5 tool): a post with a straw figure and a health bar. */
-export function drawScarecrows(t){
-  for (const sc of G.scarecrows || []){
-    const x = sc.x, y = sc.y;
-    ctx.fillStyle = 'rgba(0,0,0,.35)'; ell(ctx, x, y + 24, 18, 6);
-    ctx.fillStyle = '#5a3a1a'; ctx.fillRect(x - 3, y - 20, 6, 44); ctx.fillRect(x - 22, y - 8, 44, 5);
-    ctx.fillStyle = '#c8b060'; ell(ctx, x, y - 2, 12, 14); ell(ctx, x - 22, y - 6 + Math.sin(t * 3) * 2, 6, 4); ell(ctx, x + 22, y - 6 - Math.sin(t * 3) * 2, 6, 4);
-    ctx.fillStyle = '#e8a030'; ell(ctx, x, y - 22, 11, 10);
-    ctx.fillStyle = '#3a2a1a'; ell(ctx, x - 4, y - 24, 2, 2.5); ell(ctx, x + 4, y - 24, 2, 2.5);
-    ctx.fillStyle = '#4a2a10'; ctx.fillRect(x - 14, y - 34, 28, 4); ctx.fillRect(x - 8, y - 46, 16, 13);
-    const bw = 40, bx = x - bw / 2, by = y + 28;
-    ctx.fillStyle = 'rgba(0,0,0,.6)'; rrect(ctx, bx - 1, by - 1, bw + 2, 7, 3); ctx.fill();
-    ctx.fillStyle = '#c8b060'; rrect(ctx, bx, by, Math.max(0, bw * sc.hp / sc.maxHp), 5, 2.5); ctx.fill();
-  }
-}
+export function drawScarecrows(t){ drawScarecrowsFx(ctx, G.scarecrows || [], t, sc => G.monsters.some(m => !m.dead && m.chewing === sc)); }
 /** Archers' arrows. */
 export function drawArrows(t){
   for (const a of G.arrows || []){
@@ -353,20 +339,7 @@ export function drawBossBarsOverFog(g){
   }
 }
 /** Landmines waiting on their tile. */
-export function drawMines(t){
-  for (const mine of G.mines || []){
-    const x = LANE(mine.lane), y = mine.p == null ? FENCE_Y - 30 : FIELD_TOP + mine.p * (FIELD_BOT - FIELD_TOP);
-    const armed = (mine.t || 0) >= MINE_ARM, f = Math.min(1, (mine.t || 0) / MINE_ARM);
-    if (!armed){   // buried: a mound of earth with a fuse-like ring that fills as it gets ready to surface
-      ctx.fillStyle = '#3a2a1c'; ell(ctx, x, y + 4, 14, 6); ctx.fillStyle = '#4e3a26'; ell(ctx, x, y, 11, 5);
-      ctx.strokeStyle = 'rgba(255,211,90,.85)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 16, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * f); ctx.stroke();
-      continue;
-    }
-    ctx.fillStyle = '#2a2230'; ell(ctx, x, y + 6, 13, 6);
-    ctx.fillStyle = '#3d3348'; ell(ctx, x, y, 12, 9);
-    ctx.fillStyle = Math.floor(t * 4) % 2 ? '#ff5a4d' : '#ffd35a'; ell(ctx, x, y - 4, 3, 3);
-  }
-}
+export function drawMines(t){ drawMinesFx(ctx, G.mines || [], t, p => p == null ? FENCE_Y - 30 : FIELD_TOP + p * (FIELD_BOT - FIELD_TOP), LANE, MINE_ARM); }
 export function drawAimGraves(t){
   ctx.strokeStyle = `rgba(255,211,90,${0.6 + 0.4 * Math.sin(t * 8)})`; ctx.lineWidth = 4;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
@@ -469,7 +442,9 @@ export function drawStar(x, y, r, rot){
 function drawVfx(){
   if (!G.vfx) return;
   for (const v of G.vfx){
+    if (v.t < 0) continue;   // a delayed effect
     const p = Math.min(1, v.t / v.dur);
+    if (['firework', 'hammer', 'dynamite', 'lantern', 'bombdrop', 'scbreak'].includes(v.kind)){ drawToolFx(ctx, v, G.t); continue; }
     if (v.kind === 'pop'){
       const key = charKey(v.m); if (!key) continue;
       ctx.save(); ctx.translate(v.x, v.y); ctx.scale(v.s * (1 + p * 0.5), v.s * (1 - p * 0.85)); ctx.globalAlpha = 1 - p;

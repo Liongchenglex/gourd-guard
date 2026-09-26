@@ -4,6 +4,8 @@ import { FIELD_BOT, FIELD_TOP, G, setBannerTimer } from '../engine/state.js';
 import { $, clamp } from '../engine/util.js';
 import { wallFrac } from '../engine/walls.js';
 import { save } from '../save.js';
+import { toolIcon } from '../engine/render/tools.js';
+let trayDrawn = false;
 
 export function banner(big, sub, dur){
   $('#bnBig').textContent = big; $('#bnSub').textContent = sub || '';
@@ -25,6 +27,7 @@ export function updateHud(force){
   const label = G.mode === 'story' ? `Night ${G.def.label}` : `Score ${G.score.toLocaleString()}`;
   const wf = Math.round(wallFrac() * 100);
   const tools = toolsForNight(G.mode === 'story' ? Math.max(G.n, highestOpen()) : highestOpen());
+  if (!trayDrawn){ trayDrawn = true; for (const [btn, key] of [['#rpBtn', 'repair'], ['#fwBtn', 'fw'], ['#gbBtn', 'buster'], ['#lnBtn', 'lantern'], ['#lmBtn', 'mine'], ['#bmBtn', 'bomb'], ['#scBtn', 'scarecrow']]){ const cv = $(btn).querySelector('canvas.ti'); if (!cv) continue; const ic = toolIcon(key, 40); cv.width = ic.width; cv.height = ic.height; cv.getContext('2d').drawImage(ic, 0, 0); } }
   const sig = [wf, coins, Math.round(prog * 100), label, save.fw, save.repair, save.buster, save.lantern, save.mine, save.bomb, save.scarecrow, G.aim, tools.join(','), Math.round(G.fogClear || 0)].join('|');
   if (sig === hudSig && !force) return;
   const coinsChanged = hudSig && hudSig.split('|')[1] !== String(coins);

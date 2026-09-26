@@ -43,6 +43,7 @@ canvas#cv{ position:absolute; inset:0; width:100%; height:100%; display:block; t
 #coinBox.bump{ transform:scale(1.18); }
 .coin{ width:calc(var(--u)*17px); height:calc(var(--u)*17px); border-radius:50%; display:inline-block; flex:none;
   background:radial-gradient(circle at 35% 35%,#fff4b8,#ffc53a 45%,#c7861a); box-shadow:inset 0 0 0 calc(var(--u)*2px) rgba(140,80,0,.45); }
+.icon-btn canvas.ti{ width:calc(var(--u)*34px); height:calc(var(--u)*34px); display:block; }
 .icon-btn .n{ position:absolute; right:calc(var(--u)*-5px); bottom:calc(var(--u)*-5px); background:var(--pumpkin); color:#2a1400;
   font-size:calc(var(--u)*12px); font-weight:700; border-radius:99px; min-width:calc(var(--u)*19px); height:calc(var(--u)*19px);
   display:grid; place-items:center; padding:0 calc(var(--u)*4px); }

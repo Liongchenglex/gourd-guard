@@ -12,6 +12,7 @@ import { beginEndless, beginNight, makeDemo, makePreview, startGame, useFirework
 import { bgWorld, buildBg, pumpkinIcon, worldScene } from '../engine/render/sprites.js';
 import { BOOKS } from '../data/lore.js';
 import { BESTIARY, COMPANIONS } from '../data/bestiary.js';
+import { toolIcon } from '../engine/render/tools.js';
 import { G, setBannerTimer, setGest, setStateRaw, state } from '../engine/state.js';
 import { $, clamp } from '../engine/util.js';
 import { wallFrac } from '../engine/walls.js';
@@ -151,7 +152,7 @@ export function openPreview(n){
   for (const key of def.unlockGear){
     const g = GEAR.find(x => x.key === key); if (!g) continue;
     const d = document.createElement('div'); d.className = 'pv-ic';
-    const ic = document.createElement('div'); ic.className = 'pv-emoji'; ic.textContent = g.icon; d.appendChild(ic);
+    d.appendChild(toolIcon(g.key, 54));
     const sm = document.createElement('small'); sm.textContent = g.name; d.appendChild(sm);
     pk.appendChild(d);
   }
@@ -185,7 +186,7 @@ function startPreviewedNight(){
   }
   for (const key of def.unlockGear){
     const g = GEAR.find(x => x.key === key);
-    if (g) cards.push({ key:'g:' + key, icon:g.icon, title:`New tool: ${g.name}`, text:`${g.desc} You get one to start with. More drop from monsters and sell in the shop.` });
+    if (g) cards.push({ key:'g:' + key, icon:toolIcon(g.key, 104), title:`New tool: ${g.name}`, text:`${g.desc} You get one to start with. More drop from monsters and sell in the shop.` });
   }
   if (def.graves && !prevGraves) cards.push({ key:'graves', icon:'🪦', title:'Graves', text:GRAVES_INTRO });
   if (def.fog.length && !(n > 1 && levelFor(n - 1).fog.length)) cards.push({ key:'fog', icon:'🌫️', title:'Fog', text:FOG_INTRO });
@@ -412,7 +413,8 @@ export function renderShop(){
     const gu = it.consumable ? gearUnlockNightOf(it.key) : 1, gLocked = gu > highestOpen();
     const d = document.createElement('div'); d.className = 'item';
     const pips = Array.from({ length:it.max }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('');
-    d.innerHTML = `<div class="ic" aria-hidden="true">${it.icon}</div><div class="tx"><b>${it.name}</b><p>${it.desc}</p><div class="pips" aria-label="${lvl} of ${it.max}">${pips}</div></div>`;
+    d.innerHTML = `<div class="tx"><b>${it.name}</b><p>${it.desc}</p><div class="pips" aria-label="${lvl} of ${it.max}">${pips}</div></div>`;
+    const tic = toolIcon(it.key, 42); tic.className = 'ic'; tic.setAttribute('aria-hidden', 'true'); d.prepend(tic);
     const b = document.createElement('button'); b.className = 'btn small';
     if (gLocked){ b.textContent = gu === Infinity ? 'Later world' : `Level ${levelFor(gu).label}`; b.disabled = true; }
     else if (maxed){ b.textContent = it.consumable ? 'Full' : 'Maxed'; b.disabled = true; }

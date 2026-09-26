@@ -120,7 +120,7 @@ export function useFirework(){
   if (state !== 'play' || G.over || save.fw <= 0) return;
   save.fw--; persist();
   SFX.tool('fw'); G.shake = 1; G.flash = 1;
-  for (let i = 0; i < 5; i++){ const x = rnd(60, W - 60), y = rnd(FIELD_TOP, FIELD_TOP + 160); const col = ['#ffd35a', '#ff6a3a', '#d09bff', '#aee8ff', '#a6f06a'][i]; for (let k = 0; k < 24; k++) spark(x, y, col, 260); }
+  for (let i = 0; i < 5; i++){ const x = rnd(60, W - 60), y = rnd(FIELD_TOP, FIELD_TOP + 160); const col = ['#ffd35a', '#ff6a3a', '#d09bff', '#aee8ff', '#a6f06a'][i]; for (let k = 0; k < 12; k++) spark(x, y, col, 260); if (G.vfx) G.vfx.push({ kind:'firework', x, y, i, col, t:-i * 0.12, dur:1.1 }); }   // rockets climb from the fence and burst (render/tools.js)
   for (const m of G.monsters.slice()) if (!m.dead && !(m.rise > 0)){ m.lastHit = -1; damage(m, 3, '#ffd35a'); }
   updateHud(true);
 }
@@ -140,6 +140,7 @@ export function bustGrave(r, c){
   const x = LANE(c), y = GY + r * CS + CS / 2;
   for (let i = 0; i < 18; i++) chunk(x, y, i % 2 ? '#8a8d96' : '#3b2a1c', 220);
   ring(x, y, 40, 'rgba(255,220,150,.9)');
+  if (G.vfx) G.vfx.push({ kind:'dynamite', x, y, t:0, dur:1.0 });
   SFX.tool('buster'); G.shake = 0.4; G.aim = null;
   updateHud(true);
   return true;
@@ -149,7 +150,8 @@ export function useLantern(){
   if (!G.def || !G.def.fog.length){ addFloat('No fog here', W / 2, GY - 30, '#ffd35a', 18, 1); SFX.bad(); return; }
   save.lantern--; persist();
   G.fogClear = 10; G.flash = 0.4;
-  for (let i = 0; i < 40; i++) spark(rnd(40, W - 40), rnd(FIELD_TOP, FENCE_Y), '#ffe27a', 120);
+  for (let i = 0; i < 20; i++) spark(rnd(40, W - 40), rnd(FIELD_TOP, FENCE_Y), '#ffe27a', 120);
+  if (G.vfx) G.vfx.push({ kind:'lantern', x:W / 2, y:FENCE_Y - 30, t:0, dur:1.3 });
   SFX.tool('lantern'); updateHud(true);
 }
 /** Landmine: first press arms it (tap a column next), second press or a tap elsewhere cancels. */
@@ -224,7 +226,7 @@ export function placeScarecrow(lane){
   if (save.scarecrow <= 0 || G.scarecrows.some(s => s.lane === lane)){ addFloat('Scarecrow already there', LANE(lane), FENCE_Y - 60, '#ffd35a', 16, 1); SFX.bad(); G.aim = null; updateHud(true); return false; }
   save.scarecrow--; persist();
   const p = 0.84;
-  G.scarecrows.push({ lane, p, x:LANE(lane), y:FIELD_TOP + p * (FIELD_BOT - FIELD_TOP), hp:12, maxHp:12, dead:false });
+  G.scarecrows.push({ lane, p, x:LANE(lane), y:FIELD_TOP + p * (FIELD_BOT - FIELD_TOP), hp:12, maxHp:12, dead:false, age:0 });
   for (let i = 0; i < 12; i++) spark(LANE(lane), FIELD_TOP + p * (FIELD_BOT - FIELD_TOP), '#c8b060', 120);
   SFX.tool('scarecrow'); G.aim = null; updateHud(true);
   return true;
@@ -248,7 +250,8 @@ export function dropBomb(x, y){
   save.bomb--; persist();
   const lane0 = clamp(Math.floor((x - GX) / CS), 0, COLS - 1), p0 = (y - FIELD_TOP) / (FIELD_BOT - FIELD_TOP), reach = 1.5 * TILE_P();
   G.flash = 0.6; G.shake = 1; SFX.tool('bomb');
-  for (let k = 0; k < 40; k++) spark(x, y, k % 3 ? '#ffd35a' : '#ff6a3a', 320); ring(x, y, CS * 1.5, 'rgba(255,200,90,.9)');
+  for (let k = 0; k < 20; k++) spark(x, y, k % 3 ? '#ffd35a' : '#ff6a3a', 320);
+  if (G.vfx){ G.vfx.push({ kind:'bombdrop', x, y, t:0, dur:0.35 }); G.vfx.push({ kind:'blast', x, y, t:-0.35, dur:0.7, r:CS * 1.5, seed:4 }); }   // the bomb falls in, then the fireball (render/tools.js, render/fx.js)
   for (const m of G.monsters.slice()) if (!m.dead && !m.hidden && m.rise <= 0 && Math.abs(m.lane - lane0) <= 1 && Math.abs(m.p - p0) <= reach){ m.lastHit = -1; damage(m, 4, '#ffd35a'); }
   for (const w of G.castles) if (!w.dead && Math.abs(w.lane - lane0) <= 1 && Math.abs(w.p - p0) <= reach) damageCastle(w, 4);
   G.aim = null; updateHud(true);
@@ -268,6 +271,7 @@ export function repairWall(lane){
   if (walls[lane].hp >= walls[lane].max){ addFloat('That wall is fine', LANE(lane), FENCE_Y - 40, '#ffd35a', 16, 1); SFX.bad(); G.aim = null; updateHud(true); return false; }
   save.repair--; persist();
   walls[lane].hp = walls[lane].max; for (let i = 0; i < 10; i++) spark(LANE(lane), FENCE_Y - 10, '#ffe27a', 140);
+  if (G.vfx) G.vfx.push({ kind:'hammer', x:LANE(lane), y:FENCE_Y - 4, t:0, dur:0.7 });
   SFX.tool('repair'); G.aim = null; updateHud(true);
   return true;
 }
@@ -328,7 +332,8 @@ export function update(dt){
     const v = g.monsters.find(m => !m.dead && !m.hidden && m.rise <= 0 && m.lane === mine.lane && m.p >= mine.p - tile * 0.3 && m.p < mine.p + tile * 0.6 && m.type !== 'boss');
     if (v){
       mine.dead = true; const y = fieldY(mine.p);
-      for (let i = 0; i < 30; i++) spark(LANE(mine.lane), y, i % 2 ? '#ffd35a' : '#ff6a3a', 300); ring(LANE(mine.lane), y, 70, 'rgba(255,200,90,.9)'); g.shake = 0.8; SFX.tool('mineBoom');
+      for (let i = 0; i < 16; i++) spark(LANE(mine.lane), y, i % 2 ? '#ffd35a' : '#ff6a3a', 300); g.shake = 0.8; SFX.tool('mineBoom');
+      if (g.vfx) g.vfx.push({ kind:'blast', x:LANE(mine.lane), y, t:0, dur:0.7, r:CS * 1.5, seed:6 });
       for (const o of g.monsters) if (!o.dead && !o.hidden && o.rise <= 0 && Math.abs(o.lane - mine.lane) <= 1 && Math.abs(o.p - mine.p) <= tile){ o.lastHit = -1; damage(o, 6, '#ffd35a'); }
     }
   }
@@ -364,7 +369,8 @@ export function update(dt){
       m.p = Math.min(m.p, sc.p); m.chewing = sc; sc.hp -= m.eat * (m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1) * dt;
       if (Math.random() < dt * 4) chunk(sc.x + rnd(-8, 8), sc.y, '#c8b060', 80);
     }
-    if (sc.hp <= 0){ sc.dead = true; for (let i = 0; i < 20; i++) chunk(sc.x, sc.y, i % 2 ? '#c8b060' : '#5a3a1a', 220); SFX.smash(); for (const m of g.monsters) if (m.chewing === sc) m.chewing = null; }
+    if (sc.age != null) sc.age += dt;
+    if (sc.hp <= 0){ sc.dead = true; for (let i = 0; i < 8; i++) chunk(sc.x, sc.y, i % 2 ? '#c8b060' : '#5a3a1a', 220); if (g.vfx) g.vfx.push({ kind:'scbreak', x:sc.x, y:sc.y, t:0, dur:0.7 }); SFX.smash(); for (const m of g.monsters) if (m.chewing === sc) m.chewing = null; }
   }
   g.scarecrows = g.scarecrows.filter(s => !s.dead);
   for (const tl of g.tails) tl.t -= dt;

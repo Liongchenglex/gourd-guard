@@ -161,6 +161,16 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 
 /* Level-20 boosts shown as trophies on the loadout screen (owner): gold when on, grey when off */
 .trophies{ margin-top:calc(var(--u)*6px); }
+.pv-row.powers{ gap:calc(var(--u)*6px); }
+.pw{ position:relative; width:calc(var(--u)*72px); border:none; background:none; padding:calc(var(--u)*4px) 0; font:inherit; color:var(--ink); display:flex; flex-direction:column; align-items:center; gap:0; cursor:pointer; border-radius:calc(var(--u)*12px); }
+.pw canvas{ width:calc(var(--u)*52px); height:calc(var(--u)*52px); display:block; }
+.pw small{ font-size:calc(var(--u)*10.5px); color:var(--muted); line-height:1.15; text-align:center; }
+.pw.on canvas{ filter:drop-shadow(0 0 calc(var(--u)*6px) rgba(255,211,90,.9)); }
+.pw.on small{ color:var(--candle); }
+.pw.off canvas{ opacity:.45; }
+.pw.locked canvas{ opacity:.5; }
+.pw.locked::after{ content:'🔒'; position:absolute; right:calc(var(--u)*8px); top:calc(var(--u)*2px); font-size:calc(var(--u)*14px); filter:drop-shadow(0 1px 2px #000); }
+.pw.picked{ background:rgba(255,193,74,.14); box-shadow:inset 0 0 0 2px var(--candle); }
 .pick.trophy canvas{ width:calc(var(--u)*56px); height:calc(var(--u)*56px); }
 .pick.trophy[aria-pressed="false"]{ opacity:.6; }
 .pick.trophy[aria-pressed="true"]{ border-color:var(--candle); background:rgba(255,211,90,.12); }

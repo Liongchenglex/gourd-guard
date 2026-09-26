@@ -169,6 +169,7 @@ export function openPreview(n){
     pk.appendChild(d);
   }
   $('#pvNewBlock').hidden = !pk.childElementCount;
+  powerPick = null; $('#pvPowerInfo').hidden = true; renderPowers();
   const info = [];   // no counts here (owner): just what is special
   if (def.boss) info.push('Monsters keep coming until the boss falls.');
   if (def.levelNo === 10){ const nextName = WORLD_NAMES[def.worldNo]; info.push(`🎁 Reward: levels 11–20${nextName && WORLD_LEVELS[def.worldNo] && WORLD_LEVELS[def.worldNo].length ? ` and World ${def.worldNo + 1}: ${nextName}` : ''}.`); }
@@ -339,8 +340,8 @@ let loadoutFocus = null;
 export function openLoadout(avail, next, required){
   loadoutAvail = avail; loadoutNext = next; loadoutMust = (required || []).map(m => m.t); loadoutWhy = required || [];
   const pref = [...loadoutMust, ...(save.loadout || []).filter(t => avail.includes(t) && !loadoutMust.includes(t))];
-  for (const t of avail) if (pref.length < 5 && !pref.includes(t)) pref.push(t);
-  loadoutSel = new Set(pref.slice(0, 5));
+  for (const t of avail) if (pref.length < (perkOn('pick4') ? 4 : 5) && !pref.includes(t)) pref.push(t);
+  loadoutSel = new Set(pref.slice(0, perkOn('pick4') ? 4 : 5));
   const night = t => t < 2 ? 0 : unlockNightOf(PTYPES[t].key);   // Green and Yellow are there from the start
   const order = avail.slice().sort((x, y) => night(x) - night(y) || x - y);
   loadoutFocus = loadoutMust[0] != null ? loadoutMust[0] : order[0];
@@ -358,14 +359,13 @@ export function openLoadout(avail, next, required){
       loadoutFocus = t;
       if (!loadoutMust.includes(t)){   // introduced this level: stays in
         if (loadoutSel.has(t)){ loadoutSel.delete(t); SFX.ui('unpick'); }
-        else if (loadoutSel.size < 5){ loadoutSel.add(t); SFX.ui('pick'); }
+        else if (loadoutSel.size < (perkOn('pick4') ? 4 : 5)){ loadoutSel.add(t); SFX.ui('pick'); }   // Focused patch: exactly four
         else SFX.ui('locked');
       } else SFX.ui('tap');
       syncLoadout();
     };
     b.dataset.t = t; box.appendChild(b);
   }
-  renderTrophies();
   syncLoadout();
   setState('loadout');
 }
@@ -379,22 +379,27 @@ function renderDetail(){
   d.appendChild(tx);
 }
 
-/** All five trophies (the level-20 perks): earned ones toggle on and off, the rest show which level wins them (owner). */
-export function renderTrophies(){
-  const box = $('#trophies'); if (!box) return;
+/** Powers (the level-20 trophies) on the level preview card (owner, 2026-09-27): gold when on, dim when off, locked until that world is complete. Tap one to read its power and switch it. */
+let powerPick = null;
+export function renderPowers(){
+  const box = $('#pvPowers'), info = $('#pvPowerInfo'); if (!box) return;
   box.innerHTML = '';
   for (const p of PERKS){
-    const earned = perkEarned(p.key), on = perkOn(p.key);
-    const b = document.createElement('button'); b.className = 'pick trophy' + (earned ? '' : ' locked'); b.appendChild(trophyIcon(p.world - 1, 56, earned));
-    const nm = document.createElement('b'); nm.textContent = p.name; b.appendChild(nm);
-    const sm = document.createElement('small'); sm.textContent = earned ? (on ? 'On' : 'Off') : `Beat level ${p.world}-20`; b.appendChild(sm);
-    b.title = p.desc; b.setAttribute('aria-pressed', earned ? (on ? 'true' : 'false') : 'false'); b.setAttribute('aria-label', earned ? `${p.name}, ${on ? 'on' : 'off'}: ${p.desc}` : `${p.name}, locked: beat level ${p.world}-20. ${p.desc}`);
-    if (earned) b.onclick = () => { save.perksOff = save.perksOff || {}; save.perksOff[p.key] = on; persist(); SFX.ui(on ? 'unpick' : 'pick'); renderTrophies(); syncLoadout(); };
-    else b.onclick = () => { SFX.ui('locked'); addFloatMsg(`${p.desc} Beat level ${p.world}-20 to win it.`); };
+    const earned = perkEarned(p.key), on = perkOn(p.key), wname = WORLD_NAMES[p.world - 1];
+    const b = document.createElement('button'); b.className = 'pw ' + (earned ? (on ? 'on' : 'off') : 'locked') + (powerPick === p.key ? ' picked' : '');
+    b.appendChild(trophyIcon(p.world - 1, 52, earned));
+    const sm = document.createElement('small'); sm.textContent = earned ? p.name : `Complete ${wname}`; b.appendChild(sm);
+    b.setAttribute('aria-label', earned ? `${p.name}, ${on ? 'on' : 'off'}: ${p.desc}` : `${p.name}, locked: complete ${wname}. ${p.desc}`);
+    b.onclick = () => {
+      powerPick = p.key;
+      if (earned){ save.perksOff = save.perksOff || {}; save.perksOff[p.key] = on; persist(); SFX.ui(on ? 'unpick' : 'pick'); info.textContent = `${p.name} is ${on ? 'off' : 'on'}: ${p.desc}`; }
+      else { SFX.ui('locked'); info.textContent = `${p.name}: ${p.desc} Complete ${wname} to win it.`; }
+      info.hidden = false; renderPowers();
+    };
     box.appendChild(b);
   }
 }
-function addFloatMsg(text){ const el = $('#loWhy'); el.textContent = text; el.hidden = false; }
+export function renderTrophies(){ renderPowers(); }
 
 export function syncLoadout(){
   for (const b of document.querySelectorAll('#picks .pick')) b.setAttribute('aria-pressed', loadoutSel.has(+b.dataset.t) ? 'true' : 'false');

@@ -296,7 +296,7 @@ export function update(dt){
   g.mines = g.mines.filter(m => !m.dead);
   for (const a of g.arrows){   // skeleton archers' arrows fly down their lane into the wall
     a.p += a.sp * dt;
-    if (a.p >= 1){ a.dead = true; damageWall(a.lane, a.dmg); for (let i = 0; i < 8; i++) spark(LANE(a.lane), FENCE_Y - 10, a.water ? '#9fe0f0' : '#d8d0c0', 120); SFX.monsterAct('arrow', 'land'); }
+    if (a.p >= 1){ a.dead = true; damageWall(a.lane, a.dmg); for (let i = 0; i < 8; i++) spark(LANE(a.lane), FENCE_Y - 10, a.water ? '#9fe0f0' : '#d8d0c0', 120); SFX.monsterAct(a.water ? 'water' : 'arrow', 'land'); }
   }
   g.arrows = g.arrows.filter(a => !a.dead);
   for (const w of g.castles) if (w.flash > 0) w.flash -= dt;

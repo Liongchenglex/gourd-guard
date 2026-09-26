@@ -385,13 +385,15 @@ Reading: the first five levels of every world are fine. Worlds 1, 2, 4 and 5 bre
 
 Same bot caveats as above (no colour picking, no plan for wind). Follow-up (2026-09-26): every level 10's spawn gap lengthened by 35% at the owner's request; see the re-run below.
 
-| Level | Before (2 runs) | After, gap ×1.35 (3 runs) |
-|---|---|---|
-| 1-10 | 0/2 | 0/3, 66% |
-| 2-10 | 0/2 | 0/3, 75% |
-| 3-10 | 0/2 | 0/3, 78% |
-| 4-10 | 0/2 | 0/3, 70% |
-| 5-10 | 0/2 | 0/3, 63% |
+| Level | Before (2 runs) | After, gap ×1.35 (3 runs) | Gap restored, boss HP −25% (3 runs, 2026-09-26) |
+|---|---|---|---|
+| 1-10 | 0/2 | 0/3, 66% | 0/3, 56% |
+| 2-10 | 0/2 | 0/3, 75% | 0/3, 70% |
+| 3-10 | 0/2 | 0/3, 78% | 0/3, 68% |
+| 4-10 | 0/2 | 0/3, 70% | 0/3, 67% |
+| 5-10 | 0/2 | 0/3, 63% | 0/3, 55% |
+
+Second follow-up (2026-09-26): the owner reverted the ×1.35 spawn slowdown after cutting boss health (form 1 about −25%). Result at the expected profile: still 0/15 with mean walls 55–70%, in line with the slowed runs, so the boss-health cut roughly offsets the faster spawns for the bot. The bot cannot colour-pick or plan around gusts, so the owner's own runs decide; nothing further changed.
 
 
 ---

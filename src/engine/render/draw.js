@@ -314,6 +314,15 @@ export function drawArrows(t){
   for (const a of G.arrows || []){
     const x = LANE(a.lane), y = FIELD_TOP + a.p * (FIELD_BOT - FIELD_TOP);
     if (a.mirror){ const sz = CS * 0.5; ctx.drawImage(sprites[a.vis][0], x - sz / 2, y - sz / 2, sz, sz); continue; }   // a reflected pumpkin
+    if (a.water){   // divers and Twin Tides hurl water balls: a wobbling blue blob with a highlight and a spray of droplets behind it
+      const r = 11 + Math.sin(t * 18 + a.lane) * 1.5, ry = 11 - Math.sin(t * 18 + a.lane) * 1.5;
+      for (let i = 1; i <= 3; i++){ ctx.fillStyle = `rgba(120,190,235,${0.5 - i * 0.12})`; ctx.beginPath(); ctx.arc(x + Math.sin(t * 25 + i * 2.1) * 5, y - 12 - i * 8, 4 - i * 0.7, 0, Math.PI * 2); ctx.fill(); }
+      const gr = ctx.createRadialGradient(x - 4, y - 4, 2, x, y, 13); gr.addColorStop(0, '#dff4ff'); gr.addColorStop(0.35, '#7cc4ec'); gr.addColorStop(1, '#2a72b0');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(x, y, r, ry, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(20,70,120,.6)'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.beginPath(); ctx.ellipse(x - 4, y - 5, 3.5, 2.2, -0.6, 0, Math.PI * 2); ctx.fill();
+      continue;
+    }
     ctx.strokeStyle = '#3a2a1c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y - 14); ctx.lineTo(x, y + 10); ctx.stroke();
     ctx.fillStyle = '#d8d0c0'; tri(ctx, x, y + 14, 5);
     ctx.fillStyle = '#c8b090'; ctx.fillRect(x - 4, y - 16, 8, 5);

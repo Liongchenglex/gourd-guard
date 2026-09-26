@@ -163,3 +163,26 @@ Files under `raw/kenney/` come from kenney.nl asset packs, all CC0: Impact Sound
 | win8bit_0.mp3 | Victory 1 | pumodi | https://freesound.org/s/150224/ | CC0 |
 | win8bit_1.mp3 | Game FX #8 | danlucaz | https://freesound.org/s/517765/ | CC0 |
 | win8bit_2.mp3 | victory chime | 1bob | https://freesound.org/s/717771/ | CC0 |
+| siren_0.mp3 | belch alarm SINGLE.mp3 | KristopherTiberiusHaven | https://freesound.org/s/559267/ | CC0 |
+| alert_0.mp3 | Chippy alarm | IanStarGem | https://freesound.org/s/341819/ | CC0 |
+| alert_1.mp3 | pup_alert.mp3 | willy_ineedthatapp_com | https://freesound.org/s/167337/ | CC0 |
+| evillaugh_0.mp3 | evil laugh.wav | Reitanna | https://freesound.org/s/215339/ | CC0 |
+| evillaugh_1.mp3 | dat evil laugh.wav | Reitanna | https://freesound.org/s/253772/ | CC0 |
+| evillaugh_2.mp3 | Joker Laugh 1 | BrainClaim | https://freesound.org/s/427574/ | CC0 |
+| evillaugh_3.mp3 | 14-evil laugh.wav | tilano408 | https://freesound.org/s/445639/ | CC0 |
+| chuckle_0.mp3 | Voices - young child - screech, chuckle.wav | jodybruchon | https://freesound.org/s/459458/ | CC0 |
+| chuckle_1.mp3 | deep laugh chuckle.mp3 | hsmith1986 | https://freesound.org/s/458101/ | CC0 |
+| chuckle_2.mp3 | chuckle_laught_2.wav | 104-Moonj | https://freesound.org/s/687262/ | CC0 |
+| harp_0.mp3 | harp glissando | PhonosUPF | https://freesound.org/s/490831/ | CC0 |
+| arpeggio_0.mp3 | arpeggio c a g _ in g major-05.wav | @realdavidfloat | https://freesound.org/s/424193/ | CC0 |
+| arpeggio_1.mp3 | a5sus2 arpeggio stab glassy synth clicky low freq atmosphere-16.wav | @realdavidfloat | https://freesound.org/s/418934/ | CC0 |
+| arpeggio_2.mp3 | Fast chiptune arpeggio | muklo094 | https://freesound.org/s/860664/ | CC0 |
+| success_0.mp3 | MISSION SUCCESS!.wav | StormBat | https://freesound.org/s/406371/ | CC0 |
+| success_1.mp3 | success2 | Kenneth_Cooney | https://freesound.org/s/779817/ | CC0 |
+| success_2.mp3 | Success.mp3 | oysterqueen | https://freesound.org/s/582988/ | CC0 |
+| alarm_0.mp3 | archi_scifi_alarm_tracking_05.flac | ElanHickler | https://freesound.org/s/507502/ | CC0 |
+| alarm_1.mp3 |  2-tone alarm #2 OGG | tt_runscript | https://freesound.org/s/321684/ | CC0 |
+| alarm_2.mp3 | Digital Siren Alarm Loop.wav | bbrocer | https://freesound.org/s/389510/ | CC0 |
+| siren2_0.mp3 | dub_siren_lfo_square_short_9 | leonseptavaux | https://freesound.org/s/716153/ | CC0 |
+| siren2_1.mp3 | Sirens.wav | Music15tree | https://freesound.org/s/491448/ | CC0 |
+| siren2_2.mp3 | Woo Siren.wav | 8bitmyketison | https://freesound.org/s/699849/ | CC0 |

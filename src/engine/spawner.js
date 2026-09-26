@@ -27,7 +27,7 @@ export function storySpawn(dt){
   }
   if (d.boss && !G.bossSpawned && G.spawned >= Math.floor(d.total * 0.4)){
     spawnMonster('boss'); G.bossSpawned = true;
-    banner(BOSS_NAMES[d.boss] || 'Boss', (BOSS_INTRO[d.boss] || {})[d.bossForm] || 'Monsters keep coming until it falls.', 3); SFX.bossSfx(d.boss, 'arrive');
+    banner(BOSS_NAMES[d.boss] || 'Boss', (BOSS_INTRO[d.boss] || {})[d.bossForm] || 'Monsters keep coming until it falls.', 3); SFX.bossAlert(); setTimeout(() => SFX.bossSfx(d.boss, 'arrive'), 900);
   }
 }
 

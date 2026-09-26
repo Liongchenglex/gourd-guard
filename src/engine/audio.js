@@ -45,6 +45,7 @@ function decodeBank(){
 export const sfxReady = () => bankReady > 0;
 
 // ---- music: one looping track per key (src/data/music.js), decoded on first use, faded in and out ----
+const MUSIC_GAIN = 0.32;   // owner: current balance is fine for now (2026-09-26)
 const musicBufs = {}; let musicSrc = null, musicGain = null, musicKey = null, musicWant = null;
 export function musicStart(key = 'play'){
   ensureAudio(); if (!AC) return;
@@ -52,7 +53,7 @@ export function musicStart(key = 'play'){
   musicStop(0.4); musicWant = key;   // set after the stop, which clears the wish
   const play = buf => {
     if (musicWant !== key || musicSrc) return;
-    musicGain = AC.createGain(); musicGain.gain.setValueAtTime(0.0001, AC.currentTime); musicGain.gain.exponentialRampToValueAtTime(save.muted ? 0.0001 : 0.32, AC.currentTime + 1.2);
+    musicGain = AC.createGain(); musicGain.gain.setValueAtTime(0.0001, AC.currentTime); musicGain.gain.exponentialRampToValueAtTime(save.muted ? 0.0001 : MUSIC_GAIN, AC.currentTime + 1.2);
     musicSrc = AC.createBufferSource(); musicSrc.buffer = buf; musicSrc.loop = true; musicSrc.connect(musicGain); musicGain.connect(master); musicSrc.start(); musicKey = key;
   };
   if (musicBufs[key]) return play(musicBufs[key]);
@@ -70,7 +71,13 @@ export function musicStop(fade = 0.8){
   try { g.gain.cancelScheduledValues(AC.currentTime); g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), AC.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + fade); src.stop(AC.currentTime + fade + 0.05); } catch (e) {}
 }
 /** Mute toggle: duck or restore the running track without restarting it. */
-export function musicSync(){ if (musicGain && AC) musicGain.gain.setTargetAtTime(save.muted ? 0.0001 : 0.32, AC.currentTime, 0.1); }
+export function musicSync(){ if (musicGain && AC) musicGain.gain.setTargetAtTime(save.muted ? 0.0001 : MUSIC_GAIN, AC.currentTime, 0.1); }
+/** Duck the music to `level` of its gain for `seconds`, then ease back (boss warnings). */
+export function musicDuck(level = 0.35, seconds = 3){
+  if (!musicGain || !AC || save.muted) return;
+  const g = musicGain.gain, t = AC.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(Math.max(0.0001, g.value), t);
+  g.linearRampToValueAtTime(MUSIC_GAIN * level, t + 0.25); g.setValueAtTime(MUSIC_GAIN * level, t + seconds); g.linearRampToValueAtTime(MUSIC_GAIN, t + seconds + 1.5);
+}
 
 // Mix levels. BOOST lifts the synth primitives out of the -30 dBFS range the first draft sat in; SAMPLE_GAIN scales the
 // peak-normalised clips into the same range. layerGain/jitter are set briefly by the hit layers: monster reactions play
@@ -177,8 +184,8 @@ export const SFX = {
     const base = 440 * Math.pow(2, (Math.min(groups, 4) - 1) * 3 / 12);
     S('pop', 0.5, { rate: 0.85 + 0.1 * Math.min(groups, 4) });
     if (size >= 5){
-      [0,4,7,12,16].forEach((s, i) => tone(base * Math.pow(2, s / 12), 0.22, 'triangle', 0.11, null, i * 0.045));
-      S('heavy', 0.5, { rate: 0.8 }) || tone(110, 0.25, 'sine', 0.14, 55); S('sparkle', 0.45, { delay: 0.1 }) || noise(0.12, 0.2, 2500, 1, 0.1);
+      [0,4,7,12,16,19,24].forEach((s, i) => tone(base * Math.pow(2, s / 12), i === 6 ? 0.5 : 0.16, 'sine', 0.05, null, i * 0.05));   // soft rising run under the chime
+      S('combo', 0.6, { rate: 0.95 + 0.05 * Math.min(groups, 4) }) || S('sparkle', 0.45, { delay: 0.1 });
     } else [0,4,7].forEach((s, i) => tone(base * Math.pow(2, s / 12), 0.16, 'triangle', 0.08, null, i * 0.05));
   },
 
@@ -228,16 +235,17 @@ export const SFX = {
       case 'bat': S('bat', 0.45, { rate: 1.1 }) || (tone(1800, 0.06, 'square', 0.035, 2400), noise(0.05, 0.08, 2500, 1.5)); break;
       case 'imp': S('imp', 0.4) || tone(700, 0.12, 'sawtooth', 0.05, 1100); break;
       case 'rider': S('imp', 0.35) || tone(700, 0.08, 'sawtooth', 0.03, 900, 0.04); S('cloth', 0.35); break;
-      case 'brute': case 'hauler': case 'bulwark': S('giant', 0.6) || (tone(80, 0.25, 'sawtooth', 0.09, 60), noise(0.15, 0.2, 150, 1)); break;
+      case 'brute': S('bigcute', 0.5, { rate: 0.85 }) || S('giant', 0.5) || (tone(80, 0.25, 'sawtooth', 0.09, 60), noise(0.15, 0.2, 150, 1)); break;
+      case 'hauler': case 'bulwark': S('giant', 0.6) || (tone(80, 0.25, 'sawtooth', 0.09, 60), noise(0.15, 0.2, 150, 1)); break;
       case 'mummy': S('cloth', 0.5) || cloth(); S('groan', 0.35, { rate: 1.1, delay: 0.03 }); break;
       case 'firemummy': S('cloth', 0.5) || cloth(); S('groan', 0.35, { rate: 1.1, delay: 0.03 }); noise(0.06, 0.14, 2500, 3, 0.05); break;
       case 'wisp': case 'wraith': case 'fogwalker': S('ghost', 0.4) || cloth(); break;
       case 'doctor': case 'sailor': case 'archer': S('human', 0.55) || (noise(0.06, 0.16, 400, 2), noise(0.07, 0.12, 380, 2, 0.1)); break;
       case 'knight': S('clank', 0.5) || clang(); S('human', 0.3, { delay: 0.04 }); break;
       case 'gargoyle': S('metal', 0.55) || (noise(0.1, 0.22, 1200, 1), tone(300, 0.1, 'square', 0.05, 150)); break;
-      case 'vampire': S('hiss', 0.55) || noise(0.2, 0.16, 5000, 1.2, 0, 3000); break;
+      case 'vampire': S('chuckle', 0.5, { rate: 1.1 }) || noise(0.2, 0.16, 5000, 1.2, 0, 3000); break;
       case 'crawler': case 'diver': S('splash', 0.45) || noise(0.1, 0.18, 500, 0.8, 0, 250); break;
-      case 'turtle': S('knock', 0.55) || (tone(260, 0.1, 'triangle', 0.08, 180), noise(0.05, 0.12, 400, 2)); break;
+      case 'turtle': S('metal', 0.6, { rate: 0.7 }) || (tone(260, 0.1, 'triangle', 0.08, 180), noise(0.05, 0.12, 400, 2)); break;
       case 'slime': S('slime', 0.55) || squelch(); break;
       case 'blob': S('slime', 0.55, { rate: 0.8 }) || squelch(0.1, 500); break;
       case 'chameleon': case 'rchameleon': S('chameleon', 0.45) || (tone(1500, 0.05, 'sine', 0.05, 2200), tone(1500, 0.05, 'sine', 0.04, 2200, 0.07)); break;
@@ -254,16 +262,17 @@ export const SFX = {
       case 'ghoul': S('ghouldie', 0.5) || groan(110, 0.1, 0.45); break;
       case 'bat': S('batdie', 0.45, { rate: 1.3 }) || S('pop', 0.4) || tone(2000, 0.05, 'square', 0.04, 2600); break;
       case 'imp': case 'rider': S('impdie', 0.45) || tone(900, 0.2, 'sawtooth', 0.06, 1500); break;
-      case 'brute': case 'hauler': S('giantdie', 0.65) || (tone(70, 0.4, 'sawtooth', 0.1, 40), noise(0.3, 0.25, 120, 1)); break;
+      case 'brute': S('bigcute', 0.5, { rate: 0.7 }) || S('giantdie', 0.5) || (tone(70, 0.4, 'sawtooth', 0.1, 40), noise(0.3, 0.25, 120, 1)); break;
+      case 'hauler': S('giantdie', 0.65) || (tone(70, 0.4, 'sawtooth', 0.1, 40), noise(0.3, 0.25, 120, 1)); break;
       case 'bulwark': S('giantdie', 0.6); S('armorbreak', 0.5, { delay: 0.05 }) || noise(0.3, 0.25, 120, 1); break;
       case 'mummy': case 'firemummy': S('ghouldie', 0.55, { rate: 0.85 }) || noise(0.25, 0.2, 500, 0.6, 0, 150); S('dig', 0.35, { delay: 0.1 }); break;
       case 'wisp': case 'wraith': case 'fogwalker': S('ghostdie', 0.35, { rate: 1.05 }) || noise(0.35, 0.12, 1200, 0.8, 0, 300); break;
       case 'doctor': case 'sailor': case 'archer': S('humandie', 0.55) || (noise(0.07, 0.14, 400, 2), noise(0.2, 0.25, 3000, 1, 0.12, 1200)); break;
       case 'knight': S('armorbreak', 0.6) || [0, 0.08, 0.18].forEach(d => { tone(600, 0.12, 'square', 0.05, 200, d); noise(0.1, 0.18, 1800, 1.2, d); }); break;
       case 'gargoyle': S('stonebreak', 0.7) || noise(0.3, 0.3, 1000, 0.8, 0, 300); break;
-      case 'vampire': S('scream', 0.5, { rate: 0.8 }) || (tone(800, 0.5, 'sawtooth', 0.07, 300), noise(0.5, 0.15, 800, 0.7, 0.2, 200)); S('bat', 0.4, { delay: 0.15 }); break;
+      case 'vampire': S('chuckle', 0.5, { rate: 0.8 }) || (tone(800, 0.5, 'sawtooth', 0.07, 300), noise(0.5, 0.15, 800, 0.7, 0.2, 200)); S('bat', 0.4, { delay: 0.15 }); break;
       case 'crawler': case 'diver': S('splash', 0.7) || splash(0.18); break;
-      case 'turtle': S('knock', 0.5, { rate: 0.8 }); S('splash', 0.5, { delay: 0.08 }) || (noise(0.25, 0.3, 900, 0.8, 0, 300), tone(200, 0.2, 'triangle', 0.08, 120)); break;
+      case 'turtle': S('metal', 0.65, { rate: 0.6 }); S('splash', 0.5, { delay: 0.1 }) || (noise(0.25, 0.3, 900, 0.8, 0, 300), tone(200, 0.2, 'triangle', 0.08, 120)); break;
       case 'slime': case 'blob': S('slimedie', 0.6) || (tone(500, 0.06, 'sine', 0.08, 800), tone(560, 0.06, 'sine', 0.08, 900, 0.09)); break;
       case 'chameleon': case 'rchameleon': S('chameleon', 0.4, { rate: 1.3 }) || tone(1500, 0.04, 'sine', 0.05, 900); break;
       case 'mirror': S('glass', 0.6) || (noise(0.3, 0.25, 4000, 1, 0, 1500), [3000, 2500, 2000].forEach((f, i) => tone(f, 0.08, 'sine', 0.04, null, i * 0.05))); break;
@@ -278,12 +287,13 @@ export const SFX = {
       case 'diver:surface': case 'turtle:rise': S('splash', 0.5) || splash(0.16); break;
       case 'crawler:rise': S('dig', 0.45) || splash(0.16); break;
       case 'diver:submerge': S('bubbles', 0.45) || (tone(300, 0.1, 'sine', 0.06, 150), noise(0.1, 0.12, 400, 1)); break;
-      case 'diver:bolt': case 'water:bolt': S('zap', 0.5) || noise(0.15, 0.2, 1200, 1, 0, 300); S('splash', 0.35, { delay: 0.05 }); break;
+      case 'diver:bolt': case 'water:bolt': S('bubbles', 0.5, { rate: 1.3 }) || noise(0.15, 0.2, 1200, 1, 0, 300); S('splash', 0.55, { rate: 1.15, delay: 0.03 }); break;   // liquid (owner)
+      case 'water:land': S('splash', 0.6) || splash(0.2); S('bubbles', 0.3, { rate: 1.2, delay: 0.05 }); break;
       case 'wraith:vanish': S('reverse', 0.45) || noise(0.3, 0.12, 400, 0.8, 0, 1600); break;
       case 'wraith:return': S('ghost', 0.45) || noise(0.3, 0.12, 1600, 0.8, 0, 400); break;
       case 'hauler:freed': S('armorbreak', 0.4, { rate: 1.2 }) || (noise(0.06, 0.2, 1800, 2), [0.08, 0.16, 0.24].forEach(d => noise(0.04, 0.1, 300, 1, d))); break;
       case 'doctor:heal': if (gate('dheal', 300)) S('heal', 0.35, { rate: 0.9 }) || [880, 740, 620].forEach((f, i) => tone(f, 0.12, 'sine', 0.04, null, i * 0.06)); break;
-      case 'vampire:heal': if (gate('vheal', 500)) S('hiss', 0.3, { rate: 0.8 }) || (tone(60, 0.1, 'sine', 0.08, 45), tone(60, 0.1, 'sine', 0.07, 45, 0.18)); break;
+      case 'vampire:heal': if (gate('vheal', 500)) S('chuckle', 0.4) || (tone(60, 0.1, 'sine', 0.08, 45), tone(60, 0.1, 'sine', 0.07, 45, 0.18)); break;
       case 'rider:break': S('cloth', 0.45) || noise(0.12, 0.2, 1200, 1, 0, 400); S('imp', 0.3, { delay: 0.05 }); break;
       case 'mirror:up': S('glassping', 0.4, { rate: 1.2 }) || tone(2400, 0.12, 'sine', 0.04, 3600); break;
       case 'mirror:reflect': S('glassping', 0.5, { rate: 0.8 }) || (tone(3200, 0.12, 'sine', 0.06, 2000), noise(0.06, 0.1, 5000, 2)); S('metallight', 0.3); break;
@@ -317,18 +327,18 @@ export const SFX = {
       case 'hexwitch:drift': noise(0.2, 0.1, 1200, 1, 0, 500); break;
       case 'hexwitch:hit': S('witch', 0.6) || tone(900, 0.1, 'sawtooth', 0.05, 1300); break;
       case 'hexwitch:die': S('witchdie', 0.7) || cackle(2, 700, 0, 0.07); S('boom', 0.5, { delay: 0.35 }) || noise(0.4, 0.3, 700, 0.8, 0.25, 200); break;
-      case 'vampirecount:arrive': S('roarfar', 0.6) || [110, 138, 165, 220].forEach(f => tone(f, 1.2, 'sawtooth', 0.045)); [0.1, 0.25, 0.4].forEach(d => S('bat', 0.35, { delay: d }) || noise(0.05, 0.1, 2500, 1.5, d)); break;
+      case 'vampirecount:arrive': S('evillaugh', 0.6, { rate: 0.95 }) || [110, 138, 165, 220].forEach(f => tone(f, 1.2, 'sawtooth', 0.045)); [0.1, 0.25, 0.4].forEach(d => S('bat', 0.35, { delay: d }) || noise(0.05, 0.1, 2500, 1.5, d)); break;
       case 'vampirecount:burst': [0, 0.08, 0.16, 0.24].forEach(d => S('bat', 0.4, { delay: d, rate: 1.1 }) || noise(0.05, 0.12, 2500, 1.5, d)); break;
       case 'vampirecount:bats': [0, 0.09, 0.18].forEach(d => S('bat', 0.35, { delay: d }) || noise(0.05, 0.1, 2500, 1.5, d)); break;
       case 'vampirecount:wall': S('woodbreak', 0.5, { rate: 0.7 }) || noise(0.6, 0.22, 250, 2, 0, 120); break;
-      case 'vampirecount:trance': S('darkcast', 0.85, { rate: 0.7 }) || tone(60, 0.12, 'sine', 0.1, 45); S('hiss', 0.6, { rate: 0.8, delay: 0.1 }); tone(55, 0.5, 'sine', 0.12, 40, 0.2); break;   // loud cast (owner)
-      case 'vampirecount:pulse': S('hiss', 0.3, { rate: 0.85 }); S('darkcast', 0.3, { rate: 0.6 }); tone(70, 0.3, 'sine', 0.08, 50); break;   // heartbeat while the trance holds
+      case 'vampirecount:trance': S('evillaugh', 0.6) || cackle(3, 300); [55, 82.5].forEach((f, i) => tone(f, 1.6, 'sine', 0.03 - i * 0.01, null, 0.3)); break;   // a laugh, then a soft low pad (owner: not loud)
+      case 'vampirecount:pulse': tone(62, 0.16, 'sine', 0.035, 48); tone(58, 0.14, 'sine', 0.028, 45, 0.16); break;   // a quiet lub-dub while the trance holds
       case 'vampirecount:tick': tone(2000, 0.05, 'sine', 0.06, 2400); break;
       case 'vampirecount:break': S('glass', 0.5) || (noise(0.3, 0.3, 4000, 1, 0, 1500), tone(1500, 0.3, 'sine', 0.06, 600)); S('hiss', 0.4, { delay: 0.1 }); break;
-      case 'vampirecount:hit': S('hiss', 0.6) || noise(0.2, 0.16, 5000, 1.2, 0, 3000); S('giant', 0.3, { delay: 0.04 }); break;
-      case 'vampirecount:die': S('scream', 0.6, { rate: 0.7 }) || (tone(800, 0.6, 'sawtooth', 0.09, 300), noise(0.8, 0.2, 800, 0.7, 0.4, 150)); S('bat', 0.4, { delay: 0.3 }); S('boom', 0.4, { delay: 0.6 }); break;
+      case 'vampirecount:hit': S('chuckle', 0.55, { rate: 1.05 }) || noise(0.2, 0.16, 5000, 1.2, 0, 3000); break;
+      case 'vampirecount:die': S('chuckle', 0.55, { rate: 0.7 }) || (tone(800, 0.6, 'sawtooth', 0.09, 300), noise(0.8, 0.2, 800, 0.7, 0.4, 150)); S('bat', 0.4, { delay: 0.3 }); S('boom', 0.4, { delay: 0.6 }); break;
       case 'twintides:arrive': S('seabig', 0.7) || (tone(90, 0.5, 'sawtooth', 0.1, 60, 0.2), tone(120, 0.5, 'sawtooth', 0.08, 80, 0.3)); S('splash', 0.6) || splash(0.3, 0.5); break;
-      case 'twintides:bolt': S('seabark', 0.5, { rate: 1.1 }); S('zap', 0.6) || noise(0.15, 0.2, 1200, 1, 0.1, 300); S('splash', 0.4, { delay: 0.05 }) || splash(0.16, 0.2); break;
+      case 'twintides:bolt': S('bubbles', 0.55, { rate: 1.2 }); S('splash', 0.6, { rate: 1.1, delay: 0.03 }) || noise(0.15, 0.2, 1200, 1, 0.1, 300); S('splash', 0.4, { delay: 0.05 }) || splash(0.16, 0.2); break;
       case 'twintides:down': S('splash', 0.8) || splash(0.25, 0.4); S('seabark', 0.5, { rate: 0.8, delay: 0.1 }) || tone(200, 0.4, 'sine', 0.06, 120, 0.2); break;
       case 'twintides:revive': S('bubbles', 0.65) || noise(0.6, 0.2, 300, 0.8, 0, 900); S('seabark', 0.6, { delay: 0.4 }); break;
       case 'twintides:hit': S('seabark', 0.6) || (noise(0.1, 0.18, 500, 0.8, 0, 250), tone(110, 0.15, 'sawtooth', 0.05, 80)); S('splash', 0.3, { delay: 0.03 }); break;
@@ -373,11 +383,14 @@ export const SFX = {
     switch (type){
       case 'knight': case 'bulwark': case 'gargoyle': S('metallight', 0.45) || (noise(0.08, 0.22, 2200, 1.5), tone(400, 0.08, 'square', 0.05, 250)); break;   // metal or stone scraping wood
       case 'slime': case 'blob': case 'crawler': case 'diver': S('slime', 0.4, { rate: 0.9 }) || (noise(0.1, 0.22, 350, 2.5), tone(180, 0.08, 'sine', 0.06, 120)); break;   // wet
-      case 'turtle': S('knock', 0.5) || (tone(240, 0.1, 'triangle', 0.09, 160), noise(0.06, 0.16, 600, 1.5)); break;                                       // hollow knock
+      case 'turtle': S('metallight', 0.45, { rate: 0.7 }) || (tone(240, 0.1, 'triangle', 0.09, 160), noise(0.06, 0.16, 600, 1.5)); break;                                       // hollow knock
       case 'bat': S('crunch', 0.3, { rate: 1.4 }) || (noise(0.05, 0.18, 2500, 2), noise(0.05, 0.14, 2200, 2, 0.08)); break;                                 // quick nibbles
       default: S('crunch', 0.5) || (noise(0.09, 0.28, 700, 1.2, 0, 300), tone(150, 0.09, 'square', 0.07, 90));                                              // wood being gnawed
     }
   },
+
+  // ---- boss warning: two alarm blasts while the music ducks (owner) ----
+  bossAlert(){ S('alarm', 0.55) || (tone(440, 0.25, 'square', 0.06, null), tone(440, 0.25, 'square', 0.06, null, 0.35)); S('alarm', 0.5, { delay: 0.65 }); musicDuck(0.3, 3.5); },
 
   // ---- walls, wind, fog, level ----
   wallHit(kind){ if (!gate('wall', 120)) return; if (kind === 'castle'){ S('stone', 0.7) || (noise(0.1, 0.25, 500, 1), tone(120, 0.12, 'square', 0.06, 80)); return; } S('wood', 0.55) || (noise(0.1, 0.22, 800, 1), tone(200, 0.1, 'square', 0.05, 150)); },

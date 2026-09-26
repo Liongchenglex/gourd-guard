@@ -417,16 +417,41 @@ export function syncLoadout(){
 
 export function openShop(ret){ shopReturn = ret || 'levels'; renderShop(); setState('shop'); }
 
+let shopTab = 'pumpkins';
+function setShopTab(tab){
+  shopTab = tab;
+  for (const b of document.querySelectorAll('#shopTabs .tab')) b.setAttribute('aria-selected', b.dataset.tab === tab ? 'true' : 'false');
+  $('#paneP').hidden = tab !== 'pumpkins'; $('#paneT').hidden = tab !== 'tools'; $('#paneS').hidden = tab !== 'seeds';
+}
+/** One stat line: now, and the next level's value when it changes. */
+const nxLine = (k, a, b) => `<span class="k">${k}</span><span>${a}${b != null && b !== a ? ` <span class="dim">\u2192</span> <span class="up">${b}</span>` : ''}</span>`;
+const SEED_PACKS = [
+  { n:100,  name:'Handful of seeds', price:'$0.99' },
+  { n:550,  name:'Pouch of seeds',   price:'$4.99' },
+  { n:1200, name:'Sack of seeds',    price:'$9.99' },
+  { n:2600, name:'Barrel of seeds',  price:'$19.99' },
+];
+function seedIcon(px, n){
+  const c = document.createElement('canvas'); c.width = c.height = px * 2; const g = c.getContext('2d'); g.scale(2, 2);
+  const k = Math.min(5, 1 + Math.floor(Math.log2(n / 100 + 1) * 1.5));
+  for (let i = 0; i < k; i++){ const x = px / 2 + (i - (k - 1) / 2) * px * .14, y = px / 2 + (i % 2) * px * .1;
+    g.save(); g.translate(x, y); g.rotate(-.35 + i * .15); const gr = g.createRadialGradient(-2, -4, 1, 0, 0, px * .22); gr.addColorStop(0, '#fff7dc'); gr.addColorStop(.5, '#f3dca0'); gr.addColorStop(1, '#b8904a');
+    g.fillStyle = gr; g.beginPath(); g.ellipse(0, 0, px * .14, px * .22, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = 'rgba(120,80,30,.55)'; g.lineWidth = 1; g.stroke(); g.restore(); }
+  return c;
+}
 export function renderShop(){
-  $('#shopCoins').textContent = save.coins.toLocaleString();
+  $('#shopCoins').textContent = save.coins.toLocaleString(); $('#shopSeeds').textContent = (save.seeds || 0).toLocaleString();
+  setShopTab(shopTab);
   const pbox = $('#shopPumpkins'); pbox.innerHTML = '';
-  for (let t = 0; t < NTYPES; t++){
-    const P = PTYPES[t], L = lvOf(t), un = unlockNightOf(P.key), unlocked = t < 2 || un <= highestOpen(), maxed = L >= 5, cost = LV_COST[L - 1];
+  const order = [...Array(NTYPES).keys()].sort((x, y) => (x < 2 ? 0 : unlockNightOf(PTYPES[x].key)) - (y < 2 ? 0 : unlockNightOf(PTYPES[y].key)) || x - y);   // first unlocked first (owner)
+  for (const t of order){
+    const P = PTYPES[t], L = lvOf(t), un = t < 2 ? 1 : unlockNightOf(P.key), unlocked = t < 2 || un <= highestOpen(), maxed = L >= 5, cost = LV_COST[L - 1];
     const d = document.createElement('div'); d.className = 'item';
     const ic = pumpkinIcon(t, true); ic.className = 'ic'; d.appendChild(ic);
     const tx = document.createElement('div'); tx.className = 'tx';
     const pips = Array.from({ length:5 }, (_, i) => `<i class="${i < L ? 'on' : ''}"></i>`).join('');
-    tx.innerHTML = `<b>${P.name} pumpkin, level ${L}</b><p>Now: ${lvDesc(t, L)}.${maxed ? '' : ` Next: ${lvDesc(t, L + 1)}.`}</p><div class="pips" aria-label="Level ${L} of 5">${pips}</div>`;
+    const a = lvStats(t, L), n = maxed ? null : lvStats(t, L + 1);
+    tx.innerHTML = `<b>${P.name}, level ${L}${maxed ? ' (max)' : ` <span class="dim">\u2192 ${L + 1}</span>`}</b><div class="nx">${nxLine('Power', a.power, n && n.power)}${nxLine('Knockback', a.knockback, n && n.knockback)}${nxLine('Special', a.special, n && n.special)}</div><div class="pips" aria-label="Level ${L} of 5">${pips}</div>`;
     d.appendChild(tx);
     const b = document.createElement('button'); b.className = 'btn small';
     if (!unlocked){ b.textContent = un === Infinity ? 'Later world' : `Level ${levelFor(un).label}`; b.disabled = true; }
@@ -438,6 +463,14 @@ export function renderShop(){
     };
     d.appendChild(b); pbox.appendChild(d);
   }
+  const sp = $('#shopSeedPacks'); sp.innerHTML = '';
+  for (const pk of SEED_PACKS){
+    const d = document.createElement('div'); d.className = 'item pack';
+    const ic = seedIcon(48, pk.n); ic.className = 'ic'; d.appendChild(ic);
+    const tx = document.createElement('div'); tx.className = 'tx'; tx.innerHTML = `<b>${pk.name}</b><p>${pk.n.toLocaleString()} pumpkin seeds</p>`; d.appendChild(tx);
+    const b = document.createElement('button'); b.className = 'btn small'; b.textContent = pk.price; b.disabled = true; b.title = 'On sale with the app store release'; d.appendChild(b);
+    sp.appendChild(d);
+  }
   const list = $('#shopList'); list.innerHTML = '';
   for (const it of GEAR){
     const lvl = save[it.key] || 0, maxed = lvl >= it.max;
@@ -445,7 +478,7 @@ export function renderShop(){
     const gu = it.consumable ? gearUnlockNightOf(it.key) : 1, gLocked = gu > highestOpen();
     const d = document.createElement('div'); d.className = 'item';
     const pips = Array.from({ length:it.max }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('');
-    d.innerHTML = `<div class="tx"><b>${it.name}</b><p>${it.desc}</p><div class="pips" aria-label="${lvl} of ${it.max}">${pips}</div></div>`;
+    d.innerHTML = `<div class="tx"><b>${it.name}${it.consumable ? ` <span class="dim">\u00b7 ${lvl} of ${it.max} carried</span>` : ` <span class="dim">\u00b7 level ${lvl} of ${it.max}</span>`}</b><p>${it.desc}</p><div class="pips" aria-label="${lvl} of ${it.max}">${pips}</div></div>`;
     const tic = toolIcon(it.key, 42); tic.className = 'ic'; tic.setAttribute('aria-hidden', 'true'); d.prepend(tic);
     const b = document.createElement('button'); b.className = 'btn small';
     if (gLocked){ b.textContent = gu === Infinity ? 'Later world' : `Level ${levelFor(gu).label}`; b.disabled = true; }
@@ -512,6 +545,7 @@ export function wireButtons(){
 
   $('#bLoGo').onclick = () => { if (loadoutSel.size < (perkOn('pick4') ? 4 : 5)) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo); };
 
+  for (const b of document.querySelectorAll('#shopTabs .tab')) b.onclick = () => { SFX.ui('tap'); setShopTab(b.dataset.tab); };
   $('#bShopBack').onclick = () => { if (shopReturn === 'result') setState('result'); else openLevels(); };
 
   $('#pauseBtn').onclick = () => { if (state === 'play' && !G.over) setState('pause'); };

@@ -100,11 +100,19 @@
   <div class="ov" id="ovShop">
     <div class="card">
       <h2>Pumpkin shed</h2>
-      <div class="bankline"><span class="coin"></span><span id="shopCoins">0</span></div>
-      <h3>Pumpkin levels</h3>
-      <div id="shopPumpkins"></div>
-      <h3>Walls and gear</h3>
-      <div id="shopList"></div>
+      <div class="bankline"><span class="coin"></span><span id="shopCoins">0</span><span class="seed" aria-hidden="true"></span><span id="shopSeeds">0</span></div>
+      <div class="tabs" role="tablist" id="shopTabs">
+        <button class="tab" role="tab" data-tab="pumpkins" id="tabPumpkins">Pumpkins</button>
+        <button class="tab" role="tab" data-tab="tools" id="tabTools">Tools</button>
+        <button class="tab" role="tab" data-tab="seeds" id="tabSeeds">Seeds</button>
+      </div>
+      <div class="tabPane" id="paneP"><div id="shopPumpkins"></div></div>
+      <div class="tabPane" id="paneT" hidden><div id="shopList"></div></div>
+      <div class="tabPane" id="paneS" hidden>
+        <p class="seedIntro">Pumpkin seeds are a second currency, used for special items in future shops.</p>
+        <div id="shopSeedPacks"></div>
+        <p class="seedNote">Seed packs go on sale with the app store release. Nothing here charges you.</p>
+      </div>
       <div class="row"><button class="btn small alt" id="bShopBack">Done</button></div>
     </div>
   </div>

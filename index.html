@@ -84,13 +84,15 @@
 
   <div class="ov" id="ovLoadout">
     <div class="card">
-      <h2>Pick 5 pumpkins</h2>
-      <p>Only the pumpkins you pick will sprout and drop tonight.</p>
-      <div class="picks" id="picks"></div>
-      <p id="trophyHead" class="why" hidden>Trophies: tap to switch a boost on or off</p>
-      <div class="picks trophies" id="trophies" hidden></div>
+      <h2 id="loTitle">Pick 5 pumpkins</h2>
       <p id="loCount"></p>
+      <div class="detail" id="loDetail"></div>
+      <div class="picks" id="picks"></div>
       <p id="loWhy" class="why" hidden></p>
+      <h3 class="secHead">Trophies</h3>
+      <p class="secNote">Beat a world's level 20 to win its trophy. Tap a trophy to switch it on or off.</p>
+      <div class="picks trophies" id="trophies"></div>
+      <!-- Future release (owner): a "Gourds" section goes here, a third pick row for playstyle gourds. -->
       <div class="row">
         <button class="btn small alt" id="bLoBack">Back</button>
         <button class="btn small" id="bLoGo">Start night</button>

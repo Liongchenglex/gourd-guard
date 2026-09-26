@@ -22,3 +22,20 @@ export const BOOKS = [
     lore:'On the last night of October every door between the worlds stands open at once.',
     blurb:'Coming in a future release.' },
 ];
+
+// A line of story per pumpkin for the picking screen (owner, 2026-09-27). Keys match PTYPES[].key.
+export const PUMPKIN_LORE = {
+  green:'The patch\u2019s everyday pumpkin. Not clever, not fancy, but there are always more of them.',
+  yellow:'Grown from seeds a travelling pedlar swapped for a night\u2019s shelter. Something about them makes monsters drop their coins.',
+  ice:'Ripened in the first frost and never quite thawed. Monsters that get hit stop to shiver.',
+  fire:'Sprouted where the bonfire stood last year. Still warm in the middle, and the only thing a mummy fears.',
+  grey:'Hard as river stone and twice as stubborn. It goes straight through whatever is in its way.',
+  purple:'The witches\u2019 own strain. Where it lands, something new grows.',
+  white:'A ghost of a pumpkin. Throw it at nothing and it drifts back home to the patch.',
+  black:'Packed tight with something that should not be inside a vegetable. Handle it quickly.',
+  blue:'Grew under the wreck at the bottom of the marsh, where the lightning sleeps. It remembers.',
+  pink:'Sweet enough to mend a broken fence with a single thump. Monsters hate the smell.',
+  turquoise:'Small, quick and impatient. Two is enough for a throw, half as hard.',
+  brown:'A slow grower with a temper. Leave it in the patch and it comes back twice the size.',
+  rainbow:'Nobody plants these. They simply appear when a patch has been looked after well.',
+};

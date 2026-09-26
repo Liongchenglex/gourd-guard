@@ -161,10 +161,20 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 
 /* Level-20 boosts shown as trophies on the loadout screen (owner): gold when on, grey when off */
 .trophies{ margin-top:calc(var(--u)*6px); }
-.pick.trophy svg{ width:calc(var(--u)*40px); height:calc(var(--u)*40px); display:block; margin:0 auto; }
-.pick.trophy[aria-pressed="false"]{ opacity:.55; }
-.pick.trophy[aria-pressed="false"] svg .cup{ fill:#8c8c96; }
+.pick.trophy canvas{ width:calc(var(--u)*56px); height:calc(var(--u)*56px); }
+.pick.trophy[aria-pressed="false"]{ opacity:.6; }
 .pick.trophy[aria-pressed="true"]{ border-color:var(--candle); background:rgba(255,211,90,.12); }
+.pick.trophy.locked{ opacity:.45; cursor:default; border-style:dashed; }
+.pick.trophy.locked small{ color:var(--candle); }
+.secHead{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-size:calc(var(--u)*26px); color:var(--candle); margin:calc(var(--u)*14px) 0 0; letter-spacing:.5px; }
+.secNote{ font-size:calc(var(--u)*13px) !important; color:var(--muted); margin:calc(var(--u)*2px) 0 0 !important; }
+.detail{ display:grid; grid-template-columns:calc(var(--u)*72px) 1fr; gap:calc(var(--u)*10px); align-items:center; text-align:left; background:rgba(255,193,74,.08); border:1px solid var(--line); border-radius:calc(var(--u)*16px); padding:calc(var(--u)*10px) calc(var(--u)*12px); margin-top:calc(var(--u)*8px); min-height:calc(var(--u)*96px); }
+.detail canvas{ width:calc(var(--u)*72px); height:calc(var(--u)*72px); display:block; }
+.detail b{ font-size:calc(var(--u)*18px); color:var(--ink); }
+.detail small{ color:var(--candle); font-size:calc(var(--u)*12.5px); margin-left:calc(var(--u)*6px); }
+.detail p{ margin:calc(var(--u)*2px) 0 0; font-size:calc(var(--u)*13px); line-height:1.35; }
+.detail p.lo{ color:var(--muted); font-style:italic; }
+.pick .lv{ position:absolute; left:calc(var(--u)*6px); top:calc(var(--u)*6px); background:rgba(0,0,0,.45); color:var(--candle); font-size:calc(var(--u)*10.5px); font-weight:700; border-radius:99px; padding:1px 6px; }
 
 /* ---------- Storybook shelf and open book (level select, owner 2026-09-26) ---------- */
 .library{ width:100%; max-width:calc(var(--u)*500px); max-height:100%; overflow:auto; display:flex; flex-direction:column; align-items:center; gap:calc(var(--u)*6px); padding:calc(var(--u)*6px) 0; }
@@ -267,8 +277,8 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 /* Level-20 win (owner: "it should feel awesome"): the trophy drops in with rays and eight sparkles; the level tile gets stamped when the book reopens */
 .trophyWin{ position:relative; display:grid; place-items:center; gap:calc(var(--u)*4px); margin:calc(var(--u)*4px) auto calc(var(--u)*8px); width:calc(var(--u)*170px); height:calc(var(--u)*150px); }
 .trophyWin[hidden]{ display:none; }
-.trophyWin svg{ width:calc(var(--u)*110px); height:calc(var(--u)*110px); transform:scale(0) rotate(-30deg); opacity:0; filter:drop-shadow(0 0 calc(var(--u)*10px) rgba(255,193,74,.7)); }
-.trophyWin.show svg{ animation:trophyIn .9s cubic-bezier(.2,1.2,.3,1.1) forwards, trophyGlow 1.8s 1s ease-in-out infinite; }
+.trophyWin svg, .trophyWin canvas{ width:calc(var(--u)*110px); height:calc(var(--u)*110px); transform:scale(0) rotate(-30deg); opacity:0; filter:drop-shadow(0 0 calc(var(--u)*10px) rgba(255,193,74,.7)); }
+.trophyWin.show svg, .trophyWin.show canvas{ animation:trophyIn .9s cubic-bezier(.2,1.2,.3,1.1) forwards, trophyGlow 1.8s 1s ease-in-out infinite; }
 .trophyWin b{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-size:calc(var(--u)*24px); color:var(--candle); letter-spacing:1px; opacity:0; }
 .trophyWin.show b{ animation:inkIn .5s .6s forwards; }
 .trophyWin::before{ content:''; position:absolute; inset:calc(var(--u)*-20px); border-radius:50%; background:conic-gradient(from 0deg, rgba(255,193,74,0) 0 20deg, rgba(255,193,74,.28) 30deg, rgba(255,193,74,0) 40deg 65deg, rgba(255,193,74,.28) 75deg, rgba(255,193,74,0) 85deg 110deg, rgba(255,193,74,.28) 120deg, rgba(255,193,74,0) 130deg 155deg, rgba(255,193,74,.28) 165deg, rgba(255,193,74,0) 175deg 200deg, rgba(255,193,74,.28) 210deg, rgba(255,193,74,0) 220deg 245deg, rgba(255,193,74,.28) 255deg, rgba(255,193,74,0) 265deg 290deg, rgba(255,193,74,.28) 300deg, rgba(255,193,74,0) 310deg 335deg, rgba(255,193,74,.28) 345deg, rgba(255,193,74,0) 355deg); opacity:0; z-index:-1; }
@@ -285,4 +295,4 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .pg.stamping{ animation:stampIn .8s cubic-bezier(.2,1.1,.3,1) both; z-index:2; }
 .pg.stamped{ box-shadow:0 0 0 calc(var(--u)*3px) var(--candle), 0 0 calc(var(--u)*16px) rgba(255,193,74,.8); }
 @keyframes stampIn{ 0%{ transform:scale(2.4) rotate(-14deg); opacity:0; } 55%{ transform:scale(.92) rotate(2deg); opacity:1; box-shadow:0 0 0 calc(var(--u)*6px) var(--candle), 0 0 calc(var(--u)*30px) rgba(255,193,74,1); } 100%{ transform:none; box-shadow:0 0 0 calc(var(--u)*3px) var(--candle), 0 0 calc(var(--u)*16px) rgba(255,193,74,.8); } }
-@media (prefers-reduced-motion: reduce){ .trophyWin.show svg, .trophyWin.show::before, .trophyWin.show i, .trophyWin.show, .pg.stamping{ animation:none; } .trophyWin svg{ transform:none; opacity:1; } .trophyWin b{ opacity:1; } }
+@media (prefers-reduced-motion: reduce){ .trophyWin.show svg, .trophyWin.show canvas, .trophyWin.show::before, .trophyWin.show i, .trophyWin.show, .pg.stamping{ animation:none; } .trophyWin svg, .trophyWin canvas{ transform:none; opacity:1; } .trophyWin b{ opacity:1; } }

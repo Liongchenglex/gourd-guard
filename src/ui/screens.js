@@ -13,6 +13,8 @@ import { bgWorld, buildBg, pumpkinIcon, worldScene } from '../engine/render/spri
 import { BOOKS } from '../data/lore.js';
 import { BESTIARY, COMPANIONS } from '../data/bestiary.js';
 import { toolIcon } from '../engine/render/tools.js';
+import { trophyIcon } from '../engine/render/trophies.js';
+import { PUMPKIN_LORE } from '../data/lore.js';
 import { G, setBannerTimer, setGest, setStateRaw, state } from '../engine/state.js';
 import { $, clamp } from '../engine/util.js';
 import { wallFrac } from '../engine/walls.js';
@@ -44,7 +46,7 @@ export function showResult(win){
       if (perk){   // level 20 (owner): a trophy drops in with rays and sparkles, and the level tile gets stamped when the book reopens
         title = `Trophy earned!`;
         msg = `🏆 ${perk.name}: ${perk.desc} It waits on the pumpkin-picking screen as a trophy you can switch on or off.`;
-        tw.appendChild(trophyIcon()); const nm = document.createElement('b'); nm.textContent = perk.name; tw.appendChild(nm);
+        tw.appendChild(trophyIcon(perk.world - 1, 64, true)); const nm = document.createElement('b'); nm.textContent = perk.name; tw.appendChild(nm);
         for (let i = 0; i < 8; i++){ const sp = document.createElement('i'); sp.style.setProperty('--a', (i * 45) + 'deg'); sp.style.setProperty('--d', (0.9 + (i % 3) * 0.12) + 's'); tw.appendChild(sp); }
         tw.hidden = false; setTimeout(() => tw.classList.add('show'), 60); setTimeout(() => SFX.star(), 700);
         SFX.perk();
@@ -332,23 +334,33 @@ function flipBook(toBestiary){
 }
 function closeBook(){ curBook = null; SFX.ui('back'); openLevels(); }
 
+let loadoutFocus = null;
+/** Pumpkin picking (owner, 2026-09-27): pumpkins in unlock order, a detail card for the focused one (level, ability, lore), then the trophies. */
 export function openLoadout(avail, next, required){
   loadoutAvail = avail; loadoutNext = next; loadoutMust = (required || []).map(m => m.t); loadoutWhy = required || [];
   const pref = [...loadoutMust, ...(save.loadout || []).filter(t => avail.includes(t) && !loadoutMust.includes(t))];
   for (const t of avail) if (pref.length < 5 && !pref.includes(t)) pref.push(t);
   loadoutSel = new Set(pref.slice(0, 5));
+  const night = t => t < 2 ? 0 : unlockNightOf(PTYPES[t].key);   // Green and Yellow are there from the start
+  const order = avail.slice().sort((x, y) => night(x) - night(y) || x - y);
+  loadoutFocus = loadoutMust[0] != null ? loadoutMust[0] : order[0];
+  $('#loTitle').textContent = `Pick ${perkOn('pick4') ? 4 : 5} pumpkins`;
   const box = $('#picks'); box.innerHTML = '';
-  for (const t of avail){
+  for (const t of order){
     const b = document.createElement('button'); b.className = 'pick';
     b.appendChild(pumpkinIcon(t, true));
+    const lv = document.createElement('span'); lv.className = 'lv'; lv.textContent = `Lv ${lvOf(t)}`; b.appendChild(lv);
     const nm = document.createElement('b'); nm.textContent = PTYPES[t].name; b.appendChild(nm);
-    const sm = document.createElement('small'); sm.textContent = `Level ${lvOf(t)}`; b.appendChild(sm);
-    b.title = PTYPES[t].role;
+    const sm = document.createElement('small'); sm.textContent = PTYPES[t].role.split(/[:.;]/)[0]; b.appendChild(sm);
+    b.setAttribute('aria-label', `${PTYPES[t].name}, level ${lvOf(t)}`);
     if (loadoutMust.includes(t)){ const why = loadoutWhy.find(m => m.t === t).why, tag = document.createElement('span'); tag.className = 'tag' + (why === 'New this level' ? '' : ' info'); tag.textContent = why === 'New this level' ? 'NEW' : 'i'; tag.title = why; b.appendChild(tag); b.classList.add('must'); }
     b.onclick = () => {
-      if (loadoutMust.includes(t)) return;   // introduced this level: stays in (the tap sound says so)
-      if (loadoutSel.has(t)) loadoutSel.delete(t);
-      else if (loadoutSel.size < 5) loadoutSel.add(t);
+      loadoutFocus = t;
+      if (!loadoutMust.includes(t)){   // introduced this level: stays in
+        if (loadoutSel.has(t)){ loadoutSel.delete(t); SFX.ui('unpick'); }
+        else if (loadoutSel.size < 5){ loadoutSel.add(t); SFX.ui('pick'); }
+        else SFX.ui('locked');
+      } else SFX.ui('tap');
       syncLoadout();
     };
     b.dataset.t = t; box.appendChild(b);
@@ -357,41 +369,42 @@ export function openLoadout(avail, next, required){
   syncLoadout();
   setState('loadout');
 }
-
-/** Earned level-20 boosts as trophy toggles on the loadout screen (owner): gold and pressed when on, grey when off. */
-function trophyIcon(){
-  const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg'); svg.setAttribute('viewBox', '0 0 40 40');
-  const path = (d, cls) => { const e = document.createElementNS(ns, 'path'); e.setAttribute('d', d); e.setAttribute('class', cls); svg.appendChild(e); return e; };
-  path('M11 6h18v9c0 6-4 10-9 10s-9-4-9-10z', 'cup').setAttribute('fill', '#f2c44c');           // cup
-  path('M11 9H5v3c0 4 3 7 7 7M29 9h6v3c0 4-3 7-7 7', 'cup').setAttribute('style', 'fill:none;stroke:#f2c44c;stroke-width:2.5;stroke-linecap:round');   // handles
-  path('M17 25h6v4h-6z', 'cup').setAttribute('fill', '#d9a93a');                                  // stem
-  path('M12 31h16v4H12z', 'base').setAttribute('fill', '#6b4a2a');                                // base
-  path('M16 10h3v9h-3z', 'shine').setAttribute('fill', 'rgba(255,255,255,.45)');                  // shine
-  return svg;
+function renderDetail(){
+  const t = loadoutFocus, d = $('#loDetail'); if (t == null){ d.innerHTML = ''; return; }
+  const P = PTYPES[t], L = lvOf(t), un = t < 2 ? 1 : unlockNightOf(P.key), where = un === 1 ? 'from the start' : un === Infinity ? '' : `unlocked at ${levelFor(un).label}`;
+  d.innerHTML = '';
+  d.appendChild(pumpkinIcon(t, true));
+  const tx = document.createElement('div');
+  tx.innerHTML = `<b>${P.name}</b><small>Level ${L}${where ? ' \u00b7 ' + where : ''}</small><p class="ab">${P.role.charAt(0).toUpperCase() + P.role.slice(1)}. ${lvDesc(t, L).charAt(0).toUpperCase() + lvDesc(t, L).slice(1)}.</p><p class="lo">${PUMPKIN_LORE[P.key] || ''}</p>`;
+  d.appendChild(tx);
 }
+
+/** All five trophies (the level-20 perks): earned ones toggle on and off, the rest show which level wins them (owner). */
 export function renderTrophies(){
-  const box = $('#trophies'), head = $('#trophyHead'); if (!box) return;
+  const box = $('#trophies'); if (!box) return;
   box.innerHTML = '';
-  const earned = PERKS.filter(p => perkEarned(p.key));
-  box.hidden = head.hidden = !earned.length;
-  for (const p of earned){
-    const b = document.createElement('button'); b.className = 'pick trophy'; b.appendChild(trophyIcon());
+  for (const p of PERKS){
+    const earned = perkEarned(p.key), on = perkOn(p.key);
+    const b = document.createElement('button'); b.className = 'pick trophy' + (earned ? '' : ' locked'); b.appendChild(trophyIcon(p.world - 1, 56, earned));
     const nm = document.createElement('b'); nm.textContent = p.name; b.appendChild(nm);
-    const sm = document.createElement('small'); sm.textContent = perkOn(p.key) ? 'On' : 'Off'; b.appendChild(sm);
-    b.title = p.desc; b.setAttribute('aria-pressed', perkOn(p.key) ? 'true' : 'false');
-    b.onclick = () => { save.perksOff = save.perksOff || {}; save.perksOff[p.key] = perkOn(p.key); persist(); renderTrophies(); syncLoadout(); };
+    const sm = document.createElement('small'); sm.textContent = earned ? (on ? 'On' : 'Off') : `Beat level ${p.world}-20`; b.appendChild(sm);
+    b.title = p.desc; b.setAttribute('aria-pressed', earned ? (on ? 'true' : 'false') : 'false'); b.setAttribute('aria-label', earned ? `${p.name}, ${on ? 'on' : 'off'}: ${p.desc}` : `${p.name}, locked: beat level ${p.world}-20. ${p.desc}`);
+    if (earned) b.onclick = () => { save.perksOff = save.perksOff || {}; save.perksOff[p.key] = on; persist(); SFX.ui(on ? 'unpick' : 'pick'); renderTrophies(); syncLoadout(); };
+    else b.onclick = () => { SFX.ui('locked'); addFloatMsg(`${p.desc} Beat level ${p.world}-20 to win it.`); };
     box.appendChild(b);
   }
 }
+function addFloatMsg(text){ const el = $('#loWhy'); el.textContent = text; el.hidden = false; }
 
 export function syncLoadout(){
   for (const b of document.querySelectorAll('#picks .pick')) b.setAttribute('aria-pressed', loadoutSel.has(+b.dataset.t) ? 'true' : 'false');
   const n = loadoutSel.size;
   const min = perkOn('pick4') ? 4 : 5;   // 5-20 perk: four colours are enough
-  $('#loCount').textContent = n >= min ? 'Ready.' : `${n} of ${min} picked`;
+  $('#loCount').textContent = n >= min ? 'Ready. Only the pumpkins you pick will sprout and drop tonight.' : `${n} of ${min} picked. Tap a pumpkin to pick it and read about it.`;
   $('#bLoGo').disabled = n < min;
   const why = loadoutWhy.filter(w => w.why !== 'New this level').map(w => `${PTYPES[w.t].name} is locked in: ${w.why.toLowerCase()}.`).join(' ');
   $('#loWhy').textContent = why; $('#loWhy').hidden = !why;
+  renderDetail();
 }
 
 export function openShop(ret){ shopReturn = ret || 'levels'; renderShop(); setState('shop'); }

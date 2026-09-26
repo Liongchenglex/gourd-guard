@@ -319,7 +319,7 @@ Weapons drop from kills (10% roll) and can also be bought in the shop. The HUD a
 | Firework | 3 damage to every monster | 1-7 |
 | Gravestone buster | Removes one grave (tap it) | 1-6 |
 | Lantern | Clears all fog for 10 s | 2-2 |
-| Landmine | Tap it, then tap any tile of the field: the mine hides there and the first monster to step on it sets off a 3×3 blast (3 lanes × 3 tile heights) for 6 (owner, 2026-09-26; was: waits at the wall line of one lane) | Tap it, then tap any tile of the field: the mine hides there and the first monster to step on it sets off a 3×3 blast for 6 (owner, 2026-09-26) |
+| Landmine | Tap it, then tap any tile of the field: the mine lies buried for 6 s, then surfaces armed; the first monster to step on it sets off a 3×3 blast (3 lanes × 3 tile heights) for 6 (owner, 2026-09-26; was: waits at the wall line of one lane) | Tap it, then tap any tile of the field: the mine hides there and the first monster to step on it sets off a 3×3 blast for 6 (owner, 2026-09-26) |
 | Bomb | Damages a 3×3 area of the field: 3 lanes × 3 tile heights, tap to aim | 4-6 |
 | Scarecrow | Decoy planted in a lane; monsters stop to chew it until it breaks | 3-2 |
 

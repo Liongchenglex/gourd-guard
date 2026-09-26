@@ -1,5 +1,5 @@
 import { TYPES } from '../../data/monsters.js';
-import { sproutEvery, shoreP } from '../game.js';
+import { sproutEvery, shoreP, MINE_ARM } from '../game.js';
 import { perkOn } from '../../data/perks.js';
 import { GEAR } from '../../data/shop.js';
 import { PTYPES, RAINBOW, BROWN } from '../../data/pumpkins.js';
@@ -356,6 +356,12 @@ export function drawBossBarsOverFog(g){
 export function drawMines(t){
   for (const mine of G.mines || []){
     const x = LANE(mine.lane), y = mine.p == null ? FENCE_Y - 30 : FIELD_TOP + mine.p * (FIELD_BOT - FIELD_TOP);
+    const armed = (mine.t || 0) >= MINE_ARM, f = Math.min(1, (mine.t || 0) / MINE_ARM);
+    if (!armed){   // buried: a mound of earth with a fuse-like ring that fills as it gets ready to surface
+      ctx.fillStyle = '#3a2a1c'; ell(ctx, x, y + 4, 14, 6); ctx.fillStyle = '#4e3a26'; ell(ctx, x, y, 11, 5);
+      ctx.strokeStyle = 'rgba(255,211,90,.85)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 16, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * f); ctx.stroke();
+      continue;
+    }
     ctx.fillStyle = '#2a2230'; ell(ctx, x, y + 6, 13, 6);
     ctx.fillStyle = '#3d3348'; ell(ctx, x, y, 12, 9);
     ctx.fillStyle = Math.floor(t * 4) % 2 ? '#ff5a4d' : '#ffd35a'; ell(ctx, x, y - 4, 3, 3);

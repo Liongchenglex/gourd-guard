@@ -145,6 +145,7 @@ export function useMine(){
   if (G.aim) SFX.tool('aim');
   updateHud(true);
 }
+export const MINE_ARM = 6;   // seconds a landmine stays buried before it surfaces, armed (owner)
 /** Field y of anything at fraction p of the field. */
 export const fieldY = p => FIELD_TOP + p * (FIELD_BOT - FIELD_TOP);
 export function placeMine(lane, p = 0.93){   // owner: a mine goes on any tile of the field and blasts the 3×3 around it
@@ -307,7 +308,9 @@ export function update(dt){
   if (g.fogClear > 0) g.fogClear -= dt;
   for (const mine of g.mines){   // landmines hide on a tile; the first monster to step on one sets off a 3×3 blast (owner)
     const tile = CS / (FIELD_BOT - FIELD_TOP);
-    const v = g.monsters.find(m => !m.dead && !m.hidden && m.rise <= 0 && m.lane === mine.lane && m.p >= mine.p && m.p < mine.p + tile * 0.6 && m.type !== 'boss');
+    mine.t += dt;
+    if (mine.t < MINE_ARM) continue;   // buried and harmless until it surfaces (owner: 6 s), then the first monster on it sets it off
+    const v = g.monsters.find(m => !m.dead && !m.hidden && m.rise <= 0 && m.lane === mine.lane && m.p >= mine.p - tile * 0.3 && m.p < mine.p + tile * 0.6 && m.type !== 'boss');
     if (v){
       mine.dead = true; const y = fieldY(mine.p);
       for (let i = 0; i < 30; i++) spark(LANE(mine.lane), y, i % 2 ? '#ffd35a' : '#ff6a3a', 300); ring(LANE(mine.lane), y, 70, 'rgba(255,200,90,.9)'); g.shake = 0.8; SFX.tool('mineBoom');

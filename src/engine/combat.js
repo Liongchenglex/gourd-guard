@@ -100,7 +100,7 @@ export function kill(m){
       kill(other); kill(m); return;
     }
     if (other && !other.dead){
-      m.hp = 0; m.rise = win; m.eating = false;
+      m.hp = 0; m.rise = win; m.eating = false; m.anim = { clip:'collapse', t:0, dur:0.5 };   // the serpent sinks (render/chars/w5.js)
       addFloat(`Down! ${win}s to fell the other`, m.x, mY(m) - m.r - 34, '#9fe0f0', 18, 1.6);
       for (let i = 0; i < 14; i++) chunk(m.x, mY(m), '#2a7a78', 200); SFX.bossSfx('twintides', 'down');
       return;
@@ -192,15 +192,16 @@ export function hitMonster(pr, m){
     const others = G.monsters.filter(o => o !== m && !o.dead && !o.hidden && o.rise <= 0 && Math.abs(mY(o) - y) < CS * 0.8).sort((a, b) => Math.abs(a.x - m.x) - Math.abs(b.x - m.x)).slice(0, CHAIN_N[i] - 1);
     let from = m;
     for (const o of others){
-      const y1 = mY(from), y2 = mY(o), n = 6;
-      for (let k = 0; k <= n; k++){ const f = k / n; G.parts.push({ x:from.x + (o.x - from.x) * f + rnd(-8, 8), y:y1 + (y2 - y1) * f + rnd(-8, 8), vx:0, vy:0, t:0, life:0.25, size:4, color:'#9ab0ff', kind:'dot', grav:0 }); }
-      ring(o.x, y2, 30, 'rgba(154,176,255,.9)');
+      const y1 = mY(from), y2 = mY(o);
+      if (G.vfx) G.vfx.push({ kind:'bolt', x1:from.x, y1, x2:o.x, y2, t:0, dur:0.45, seed:Math.floor(Math.random() * 1e6) });   // jagged lightning (render/fx.js)
+      for (let k = 0; k < 6; k++) spark(o.x, y2, '#bfe0ff', 160);
       o.lastHit = BLUE; o.lastHitLv = pr.lv; damage(o, POWER[i] * CHAIN_FRAC[i], '#9ab0ff', true); SFX.extra('chain');
       from = o;
     }
   }
   if (pr.type === 7){   // Black: blast the neighbouring lanes at the same height for half power
-    ring(pr.x, y, 70, 'rgba(255,154,58,.9)'); for (let k = 0; k < 24; k++) spark(pr.x, y, k % 2 ? '#ff9a3a' : '#3a3540', 260); G.shake = Math.max(G.shake, 0.4);
+    for (let k = 0; k < 14; k++) chunk(pr.x, y, k % 2 ? '#ff9a3a' : '#3a3540', 300); G.shake = Math.max(G.shake, 0.4);
+    if (G.vfx) G.vfx.push({ kind:'blast', x:pr.x, y, t:0, dur:0.7, r:SPLASH_ROWS[i] === 3 ? CS * 1.5 : CS * 0.95, seed:Math.floor(Math.random() * 1e6) });   // fireball and shockwave (render/fx.js)
     const reach = SPLASH_ROWS[i] === 3 ? CS * 1.6 : CS * 0.7, frac = SPLASH_FRAC[i];
     for (const o of G.monsters.slice()) if (o !== m && !o.dead && !o.hidden && o.rise <= 0 && Math.abs(o.lane - m.lane) <= 1 && Math.abs(mY(o) - y) < reach){ o.lastHit = 7; o.lastHitLv = pr.lv; damage(o, POWER[i] * frac, '#ff9a3a', true); SFX.extra('splash'); if (i >= 4 && !o.dead) knockback(o); }
     for (const w of G.castles) if (!w.dead && Math.abs(w.lane - m.lane) <= 1 && Math.abs(castleY(w) - y) < reach) damageCastle(w, POWER[i] * frac);

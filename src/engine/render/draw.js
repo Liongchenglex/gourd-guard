@@ -9,8 +9,10 @@ import { mS, mY, TILE_P } from '../monsters.js';
 import { K, coinTarget, ctx } from './canvas.js';
 import { drawMonster } from './monsters.js';
 import { charKey, drawChar } from './anim.js';
+import { castleSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
-import { ell, mix, rrect, shade, tri } from './util.js';
+import { ell, rrect, tri } from './util.js';
+import { rng } from './paint.js';
 import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, GX, GY, H, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, state, walls, HOLD_TIME_QUICK } from '../state.js';
 import { TAU, clamp, mulberry } from '../util.js';
 import { save } from '../../save.js';
@@ -48,7 +50,7 @@ export function render(){
   const fogCols = (g.def && g.def.fogCols) || [];
   const fogOn = (bands.length || fogCols.length) && !(g.fogClear > 0);
   for (const m of ms){
-    if (m.hidden) continue;                                             // wraith: invisible
+    if (m.hidden && m.type !== 'diver') continue;                       // wraith: invisible (a submerged diver still shows ripples)
     if (fogOn && m.type !== 'boss' && m.p > -0.02 && (bands.some(([a, b]) => m.p >= a && m.p <= b) || fogCols.includes(m.lane))) continue;   // inside a fog bank (bosses glow through)
     drawMonster(m, t);
   }
@@ -116,51 +118,33 @@ export function render(){
   if (g.flash > 0){ ctx.fillStyle = `rgba(255,240,210,${g.flash * 0.45})`; ctx.fillRect(0, 0, W, H); }
 }
 
+/** The palisade: a baked wooden sprite per column (render/fx.js) in four damage states, a live hit flash and the per-column health bar. */
 export function drawWalls(t){
   const fy = FENCE_Y;
-  // corner posts
-  ctx.fillStyle = '#4a3220'; ctx.fillRect(0, fy - 26, GX, 42); ctx.fillRect(W - GX, fy - 26, GX, 42);
+  // rail stubs in the margins outside the outer posts
+  ctx.fillStyle = '#6b4526'; ctx.fillRect(0, fy - 19, GX + 2, 7); ctx.fillRect(0, fy + 1, GX + 2, 7); ctx.fillRect(W - GX - 2, fy - 19, GX + 2, 7); ctx.fillRect(W - GX - 2, fy + 1, GX + 2, 7);
   for (let c = 0; c < COLS; c++){
     const w = walls[c]; if (!w) continue;
-    const x0 = GX + c * CS, f = w.hp / w.max, fl = w.flash;
-    if (w.hp <= 0){
-      ctx.fillStyle = '#3a2616';
-      for (let i = 0; i < 5; i++) ell(ctx, x0 + 10 + i * 13, fy + 6 - (i % 2) * 4, 8, 5, i);
-      continue;
-    }
-    const wood = fl > 0 ? mix('#8a6440', '#ff4a3a', Math.min(1, fl) * 0.7) : f < 0.35 ? '#6d4a2c' : '#8a6440';
-    const rail = shade(wood, -34);
-    ctx.fillStyle = rail; ctx.fillRect(x0 + 1, fy - 18, CS - 2, 7); ctx.fillRect(x0 + 1, fy - 1, CS - 2, 7);
-    const intact = Math.ceil(f * 3);
-    for (let i = 0; i < 3; i++){
-      const px = x0 + 5 + i * 23, broken = i >= intact;
-      const top = broken ? fy - 6 - (i * 5 % 9) : fy - 24;
-      ctx.fillStyle = (c + i) % 3 === 1 ? shade(wood, -12) : wood;
-      ctx.beginPath(); ctx.moveTo(px, fy + 14); ctx.lineTo(px, top);
-      if (broken){ ctx.lineTo(px + 6, top - 5); ctx.lineTo(px + 11, top + 2); ctx.lineTo(px + 18, top - 3); }
-      else { ctx.lineTo(px + 9, fy - 33 + ((c + i) % 2) * 3); ctx.lineTo(px + 18, top); }
-      ctx.lineTo(px + 18, fy + 14); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = 'rgba(40,24,10,.6)'; ctx.lineWidth = 1.5; ctx.stroke();
-      if (!broken){ ctx.fillStyle = 'rgba(30,18,8,.7)'; ell(ctx, px + 9, fy - 15, 1.6, 1.6); ell(ctx, px + 9, fy + 2, 1.6, 1.6); }
-    }
+    const x0 = GX + c * CS, f = w.hp / w.max, st = w.hp <= 0 ? 3 : f > 0.66 ? 0 : f > 0.33 ? 1 : 2;
+    const sp = fenceSprite(K, st, c % 3);
+    ctx.drawImage(sp.c, x0 - sp.ox, fy - sp.oy, sp.w, sp.h);
+    if (w.flash > 0){ ctx.globalAlpha = Math.min(1, w.flash) * 0.55; ctx.fillStyle = '#ffb894'; rrect(ctx, x0 + 3, fy - 46, CS - 6, 60, 6); ctx.fill(); ctx.globalAlpha = 1; }
+    if (w.hp <= 0) continue;   // a fallen wall shows its broken gap and no bar
     const bw = CS - 18, bx = x0 + 9, by = fy + 18;
     ctx.fillStyle = 'rgba(0,0,0,.6)'; rrect(ctx, bx - 1, by - 1, bw + 2, 6, 3); ctx.fill();
     ctx.fillStyle = f > 0.6 ? '#94d65e' : f > 0.3 ? '#ffc14a' : '#ff5a4d';
     rrect(ctx, bx, by, Math.max(3, bw * f), 4, 2); ctx.fill();
   }
+  const ps = postSprite(K); ctx.drawImage(ps.c, W - GX - ps.ox, fy - ps.oy, ps.w, ps.h);   // the right-hand corner post
 }
 
+/** Which of the three headstone shapes a cell gets: seeded from its position so it never changes mid-night. */
+const GRAVE_VAR = Array.from({ length:ROWS }, (_, r) => Array.from({ length:COLS }, (_, c) => Math.floor(rng(r * 31 + c * 7 + 1)() * 3)));
 export function drawGraves(){
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
     if (!graves[r][c]) continue;
-    const x = LANE(c), y = GY + r * CS + CS / 2;
-    ctx.fillStyle = 'rgba(0,0,0,.35)'; ell(ctx, x, y + 24, 24, 7);
-    ctx.fillStyle = '#3b2a1c'; ell(ctx, x, y + 20, 26, 9);
-    ctx.fillStyle = '#6c6f78'; rrect(ctx, x - 18, y - 24, 36, 46, 16); ctx.fill();
-    ctx.fillStyle = '#8a8d96'; rrect(ctx, x - 18, y - 24, 30, 42, 14); ctx.fill();
-    ctx.strokeStyle = 'rgba(20,20,26,.7)'; ctx.lineWidth = 2; rrect(ctx, x - 18, y - 24, 36, 46, 16); ctx.stroke();
-    ctx.fillStyle = '#55585f'; ctx.fillRect(x - 2.5, y - 14, 5, 20); ctx.fillRect(x - 8, y - 8, 16, 5);
-    ctx.fillStyle = '#4f7a34'; ell(ctx, x + 12, y + 16, 7, 4, -0.4);
+    const sp = graveSprite(K, GRAVE_VAR[r][c]);
+    ctx.drawImage(sp.c, LANE(c) - sp.ox, GY + r * CS + CS / 2 - sp.oy, sp.w, sp.h);
   }
 }
 
@@ -207,41 +191,54 @@ export function drawDrops(t){
 
 /** Pulsing outline on every grave while the grave buster is armed. */
 /** Fog banks: opaque marsh mist over field ranges; thin and see-through while a lantern burns. */
-export function drawFog(t, bands, cleared){
-  const H0 = FIELD_TOP, H1 = FIELD_BOT;
-  for (const [a, b] of bands){
-    const y0 = H0 + a * (H1 - H0), y1 = H0 + b * (H1 - H0), pad = 26;
-    const gr = ctx.createLinearGradient(0, y0 - pad, 0, y1 + pad);
-    const al = cleared ? 0.16 : 0.93;
-    gr.addColorStop(0, 'rgba(150,172,190,0)'); gr.addColorStop(0.2, `rgba(158,180,198,${al})`); gr.addColorStop(0.5, `rgba(176,196,210,${al})`); gr.addColorStop(0.8, `rgba(150,172,190,${al})`); gr.addColorStop(1, 'rgba(140,162,180,0)');
-    ctx.fillStyle = gr; ctx.fillRect(0, y0 - pad, W, y1 - y0 + pad * 2);
-    if (fogSprite){
-      ctx.globalAlpha = cleared ? 0.08 : 0.5;
-      for (let i = 0; i < 7; i++){ const x = ((i * 113 + t * 18) % (W + 240)) - 120, fw = 260; ctx.drawImage(fogSprite, x, y0 - 30 + Math.sin(t * 0.7 + i) * 10, fw, y1 - y0 + 60); }
-      ctx.globalAlpha = 1;
+export function drawFog(t, bands, cleared){   // layered drifting mist (render/fx.js drawMist), dense at the core, thin while a lantern burns
+  const H0 = FIELD_TOP, H1 = FIELD_BOT, pad = 26 / (H1 - H0);
+  // overlapping banks (fogwalkers crowd the same rows) are merged into one so they cost one bank and show no seams; the extents drawn are unchanged
+  const sorted = bands.slice().sort((p, q) => p[0] - q[0]), merged = [];
+  for (const [a, b] of sorted){ const last = merged[merged.length - 1]; if (last && a - pad <= last[1] + pad) last[1] = Math.max(last[1], b); else merged.push([a, b]); }
+  let i = 0;
+  for (const [a, b] of merged){
+    const y0 = H0 + a * (H1 - H0), y1 = H0 + b * (H1 - H0);
+    drawMist(ctx, K, 0, y0 - 26, W, y1 - y0 + 52, t, cleared, i++, false);
+  }
+}
+/** Puddles (world 5): baked glossy pools (render/fx.js) with two slow live ripples each. */
+export function drawPuddles(t){
+  const pds = G.puddles; if (!pds || !pds.length) return;
+  const rx = CS * 0.44, ry = 14;
+  ctx.lineWidth = 1.3; ctx.strokeStyle = '#b8e6f4';
+  for (const pd of pds){
+    const x = LANE(pd.lane), y = FIELD_TOP + pd.p * (FIELD_BOT - FIELD_TOP) + 8;
+    const sp = puddleSprite(K, pd.lane); ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h);
+    for (let j = 0; j < 2; j++){
+      const f = (t * 0.28 + j * 0.5 + pd.lane * 0.19) % 1, s = 0.12 + 0.68 * f;
+      ctx.globalAlpha = (1 - f) * 0.55 * Math.min(1, f * 12);
+      ctx.beginPath(); ctx.ellipse(x + (j ? 4 : -4), y + (j ? 1.5 : -1.5), rx * s, ry * s, 0, 0, TAU); ctx.stroke();
     }
   }
+  ctx.globalAlpha = 1;
 }
-/** Puddles (world 4): dark water pools on the field. */
-export function drawPuddles(t){
-  for (const pd of G.puddles || []){
-    const x = LANE(pd.lane), y = FIELD_TOP + pd.p * (FIELD_BOT - FIELD_TOP);
-    ctx.fillStyle = 'rgba(20,60,80,.75)'; ell(ctx, x, y + 8, CS * 0.44, 14);
-    ctx.fillStyle = 'rgba(80,160,190,.35)'; ell(ctx, x - 6, y + 4, CS * 0.22, 6);
-    ctx.strokeStyle = `rgba(160,220,240,${0.35 + 0.25 * Math.sin(t * 2 + pd.lane)})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x, y + 8, CS * 0.3, 9, 0, 0, TAU); ctx.stroke();
-  }
-}
-/** Sea row (world 4): water across the top of the field. */
-export function drawSea(t){   // water from the top of the field down to the shoreline, with a foam edge so the spawn line is visible
+/** Sea (world 5): a baked water base, scrolling wave tiles and a foam lace at the shoreline so the spawn line stays obvious. */
+export function drawSea(t){
   const y0 = FIELD_TOP - 6, h = Math.max(0.1, shoreP()) * (FIELD_BOT - FIELD_TOP) + 6, y1 = y0 + h;
-  const gr = ctx.createLinearGradient(0, y0, 0, y1);
-  gr.addColorStop(0, 'rgba(30,110,130,.92)'); gr.addColorStop(0.7, 'rgba(24,90,110,.8)'); gr.addColorStop(1, 'rgba(40,130,150,.75)');
-  ctx.fillStyle = gr; ctx.fillRect(0, y0, W, h);
-  ctx.strokeStyle = 'rgba(180,235,245,.35)'; ctx.lineWidth = 2;
-  for (let i = 0; i < Math.floor(h / 26); i++){ ctx.beginPath(); for (let x = 0; x <= W; x += 12) ctx.lineTo(x, y0 + 14 + i * 26 + Math.sin(x * 0.05 + t * 2 + i) * 3); ctx.stroke(); }
-  ctx.strokeStyle = 'rgba(235,250,255,.9)'; ctx.lineWidth = 3;   // foam at the shoreline
-  ctx.beginPath(); for (let x = 0; x <= W; x += 8) ctx.lineTo(x, y1 + Math.sin(x * 0.08 + t * 3) * 3); ctx.stroke();
-  ctx.fillStyle = 'rgba(235,250,255,.5)'; for (let x = 6; x < W; x += 22) ell(ctx, x + Math.sin(t * 2 + x) * 2, y1 + 4 + Math.cos(t * 3 + x) * 2, 4, 2);
+  const sea = seaSprite(K, h); ctx.drawImage(sea.c, 0, y0, W, h);
+  const wt = waveTile(K), rows = Math.max(1, Math.floor(h / 34)), n = Math.ceil(W / 240) + 1;
+  ctx.save(); ctx.beginPath(); ctx.rect(0, y0, W, h); ctx.clip();
+  for (let i = 0; i < rows; i++){
+    const yy = y0 + 2 + (i + 0.5) * (h - 16) / rows - 8, spd = (14 + i * 5) * (i % 2 ? -1 : 1), off = ((t * spd + i * 80) % 240 + 240) % 240 - 240, bob = Math.sin(t * 1.3 + i * 1.7) * 1.5;
+    ctx.globalAlpha = 0.4 + 0.45 * (rows > 1 ? i / (rows - 1) : 1);
+    for (let j = 0; j <= n; j++) ctx.drawImage(wt.c, off + j * 240, yy + bob, 240, 30);
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+  for (let i = 0; i < 6; i++){   // bubbles rising through the water
+    const f = (t * (0.1 + i * 0.02) + i * 0.17) % 1, bx = (i * 97 + 30) % W + Math.sin(t * 2 + i) * 3, by = y1 - 8 - f * (h - 18);
+    ctx.globalAlpha = Math.sin(f * Math.PI) * 0.5; ctx.strokeStyle = '#dff6fb'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(bx, by, 2 + (i % 3), 0, TAU); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = 'rgba(12,44,62,.28)'; ctx.fillRect(0, y1 + 4, W, 8);   // wet sand under the foam
+  const ft = foamTile(K), off = ((t * 22) % 240 + 240) % 240 - 240, bob = Math.sin(t * 1.6) * 2;
+  for (let j = 0; j <= n; j++) ctx.drawImage(ft.c, off + j * 240, y1 - 14 + bob, 240, 30);
 }
 /** Twin Tides: a serpent tail curling out of the water where a bolt is thrown from. */
 export function drawTails(t){
@@ -255,16 +252,16 @@ export function drawTails(t){
 }
 /** Castle walls (world 3): a stone segment across the lane with a health bar. */
 export function drawCastles(t){
-  for (const w of G.castles || []){
+  const cs = G.castles; if (!cs || !cs.length) return;
+  const glow = glowSprite(K);
+  for (const w of cs){
     if (w.dead) continue;
     const x = LANE(w.lane), y = castleY(w), hw = CS * 0.46;
-    ctx.fillStyle = 'rgba(0,0,0,.35)'; ell(ctx, x, y + 20, hw, 7);
-    ctx.fillStyle = w.flash > 0 ? '#e8e8f0' : '#6c6f78'; rrect(ctx, x - hw, y - 16, hw * 2, 34, 4); ctx.fill();
-    ctx.fillStyle = w.flash > 0 ? '#ffffff' : '#8a8d96';
-    for (let i = 0; i < 4; i++) ctx.fillRect(x - hw + 3 + i * (hw * 2 / 4), y - 24, hw * 2 / 4 - 6, 10);   // crenellations
-    ctx.strokeStyle = 'rgba(20,20,26,.7)'; ctx.lineWidth = 2;
-    for (let r = 0; r < 2; r++){ ctx.beginPath(); ctx.moveTo(x - hw, y - 5 + r * 12); ctx.lineTo(x + hw, y - 5 + r * 12); ctx.stroke(); }
-    for (let i = 0; i < 3; i++){ ctx.beginPath(); ctx.moveTo(x - hw + (i + 0.5) * hw * 0.66, y - 16); ctx.lineTo(x - hw + (i + 0.5) * hw * 0.66, y + 18); ctx.stroke(); }
+    const sp = castleSprite(K, w.hp / w.maxHp);   // baked hewn stone with crenellations and a portcullis, cracking as it takes damage (render/fx.js)
+    ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h);
+    const tx = x + sp.w / 2 - 9, ty = y - 27, ga = 0.3 + 0.1 * Math.sin(t * 13 + w.lane * 2) + 0.06 * Math.sin(t * 7.3 + w.lane);   // torch flicker
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = ga; ctx.drawImage(glow.c, tx - 24, ty - 24, 48, 48); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    if (w.flash > 0){ ctx.globalAlpha = 0.7; ctx.fillStyle = '#ffffff'; rrect(ctx, x - sp.w / 2, y - 52, sp.w, 72, 6); ctx.fill(); ctx.globalAlpha = 1; }
     const bw = hw * 1.6, bx = x - bw / 2, by = y + 24;
     ctx.fillStyle = 'rgba(0,0,0,.6)'; rrect(ctx, bx - 1, by - 1, bw + 2, 7, 3); ctx.fill();
     ctx.fillStyle = '#d8d0c8'; rrect(ctx, bx, by, Math.max(0, bw * w.hp / w.maxHp), 5, 2.5); ctx.fill();
@@ -273,9 +270,7 @@ export function drawCastles(t){
 /** Bulwark Knight's aura: 3 lanes × 3 tile heights, steel blue. */
 export function drawBulwarkZone(m, t){
   const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
-  const pulse = 0.5 + 0.5 * Math.sin(t * 2.5);
-  ctx.fillStyle = `rgba(140,160,200,${0.10 + 0.05 * pulse})`; rrect(ctx, x, y, w, h, 16); ctx.fill();
-  ctx.strokeStyle = `rgba(190,205,235,${0.45 + 0.3 * pulse})`; ctx.lineWidth = 2; rrect(ctx, x, y, w, h, 16); ctx.stroke();
+  drawBulwarkZoneFx(ctx, x, y, w, h, t);
 }
 /** Hexwitch zones: purple; box (3×3), a whole column, or a row across the field. */
 export function drawHexZones(t){
@@ -285,16 +280,13 @@ export function drawHexZones(t){
     if (z.shape === 'col'){ x = LANE(z.lane) - CS * 0.49; y = FIELD_TOP; w = CS * 0.98; h = FIELD_BOT - FIELD_TOP; }
     else if (z.shape === 'row'){ x = GX; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 0.5; w = CS * COLS; h = CS; }
     else { x = LANE(z.lane) - CS * 1.5 * 0.98; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 1.5; w = CS * 3 * 0.98; h = CS * 3; }
-    ctx.fillStyle = `rgba(160,80,220,${(0.12 + 0.06 * pulse) * a})`; rrect(ctx, x, y, w, h, 16); ctx.fill();
-    ctx.strokeStyle = `rgba(210,155,255,${(0.5 + 0.3 * pulse) * a})`; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.lineDashOffset = t * 24; rrect(ctx, x, y, w, h, 16); ctx.stroke(); ctx.setLineDash([]);
+    drawHexZoneFx(ctx, x, y, w, h, t, a);
   }
 }
 /** Plague Doctor's healing zone: 3 lanes × 3 tile heights, pulsing green. */
 export function drawHealZone(m, t){
   const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
-  const pulse = 0.5 + 0.5 * Math.sin(t * 3);
-  ctx.fillStyle = `rgba(120,220,120,${0.10 + 0.06 * pulse})`; rrect(ctx, x, y, w, h, 16); ctx.fill();
-  ctx.strokeStyle = `rgba(160,240,140,${0.45 + 0.3 * pulse})`; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 30; rrect(ctx, x, y, w, h, 16); ctx.stroke(); ctx.setLineDash([]);
+  drawHealZoneFx(ctx, x, y, w, h, t);
 }
 /** Scarecrows (world 5 tool): a post with a straw figure and a health bar. */
 export function drawScarecrows(t){
@@ -332,13 +324,7 @@ export function drawArrows(t){
 }
 /** Column fog: a vertical bank down a whole lane. */
 export function drawFogCols(t, lanes, cleared){
-  for (const l of lanes){
-    const x0 = LANE(l) - CS * 0.5 - 8, al = cleared ? 0.16 : 0.93;
-    const gr = ctx.createLinearGradient(x0, 0, x0 + CS + 16, 0);
-    gr.addColorStop(0, 'rgba(150,172,190,0)'); gr.addColorStop(0.2, `rgba(158,180,198,${al})`); gr.addColorStop(0.8, `rgba(158,180,198,${al})`); gr.addColorStop(1, 'rgba(150,172,190,0)');
-    ctx.fillStyle = gr; ctx.fillRect(x0, FIELD_TOP - 10, CS + 16, FIELD_BOT - FIELD_TOP + 20);
-    if (fogSprite){ ctx.globalAlpha = cleared ? 0.08 : 0.45; for (let i = 0; i < 4; i++) ctx.drawImage(fogSprite, x0 - 20, FIELD_TOP + ((i * 150 + t * 16) % (FIELD_BOT - FIELD_TOP + 100)) - 80, CS + 56, 160); ctx.globalAlpha = 1; }
-  }
+  for (const l of lanes) drawMist(ctx, K, LANE(l) - CS * 0.5 - 8, FIELD_TOP - 10, FIELD_BOT - FIELD_TOP + 20, CS + 16, t, cleared, 10 + l, true);
 }
 /** Wind warning: arrows on the patch rows or columns a gust will touch (all of them for a full gust). */
 export function drawWindArrows(t){
@@ -472,7 +458,11 @@ function drawVfx(){
       ctx.save(); ctx.translate(v.x, v.y); ctx.scale(v.s * (1 + p * 0.5), v.s * (1 - p * 0.85)); ctx.globalAlpha = 1 - p;
       if (v.m.type === 'imp') ctx.translate(0, -(v.m.hop || 0) * 14);
       drawChar(ctx, v.m, key, ['#ffffff', 0.3]); ctx.restore();
-    } else if (v.kind === 'clip'){
+    } else if (v.kind === 'bolt') drawBolt(ctx, v);
+    else if (v.kind === 'blast') drawBlast(ctx, v);
+    else if (v.kind === 'hexbolt') drawHexBolt(ctx, v);
+    else if (v.kind === 'sigil') drawSigil(ctx, v);
+    else if (v.kind === 'clip'){
       ctx.save(); ctx.translate(v.x, v.y); ctx.scale(v.s, v.s);
       drawChar(ctx, {}, v.key, null, [v.clip, Math.floor(p * 7.999)]); ctx.restore();
     }

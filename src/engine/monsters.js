@@ -4,6 +4,7 @@ import { TYPES, MODS, VARIANTS } from '../data/monsters.js';
 import { BURN_EVERY, RAINBOW } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
+import { PTYPES } from '../data/pumpkins.js';
 import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, LANE, grid, ROWS, GY, walls } from './state.js';
 import { clamp, rnd, shuffle } from './util.js';
 import { damageWall } from './walls.js';
@@ -374,7 +375,7 @@ function updatePoltergeist(m, dt){
             const others = G.loadout.filter(t => t !== cell.c);
             cell.c = others[Math.floor(Math.random() * others.length)]; cell.pop = 1;
           }
-          addFloat('Repainted!', m.x, mY(m) - m.r - 30, '#cfe8f2', 16, 0.9); SFX.bossSfx('poltergeist', 'repaint'); m.anim = { clip:'recolour', t:0, dur:0.6 };
+          addFloat('Repainted!', m.x, mY(m) - m.r - 30, '#cfe8f2', 16, 0.9); SFX.bossSfx('poltergeist', 'repaint'); m.anim = { clip:'recolour', t:0, dur:0.7 };
           resolveMatches();
         }
       }
@@ -407,7 +408,7 @@ function updateVampireCount(m, dt){
   if (m.batsT <= 0){
     m.batsT = m.form === 2 ? T.form2.batsEvery : T.batsEvery;
     for (let i = 0; i < T.bats; i++) spawnMonster('bat', pickLane(), true, Math.max(0, m.p - 0.02));
-    SFX.bossSfx('vampirecount', 'bats'); m.anim = { clip:'bats', t:0, dur:0.6 };
+    SFX.bossSfx('vampirecount', 'bats'); m.anim = { clip:'bats', t:0, dur:0.7 };
   }
   m.wallT -= dt;
   if (m.wallT <= 0){
@@ -416,7 +417,7 @@ function updateVampireCount(m, dt){
       const used = new Set(G.castles.filter(w => !w.dead).map(w => w.lane));
       const free = [...Array(COLS).keys()].filter(l => !used.has(l));
       if (free.length){ const lane = free[Math.floor(Math.random() * free.length)]; const whp = G.mode === 'story' && G.def.castles ? G.def.castles.hp : T.wallHp;
-      G.castles.push({ lane, p:rnd(0.45, 0.7), hp:whp, maxHp:whp, flash:0, dead:false }); ring(LANE(lane), FIELD_TOP + 0.55 * (FIELD_BOT - FIELD_TOP), 40, 'rgba(200,180,220,.9)'); addFloat('A wall rises', m.x, mY(m) - m.r - 30, '#d8cfe0', 16, 1); SFX.bossSfx('vampirecount', 'wall'); m.anim = { clip:'wall', t:0, dur:0.7 }; }
+      G.castles.push({ lane, p:rnd(0.45, 0.7), hp:whp, maxHp:whp, flash:0, dead:false }); ring(LANE(lane), FIELD_TOP + 0.55 * (FIELD_BOT - FIELD_TOP), 40, 'rgba(200,180,220,.9)'); addFloat('A wall rises', m.x, mY(m) - m.r - 30, '#d8cfe0', 16, 1); SFX.bossSfx('vampirecount', 'wall'); m.anim = { clip:'wall', t:0, dur:0.8 }; }
     }
   }
   m.healT -= dt;
@@ -431,9 +432,7 @@ function updateVampireCount(m, dt){
 
 /** A crackling purple bolt from a witch to the monster it hexes (owner: hexes should zap and show lightning). */
 function hexBolt(from, o){
-  const y1 = mY(from), y2 = mY(o), n = 8;
-  for (let k = 0; k <= n; k++){ const f = k / n; G.parts.push({ x:from.x + (o.x - from.x) * f + rnd(-9, 9), y:y1 + (y2 - y1) * f + rnd(-9, 9), vx:0, vy:0, t:0, life:0.45, size:5, color:k % 2 ? '#d09bff' : '#f0e0ff', kind:'dot', grav:0 }); }
-  ring(o.x, y2, 32, 'rgba(208,155,255,.9)');
+  if (G.vfx) G.vfx.push({ kind:'hexbolt', x1:from.x, y1:mY(from), x2:o.x, y2:mY(o), t:0, dur:0.4, seed:Math.floor(Math.random() * 1e6) });   // arcane zap (render/fx.js)
 }
 
 /** Turn a monster into a chameleon (or, with `reverse`, a reverse chameleon) of a random loadout colour. */
@@ -442,7 +441,8 @@ export function hexMonster(o, reverse, quiet){
   const col = pool[Math.floor(Math.random() * pool.length)];
   if (reverse){ o.colourImmune = col; o.colourLock = null; } else { o.colourLock = col; o.colourImmune = null; }
   if (quiet) return;
-  ring(o.x, mY(o), 36, 'rgba(210,120,255,.9)'); addFloat('Hexed!', o.x, mY(o) - o.r - 24, '#d09bff', 16, 0.9);
+  if (G.vfx) G.vfx.push({ kind:'sigil', x:o.x, y:mY(o), col:PTYPES[col].base, reverse:!!reverse, t:0, dur:0.9 });   // rune circle in the locked colour (render/fx.js)
+  addFloat('Hexed!', o.x, mY(o) - o.r - 24, '#d09bff', 16, 0.9);
 }
 /** The Hexwitch (world 3 boss): drifts between lanes, hexes 2–3 monsters into chameleons, and lays hex zones where the dead rise again. */
 function updateHexwitch(m, dt){
@@ -461,7 +461,7 @@ function updateHexwitch(m, dt){
     const pick = shuffle(G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.rise <= 0 && o.p > 0));   // same targets as a witch
     const n = T.hexCount[0] + Math.floor(Math.random() * (T.hexCount[1] - T.hexCount[0] + 1));
     for (const o of pick.slice(0, n)){ hexBolt(m, o); hexMonster(o, m.form === 2 ? Math.random() >= T.chameleonChance : true); }   // form 1: reverse only (owner); form 2: 25% chameleon, 75% reverse
-    if (pick.length){ SFX.bossSfx('hexwitch', 'hex'); m.anim = { clip:'hex', t:0, dur:0.6 }; }
+    if (pick.length){ SFX.bossSfx('hexwitch', 'hex'); m.anim = { clip:'hex', t:0, dur:0.73 }; }
   }
   m.zoneT -= dt;
   if (m.zoneT <= 0){
@@ -471,7 +471,7 @@ function updateHexwitch(m, dt){
       const shape = shapes[Math.floor(Math.random() * shapes.length)];
       G.hexZones.push({ shape, lane:Math.floor(Math.random() * COLS), p:rnd(0.25, 0.8), t:T.zoneLast });
     }
-    addFloat('Hex zone!', m.x, mY(m) - m.r - 30, '#d09bff', 18, 1.2); SFX.bossSfx('hexwitch', 'zone'); m.anim = { clip:'zone', t:0, dur:0.7 };
+    addFloat('Hex zone!', m.x, mY(m) - m.r - 30, '#d09bff', 18, 1.2); SFX.bossSfx('hexwitch', 'zone'); m.anim = { clip:'zone', t:0, dur:0.8 };
   }
 }
 /** Is a monster inside a Hexwitch zone? (box: 3 lanes × 3 tile heights; col: whole column; row: 3 tile heights across the field) */

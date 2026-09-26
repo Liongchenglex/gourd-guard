@@ -240,21 +240,26 @@ export function firemummy(g, P = {}){
 }
 
 // ---------- Gravekeeper ----------
-function lantern(g, x, y, s = 1){
+function lantern(g, x, y, s = 1, glow = '#ffb640', body = LANG, core = '#fff8d0'){
   g.save(); g.translate(x, y); g.scale(s, s);
   S.stroke(g, g2 => { g2.beginPath(); g2.arc(0, -20, 4, 0, TAU); }, LAN, 2); S.ln(g, [[0, -16], [0, -10]], LAN, 2);
-  g.save(); g.shadowColor = '#ffb640'; g.shadowBlur = 22; S.part(g, RR(-12, -10, 24, 28, 5), LANG, { x:0, y:4, r:16 }, { flat:true }); g.restore();
-  S.dot(g, E(0, 4, 5.5, 8), '#ffb640'); S.dot(g, E(0, 2, 2.2, 3.5), '#fff8d0');
+  g.save(); g.shadowColor = glow; g.shadowBlur = 22; S.part(g, RR(-12, -10, 24, 28, 5), body, { x:0, y:4, r:16 }, { flat:true }); g.restore();
+  S.dot(g, E(0, 4, 5.5, 8), glow); S.dot(g, E(0, 2, 2.2, 3.5), core);
   g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(-9, -8, 3, 22); g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(-4, -8, 1.5, 22); S.ln(g, [[0, -10], [0, 18]], LAN, 1, .5); S.ln(g, [[-12, 4], [12, 4]], LAN, 1, .4);
   for (const yy of [-10, 18]) S.part(g, RR(-14, yy - 3, 28, 6, 2), LAN, { x:0, y:yy, r:14 }, { flat:true, mat:'metal' });
   g.restore();
 }
+// Full form (level 20, pose.variant 'form2'): 12% taller about the feet, a near-black violet robe with glowing green runes, bone horns on the hood,
+// a half-visible skull inside it with bigger embers for eyes, bone spikes on the shoulders, chains from the belt and a sickly green lantern.
+const ROBE2 = pal('#3a2258'), ROBED2 = pal('#24143a'), LANG2 = pal('#c4ff8c'), HORN2 = pal('#d6ccb4'), GK_GLOW = '#8cff5a', GK_RUNE = '#a4ff62', GK_EYE = '#ff7a1a';
 export function gravekeeper(g, P = {}){
-  const r = ROBE, rd = ROBED, w = WOOD, st = ST, k = BONE, cast = P.cast ?? 0, fade = P.fade ?? 0, stab = P.stab ?? 0, idle = P.idle;
+  const F2 = P.variant === 'form2';
+  const r = F2 ? ROBE2 : ROBE, rd = F2 ? ROBED2 : ROBED, w = WOOD, st = ST, k = BONE, cast = P.cast ?? 0, fade = P.fade ?? 0, stab = P.stab ?? 0, idle = P.idle;
   const R = rng(5);
+  if (F2){ g.save(); g.translate(0, 66); g.scale(1.12, 1.12); g.translate(0, -66); }
   if (fade > 0){
-    for (let i = 0; i < 10; i++){ const x = (R() - .5) * 80, y0 = -60 + R() * 120, rr = 4 + R() * 5; const y = y0 - fade * 60 - R() * 20, a = Math.max(0, (1 - fade) * .6) * (fade < .15 ? fade / .15 : 1); g.save(); g.globalAlpha *= a; g.shadowColor = '#8a6ad8'; g.shadowBlur = 8; S.dot(g, E(x + Math.sin(fade * 6 + i) * 6, y, rr * (1 + fade * 1.5), rr * (1 + fade * 1.5)), '#6a52a8'); g.restore(); }
-    if (fade >= 1) return;
+    for (let i = 0; i < 10; i++){ const x = (R() - .5) * 80, y0 = -60 + R() * 120, rr = 4 + R() * 5; const y = y0 - fade * 60 - R() * 20, a = Math.max(0, (1 - fade) * .6) * (fade < .15 ? fade / .15 : 1); g.save(); g.globalAlpha *= a; g.shadowColor = F2 && i % 2 ? '#7ae050' : '#8a6ad8'; g.shadowBlur = 8; S.dot(g, E(x + Math.sin(fade * 6 + i) * 6, y, rr * (1 + fade * 1.5), rr * (1 + fade * 1.5)), F2 && i % 2 ? '#4a9a30' : '#6a52a8'); g.restore(); }
+    if (fade >= 1){ if (F2) g.restore(); return; }
     g.save(); g.globalAlpha *= 1 - fade; g.translate(0, -fade * 20); g.scale(1, 1 - fade * .3); }
   S.shadow(g, 0, 66, 46, 8);
   const ang = .42 - stab * 1.05, push = stab * 8, breathe = idle == null ? 0 : Math.sin(idle * TAU);
@@ -268,27 +273,46 @@ export function gravekeeper(g, P = {}){
   S.part(g, robe, r, { x:0, y:0, r:64 }, { mat:'cloth', hx:-26, hy:-46 });
   S.crease(g, SO([[-30, -30], [-38, 10], [-34, 52]]), r, 2.6, .45); S.crease(g, SO([[28, -24], [36, 10], [32, 50]]), r, 2.6, .45); S.crease(g, SO([[-8, 10], [-12, 34], [-14, 60]]), r, 2, .35); S.crease(g, SO([[12, 12], [16, 36], [14, 60]]), r, 2, .35);
   g.save(); robe(g); g.clip(); for (const [x, y, wd, hd, a] of [[-32, 36, 15, 13, .2], [24, 44, 13, 11, -.15]]){ g.save(); g.translate(x, y); g.rotate(a); S.part(g, RR(-wd / 2, -hd / 2, wd, hd, 2), PATCH, { x:0, y:0, r:wd / 2 }, { flat:true, mat:'cloth' }); g.strokeStyle = rgba(r.deep, .8); g.lineWidth = 1; for (let i = -wd / 2 + 2; i < wd / 2; i += 4){ g.beginPath(); g.moveTo(i, -hd / 2 - 1.5); g.lineTo(i + 1.5, -hd / 2 + 1.5); g.moveTo(i, hd / 2 - 1.5); g.lineTo(i + 1.5, hd / 2 + 1.5); g.stroke(); } g.restore(); } g.restore();
+  if (F2){   // glowing runes stitched down the robe, pulsing with the breath and flaring on a cast
+    g.save(); robe(g); g.clip(); g.shadowColor = GK_RUNE; g.shadowBlur = 7; g.strokeStyle = rgba(GK_RUNE, .55 + breathe * .2 + cast * .3); g.lineWidth = 1.8; g.lineCap = 'round'; g.lineJoin = 'round';
+    for (const pts of [[[-26, -18], [-18, -28], [-14, -14], [-24, -8]], [[-38, 22], [-30, 8], [-24, 24], [-34, 18]], [[-10, 44], [-2, 30], [6, 46], [-4, 38]], [[22, -2], [30, -14], [34, 4], [22, -2]], [[30, 34], [40, 22], [36, 40]], [[4, -6], [10, -18], [2, -18]]]){ g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); }
+    g.restore(); }
   for (const [x, y] of [[-52, 58], [-28, 64], [2, 66], [30, 64], [50, 60]]) S.thread(g, x, y, 1, r);
   const cape = SM([[-44, -30], [-20, -22], [0, -18], [20, -22], [44, -30], [42, -12, 1], [30, -6, 1], [22, -16, 1], [10, -4, 1], [0, -14, 1], [-10, -4, 1], [-22, -16, 1], [-30, -6, 1], [-42, -12, 1]], .7); S.part(g, cape, rd, { x:0, y:-20, r:44 }, { flat:true, mat:'cloth' }); S.contact(g, robe, 0, -8, 40, 8, .4);
+  if (F2) for (const s of [-1, 1]) for (let i = 0; i < 3; i++){   // bone spikes on the shoulders
+    const bx = s * (41 - i * 9), by = -28 + i * 3, L = 17 - i * 3, a = -Math.PI / 2 + s * (.6 - i * .18);
+    S.part(g, PL([[bx - s * 4, by + 1], [bx + s * 3, by + 2], [bx + Math.cos(a) * L, by + Math.sin(a) * L]]), HORN2, { x:bx, y:by - 5, r:6 }, { flat:true, mat:'bone', lw:1.2 }); }
   S.tube(g, SO([[-46, 20], [-10, 26], [44, 22]]), w, 4); for (let x = -42; x < 42; x += 6) S.ln(g, [[x, 19 + (x + 46) * .05], [x + 2.5, 24 + (x + 46) * .05]], w, 1, .6);
   for (const [x, y] of [[-22, 36], [-14, 40], [-6, 38]]){ S.ln(g, [[x, 26], [x, y]], { deep:'#d8c070' }, 1.2, .9); g.beginPath(); g.arc(x, y + 4, 3.5, 0, TAU); g.strokeStyle = '#d8c070'; g.lineWidth = 1.2; g.stroke(); S.dot(g, E(x + 2, y + 5, 1.6, 1.2), '#d8c070'); }
+  const swing = idle == null ? 0 : Math.sin(idle * TAU + 1) * 4;
+  if (F2){   // iron chains swinging from the belt, a bone bead on each end
+    for (const [x0, len, ph] of [[-36, 30, 0], [24, 26, 2], [40, 34, 1]]){ const drift = (swing + stab * 6) * .5; let px = x0, py = 24 + (x0 + 46) * .05;
+      for (let i = 1; i <= 6; i++){ const t = i / 6, x = x0 + drift * t * t * Math.cos(ph), y = 24 + (x0 + 46) * .05 + t * len; g.strokeStyle = rgba(st.deep, .9); g.lineWidth = 2.6; ell(g, (x + px) / 2, (y + py) / 2, 2.4, 3.4, i % 2 ? .5 : -.5); g.stroke(); g.strokeStyle = st.light; g.lineWidth = 1.1; ell(g, (x + px) / 2 - .4, (y + py) / 2 - .5, 2.2, 3.1, i % 2 ? .5 : -.5); g.stroke(); px = x; py = y; }
+      S.part(g, E(px, py + 3, 3.4, 3), k, { x:px, y:py + 3, r:3.4 }, { flat:true, mat:'bone', lw:1 }); } }
+  if (F2) for (const s of [-1, 1]) S.part(g, SM([[s * 24, -50], [s * 22, -64], [s * 32, -82], [s * 48, -98, 1], [s * 40, -80], [s * 34, -64], [s * 33, -52]], .7), HORN2, { x:s * 34, y:-72, r:16 }, { flat:true, mat:'horn', hx:s * 30, hy:-70 });   // horns rising from the hood
   const hood = SM([[10, -82], [-14, -76], [-30, -58], [-34, -34], [-24, -20], [0, -16], [24, -20], [34, -36], [30, -62]], .85); S.part(g, hood, r, { x:0, y:-50, r:36 }, { mat:'cloth', hx:-16, hy:-70 });
   const cave = SM([[-24, -38], [-18, -58], [0, -66], [18, -58], [24, -38], [16, -24], [0, -20], [-16, -24]], .9); S.dot(g, cave, '#140c1c');
-  g.save(); cave(g); g.clip(); const gr = g.createRadialGradient(0, -40, 2, 0, -40, 28); gr.addColorStop(0, `rgba(255,138,42,${.35 + cast * .4})`); gr.addColorStop(1, 'rgba(255,138,42,0)'); g.fillStyle = gr; g.fillRect(-40, -80, 80, 80); g.restore();
+  if (F2){   // a skull half-visible in the hood: brow and sockets lit by the embers, the jaw lost in shadow
+    g.save(); cave(g); g.clip(); S.part(g, SM([[-17, -40], [-19, -52], [-12, -63], [0, -66], [12, -63], [19, -52], [17, -40], [11, -33], [-11, -33]], .8), BONE, { x:0, y:-50, r:18 }, { mat:'bone', hx:-7, hy:-59 });
+    for (const s of [-1, 1]) S.dot(g, E(s * 9, -44, 6.5, 6.2), '#0c0812'); S.dot(g, PL([[-2.6, -38], [2.6, -38], [0, -32]]), '#0c0812');
+    for (let x = -8; x <= 8; x += 4){ S.dot(g, RR(x - 1.6, -34, 3.2, 5, 1), '#e4dcee', .85); } S.overlay(g, cave, { deep:'#0c0812' }, { x:0, y:-52, r:22 }, .7); g.restore(); }
+  g.save(); cave(g); g.clip(); const gr = g.createRadialGradient(0, -40, 2, 0, -40, 28); gr.addColorStop(0, `rgba(255,138,42,${.35 + cast * .4 + (F2 ? .1 : 0)})`); gr.addColorStop(1, 'rgba(255,138,42,0)'); g.fillStyle = gr; g.fillRect(-40, -80, 80, 80); g.restore();
   S.stroke(g, SO([[-24, -38], [-18, -58], [0, -66], [18, -58], [24, -38]]), { deep:r.light }, 2.4, .5);
-  S.glow(g, -9, -44, 4.5 + cast * 1.5, '#ff8a2a'); S.glow(g, 9, -44, 4.5 + cast * 1.5, '#ff8a2a');
+  const eyeR = 4.5 + cast * 1.5 + (F2 ? 1.6 : 0), eyeCol = F2 ? GK_EYE : '#ff8a2a';
+  S.glow(g, -9, -44, eyeR, eyeCol); S.glow(g, 9, -44, eyeR, eyeCol);
+  if (F2){ const R2 = rng(77); for (let i = 0; i < 8; i++){ const s = i % 2 ? 1 : -1, x = s * 9 + (R2() - .5) * 9, y = -49 - R2() * 16 - breathe * 2 - cast * 6, rr = .9 + R2() * 1.2; g.save(); g.shadowColor = '#ffb040'; g.shadowBlur = 4; S.dot(g, E(x, y, rr, rr * 1.3), i % 3 ? '#ffc060' : '#fff0c0', .75); g.restore(); } }   // embers drifting up from the sockets
   const ca = cast * 1.15 + breathe * .04, cs = Math.cos(ca), sn = Math.sin(ca), hx = -36 + (-34 * cs - 30 * sn), hy = -14 + (-34 * sn + 30 * cs);
   g.save(); g.translate(-36, -14); g.rotate(ca); g.translate(36, 14);
   const sleeve = SM([[-36, -14], [-64, -2], [-72, 14], [-56, 22], [-34, 8]], .7); S.part(g, sleeve, r, { x:-52, y:4, r:20 }, { flat:true, mat:'cloth' }); S.contact(g, robe, -36, -2, 10, 10, .4);
   g.restore();
-  const swing = idle == null ? 0 : Math.sin(idle * TAU + 1) * 4;
   S.tube(g, SO([[hx - 2, hy + 2], [hx - 8 + swing, hy + 26]]), w, 3.5);
   for (let i = 0; i < 3; i++){ const a = Math.PI * .55 + (i - 1) * .4; S.tube(g, SO([[hx, hy + 2], [hx + Math.cos(a) * 7, hy + 2 + Math.sin(a) * 8]]), k, 2.4); } S.part(g, E(hx + 2, hy, 5.5, 5), k, { x:hx + 2, y:hy, r:5.5 }, { flat:true, mat:'bone' });
-  if (cast > 0){ const fl = g.createRadialGradient(hx - 8, hy + 50, 4, hx - 8, hy + 50, 30 + cast * 80); fl.addColorStop(0, `rgba(255,200,90,${.55 * cast})`); fl.addColorStop(1, 'rgba(255,200,90,0)'); g.fillStyle = fl; g.fillRect(-220, -140, 300, 320); }
-  lantern(g, hx - 8 + swing * 1.4, hy + 46, 1.1 + cast * .15);
+  if (cast > 0){ const fl = g.createRadialGradient(hx - 8, hy + 50, 4, hx - 8, hy + 50, 30 + cast * 80); fl.addColorStop(0, F2 ? `rgba(150,255,100,${.55 * cast})` : `rgba(255,200,90,${.55 * cast})`); fl.addColorStop(1, F2 ? 'rgba(150,255,100,0)' : 'rgba(255,200,90,0)'); g.fillStyle = fl; g.fillRect(-220, -140, 300, 320); }
+  if (F2) lantern(g, hx - 8 + swing * 1.4, hy + 46, 1.2 + cast * .15, GK_GLOW, LANG2, '#f4ffe0'); else lantern(g, hx - 8 + swing * 1.4, hy + 46, 1.1 + cast * .15);
   S.part(g, E(46, 4 + push, 5.5, 5), k, { x:46, y:4 + push, r:5.5 }, { flat:true, mat:'bone' });
   g.restore();
   if (fade > 0) g.restore();
+  if (F2) g.restore();
 }
 
 // ---------- registry ----------
@@ -301,7 +325,7 @@ export const W1 = {
   brute: { draw:brute, scale:.66, dy:-6, box:{ x:-74, y:-66, w:148, h:124 }, variants:{ siegeBrute:true, bogTurtle:true }, clips:{ walk:{ n:8, fps:6, pose:t => ({ walk:t }) }, chew:{ n:4, fps:7, pose:t => ({ chew:t }) } }, still:{} },
   mummy: { draw:mummy, scale:.6, dy:-10, box:{ x:-92, y:-58, w:176, h:118 }, variants:{ soddenMummy:true }, clips:{ walk:{ n:8, fps:7, pose:t => ({ walk:t }) }, chew:{ n:4, fps:6, pose:t => ({ chew:t }) }, collapse:{ n:8, fps:16, once:true, pose:t => ({ collapse:t }) } }, still:{} },
   firemummy: { draw:firemummy, scale:.6, dy:-10, box:{ x:-92, y:-70, w:176, h:130 }, clips:{ walk:{ n:8, fps:7, pose:t => ({ walk:t, flick:t * 2 }) }, chew:{ n:4, fps:6, pose:t => ({ chew:t, flick:t }) }, collapse:{ n:8, fps:16, once:true, pose:t => ({ collapse:t, flick:t }) } }, still:{} },
-  gravekeeper: { draw:gravekeeper, scale:.68, dy:-13, box:{ x:-110, y:-98, w:206, h:200 }, clips:{ walk:{ n:8, fps:6, pose:t => ({ idle:t }) }, cast:{ n:6, fps:12, once:true, pose:t => ({ cast:t }) }, teleport:{ n:8, fps:16, once:true, pose:t => ({ cast:1, fade:t }) }, stab:{ n:8, fps:12, once:true, pose:t => ({ stab:t }) } }, still:{} },
+  gravekeeper: { draw:gravekeeper, scale:.68, dy:-13, box:{ x:-128, y:-128, w:242, h:238 }, variants:{ form2:true }, clips:{ walk:{ n:8, fps:6, pose:t => ({ idle:t }) }, cast:{ n:6, fps:12, once:true, pose:t => ({ cast:t }) }, teleport:{ n:8, fps:16, once:true, pose:t => ({ cast:1, fade:t }) }, stab:{ n:8, fps:12, once:true, pose:t => ({ stab:t }) } }, still:{} },   // box holds the horned, 12% taller full form too (shared atlas box)
 };
 /** The type or boss kind a monster is drawn as, or null when it still uses the old vector drawing. */
 export function charKey(m){ const k = m.type === 'boss' ? m.kind : m.type; return CHARS[k] ? k : null; }

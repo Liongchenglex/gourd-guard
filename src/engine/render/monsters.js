@@ -73,7 +73,7 @@ export function drawMonster(m, t){
     cx.globalAlpha = fade * 0.8; cx.strokeStyle = 'rgba(255,255,255,.9)'; cx.beginPath(); cx.moveTo(-m.r * 0.8, -m.r); cx.lineTo(-m.r * 0.3, -m.r * 1.3); cx.stroke();
   }
   cx.restore();
-  if (m.demo) return;
+  if (m.demo || m.hidden) return;   // no health bar over a submerged diver's ripples
   const lift = m.type === 'imp' ? m.hop * 14 * s : 0;
   let by = y - m.r * s * 1.45 - 10 - lift - (m.type === 'boss' ? 30 : 0);
   if (by < FIELD_TOP + 4) by = y + m.r * s * 1.25 + 8;   // a boss on the top row (Twin Tides) carries its bar below it, clear of the tools tray (owner)
@@ -234,11 +234,11 @@ export function drawBoss(m, F, t){   // The Gravekeeper: hooded digger with a la
 }
 
 /** Offscreen icon of a monster type (for level previews and intro cards). */
-export function monsterIcon(key, px){
+export function monsterIcon(key, px, form){
   const c = document.createElement('canvas'); c.width = c.height = px || 96;
   const v = VARIANTS[key];
   const kind = v ? v.base : key, T = TYPES[kind], isBoss = !!T.boss, type = isBoss ? 'boss' : kind;
-  if (CHARS[kind]){ const ic = charIcon(kind, px || 96, v ? key : null); if (v && v.tint && !hasCostume(kind, key)){ const g = ic.getContext('2d'); g.globalCompositeOperation = 'source-atop'; g.fillStyle = v.tint + '73'; g.fillRect(0, 0, ic.width, ic.height); } return ic; }
+  if (CHARS[kind]){ const ic = charIcon(kind, px || 96, v ? key : form === 2 ? 'form2' : null); if (v && v.tint && !hasCostume(kind, key)){ const g = ic.getContext('2d'); g.globalCompositeOperation = 'source-atop'; g.fillStyle = v.tint + '73'; g.fillRect(0, 0, ic.width, ic.height); } return ic; }
   const m = { type, kind, r:T.r, ph:1.3, flash:0, hop:0.4, slowT:0, frozenT:0, rise:0, eating:false, age:5, demo:true, x:0, p:0.5, hp:T.hp, maxHp:T.hp, form:1, carrier:true, tint:v ? v.tint : null, vanish:5, colourLock:kind === 'chameleon' ? 0 : null, colourImmune:kind === 'rchameleon' ? 1 : null, reflecting:kind === 'mirror' };
   const prev = cx; cx = c.getContext('2d');
   const box = isBoss ? 150 : T.r * 3.2;

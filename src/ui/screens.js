@@ -8,7 +8,7 @@ import { monsterIcon } from '../engine/render/monsters.js';
 import { poolKey, prebakeAsync } from '../engine/render/anim.js';
 import { atlasKey } from '../engine/render/chars.js';
 import { SFX, ensureAudio, musicStop, musicSync, musicStart } from '../engine/audio.js';
-import { beginEndless, beginNight, makeDemo, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
+import { beginEndless, beginNight, makeDemo, makePreview, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
 import { bgWorld, buildBg, pumpkinIcon, worldScene } from '../engine/render/sprites.js';
 import { BOOKS } from '../data/lore.js';
 import { BESTIARY, COMPANIONS } from '../data/bestiary.js';
@@ -42,7 +42,7 @@ export function showResult(win){
       if (perk){ msg += ` Perk unlocked: ${perk.name}. ${perk.desc} (It shows as a trophy when you pick pumpkins: tap it to switch it on or off, or use the pause menu.)`; SFX.perk(); }
       stars = [0,1,2].map(i => `<span class="${i < st ? '' : 'off'}">★</span>`).join('');
       stats.push(['Monsters stopped', g.kills], ['Walls left', pct(wf)], ['Coins found', g.coins], ['Night bonus', bonus]);
-      if (g.def.levelNo === 10) addBtn(box, 'Back to menu', () => setState('title'));
+      if (g.def.levelNo === 10) addBtn(box, 'Continue', () => { pendingUnlock = g.def.world + 1; curBook = null; openLevels(); });   // to the shelf, where the next storybook unlocks (owner)
       else {
         if (g.n < LEVELS) addBtn(box, 'Next level', () => openPreview(g.n + 1));
         addBtn(box, 'Shop', () => openShop('result'), 'alt');
@@ -109,9 +109,12 @@ export function withHelp(fn){ fn(); }   // owner: no full help before 1-1; the n
 let previewNight = 1, introQueue = [], introNext = null;
 
 /** Pre-level card (owner request, 2026-09-25): which monsters, the boss, your pumpkins, graves. Start goes through unseen intros first. */
+let pendingUnlock = null;   // world index whose storybook should play its unlock animation on the next shelf (set by a level-10 win)
 export function openPreview(n){
   previewNight = n;
   const def = levelFor(n), prevGraves = n > 1 ? levelFor(n - 1).graves : 0;
+  makePreview(n);   // the night's own map behind the card (owner: not a random background)
+  setTimeout(() => { const src = $('#cv'), m = $('#pvMap'); if (!m || !src) return; const w = 360; m.width = w; m.height = Math.round(w * src.height / src.width); m.getContext('2d').drawImage(src, 0, 0, m.width, m.height); }, 90);   // a snapshot of it inside the card too
   $('#pvTitle').textContent = `Level ${def.label}`;
   $('#pvSub').textContent = WORLD_NAMES[def.worldNo - 1];
   const mons = $('#pvMonsters'); mons.innerHTML = '';
@@ -230,7 +233,13 @@ export function openLevels(){
     if (wi % 3 === 0){ row = document.createElement('div'); row.className = 'shelfRow'; shelf.appendChild(row); }
     const levels = WORLD_LEVELS[wi], bk = BOOKS[wi], start = levels.length ? firstNightOf(wi + 1) : null;
     const open = start != null && isOpen(start), soon = !levels.length;
-    const b = document.createElement('button'); b.className = 'book' + (soon ? ' soon' : open ? '' : ' locked'); b.style.setProperty('--cover', bk.cover);
+    const unlockNow = pendingUnlock === wi && open && !soon;   // just earned: show it locked, then play the unlock
+    const b = document.createElement('button'); b.className = 'book' + (soon ? ' soon' : open && !unlockNow ? '' : ' locked'); b.style.setProperty('--cover', bk.cover);
+    if (unlockNow){
+      pendingUnlock = null;
+      setTimeout(() => { b.classList.add('unlocking'); b.scrollIntoView({ block:'center', behavior:'smooth' }); SFX.perk(); SFX.magic && SFX.magic(); }, 350);
+      setTimeout(() => { b.classList.remove('locked', 'unlocking'); b.classList.add('unlocked'); }, 2600);
+    }
     const stars = levels.reduce((t, d, i) => t + (save.stars[start + i] || 0), 0);
     b.setAttribute('aria-label', soon ? `${name}, coming soon` : open ? `${name}, ${stars} of ${levels.length * 3} stars` : `${name}, locked`);
     const cv = document.createElement('canvas'); b.appendChild(cv);
@@ -457,7 +466,7 @@ export function wireButtons(){
 
   $('#spMinus').onclick = () => stepSpawn(-1); $('#spPlus').onclick = () => stepSpawn(1);
 
-  $('#bLvBack').onclick = () => setState('title');
+  $('#bLvBack').onclick = () => { setState('title'); makeDemo(); };   // the title gets its own scene back after a level map was shown
   $('#bBkClose').onclick = closeBook;
   $('#bBkFlip').onclick = () => flipBook(true);
   $('#bBkUnflip').onclick = () => flipBook(false);

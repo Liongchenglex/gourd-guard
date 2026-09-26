@@ -34,6 +34,21 @@ export function makeDemo(){
   });
 }
 
+/** The night's own map behind the level preview (owner): the field, walls, graves, castles, puddles, shore and fog of level n, no monsters. */
+export function makePreview(n){
+  const def = levelFor(n);
+  setG({ mode:'demo', n, def, world:def.world, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], gustT:0, gustDir:null, sproutT:0, aim:null, over:false, spawned:0, bossSpawned:false, hint:null, hintT:0 });
+  if (def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
+  else if (def.castles) raiseCastles(def.castles.n, def.castles.hp);
+  if (def.puddles) placePuddles(def.puddles);
+  if (G.world !== bgWorld) buildBg(G.world);
+  initBoard(def.pattern, def.graves);
+  if (def.gravesLayout) applyGravesLayout(def.gravesLayout);
+  initWalls();
+  resolveMatches();
+  setGest(null);
+}
+
 export function beginNight(n){
   const av = typesForNight(Math.max(n, highestOpen()));   // unlocks are global progress: anything unlocked is usable on any level (owner)
   const def = levelFor(n);

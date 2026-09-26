@@ -211,3 +211,10 @@ Files under `raw/kenney/` come from kenney.nl asset packs, all CC0: Impact Sound
 | fanfare_0.mp3 | monophonic synth fanfare sound | _def | https://freesound.org/s/751890/ | CC0 |
 | fanfare_1.mp3 | result-7.mp3 | DZeDeNZ | https://freesound.org/s/522246/ | CC0 |
 | fanfare_2.mp3 | Notification | Fupicat | https://freesound.org/s/538149/ | CC0 |
+| treasure_0.mp3 | Coin_C_02 | cabled_mess | https://freesound.org/s/350873/ | CC0 |
+| coinsbag_0.mp3 | Coin Foley 9.wav | CVLTIV8R | https://freesound.org/s/800071/ | CC0 |
+| coinsbag_1.mp3 | coins - in paper bowl 02.wav | Anthousai | https://freesound.org/s/336583/ | CC0 |
+| coinsbag_2.mp3 | coins 05.wav | Anthousai | https://freesound.org/s/336571/ | CC0 |
+| heartbeat_0.mp3 | heartbeat sub kick - soft | music_is_wiggly_air | https://freesound.org/s/784657/ | CC0 |
+| heartbeat_1.mp3 | Heartbeat.wav | Jeffreys2 | https://freesound.org/s/333483/ | CC0 |
+| heartbeat_2.mp3 | Heartbeat.wav | morganpurkis | https://freesound.org/s/384662/ | CC0 |

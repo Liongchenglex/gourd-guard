@@ -22,7 +22,8 @@ BANK = {
   'pop':       [('pop_1.mp3',0,.25), ('pop_0.mp3',.12,.3)],
   'sparkle':   [('twinkle_1.mp3',0,1.3)],
   'magic':     [('twinkle_0.mp3',0,1.4)],
-  'coin':      [('coin_1.mp3',0,.55), ('coin_0.mp3',0,.55)],
+  'coin':      [('treasure_0.mp3',0,.5), ('coinsbag_2.mp3',0,.5), ('coinsbag_1.mp3',0,.4)],   # treasure-chest coins, not arcade (owner)
+  'heartbeat': [('heartbeat_0.mp3',0,.4), ('heartbeat_2.mp3',0,.5)],
   'whoosh':    [('throw_0.mp3',0,.35), ('throw_2.mp3',0,.5)],
   'whooshlong':[('throw_1.mp3',0,1.0)],
   'reverse':   [('vanish_0.mp3',.05,.6), ('vanish_1.mp3',.05,.6)],

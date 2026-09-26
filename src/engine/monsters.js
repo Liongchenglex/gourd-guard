@@ -422,7 +422,7 @@ function updateVampireCount(m, dt){
   m.healT -= dt;
   if (m.healT <= 0){   // healing trance: the player must land N hits to break it
     m.healT = m.form === 2 ? T.form2.healEvery : T.healEvery;
-    m.healing = true; m.healHits = T.healHits[Math.floor(Math.random() * T.healHits.length)];
+    m.healing = true; const hh = m.form === 2 && T.form2.healHits ? T.form2.healHits : T.healHits; m.healHits = hh[Math.floor(Math.random() * hh.length)];   // per-form hit counts (owner nerf)
     addFloat(`Healing: hit it ×${m.healHits}`, m.x, mY(m) - m.r - 34, '#ff6a6a', 18, 1.4); SFX.bossSfx('vampirecount', 'trance');
     return true;
   }

@@ -6,6 +6,7 @@ import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestO
 import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS } from '../data/monsters.js';
 import { monsterIcon } from '../engine/render/monsters.js';
 import { poolKey, prebakeAsync } from '../engine/render/anim.js';
+import { atlasKey } from '../engine/render/chars.js';
 import { SFX, ensureAudio, musicStop, musicSync, musicStart } from '../engine/audio.js';
 import { beginEndless, beginNight, makeDemo, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
 import { bgWorld, buildBg, pumpkinIcon } from '../engine/render/sprites.js';
@@ -33,7 +34,7 @@ export function showResult(win){
       if (nextP && g.n < LEVELS) msg += ` Next night unlocks the ${nextP.name} pumpkin.`;
       if (g.def.levelNo === 10) msg += ' The rest of this world is open, and the next world will follow.';
       const perk = PERKS.find(p => perkNight(p) === g.n);
-      if (perk){ msg += ` Perk unlocked: ${perk.name}. ${perk.desc} (Switch it off in the pause menu if you prefer.)`; SFX.perk(); }
+      if (perk){ msg += ` Perk unlocked: ${perk.name}. ${perk.desc} (It shows as a trophy when you pick pumpkins: tap it to switch it on or off, or use the pause menu.)`; SFX.perk(); }
       stars = [0,1,2].map(i => `<span class="${i < st ? '' : 'off'}">★</span>`).join('');
       stats.push(['Monsters stopped', g.kills], ['Walls left', pct(wf)], ['Coins found', g.coins], ['Night bonus', bonus]);
       if (g.n < LEVELS) addBtn(box, 'Next level', () => openPreview(g.n + 1));
@@ -106,7 +107,7 @@ export function openPreview(n){
   $('#pvTitle').textContent = `Level ${def.label}`;
   $('#pvSub').textContent = WORLD_NAMES[def.worldNo - 1];
   const mons = $('#pvMonsters'); mons.innerHTML = '';
-  prebakeAsync([...def.pool.map(([t]) => poolKey(t, VARIANTS)), ...(def.boss ? [def.boss] : []), 'ghoul']);   // bake this level's sprite strips while the card is read
+  prebakeAsync([...def.pool.map(([t]) => poolKey(t, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), 'ghoul']);   // bake this level's sprite strips while the card is read
   for (const [t] of def.pool){
     const d = document.createElement('div'); d.className = 'pv-ic';
     d.appendChild(monsterIcon(t, 108));
@@ -118,7 +119,7 @@ export function openPreview(n){
   const bb = $('#pvBoss'); bb.innerHTML = '';
   if (def.boss){
     const d = document.createElement('div'); d.className = 'pv-ic big';
-    d.appendChild(monsterIcon(def.boss, 160));
+    d.appendChild(monsterIcon(def.boss, 160, def.bossForm));
     const sm = document.createElement('small'); sm.textContent = `${BOSS_NAMES[def.boss]}${def.bossForm === 2 ? ', full form' : ''}`; d.appendChild(sm);
     bb.appendChild(d);
   }
@@ -179,7 +180,7 @@ function startPreviewedNight(){
   if (def.sea && !(n > 1 && levelFor(n - 1).sea)) cards.push({ key:'sea', icon:'🌊', title:'The sea row', text:SEA_INTRO });
   if (def.gust && !(n > 1 && levelFor(n - 1).gust)) cards.push({ key:'wind', icon:'🍂', title:'Wind', text:WIND_INTRO });
   for (const t of def.intro) if (!VARIANTS[t]) cards.push({ key:'m:' + t, icon:monsterIcon(t, 160), title:`New monster: ${MNAME[t] || t}`, text:MINTRO[t] || '' });   // returning variants get no card (owner)
-  if (def.boss) cards.push({ key:`b:${def.boss}:${def.bossForm}`, icon:monsterIcon(def.boss, 200), title:def.bossForm === 2 ? `${BOSS_NAMES[def.boss]}, full form` : `Boss: ${BOSS_NAMES[def.boss]}`, text:BOSS_INTRO[def.boss][def.bossForm] });
+  if (def.boss) cards.push({ key:`b:${def.boss}:${def.bossForm}`, icon:monsterIcon(def.boss, 200, def.bossForm), title:def.bossForm === 2 ? `${BOSS_NAMES[def.boss]}, full form` : `Boss: ${BOSS_NAMES[def.boss]}`, text:BOSS_INTRO[def.boss][def.bossForm] });
   introQueue = cards.filter(c => !save.seenIntro[c.key]);
   introNext = () => beginNight(n);
   showNextIntro();
@@ -251,8 +252,35 @@ export function openLoadout(avail, next, required){
     };
     b.dataset.t = t; box.appendChild(b);
   }
+  renderTrophies();
   syncLoadout();
   setState('loadout');
+}
+
+/** Earned level-20 boosts as trophy toggles on the loadout screen (owner): gold and pressed when on, grey when off. */
+function trophyIcon(){
+  const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg'); svg.setAttribute('viewBox', '0 0 40 40');
+  const path = (d, cls) => { const e = document.createElementNS(ns, 'path'); e.setAttribute('d', d); e.setAttribute('class', cls); svg.appendChild(e); return e; };
+  path('M11 6h18v9c0 6-4 10-9 10s-9-4-9-10z', 'cup').setAttribute('fill', '#f2c44c');           // cup
+  path('M11 9H5v3c0 4 3 7 7 7M29 9h6v3c0 4-3 7-7 7', 'cup').setAttribute('style', 'fill:none;stroke:#f2c44c;stroke-width:2.5;stroke-linecap:round');   // handles
+  path('M17 25h6v4h-6z', 'cup').setAttribute('fill', '#d9a93a');                                  // stem
+  path('M12 31h16v4H12z', 'base').setAttribute('fill', '#6b4a2a');                                // base
+  path('M16 10h3v9h-3z', 'shine').setAttribute('fill', 'rgba(255,255,255,.45)');                  // shine
+  return svg;
+}
+export function renderTrophies(){
+  const box = $('#trophies'), head = $('#trophyHead'); if (!box) return;
+  box.innerHTML = '';
+  const earned = PERKS.filter(p => perkEarned(p.key));
+  box.hidden = head.hidden = !earned.length;
+  for (const p of earned){
+    const b = document.createElement('button'); b.className = 'pick trophy'; b.appendChild(trophyIcon());
+    const nm = document.createElement('b'); nm.textContent = p.name; b.appendChild(nm);
+    const sm = document.createElement('small'); sm.textContent = perkOn(p.key) ? 'On' : 'Off'; b.appendChild(sm);
+    b.title = p.desc; b.setAttribute('aria-pressed', perkOn(p.key) ? 'true' : 'false');
+    b.onclick = () => { save.perksOff = save.perksOff || {}; save.perksOff[p.key] = perkOn(p.key); persist(); renderTrophies(); syncLoadout(); };
+    box.appendChild(b);
+  }
 }
 
 export function syncLoadout(){

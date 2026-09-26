@@ -157,3 +157,10 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 #banner .big{ font-family:'Creepster','Chiller',fantasy,cursive; font-size:calc(var(--u)*56px); color:var(--pumpkin); line-height:1; text-shadow:0 0 22px rgba(255,138,31,.6), 0 4px 0 #3a1500; }
 #banner .sub{ font-size:calc(var(--u)*17px); color:var(--ink); margin-top:calc(var(--u)*8px); text-shadow:0 2px 6px #000; font-weight:500; line-height:1.35; }
 @media (prefers-reduced-motion: reduce){ .ov.show{ animation:none; } #banner{ transition:none; } }
+
+/* Level-20 boosts shown as trophies on the loadout screen (owner): gold when on, grey when off */
+.trophies{ margin-top:calc(var(--u)*6px); }
+.pick.trophy svg{ width:calc(var(--u)*40px); height:calc(var(--u)*40px); display:block; margin:0 auto; }
+.pick.trophy[aria-pressed="false"]{ opacity:.55; }
+.pick.trophy[aria-pressed="false"] svg .cup{ fill:#8c8c96; }
+.pick.trophy[aria-pressed="true"]{ border-color:var(--candle); background:rgba(255,211,90,.12); }

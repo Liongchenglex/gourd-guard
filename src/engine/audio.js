@@ -182,7 +182,7 @@ export const SFX = {
   },
   match(size, groups){   // one sparkly sound for any bunch (owner: no 3-vs-5 distinction); combos climb in pitch
     const g = Math.min(groups, 4), rate = 1 + (g - 1) * 0.06, base = 1568 * Math.pow(2, (g - 1) * 3 / 12);
-    S('sparkle', 0.6, { rate }) || sparkle(0, 0.05); S('combo', 0.4, { rate: rate * 1.1, delay: 0.05 });
+    S('sparkle', 0.65, { rate }) || sparkle(0, 0.05);   // owner: sparkle only, no harp
     [0, 4, 7, 12].forEach((s, i) => tone(base * Math.pow(2, s / 12), 0.14, 'sine', 0.035, null, 0.02 + i * 0.045));   // bright twinkle on top
   },
 
@@ -329,7 +329,7 @@ export const SFX = {
       case 'vampirecount:bats': [0, 0.09, 0.18].forEach(d => S('bat', 0.35, { delay: d }) || noise(0.05, 0.1, 2500, 1.5, d)); break;
       case 'vampirecount:wall': S('woodbreak', 0.5, { rate: 0.7 }) || noise(0.6, 0.22, 250, 2, 0, 120); break;
       case 'vampirecount:trance': S('chuckle', 0.55, { rate: 0.9 }) || cackle(3, 300); S('chuckle', 0.4, { rate: 1.15, delay: 0.6 }); break;   // a snicker; then only the quiet heartbeat (owner)
-      case 'vampirecount:pulse': tone(62, 0.16, 'sine', 0.018, 48); tone(58, 0.14, 'sine', 0.014, 45, 0.16); break;   // a faint lub-dub in the background while the trance holds
+      case 'vampirecount:pulse': S('heartbeat', 0.5, { rate: 0.9 }) || (tone(62, 0.16, 'sine', 0.06, 48), tone(58, 0.14, 'sine', 0.05, 45, 0.16)); break;   // a clear heartbeat while the trance holds (owner could not hear the first one)
       case 'vampirecount:tick': tone(2000, 0.05, 'sine', 0.06, 2400); break;
       case 'vampirecount:break': S('glass', 0.5) || (noise(0.3, 0.3, 4000, 1, 0, 1500), tone(1500, 0.3, 'sine', 0.06, 600)); S('hiss', 0.4, { delay: 0.1 }); break;
       case 'vampirecount:hit': S('chuckle', 0.55, { rate: 1.05 }) || noise(0.2, 0.16, 5000, 1.2, 0, 3000); break;

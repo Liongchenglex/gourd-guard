@@ -34,7 +34,7 @@ export const BESTIARY = {
   hexwitch:   { lore:'Head of the coven and the reason the wood has no birds. Keeps a cauldron for guests.', ability:'Never reaches the wall. Hexes monsters into chameleons and lays hex zones where the dead rise again.' },
 
   cryptGhoul: { lore:'Spent a century in the keep’s crypt with only the spiders for company. The spiders came too.', ability:'Shrugs off knockback.' },
-  keepImp:    { lore:'Picked scraps of armour off the fallen and calls itself a knight now.', ability:'Wears scraps of armour: four hits to fell.' },
+  keepImp:    { lore:'Picked scraps of armour off the fallen and calls itself a knight now.', ability:'Wears scraps of armour: three hits to fell.' },
   knight:     { lore:'Sworn to the Count in life and bound to him after. The shield is older than the keep.', ability:'Shield up while marching, down while it rests. Hit it when it stops.' },
   hauler:     { lore:'Once the castle mason. Still hauling stone, though nobody has paid him in a hundred years.', ability:'Pushes a line of stone gargoyles ahead of it, slowly. Break them all and it sprints.' },
   gargoyle:   { lore:'Carved to guard the battlements. Guards whatever it is pointed at now.', ability:'A stone block on legs. Five hits, or Grey pierces straight through.' },

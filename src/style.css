@@ -259,5 +259,5 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .book.unlocked{ box-shadow:0 0 0 calc(var(--u)*3px) var(--candle), 0 0 calc(var(--u)*14px) rgba(255,193,74,.6); }
 @media (prefers-reduced-motion: reduce){ .book.unlocking, .book.unlocking::before, .book.unlocking::after{ animation:none; } .book.unlocking::before, .book.unlocking::after{ display:none; } .book.unlocking{ filter:none; } }
 
-/* Level preview: the card shows the night's own map (owner) */
-#pvMap{ width:100%; max-width:calc(var(--u)*300px); aspect-ratio:9/10; display:block; margin:calc(var(--u)*6px) auto 0; border-radius:calc(var(--u)*12px); border:calc(var(--u)*2px) solid var(--line); background:#140c1c; box-shadow:0 6px 18px rgba(0,0,0,.5); }
+/* Level preview sits over the night's own map; the overlay is lighter so the map reads through (owner) */
+#ovPreview{ background:linear-gradient(rgba(8,5,14,.55), rgba(8,5,14,.35) 40%, rgba(8,5,14,.35) 70%, rgba(8,5,14,.6)); }

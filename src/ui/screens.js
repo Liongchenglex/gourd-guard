@@ -114,7 +114,6 @@ export function openPreview(n){
   previewNight = n;
   const def = levelFor(n), prevGraves = n > 1 ? levelFor(n - 1).graves : 0;
   makePreview(n);   // the night's own map behind the card (owner: not a random background)
-  setTimeout(() => { const src = $('#cv'), m = $('#pvMap'); if (!m || !src) return; const w = 360; m.width = w; m.height = Math.round(w * src.height / src.width); m.getContext('2d').drawImage(src, 0, 0, m.width, m.height); }, 90);   // a snapshot of it inside the card too
   $('#pvTitle').textContent = `Level ${def.label}`;
   $('#pvSub').textContent = WORLD_NAMES[def.worldNo - 1];
   const mons = $('#pvMonsters'); mons.innerHTML = '';

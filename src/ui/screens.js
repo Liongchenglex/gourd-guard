@@ -11,6 +11,7 @@ import { SFX, ensureAudio, musicStop, musicSync, musicStart } from '../engine/au
 import { beginEndless, beginNight, makeDemo, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
 import { bgWorld, buildBg, pumpkinIcon, worldScene } from '../engine/render/sprites.js';
 import { BOOKS } from '../data/lore.js';
+import { BESTIARY, COMPANIONS } from '../data/bestiary.js';
 import { G, setBannerTimer, setGest, setStateRaw, state } from '../engine/state.js';
 import { $, clamp } from '../engine/util.js';
 import { wallFrac } from '../engine/walls.js';
@@ -269,9 +270,45 @@ export function openBook(wi, animate){
   });
   grid.querySelectorAll('.pg').forEach((b, i) => { if (start + i === nextN) b.classList.add('next'); });
   $('#bkStars').innerHTML = `<b>★ ${stars}</b> of ${levels.length * 3} collected`;
+  renderBestiary(wi);
+  $('#bestiary').hidden = true; $('#spread .pages:not(#bestiary)').hidden = false;
   $('#shelfView').hidden = true; view.hidden = false;
   view.classList.remove('opening'); if (animate){ void view.offsetWidth; view.classList.add('opening'); }
   setState('levels');
+}
+/** The book's collection page: every monster of world wi in order of first appearance, met or not yet met. */
+function renderBestiary(wi){
+  const levels = WORLD_LEVELS[wi], start = firstNightOf(wi + 1), seen = new Set(), order = [], firstN = {};
+  levels.forEach((d, i) => {
+    const n = start + i, met = isOpen(n);   // a level you can enter has shown you its monsters (preview and intro cards)
+    const keys = [...d.pool.map(([k]) => k), ...(d.boss ? [d.boss] : [])];
+    for (const k of keys) for (const kk of [k, ...(COMPANIONS[VARIANTS[k] ? VARIANTS[k].base : k] || [])]){
+      if (firstN[kk] == null){ firstN[kk] = n; order.push(kk); }
+      if (met) seen.add(kk);
+    }
+  });
+  const L = $('#bsLeft'), R = $('#bsRight'); L.innerHTML = ''; R.innerHTML = '';
+  let metCount = 0;
+  order.forEach((k, i) => {
+    const v = VARIANTS[k], base = v ? v.base : k, e = BESTIARY[k] || BESTIARY[base] || {}, met = seen.has(k); if (met) metCount++;
+    const name = v ? v.name : BOSS_NAMES[k] || MNAME[k] || k;
+    const d = document.createElement('div'); d.className = 'bs' + (met ? '' : ' unmet');
+    d.appendChild(monsterIcon(k, 92, 1));
+    const t = document.createElement('div');
+    t.innerHTML = met ? `<b>${name}</b><p class="ab">${e.ability || MINTRO[base] || ''}</p><p class="lo">${e.lore || ''}</p>` : `<b>Not yet met</b><p class="ab">Reach level ${levels[firstN[k] - start].world}-${levels[firstN[k] - start].level} to find out.</p>`;
+    d.appendChild(t);
+    (i < Math.ceil(order.length / 2) ? L : R).appendChild(d);
+  });
+  $('#bsTitle').textContent = `${WORLD_NAMES[wi]} bestiary`; $('#bsTitle').style.color = BOOKS[wi].ink;
+  $('#bsCount').textContent = `${metCount} of ${order.length} met`;
+}
+function flipBook(toBestiary){
+  const spread = $('#spread'), pages = $('#spread .pages:not(#bestiary)'), best = $('#bestiary');
+  SFX.ui('tap');
+  const swap = () => { pages.hidden = toBestiary; best.hidden = !toBestiary; };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches){ swap(); return; }
+  spread.classList.remove('turning'); void spread.offsetWidth; spread.classList.add('turning');
+  setTimeout(swap, 250); setTimeout(() => spread.classList.remove('turning'), 520);
 }
 function closeBook(){ curBook = null; SFX.ui('back'); openLevels(); }
 
@@ -422,6 +459,8 @@ export function wireButtons(){
 
   $('#bLvBack').onclick = () => setState('title');
   $('#bBkClose').onclick = closeBook;
+  $('#bBkFlip').onclick = () => flipBook(true);
+  $('#bBkUnflip').onclick = () => flipBook(false);
   $('#bBkShop').onclick = () => openShop('levels');
 
   $('#bLvShop').onclick = () => openShop('levels');

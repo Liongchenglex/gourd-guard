@@ -227,3 +227,24 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 @keyframes popRise{ from{ transform:rotateX(88deg); opacity:.4; } to{ transform:rotateX(-14deg); opacity:1; } }
 @keyframes inkIn{ from{ opacity:0; } to{ opacity:1; } }
 @media (prefers-reduced-motion: reduce){ #bookView.opening .spread, #bookView.opening .popup, #bookView.opening .page > *, .pg.next{ animation:none; } }
+
+/* bestiary page (the book's page flip) */
+.pages[hidden]{ display:none; }
+.flip{ position:absolute; right:calc(var(--u)*10px); bottom:calc(var(--u)*8px); font:inherit; font-weight:700; font-size:calc(var(--u)*12.5px); color:#3a2418; background:#fbf1dc; border:calc(var(--u)*1.5px) solid #3a2418; border-radius:99px; padding:calc(var(--u)*6px) calc(var(--u)*12px); cursor:pointer; box-shadow:0 calc(var(--u)*2px) 0 rgba(60,30,10,.35); min-height:calc(var(--u)*34px); }
+.flip.back{ right:auto; left:calc(var(--u)*10px); }
+.flip:active{ transform:translateY(calc(var(--u)*2px)); box-shadow:none; }
+.page:last-child{ padding-bottom:calc(var(--u)*50px); }
+.bsList{ display:grid; gap:calc(var(--u)*9px); }
+.bs{ display:grid; grid-template-columns:calc(var(--u)*46px) 1fr; gap:calc(var(--u)*7px); align-items:start; text-align:left; }
+.bs canvas{ width:calc(var(--u)*46px); height:calc(var(--u)*46px); display:block; border-radius:50%; background:rgba(120,80,30,.12); box-shadow:inset 0 0 0 1px rgba(60,30,10,.25); }
+.bs b{ display:block; font-size:calc(var(--u)*13px); color:#3a2418; line-height:1.15; }
+.bs .ab{ font-size:calc(var(--u)*10.5px); line-height:1.3; color:#3a2418; margin:calc(var(--u)*2px) 0 0; }
+.bs .lo{ font-size:calc(var(--u)*10px); line-height:1.3; color:#7a5a3a; margin:calc(var(--u)*2px) 0 0; }
+.bs.unmet canvas{ filter:brightness(0) opacity(.25); }
+.bs.unmet b{ color:#a89878; }
+.bs.unmet .ab{ color:#a89878; }
+.spread.turning .page:first-child{ animation:turnL .5s ease-in-out; transform-origin:100% 50%; }
+.spread.turning .page:last-child{ animation:turnR .5s ease-in-out; transform-origin:0 50%; }
+@keyframes turnR{ 0%{ transform:rotateY(0); } 50%{ transform:rotateY(-88deg); } 100%{ transform:rotateY(0); } }
+@keyframes turnL{ 0%{ transform:rotateY(0); } 50%{ transform:rotateY(88deg); } 100%{ transform:rotateY(0); } }
+@media (prefers-reduced-motion: reduce){ .spread.turning .page{ animation:none; } }

@@ -26,7 +26,7 @@ with sync_playwright() as p:
         page.goto(PAGE)
         time.sleep(1)
         page.screenshot(path=str(OUT / f"title_{vp['width']}.png"))
-        page.click('#bStory'); page.click('.lv >> nth=0')
+        page.click('#bStory'); page.click('.book >> nth=0'); page.click('.pg:not([disabled]) >> nth=0')
         if page.is_visible('#bHelpOk'):
             page.click('#bHelpOk')
         page.wait_for_selector('#bPvGo', state='visible'); page.click('#bPvGo')   # level preview

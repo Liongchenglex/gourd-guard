@@ -438,3 +438,22 @@ export function buildBg(world){
   field(g, w, R, hz + 4, t);
   patch(g, w, R);
 }
+
+/** A cropped painting of a world's sky and horizon (moon and props) for the storybook covers and pop-ups: w × h in css px,
+ *  rendered at 2× and cached per theme and aspect. Builds the world background off-screen and restores the current one. */
+const sceneCache = new Map();
+export function worldScene(theme, w, h){
+  const key = `${theme}:${Math.round(w * 100 / h)}`;
+  if (sceneCache.has(key)) return sceneCache.get(key);
+  const pb = bg, pw = bgWorld;
+  buildBg(theme);
+  const kx = bg.width / W, sh0 = FIELD_TOP + 22;
+  let sw = W, sh = sh0;
+  if (w / h > W / sh0) sh = W * h / w; else sw = sh0 * w / h;
+  const sx = (W - sw) / 2, sy = sh0 - sh;
+  const c = document.createElement('canvas'); c.width = Math.round(w * 2); c.height = Math.round(h * 2);
+  c.getContext('2d').drawImage(bg, sx * kx, sy * kx, sw * kx, sh * kx, 0, 0, c.width, c.height);
+  bg = pb; bgWorld = pw;
+  sceneCache.set(key, c);
+  return c;
+}

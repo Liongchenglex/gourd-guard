@@ -9,7 +9,8 @@ import { poolKey, prebakeAsync } from '../engine/render/anim.js';
 import { atlasKey } from '../engine/render/chars.js';
 import { SFX, ensureAudio, musicStop, musicSync, musicStart } from '../engine/audio.js';
 import { beginEndless, beginNight, makeDemo, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
-import { bgWorld, buildBg, pumpkinIcon } from '../engine/render/sprites.js';
+import { bgWorld, buildBg, pumpkinIcon, worldScene } from '../engine/render/sprites.js';
+import { BOOKS } from '../data/lore.js';
 import { G, setBannerTimer, setGest, setStateRaw, state } from '../engine/state.js';
 import { $, clamp } from '../engine/util.js';
 import { wallFrac } from '../engine/walls.js';
@@ -32,14 +33,20 @@ export function showResult(win){
       msg = g.n === LEVELS ? 'Every night is safe. The patch thanks you.' : st === 3 ? 'The walls barely have a scratch.' : 'The walls held. Keep them healthier for more stars.';
       const nk = ALL_LEVELS[g.n] && (ALL_LEVELS[g.n].unlockPumpkins || [])[0], nextP = nk && PTYPES.find(p => p.key === nk);
       if (nextP && g.n < LEVELS) msg += ` Next night unlocks the ${nextP.name} pumpkin.`;
-      if (g.def.levelNo === 10) msg += ' The rest of this world is open, and the next world will follow.';
+      if (g.def.levelNo === 10){   // owner: beating the level-10 boss is a celebration: a world-unlock card, then back to the menu
+        const nextW = WORLDS[g.def.world + 1]; title = nextW ? `${nextW.name} unlocked!` : 'Every boss beaten!';
+        msg = `🎉 ${BOSS_NAMES[g.def.boss]} is beaten! The rest of ${WORLDS[g.def.world].name} is open` + (nextW ? `, and ${nextW.name} awaits.` : '.'); SFX.perk();
+      }
       const perk = PERKS.find(p => perkNight(p) === g.n);
       if (perk){ msg += ` Perk unlocked: ${perk.name}. ${perk.desc} (It shows as a trophy when you pick pumpkins: tap it to switch it on or off, or use the pause menu.)`; SFX.perk(); }
       stars = [0,1,2].map(i => `<span class="${i < st ? '' : 'off'}">★</span>`).join('');
       stats.push(['Monsters stopped', g.kills], ['Walls left', pct(wf)], ['Coins found', g.coins], ['Night bonus', bonus]);
-      if (g.n < LEVELS) addBtn(box, 'Next level', () => openPreview(g.n + 1));
-      addBtn(box, 'Shop', () => openShop('result'), 'alt');
-      addBtn(box, 'Levels', openLevels, 'alt');
+      if (g.def.levelNo === 10) addBtn(box, 'Back to menu', () => setState('title'));
+      else {
+        if (g.n < LEVELS) addBtn(box, 'Next level', () => openPreview(g.n + 1));
+        addBtn(box, 'Shop', () => openShop('result'), 'alt');
+        addBtn(box, 'Levels', openLevels, 'alt');
+      }
     } else {
       save.coins += g.coins;
       title = 'A wall fell';
@@ -96,7 +103,7 @@ export function setState(s){
   if (first && matchMedia('(pointer:fine)').matches) first.focus({ preventScroll:true });
 }
 
-export function withHelp(fn){ if (!save.seenHelp){ helpNext = fn; save.seenHelp = true; persist(); setState('help'); } else fn(); }
+export function withHelp(fn){ fn(); }   // owner: no full help before 1-1; the night's own cards teach bunches of 3 and 5. 'How to play' stays on the title.
 
 let previewNight = 1, introQueue = [], introNext = null;
 
@@ -161,9 +168,13 @@ export function openPreview(n){
 function startPreviewedNight(){
   const n = previewNight, def = levelFor(n), prevGraves = n > 1 ? levelFor(n - 1).graves : 0;
   const cards = [];
+  if (n === 1){   // 1-1 (owner): the Green pumpkin, and the whole lesson: bunch three to throw, bunch five to knock back
+    cards.push({ key:'p:green', icon:pumpkinIcon(0, true), title:'Green pumpkin', text:'Your everyday pumpkin. Slide it so three of the same colour touch, and the bunch lights up.' });
+    cards.push({ key:'tutorial', icon:'🎃', title:'Bunch them up', text:'Three of a colour touching: flick the lit bunch and every pumpkin flies up its own column. Five or more: the bunch also knocks monsters back a step. That is all you need tonight.' });
+  }
   for (const key of def.unlockPumpkins){
     const t = PTYPES.findIndex(p => p.key === key);
-    if (t >= 0) cards.push({ key:'p:' + key, icon:pumpkinIcon(t, true), title:`New pumpkin: ${PTYPES[t].name}`, text:`It ${PTYPES[t].role}. Bunch three or more to throw it.` });
+    if (t >= 0) cards.push({ key:'p:' + key, icon:pumpkinIcon(t, true), title:`New pumpkin: ${PTYPES[t].name}`, text:def.unlockCopy && def.unlockCopy[key] ? def.unlockCopy[key] : `It ${PTYPES[t].role}. Bunch three or more to throw it.` });
   }
   for (const key of def.introPumpkins){
     const t = PTYPES.findIndex(p => p.key === key);
@@ -206,30 +217,63 @@ export function renderPerks(){
     box.appendChild(b);
   }
 }
+let curBook = null;   // the open storybook (world index), so Back from a preview or the loadout returns to its pages
+/** Level select: a shelf of storybooks, one per world; an open book shows the world's lore and its level grid (owner, 2026-09-26). */
 export function openLevels(){
   $('#lvCoins').textContent = save.coins.toLocaleString();
   $('#bUnlockAll').textContent = save.testUnlock ? 'Testing: relock levels' : 'Testing: unlock all levels';
-  const list = $('#lvList'); list.innerHTML = '';
+  if (curBook != null){ openBook(curBook, false); return; }
+  const shelf = $('#shelf'); shelf.innerHTML = '';
+  let row = null;
   WORLD_NAMES.forEach((name, wi) => {
-    const levels = WORLD_LEVELS[wi];
-    const sec = document.createElement('div'); sec.className = 'world';
-    sec.innerHTML = `<h3>World ${wi + 1}: ${name}</h3>`;
-    if (!levels.length){ sec.innerHTML += '<p class="soon">Coming soon.</p>'; list.appendChild(sec); return; }
-    const start = firstNightOf(wi + 1);
-    const row = document.createElement('div'); row.className = 'lv-row';
-    levels.forEach((d, i) => {
-      const n = start + i, locked = !isOpen(n), st = save.stars[n] || 0;
-      const b = document.createElement('button'); b.className = 'lv' + (d.boss ? ' boss' : '');
-      b.disabled = locked;
-      b.setAttribute('aria-label', locked ? `Level ${d.world}-${d.level}, locked` : `Level ${d.world}-${d.level}, ${st} of 3 stars`);
-      b.innerHTML = locked ? `<span>🔒</span><small></small>` : `<span>${d.boss ? '💀' : d.level}</span><small>${'★'.repeat(st)}${'<span style="opacity:.25">★</span>'.repeat(3 - st)}</small>`;
-      b.onclick = () => withHelp(() => openPreview(n));
-      row.appendChild(b);
-    });
-    sec.appendChild(row); list.appendChild(sec);
+    if (wi % 3 === 0){ row = document.createElement('div'); row.className = 'shelfRow'; shelf.appendChild(row); }
+    const levels = WORLD_LEVELS[wi], bk = BOOKS[wi], start = levels.length ? firstNightOf(wi + 1) : null;
+    const open = start != null && isOpen(start), soon = !levels.length;
+    const b = document.createElement('button'); b.className = 'book' + (soon ? ' soon' : open ? '' : ' locked'); b.style.setProperty('--cover', bk.cover);
+    const stars = levels.reduce((t, d, i) => t + (save.stars[start + i] || 0), 0);
+    b.setAttribute('aria-label', soon ? `${name}, coming soon` : open ? `${name}, ${stars} of ${levels.length * 3} stars` : `${name}, locked`);
+    const cv = document.createElement('canvas'); b.appendChild(cv);
+    const nm = document.createElement('span'); nm.className = 'bkName'; nm.textContent = name; b.appendChild(nm);
+    const pr = document.createElement('span'); pr.className = 'bkProg'; pr.textContent = soon ? 'Coming soon' : open ? `★ ${stars} / ${levels.length * 3}` : `Beat world ${wi} first`; b.appendChild(pr);
+    if (!soon){ const sc = worldScene(levels[0].theme, 130, 104); cv.width = sc.width; cv.height = sc.height; cv.getContext('2d').drawImage(sc, 0, 0); }
+    else { cv.width = 260; cv.height = 208; const g = cv.getContext('2d'); g.fillStyle = '#100a16'; g.fillRect(0, 0, 260, 208); g.fillStyle = '#3a2a4a'; g.font = '120px serif'; g.textAlign = 'center'; g.fillText('?', 130, 150); }
+    b.onclick = () => { if (soon || !open){ SFX.ui('locked'); return; } SFX.ui('go'); openBook(wi, true); };
+    row.appendChild(b);
   });
+  $('#shelfView').hidden = false; $('#bookView').hidden = true;
   setState('levels');
 }
+/** Open world wi's storybook: lore and boss on the left page, the level grid on the right; animate = play the pop-up. */
+export function openBook(wi, animate){
+  curBook = wi;
+  const name = WORLD_NAMES[wi], levels = WORLD_LEVELS[wi], bk = BOOKS[wi], start = firstNightOf(wi + 1);
+  const view = $('#bookView'), spread = $('#spread');
+  spread.style.setProperty('--cover', bk.cover);
+  $('#bkTitle').textContent = name; $('#bkTitle').style.color = bk.ink;
+  $('#bkWorld').textContent = `World ${wi + 1} of 5`;
+  $('#bkLore').textContent = bk.lore;
+  const sc = worldScene(levels[0].theme, 456, 120), cv = $('#bkScene'); cv.width = sc.width; cv.height = sc.height; cv.getContext('2d').drawImage(sc, 0, 0);
+  const bossKey = (levels.find(d => d.boss) || {}).boss, bossBox = $('#bkBoss'); bossBox.innerHTML = '';
+  if (bossKey){ bossBox.appendChild(monsterIcon(bossKey, 192, 1)); const cap = document.createElement('span'); cap.textContent = BOSS_NAMES[bossKey]; bossBox.appendChild(cap); }
+  const grid = $('#bkLevels'); grid.innerHTML = '';
+  let stars = 0, nextN = null;
+  levels.forEach((d, i) => {
+    const n = start + i, locked = !isOpen(n), st = save.stars[n] || 0; stars += st;
+    if (!locked && !st && nextN == null) nextN = n;
+    const b = document.createElement('button'); b.className = 'pg' + (d.boss ? ' boss' : '') + (st ? ' done' : ''); b.disabled = locked;
+    b.setAttribute('aria-label', locked ? `Level ${d.world}-${d.level}, locked` : `Level ${d.world}-${d.level}${d.name ? ', ' + d.name : ''}, ${st} of 3 stars`);
+    if (d.boss) b.appendChild(monsterIcon(d.boss, 88, d.bossForm)); else b.textContent = d.level;
+    if (!locked){ const sp = document.createElement('span'); sp.className = 'st'; sp.innerHTML = '★'.repeat(st) + '<span class="off">' + '★'.repeat(3 - st) + '</span>'; b.appendChild(sp); }
+    b.onclick = () => { SFX.ui('level'); withHelp(() => openPreview(n)); };
+    grid.appendChild(b);
+  });
+  grid.querySelectorAll('.pg').forEach((b, i) => { if (start + i === nextN) b.classList.add('next'); });
+  $('#bkStars').innerHTML = `<b>★ ${stars}</b> of ${levels.length * 3} collected`;
+  $('#shelfView').hidden = true; view.hidden = false;
+  view.classList.remove('opening'); if (animate){ void view.offsetWidth; view.classList.add('opening'); }
+  setState('levels');
+}
+function closeBook(){ curBook = null; SFX.ui('back'); openLevels(); }
 
 export function openLoadout(avail, next, required){
   loadoutAvail = avail; loadoutNext = next; loadoutMust = (required || []).map(m => m.t); loadoutWhy = required || [];
@@ -364,7 +408,7 @@ export function stepSpawn(d){
 }
 
 export function wireButtons(){
-  $('#bStory').onclick = () => { ensureAudio(); openLevels(); };
+  $('#bStory').onclick = () => { ensureAudio(); curBook = null; openLevels(); };
 
   $('#bEndless').onclick = () => { ensureAudio(); withHelp(beginEndless); };
 
@@ -377,6 +421,8 @@ export function wireButtons(){
   $('#spMinus').onclick = () => stepSpawn(-1); $('#spPlus').onclick = () => stepSpawn(1);
 
   $('#bLvBack').onclick = () => setState('title');
+  $('#bBkClose').onclick = closeBook;
+  $('#bBkShop').onclick = () => openShop('levels');
 
   $('#bLvShop').onclick = () => openShop('levels');
   $('#bUnlockAll').onclick = () => { save.testUnlock = !save.testUnlock; persist(); openLevels(); };   // TESTING ONLY: remove before release

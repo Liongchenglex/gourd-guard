@@ -141,15 +141,18 @@ export function useLantern(){
 export function useMine(){
   if (state !== 'play' || G.over || save.mine <= 0) return;
   G.aim = G.aim === 'mine' ? null : 'mine';
-  if (G.aim) addFloat('Tap a column', W / 2, GY - 30, '#ffd35a', 18, 1.2);
+  if (G.aim) addFloat('Tap a tile of the field', W / 2, GY - 30, '#ffd35a', 18, 1.2);
   if (G.aim) SFX.tool('aim');
   updateHud(true);
 }
-export function placeMine(lane){
-  if (save.mine <= 0 || G.mines.some(m => m.lane === lane)){ addFloat('Mine already there', LANE(lane), FENCE_Y - 40, '#ffd35a', 16, 1); SFX.bad(); G.aim = null; updateHud(true); return false; }
+/** Field y of anything at fraction p of the field. */
+export const fieldY = p => FIELD_TOP + p * (FIELD_BOT - FIELD_TOP);
+export function placeMine(lane, p = 0.93){   // owner: a mine goes on any tile of the field and blasts the 3×3 around it
+  const tile = CS / (FIELD_BOT - FIELD_TOP);
+  if (save.mine <= 0 || G.mines.some(m => m.lane === lane && Math.abs(m.p - p) < tile)){ addFloat('Mine already there', LANE(lane), fieldY(p) - 20, '#ffd35a', 16, 1); SFX.bad(); G.aim = null; updateHud(true); return false; }
   save.mine--; persist();
-  G.mines.push({ lane, t:0, dead:false });
-  for (let i = 0; i < 10; i++) spark(LANE(lane), FENCE_Y - 30, '#ffd35a', 100);
+  G.mines.push({ lane, p, t:0, dead:false });
+  for (let i = 0; i < 10; i++) spark(LANE(lane), fieldY(p), '#ffd35a', 100);
   SFX.tool('mine'); G.aim = null; updateHud(true);
   return true;
 }
@@ -235,13 +238,22 @@ export function dropBomb(x, y){
   G.aim = null; updateHud(true);
   return true;
 }
+/** Wall repair: first press arms it (tap the wall to fix next), second press or a tap elsewhere cancels (owner: one wall, like the grave buster). */
 export function useRepair(){
   if (state !== 'play' || G.over || save.repair <= 0) return;
   if (walls.every(w => w.hp >= w.max)){ addFloat('Walls are already full', W / 2, FENCE_Y - 40, '#ffd35a', 18, 1); SFX.bad(); return; }
-  save.repair--; persist();
-  for (let c = 0; c < COLS; c++){ walls[c].hp = walls[c].max; for (let i = 0; i < 5; i++) spark(LANE(c), FENCE_Y - 10, '#ffe27a', 140); }
-  SFX.tool('repair');
+  G.aim = G.aim === 'repair' ? null : 'repair';
+  if (G.aim) addFloat('Tap the wall to fix', W / 2, FENCE_Y - 40, '#ffd35a', 18, 1.2);
+  if (G.aim) SFX.tool('aim');
   updateHud(true);
+}
+export function repairWall(lane){
+  if (save.repair <= 0) return false;
+  if (walls[lane].hp >= walls[lane].max){ addFloat('That wall is fine', LANE(lane), FENCE_Y - 40, '#ffd35a', 16, 1); SFX.bad(); G.aim = null; updateHud(true); return false; }
+  save.repair--; persist();
+  walls[lane].hp = walls[lane].max; for (let i = 0; i < 10; i++) spark(LANE(lane), FENCE_Y - 10, '#ffe27a', 140);
+  SFX.tool('repair'); G.aim = null; updateHud(true);
+  return true;
 }
 
 // ---------- Update ----------
@@ -293,9 +305,14 @@ export function update(dt){
   }
   g.projs = g.projs.filter(p => !p.dead);
   if (g.fogClear > 0) g.fogClear -= dt;
-  for (const mine of g.mines){   // landmines wait at the wall line and blast the first monster to reach them
-    const v = g.monsters.find(m => !m.dead && m.rise <= 0 && m.lane === mine.lane && m.p >= 0.93 && m.type !== 'boss');
-    if (v){ mine.dead = true; for (let i = 0; i < 30; i++) spark(v.x, FENCE_Y - 30, i % 2 ? '#ffd35a' : '#ff6a3a', 300); ring(v.x, FENCE_Y - 30, 50, 'rgba(255,200,90,.9)'); g.shake = 0.8; SFX.tool('mineBoom'); v.lastHit = -1; damage(v, 6, '#ffd35a'); }
+  for (const mine of g.mines){   // landmines hide on a tile; the first monster to step on one sets off a 3×3 blast (owner)
+    const tile = CS / (FIELD_BOT - FIELD_TOP);
+    const v = g.monsters.find(m => !m.dead && !m.hidden && m.rise <= 0 && m.lane === mine.lane && m.p >= mine.p && m.p < mine.p + tile * 0.6 && m.type !== 'boss');
+    if (v){
+      mine.dead = true; const y = fieldY(mine.p);
+      for (let i = 0; i < 30; i++) spark(LANE(mine.lane), y, i % 2 ? '#ffd35a' : '#ff6a3a', 300); ring(LANE(mine.lane), y, 70, 'rgba(255,200,90,.9)'); g.shake = 0.8; SFX.tool('mineBoom');
+      for (const o of g.monsters) if (!o.dead && !o.hidden && o.rise <= 0 && Math.abs(o.lane - mine.lane) <= 1 && Math.abs(o.p - mine.p) <= tile){ o.lastHit = -1; damage(o, 6, '#ffd35a'); }
+    }
   }
   g.mines = g.mines.filter(m => !m.dead);
   for (const a of g.arrows){   // skeleton archers' arrows fly down their lane into the wall

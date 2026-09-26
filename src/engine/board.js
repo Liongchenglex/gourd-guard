@@ -21,7 +21,8 @@ export function brownSize(cell){
 
 export function randColor(){ const L = G && G.loadout ? G.loadout : [0, 1]; return L[Math.floor(Math.random() * L.length)]; }
 
-export function randSprout(){ return Math.random() < (perkOn('rainbow') ? WILD_CHANCE_PERK : WILD_CHANCE) ? RAINBOW : randColor(); }
+export function randSprout(){ if (G.mode === 'story' && G.n < 9) return randColor();   // rainbows first appear at 1-9, with their intro card (owner)
+  return Math.random() < (perkOn('rainbow') ? WILD_CHANCE_PERK : WILD_CHANCE) ? RAINBOW : randColor(); }
 
 export const inside = (a, b) => a >= 0 && a < ROWS && b >= 0 && b < COLS;
 

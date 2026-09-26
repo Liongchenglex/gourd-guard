@@ -2,9 +2,9 @@ import { updateHud } from '../ui/hud.js';
 import { ensureAudio } from './audio.js';
 import { bestLitGroup, collectDrop, findCell, slideOne } from './board.js';
 import { dropHop, launchGroup } from './combat.js';
-import { useFirework, useRepair, useBuster, bustGrave, useLantern, useMine, placeMine, useBomb, dropBomb, useScarecrow, placeScarecrow } from './game.js';
+import { useFirework, useRepair, useBuster, bustGrave, useLantern, useMine, placeMine, repairWall, useBomb, dropBomb, useScarecrow, placeScarecrow } from './game.js';
 import { cv } from './render/canvas.js';
-import { COLS, CS, G, GX, GY, H, ROWS, W, gest, graves, grid, setGest, state, FIELD_TOP, FENCE_Y } from './state.js';
+import { COLS, CS, G, GX, GY, H, ROWS, W, gest, graves, grid, setGest, state, FIELD_TOP, FENCE_Y, FIELD_BOT } from './state.js';
 import { setState } from '../ui/screens.js';
 
 // ---------- Input ----------
@@ -52,9 +52,14 @@ export function attachInput(){
       if (lane >= 0 && lane < COLS) placeScarecrow(lane); else { G.aim = null; updateHud(true); }
       e.preventDefault(); return;
     }
-    if (G.aim === 'mine'){   // armed landmine: this tap picks a column (anywhere on the field or patch)
+    if (G.aim === 'mine'){   // armed landmine: this tap picks a tile of the monster field (owner)
+      const lane = Math.floor((p.x - GX) / CS), pp = (p.y - FIELD_TOP) / (FIELD_BOT - FIELD_TOP);
+      if (lane >= 0 && lane < COLS && pp >= 0.04 && pp <= 0.97) placeMine(lane, pp); else { G.aim = null; updateHud(true); }
+      e.preventDefault(); return;
+    }
+    if (G.aim === 'repair'){   // armed wall repair: this tap picks the wall to fix (owner: not all walls at once)
       const lane = Math.floor((p.x - GX) / CS);
-      if (lane >= 0 && lane < COLS) placeMine(lane); else { G.aim = null; updateHud(true); }
+      if (lane >= 0 && lane < COLS && p.y > FENCE_Y - CS * 1.2 && p.y < FENCE_Y + CS) repairWall(lane); else { G.aim = null; updateHud(true); }
       e.preventDefault(); return;
     }
     if (G.aim === 'buster'){   // armed grave buster: this tap either digs a grave or cancels

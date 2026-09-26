@@ -19,11 +19,11 @@
     <div id="coinBox"><span class="coin"></span><span id="coinTxt">0</span></div>
   </div>
   <div id="tools">
-    <button class="icon-btn" id="rpBtn" aria-label="Repair all walls">🔨<span class="n" id="rpCount">0</span></button>
+    <button class="icon-btn" id="rpBtn" aria-label="Wall repair: tap, then tap a wall">🔨<span class="n" id="rpCount">0</span></button>
     <button class="icon-btn" id="fwBtn" aria-label="Launch firework">🎆<span class="n" id="fwCount">0</span></button>
     <button class="icon-btn" id="gbBtn" aria-label="Grave buster: tap, then tap a grave">🧨<span class="n" id="gbCount">0</span></button>
     <button class="icon-btn" id="lnBtn" aria-label="Lantern: clear the fog for a while">🏮<span class="n" id="lnCount">0</span></button>
-    <button class="icon-btn" id="lmBtn" aria-label="Landmine: tap, then tap a column">💣<span class="n" id="lmCount">0</span></button>
+    <button class="icon-btn" id="lmBtn" aria-label="Landmine: tap, then tap a tile">💣<span class="n" id="lmCount">0</span></button>
     <button class="icon-btn" id="bmBtn" aria-label="Bomb: tap, then tap the field">💥<span class="n" id="bmCount">0</span></button>
     <button class="icon-btn" id="scBtn" aria-label="Scarecrow: tap, then tap a column">🌾<span class="n" id="scCount">0</span></button>
   </div>
@@ -44,15 +44,36 @@
   </div>
 
   <div class="ov" id="ovLevels">
-    <div class="card">
-      <h2>Choose a night</h2>
+    <div class="library" id="shelfView">
+      <h2>Choose a storybook</h2>
       <div class="bankline"><span class="coin"></span><span id="lvCoins">0</span></div>
-      <div id="lvList"></div>
+      <div id="shelf"></div>
       <div class="row">
         <button class="btn small alt" id="bLvBack">Back</button>
         <button class="btn small" id="bLvShop">Shop</button>
       </div>
       <button class="link" id="bUnlockAll">Testing: unlock all levels</button>
+    </div>
+    <div class="library" id="bookView" hidden>
+      <div class="spread" id="spread">
+        <div class="popup"><canvas id="bkScene"></canvas></div>
+        <div class="pages">
+          <div class="page">
+            <h3 id="bkTitle"></h3>
+            <p class="bkWorld" id="bkWorld"></p>
+            <p class="lore" id="bkLore"></p>
+            <div class="bkBoss" id="bkBoss"></div>
+          </div>
+          <div class="page">
+            <div class="pgGrid" id="bkLevels"></div>
+            <p class="pgStars" id="bkStars"></p>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn small alt" id="bBkClose">Close book</button>
+        <button class="btn small" id="bBkShop">Shop</button>
+      </div>
     </div>
   </div>
 

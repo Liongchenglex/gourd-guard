@@ -73,6 +73,7 @@ export const MODS = {
   swift:    { name:'Swift',    desc:'40% faster',           speed:1.4 },
   stubborn: { name:'Stubborn', desc:'immune to knockback',  noKnockback:true },
   armoured: { name:'Armoured', desc:'2 more health',        hp:2 },
+  plain:    { name:'',         desc:'',                     hp:0 },   // a themed skin with no rule change
   hungry:   { name:'Hungry',   desc:'eats walls twice as fast', eat:2 },
 };
 
@@ -82,7 +83,7 @@ export const VARIANTS = {
   marshImp: { base:'imp',   mod:'stubborn', name:'Marsh Imp', tint:'#6a8a4a', intro:'Marsh Imps dig their heels in: knockback does nothing to them.' },
   swiftBat: { base:'bat',   mod:'swift',    name:'Swift Bat', tint:'#8a5aa8', intro:'Swift Bats: faster than the ones you knew. One hit still does it.' },
   cryptGhoul: { base:'ghoul', mod:'stubborn', name:'Crypt Ghoul', tint:'#8a8a96', intro:'Crypt Ghouls shrug off knockback.' },
-  keepImp:    { base:'imp',   mod:'armoured', name:'Keep Imp',    tint:'#9a7a6a', intro:'Keep Imps wear scraps of armour: four hits.' },
+  keepImp:    { base:'imp',   mod:'plain',    name:'Keep Imp',    tint:'#9a7a6a', intro:'Keep Imps: two hits, like any imp. The castle just sends more of them.' },   // owner: 2 HP like other imps
   siegeBrute: { base:'brute', mod:'hungry',   name:'Siege Brute', tint:'#a0453a', intro:'Siege Brutes chew walls twice as fast.' },
   drownedGhoul: { base:'ghoul', mod:'hungry',   name:'Drowned Ghoul', tint:'#3a7a8a', intro:'Drowned Ghouls are ravenous: they chew walls twice as fast.' },
   tideImp:      { base:'imp',   mod:'swift',    name:'Tide Imp',      tint:'#3aa0a8', intro:'Tide Imps ride the surf: 40% faster.' },

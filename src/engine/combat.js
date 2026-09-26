@@ -14,7 +14,7 @@ import { banner } from '../ui/hud.js';
 export function launchGroup(ref){
   if (!ref || !ref.lit || !G || G.over) return;
   const gid = primaryGid(ref), grp = G.groups[gid];
-  const bunch = { spawned:false };   // shared by every projectile of this launch (Purple's one-per-bunch spawn)
+  const bunch = { spawned:false, small:!!grp && grp.size < 3 };   // shared by every projectile of this launch (Purple's one-per-bunch spawn; Turquoise pairs are half power)
   if (!grp) return;
   const cells = groupCells(gid);
   if (!cells.length) return;
@@ -180,7 +180,7 @@ export function hitMonster(pr, m){
     return;
   }
   m.lastHit = pr.type; m.lastHitLv = pr.lv;
-  const hitPower = POWER[i] * (pr.type === TURQUOISE ? TURQ_FRAC : pr.type === BROWN ? BROWN_SIZE_MULT[pr.size == null ? 1 : pr.size] : 1);   // Turquoise: half; Brown: by size
+  const hitPower = POWER[i] * (pr.type === TURQUOISE && pr.grp && pr.grp.small ? TURQ_FRAC : pr.type === BROWN ? BROWN_SIZE_MULT[pr.size == null ? 1 : pr.size] : 1);   // Turquoise: half; Brown: by size
   damage(m, hitPower, PTYPES[pr.type].spark);
   if (pr.type === PINK){   // Pink: repairs the wall of the column it flew up
     const w = walls[pr.lane]; if (w.hp < w.max){ w.hp = Math.min(w.max, w.hp + HEAL_AMT[i]); addFloat(`Wall +${HEAL_AMT[i]}`, LANE(pr.lane), FENCE_Y - 40, '#ffb3e6', 16, 0.9); SFX.extra('heal'); for (let k = 0; k < 6; k++) spark(LANE(pr.lane), FENCE_Y - 10, '#ffb3e6', 100); }
@@ -240,6 +240,6 @@ export function purpleSpawn(m, y, i){
   const empties = emptyCells();
   if (!empties.length) return;
   const [r, c] = empties[Math.floor(Math.random() * empties.length)];
-  flyInto(r, c, Math.random() < RAINBOW_P[i] ? RAINBOW : randColor(), m.x, y);
+  flyInto(r, c, Math.random() < RAINBOW_P[i] && !(G.mode === 'story' && G.n < 9) ? RAINBOW : randColor(), m.x, y);   // no rainbows before 1-9 (owner)
   addFloat('+1 pumpkin', m.x, y - 40, '#d09bff', 18, 1); SFX.extra('spawn');
 }

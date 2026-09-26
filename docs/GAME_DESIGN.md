@@ -79,10 +79,10 @@ Hints: after ~6 s idle with no lit bunch, the game outlines one pumpkin with an 
 | Type | Color | Role | Unlocks |
 |---|---|---|---|
 | Green | green | Normal | Level 1-1 |
-| Yellow | yellow | Normal, plus coins: a Yellow kill skips the reward roll and pays coins ×2, ×2, ×3, ×3, ×4 by level | Level 1-1 |
+| Yellow | yellow | Normal, plus coins: a Yellow kill skips the reward roll and pays coins ×2, ×2, ×3, ×3, ×4 by level | Level 1-2 |
 | Ice | ice blue | Freeze | Level 1-3 |
 | Fire | red | Flame | Level 1-8 |
-| Grey | grey | Piercing (also passes castle walls, damaging them) | Level 4-6 |
+| Grey | grey | Piercing (also passes castle walls, damaging them) | Level 4-4 |
 | Purple | purple | Spawn: every launched Purple bunch spawns one pumpkin on its first hit; each kill may spawn another (25/40/50/60/70% by level); spawns are rainbow 10/20/30/40/50% | Level 3-3 |
 | Deep Blue | deep navy | Chain: lightning runs along the row of the monster hit and strikes the nearest 3/3/4/5/5 monsters (including it) at 25/50/50/75/75% power. Knockback like Green. | Level 5-4 |
 | Pink | pink | Heal: every hit repairs the wall of the column it flew up by 1/1/2/2/3. Knockback 50/50/50/75/75%. | Level 2-8 |
@@ -229,7 +229,7 @@ Levels 11–19 of every world are hand-authored (`docs/WORLDS.md` §8a) with the
 - Level 1 of a world opens when the previous world's level 10 has been beaten. Every other level opens when the level before it has been beaten. Beating level 10 therefore opens levels 11–20 and the next world at once.
 - **Level-20 perks** (`src/data/perks.js`): beating a world's level 20 grants a permanent perk, toggleable in the pause menu: 1-20 quick smash (0.35 s hold), 2-20 sprouts 1 s sooner, 3-20 half of sprout ticks bring 3 pumpkins, 4-20 rainbow chance 10%, 5-20 loadouts of 4 allowed. The result screen announces the perk.
 - **Unlocks are global**: once a pumpkin or tool is unlocked it can be used on every level, including earlier ones (owner, 2026-09-25). Availability is computed from the highest open level, not the level being played.
-- Unlocks sit in levels 1–10 so nothing is missable. World 1: Ice 1-3, Firework 1-5, Grave buster 1-6, Fire 1-8. World 2: Lantern 2-2, White 2-3, Landmine 2-5, Pink 2-8. World 3 (Witchwood): Scarecrow 3-2, Purple 3-3. World 4 (Crumbling Keep): Bomb 4-4, Grey 4-6, Black 4-9. World 5 (Drowned Marsh): Deep Blue 5-4. World order was changed by the owner on 2026-09-25; level addresses inside the monster and gimmick tables use the new numbering.
+- Unlocks sit in levels 1–10 so nothing is missable. World 1: Yellow 1-2, Wall repair 1-3, Ice 1-5, Grave buster 1-6, Firework 1-7, Fire 1-8 (owner reorder, 2026-09-26). World 2: Lantern 2-2, White 2-3, Landmine 2-5, Pink 2-8. World 3 (Witchwood): Scarecrow 3-2, Purple 3-3. World 4 (Crumbling Keep): Bomb 4-4, Grey 4-6, Black 4-9. World 5 (Drowned Marsh): Deep Blue 5-4. World order was changed by the owner on 2026-09-25; level addresses inside the monster and gimmick tables use the new numbering.
 - Stars are keyed by global night index in the save; `save.unlocked` mirrors the highest open night for older code and the endless-mode loadout.
 
 ### Endless mode
@@ -250,7 +250,7 @@ Difficulty `1 + t/25`; the Gravekeeper every 100 s (form 2 once the world change
   - **Landmine** (consumable, 💣): tap the button, then tap any column. The mine waits at that column's wall line and blasts the first non-boss monster to reach it for 6 damage. One mine per column. 35 coins, carry up to 3, one free at 2-5.
   - **Bomb** (consumable, 💥): tap the button, then tap a spot on the field. Everything within one lane either side and 1.5 tile heights up or down takes 4 damage, castle walls included. 45 coins, carry up to 3, one free at 3-4.
   - **Scarecrow** (consumable, 🌾): tap the button, then tap a column. A scarecrow with 12 health stands near that wall; monsters in the column stop at it and chew it at their eat rate until it breaks. One per column. 35 coins, carry up to 3, one free at 5-2.
-  - **Tools are gated by introduction**: a consumable exists only from the level that introduces it (Wall repair 1-1, Firework 1-5, Grave buster 1-6, Lantern 2-2, Landmine 2-5, Scarecrow 3-2, Bomb 4-4, from level data `unlockGear`). Before that it shows in the tool tray dimmed with a padlock, is locked in the shop, and never drops from kills. New players start with 0 of everything and receive one unit on the introducing level.
+  - **Tools are gated by introduction**: a consumable exists only from the level that introduces it (Wall repair 1-3, Firework 1-7, Grave buster 1-6, Lantern 2-2, Landmine 2-5, Scarecrow 3-2, Bomb 4-4, from level data `unlockGear`). Before that it shows in the tool tray dimmed with a padlock, is locked in the shop, and never drops from kills. New players start with 0 of everything and receive one unit on the introducing level.
 - Progress, coins, levels, loadout and settings are saved in the browser (localStorage key `gourdguard.v1`).
 
 ---
@@ -406,6 +406,10 @@ The bot still loses (it misses about 40% of throws and cannot keep Fire on the l
 
 Second follow-up (2026-09-26): the owner reverted the ×1.35 spawn slowdown after cutting boss health (form 1 about −25%). Result at the expected profile: still 0/15 with mean walls 55–70%, in line with the slowed runs, so the boss-health cut roughly offsets the faster spawns for the bot. The bot cannot colour-pick or plan around gusts, so the owner's own runs decide; nothing further changed.
 
+
+---
+
+**Owner playtest batch (2026-09-26).** Level 10 of worlds 1, 2 and 4: spawn gap ×1.2 and 20% fewer monsters (1-10: 16 at 3.96 s; 2-10: 17 at 3.72 s; 4-10: 18 at 3.6 s), owner playing at pumpkin level 2. Also: Turquoise pairs half power, bunches of 3+ full; landmines on any tile with a 3×3 blast for 6; wall repair fixes one tapped wall; Keep Imp 2 HP; 4-2/4-3 knights weight 2, 4-3 capped at 2 haulers; chameleons from 3-9 capped at 3; no rainbow sprouts or Purple rainbow spawns before 1-9; level-10 wins show a world-unlocked card and return to the menu; the full help no longer auto-opens (1-1 teaches bunches of 3 and 5 in two cards). Bot to re-run on the level 10s later.
 
 ---
 

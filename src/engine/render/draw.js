@@ -61,6 +61,7 @@ export function render(){
   drawArrows(t);
   if (bands.length) drawFog(t, bands, g.fogClear > 0);
   if (fogCols.length) drawFogCols(t, fogCols, g.fogClear > 0);
+  if (bands.length || fogCols.length) drawBossBarsOverFog(g);   // owner: the boss's health bar must show through the mist
   if (g.gustDir) drawWindArrows(t);
   drawMines(t);
   drawDrops(t);
@@ -341,10 +342,20 @@ export function drawWindArrows(t){
   }
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
-/** Landmines waiting at the wall line. */
+/** Boss health bars redrawn on top of the fog so they are never hidden (mirrors the bar in render/monsters.js). */
+export function drawBossBarsOverFog(g){
+  for (const m of g.monsters){
+    if (m.type !== 'boss' || m.dead || m.hidden || m.maxHp <= 8) continue;
+    const s = mS(m), y = mY(m); let by = y - m.r * s * 1.45 - 10 - 30; if (by < FIELD_TOP + 4) by = y + m.r * s * 1.25 + 8;
+    const bw = Math.max(40, m.r * 1.7) * s, bx = m.x - bw / 2;
+    ctx.fillStyle = 'rgba(0,0,0,.6)'; rrect(ctx, bx - 1, by - 1, bw + 2, 8, 3.5); ctx.fill();
+    ctx.fillStyle = '#c77dff'; rrect(ctx, bx, by, Math.max(0, bw * m.hp / m.maxHp), 6, 3); ctx.fill();
+  }
+}
+/** Landmines waiting on their tile. */
 export function drawMines(t){
   for (const mine of G.mines || []){
-    const x = LANE(mine.lane), y = FENCE_Y - 30;
+    const x = LANE(mine.lane), y = mine.p == null ? FENCE_Y - 30 : FIELD_TOP + mine.p * (FIELD_BOT - FIELD_TOP);
     ctx.fillStyle = '#2a2230'; ell(ctx, x, y + 6, 13, 6);
     ctx.fillStyle = '#3d3348'; ell(ctx, x, y, 12, 9);
     ctx.fillStyle = Math.floor(t * 4) % 2 ? '#ff5a4d' : '#ffd35a'; ell(ctx, x, y - 4, 3, 3);

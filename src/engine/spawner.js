@@ -20,7 +20,10 @@ export function storySpawn(dt){
   const keepComing = d.boss && G.bossSpawned && !G.bossDead;   // boss levels: monsters keep coming until the boss dies
   if ((G.spawned < d.total || keepComing) && G.spawnTimer <= 0){
     if (!G.introQueue) G.introQueue = d.intro.filter(k => d.pool.some(([t]) => t === k));   // every monster this level introduces shows up at least once, early
-    spawnMonster(G.spawned >= 1 && G.introQueue.length ? G.introQueue.shift() : pickFrom(d.pool));
+    const counts = G.spawnCounts = G.spawnCounts || {};
+    const pool = d.caps ? d.pool.filter(([t]) => (counts[t] || 0) < (d.caps[t] == null ? Infinity : d.caps[t])) : d.pool;   // per-type caps (owner: "only 2 haulers")
+    const t = G.spawned >= 1 && G.introQueue.length ? G.introQueue.shift() : pickFrom(pool.length ? pool : d.pool);
+    counts[t] = (counts[t] || 0) + 1; spawnMonster(t);
     G.spawned++;
     G.spawnTimer = d.interval * rnd(0.6, 1.4);
     if (Math.random() < 0.18) G.spawnTimer *= 0.3;

@@ -78,12 +78,12 @@ Upgrade costs per type: level 2 = 40, level 3 = 80, level 4 = 130, level 5 = 200
 | Type | Look | Role | Introduced |
 |---|---|---|---|
 | Green | green | Normal | 1-1 |
-| Yellow | yellow | Coins: a Yellow kill always pays coins, multiplied by level (replaces the Gold idea; a separate gold pumpkin could not be told from Yellow and confused chameleons) | 1-1 |
+| Yellow | yellow | Coins: a Yellow kill always pays coins, multiplied by level (replaces the Gold idea; a separate gold pumpkin could not be told from Yellow and confused chameleons) | 1-2 |
 | Pink | pink | Heal: repairs its column's wall on every hit; high knockback | 2-8 |
-| Ice | ice blue | Freeze | 1-3 |
+| Ice | ice blue | Freeze | 1-5 |
 | Fire | red | Flame; the only thing that kills a Mummy for good | 1-8 |
 | White | white | Boomerang | 2-3 |
-| Grey | grey | Piercing; passes castle walls | 4-6 |
+| Grey | grey | Piercing; passes castle walls | 4-4 |
 | Black | black | Blast | 4-9 |
 | Deep Blue | deep navy blue | Chain lightning along a row | 5-4 |
 | Purple | purple | Spawn | 3-3 |
@@ -315,12 +315,12 @@ Weapons drop from kills (10% roll) and can also be bought in the shop. The HUD a
 
 | Weapon | Effect | Introduced |
 |---|---|---|
-| Wall repair | Fully repairs every wall | 1-1 (exists) |
-| Firework | 3 damage to every monster | 1-5 (exists) |
+| Wall repair | Tap it, then tap one wall to repair it fully (owner, 2026-09-26: no longer all walls) | 1-3 |
+| Firework | 3 damage to every monster | 1-7 |
 | Gravestone buster | Removes one grave (tap it) | 1-6 |
 | Lantern | Clears all fog for 10 s | 2-2 |
-| Landmine | Placed in a lane at the wall line; explodes on the first monster to step on it | 2-5 |
-| Bomb | Damages a 3×3 area of the field: 3 lanes × 3 tile heights, tap to aim | 4-4 |
+| Landmine | Tap it, then tap any tile of the field: the mine hides there and the first monster to step on it sets off a 3×3 blast (3 lanes × 3 tile heights) for 6 (owner, 2026-09-26; was: waits at the wall line of one lane) | Tap it, then tap any tile of the field: the mine hides there and the first monster to step on it sets off a 3×3 blast for 6 (owner, 2026-09-26) |
+| Bomb | Damages a 3×3 area of the field: 3 lanes × 3 tile heights, tap to aim | 4-6 |
 | Scarecrow | Decoy planted in a lane; monsters stop to chew it until it breaks | 3-2 |
 
 ---
@@ -406,6 +406,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 | 2026-09-26 | Owner: 5-15 (The Drowned, all Sodden Mummies) is lighter: 22 mummies instead of 30, spawn gap 2.6 s → 3.4 s. Bot before/after in the design doc §11. |
 | 2026-09-26 | Owner: Vampire Count trance nerfed: form 1 asks 2–4 hits (was 4–6), form 2 stays 4–6, and it heals 1.2 HP/s instead of 2. Level-20 boosts appear as trophies on the pumpkin-picking screen, tappable on or off (the pause menu toggles stay). Bunch sound is sparkle only; coins sound like a treasure chest; the trance heartbeat is a real heartbeat recording. |
 | 2026-09-26 | Owner: future-release ideas recorded in §10: extensions of existing worlds, boss fallen mode, gourds (taller pumpkins that are broken to stop enemy obstacles on the patch), twin pumpkins as a two-colour rainbow, and a new world beyond world 6. |
+| 2026-09-26 | Owner playtest batch: world 1 reordered (1-1 Green + a two-line tutorial instead of the full help; 1-2 Yellow; 1-3 Bat + Wall repair; 1-4 Imp; 1-5 Ice with 'slow the imps' copy; 1-7 Firework; 1-8 Fire with a personable line; 1-9 unchanged) and no rainbows before 1-9. Level 10 of worlds 1, 2 and 4 spawns 20% slower and 20% fewer. Beating a level-10 boss shows a world-unlocked card and returns to the menu. Turquoise pairs are half power but bunches of 3+ hit like Green. Chameleons first appear at 3-9, at most 3 (3-8 drops them); the Reverse Chameleon keeps its own card at 3-7. 4-2 and 4-3 have fewer knights, 4-3 at most 2 haulers; Grey moves to 4-4 and the Bomb to 4-6; Keep Imps have 2 HP. Landmines are placed on any tile and blast a 3×3; wall repair fixes one tapped wall. The world-2 boss's health bar shows through the fog. |
 | 2026-09-26 | Owner: Mirror Sprite now arrives at 3-5 and the Chameleon at 3-8 (swapped). |
 | 2026-09-26 | Owner: chameleons have 2 HP; 3-10 spawns no chameleons; Hexwitch zones are 3×3, a 1-tall row or a 1-wide column. |
 | 2026-09-26 | Owner: two more pumpkins: Turquoise (3-6, bunches of 2 at half power) and Brown (5-7, grows small → medium → big); a rainbow intro card at 1-9. |

@@ -21,14 +21,14 @@ import argparse, json, pathlib, sys, time
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-UNLOCK = [1, 1, 3, 8, 66, 43, 23, 69, 84, 28, 46, 87]  # night each pumpkin type unlocks (Green, Yellow, Ice, Fire, Grey, Purple, White, Black, Deep Blue, Pink, Turquoise, Brown)
+UNLOCK = [1, 2, 5, 8, 64, 43, 23, 69, 84, 28, 46, 87]  # night each pumpkin type unlocks (Green, Yellow, Ice, Fire, Grey, Purple, White, Black, Deep Blue, Pink, Turquoise, Brown)
 
 BOT_JS = """
 (interval) => {
   window.__bot = setInterval(() => {
     const h = window.__gg; if (!h || h.state !== 'play') return;
     const G = h.G;
-    if (h.save.repair > 0 && h.walls.some(w => w.hp < w.max * 0.25)){ document.querySelector('#rpBtn').click(); return; }
+    if (h.save.repair > 0 && h.walls.some(w => w.hp < w.max * 0.25)){ const i = h.walls.findIndex(w => w.hp < w.max * 0.25); document.querySelector('#rpBtn').click(); h.repairWall(i); return; }   // repair is per wall now
     if (G.drops.length && h.emptyCells().length){
       const d = G.drops.filter(d => d.t > 0.3).sort((a, b) => (a.life - a.t) - (b.life - b.t))[0];
       if (d){ h.collectDrop(d); return; }

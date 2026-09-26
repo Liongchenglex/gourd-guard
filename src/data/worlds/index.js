@@ -65,7 +65,7 @@ export function toolsForNight(n){
 
 /** Pumpkin type indices available on night n: the starting pair plus every type unlocked by a level ≤ n. */
 export function typesForNight(n){
-  return [...Array(NTYPES).keys()].filter(t => t < 2 || unlockNightOf(PTYPES[t].key) <= n);
+  return [...Array(NTYPES).keys()].filter(t => t < 1 || unlockNightOf(PTYPES[t].key) <= n);   // only Green from the start; Yellow unlocks at 1-2 (owner)
 }
 
 /** Is story night n open to play? Level 1 of a world opens when the previous world's level 10 has been beaten;

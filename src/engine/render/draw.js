@@ -191,15 +191,15 @@ export function drawDrops(t){
 
 /** Pulsing outline on every grave while the grave buster is armed. */
 /** Fog banks: opaque marsh mist over field ranges; thin and see-through while a lantern burns. */
-export function drawFog(t, bands, cleared){   // layered drifting mist (render/fx.js drawMist), dense at the core, thin while a lantern burns
-  const H0 = FIELD_TOP, H1 = FIELD_BOT, pad = 26 / (H1 - H0);
+export function drawFog(t, bands, cleared){   // layered drifting mist (render/fx.js drawMist): the whole hide extent is dense, only a fringe outside it is thin
+  const FR = 44, H0 = FIELD_TOP, H1 = FIELD_BOT, pad = FR / (H1 - H0);
   // overlapping banks (fogwalkers crowd the same rows) are merged into one so they cost one bank and show no seams; the extents drawn are unchanged
   const sorted = bands.slice().sort((p, q) => p[0] - q[0]), merged = [];
   for (const [a, b] of sorted){ const last = merged[merged.length - 1]; if (last && a - pad <= last[1] + pad) last[1] = Math.max(last[1], b); else merged.push([a, b]); }
   let i = 0;
   for (const [a, b] of merged){
     const y0 = H0 + a * (H1 - H0), y1 = H0 + b * (H1 - H0);
-    drawMist(ctx, K, 0, y0 - 26, W, y1 - y0 + 52, t, cleared, i++, false);
+    drawMist(ctx, K, 0, y0 - FR, W, y1 - y0 + FR * 2, t, cleared, i++, false, FR);
   }
 }
 /** Puddles (world 5): baked glossy pools (render/fx.js) with two slow live ripples each. */
@@ -324,7 +324,7 @@ export function drawArrows(t){
 }
 /** Column fog: a vertical bank down a whole lane. */
 export function drawFogCols(t, lanes, cleared){
-  for (const l of lanes) drawMist(ctx, K, LANE(l) - CS * 0.5 - 8, FIELD_TOP - 10, FIELD_BOT - FIELD_TOP + 20, CS + 16, t, cleared, 10 + l, true);
+  for (const l of lanes) drawMist(ctx, K, LANE(l) - CS * 0.5 - 16, FIELD_TOP - 10, FIELD_BOT - FIELD_TOP + 20, CS + 32, t, cleared, 10 + l, true, 16);
 }
 /** Wind warning: arrows on the patch rows or columns a gust will touch (all of them for a full gust). */
 export function drawWindArrows(t){

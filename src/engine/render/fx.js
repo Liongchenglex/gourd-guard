@@ -348,12 +348,14 @@ export function mistTile(k, kind){
   });
 }
 /** A mist band `len` long and `thick` deep at (x, y); `vertical` turns it into a column of width `thick`. Dense at the core, drifting layers, faint glow; thin when a Lantern has cleared it. */
-export function drawMist(g, k, x, y, len, thick, t, cleared, idx, vertical){
+/** A fog bank. The hide extent is the rect minus `pad` on each side: that core is uniformly dense (monsters inside are invisible),
+ *  and only the `pad` fringe outside it is translucent, so players never see a thin patch with a monster hidden in it (owner, 2026-09-26). */
+export function drawMist(g, k, x, y, len, thick, t, cleared, idx, vertical, pad = 26){
   g.save();
   if (vertical){ g.translate(x + thick, y); g.rotate(Math.PI / 2); } else g.translate(x, y);
-  const al = cleared ? .15 : .9;
+  const al = cleared ? .15 : .94, p = Math.min(.45, pad / thick);
   const gr = g.createLinearGradient(0, 0, 0, thick);
-  gr.addColorStop(0, 'rgba(150,176,192,0)'); gr.addColorStop(.16, `rgba(156,182,196,${al * .45})`); gr.addColorStop(.36, `rgba(168,192,204,${al})`); gr.addColorStop(.64, `rgba(168,192,204,${al})`); gr.addColorStop(.84, `rgba(156,182,196,${al * .45})`); gr.addColorStop(1, 'rgba(150,176,192,0)');
+  gr.addColorStop(0, 'rgba(150,176,192,0)'); gr.addColorStop(p * .55, `rgba(156,182,196,${al * .3})`); gr.addColorStop(p, `rgba(168,192,204,${al})`); gr.addColorStop(1 - p, `rgba(168,192,204,${al})`); gr.addColorStop(1 - p * .55, `rgba(156,182,196,${al * .3})`); gr.addColorStop(1, 'rgba(150,176,192,0)');
   g.fillStyle = gr; g.fillRect(0, 0, len, thick);
   // tiles are always at least 256 wide (thin bands stretch the billows sideways), so a band costs a handful of draws whatever its depth
   // Three layers (billows one way, wisps the other, a glow): the cost is fill area, so the band stays at ~3 screen passes on a phone
@@ -361,6 +363,8 @@ export function drawMist(g, k, x, y, len, thick, t, cleared, idx, vertical){
   const layer = (tile, speed, alpha, sx, dy) => { const w = tw * sx, n = Math.ceil(len / w) + 1, off = ((t * speed + idx * 91) % w + w) % w - w; g.globalAlpha = alpha; for (let j = 0; j <= n; j++) g.drawImage(tile.c, off + j * w, dy, w, thick); };
   if (cleared) layer(mistTile(k, 'b'), -14, .16, 1, 0);
   else {
+    // a second flat pass keeps the core opaque under the billow gaps; the billows then only add texture
+    g.fillStyle = `rgba(172,194,206,${al * .55})`; g.fillRect(0, pad, len, Math.max(0, thick - pad * 2));
     layer(mistTile(k, 'a'), 7, .85, 1.3, Math.sin(t * .5 + idx) * thick * .03);
     layer(mistTile(k, 'b'), -17, .55, .8, Math.sin(t * .8 + idx * 2) * thick * .05);
     g.globalCompositeOperation = 'lighter';

@@ -182,7 +182,9 @@ export function openPreview(n){
 }
 
 /** Intro cards for anything the player has not met yet on night n, then start the night. */
+let loadoutFromPreview = false;
 function startPreviewedNight(){
+  loadoutFromPreview = true;
   const n = previewNight, def = levelFor(n), prevGraves = n > 1 ? levelFor(n - 1).graves : 0;
   const cards = [];
   if (n === 1){   // 1-1 (owner): the Green pumpkin, and the whole lesson: bunch three to throw, bunch five to knock back
@@ -283,7 +285,7 @@ export function openBook(wi, animate){
   levels.forEach((d, i) => {
     const n = start + i, locked = !isOpen(n), st = save.stars[n] || 0; stars += st;
     if (!locked && !st && nextN == null) nextN = n;
-    const b = document.createElement('button'); b.className = 'pg' + (d.boss ? ' boss' : '') + (st ? ' done' : ''); b.disabled = locked;
+    const b = document.createElement('button'); b.className = 'pg' + (d.boss ? ' boss' : '') + (st ? ' done' : '') + (d.boss && st && pendingStamp !== n ? ' stamped' : ''); b.disabled = locked;   // a beaten boss keeps its stamp (owner)
     b.setAttribute('aria-label', locked ? `Level ${d.world}-${d.level}, locked` : `Level ${d.world}-${d.level}${d.name ? ', ' + d.name : ''}, ${st} of 3 stars`);
     if (d.boss) b.appendChild(monsterIcon(d.boss, 88, d.bossForm)); else b.textContent = d.level;
     if (!locked){ const sp = document.createElement('span'); sp.className = 'st'; sp.innerHTML = '★'.repeat(st) + '<span class="off">' + '★'.repeat(3 - st) + '</span>'; b.appendChild(sp); }
@@ -487,7 +489,7 @@ export function stepSpawn(d){
 export function wireButtons(){
   $('#bStory').onclick = () => { ensureAudio(); curBook = null; openLevels(); };
 
-  $('#bEndless').onclick = () => { ensureAudio(); withHelp(beginEndless); };
+  $('#bEndless').onclick = () => { ensureAudio(); loadoutFromPreview = false; withHelp(beginEndless); };
 
   $('#bHelpT').onclick = () => { helpNext = () => setState('title'); setState('help'); };
 
@@ -506,7 +508,7 @@ export function wireButtons(){
   $('#bLvShop').onclick = () => openShop('levels');
   $('#bUnlockAll').onclick = () => { save.testUnlock = !save.testUnlock; persist(); openLevels(); };   // TESTING ONLY: remove before release
 
-  $('#bLoBack').onclick = () => openLevels();
+  $('#bLoBack').onclick = () => { if (loadoutFromPreview) openPreview(previewNight); else setState('title'); };   // back to the level card the night was started from (owner)
 
   $('#bLoGo').onclick = () => { if (loadoutSel.size < (perkOn('pick4') ? 4 : 5)) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo); };
 

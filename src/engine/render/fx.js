@@ -54,25 +54,33 @@ export function drawHexBolt(g, v){
   const p = Math.min(1, v.t / v.dur), R = rng((v.seed || 5) * 13);
   const cx = (v.x1 + v.x2) / 2 + (v.y2 - v.y1) * .25, cy = (v.y1 + v.y2) / 2 - (v.x2 - v.x1) * .25;
   const at = f => { const u = 1 - f; return [u * u * v.x1 + 2 * u * f * cx + f * f * v.x2, u * u * v.y1 + 2 * u * f * cy + f * f * v.y2]; };
+  const gl = glowSprite(2, '#d09bff');
   g.save(); g.globalCompositeOperation = 'lighter';
-  for (let i = 0; i < 10; i++){ const f = Math.max(0, p - i * .045); if (f <= 0) continue; const [x, y] = at(f), rr = 5 - i * .4, a = (1 - i / 10) * (p < .9 ? 1 : (1 - p) * 10);
-    g.globalAlpha = a * .8; g.fillStyle = i % 2 ? '#d09bff' : '#f4e6ff'; star(g, x + (R() - .5) * 4, y + (R() - .5) * 4, rr, v.t * 6 + i); g.fill(); }
-  const [hx, hy] = at(Math.min(1, p)); const hg = g.createRadialGradient(hx, hy, 0, hx, hy, 18); hg.addColorStop(0, 'rgba(255,240,255,.95)'); hg.addColorStop(.4, 'rgba(208,155,255,.7)'); hg.addColorStop(1, 'rgba(160,80,220,0)');
-  g.globalAlpha = p < .9 ? 1 : (1 - p) * 10; g.fillStyle = hg; g.fillRect(hx - 18, hy - 18, 36, 36);
+  for (let i = 0; i < 10; i++){ const f = Math.max(0, p - i * .045); if (f <= 0) continue; const [x, y] = at(f), rr = 4.5 - i * .35, a = (1 - i / 10) * (p < .9 ? 1 : (1 - p) * 10);
+    g.globalAlpha = a * .8; g.fillStyle = i % 2 ? '#d09bff' : '#f4e6ff'; ell(g, x + (R() - .5) * 4, y + (R() - .5) * 4, rr, rr); g.fill(); }
+  const [hx, hy] = at(Math.min(1, p));
+  g.globalAlpha = p < .9 ? 1 : (1 - p) * 10; g.drawImage(gl.c, hx - 20, hy - 20, 40, 40); g.fillStyle = '#fff4ff'; ell(g, hx, hy, 4, 4); g.fill();
   g.restore();
 }
 function star(g, x, y, r, rot){ g.beginPath(); for (let i = 0; i < 8; i++){ const a = rot + i * Math.PI / 4, rr = i % 2 ? r * .4 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); }
 /** A spinning rune circle with a pentagram over the hexed monster, in the colour it was locked to; reverse hexes get a red X. */
+let sigilCache = new Map();
+function sigilSprite(col, reverse){
+  const key = col + (reverse ? 'x' : ''); if (sigilCache.has(key)) return sigilCache.get(key);
+  const R = 40, pad = 12, sz = (R + pad) * 2, c = document.createElement('canvas'); c.width = c.height = sz * 2; const g = c.getContext('2d'); g.scale(2, 2); g.translate(R + pad, R + pad);
+  const gg = g.createRadialGradient(0, 0, 0, 0, 0, R); gg.addColorStop(0, rgba(col, .35)); gg.addColorStop(1, rgba(col, 0)); g.fillStyle = gg; g.fillRect(-R, -R, R * 2, R * 2);
+  g.strokeStyle = col; g.lineWidth = 2.6; g.shadowColor = col; g.shadowBlur = 10;
+  g.beginPath(); g.arc(0, 0, R, 0, TAU); g.stroke(); g.beginPath(); g.arc(0, 0, R * .8, 0, TAU); g.lineWidth = 1.2; g.stroke();
+  g.beginPath(); for (let i = 0; i < 5; i++){ const ang = -Math.PI / 2 + i * TAU * 2 / 5; g.lineTo(Math.cos(ang) * R * .78, Math.sin(ang) * R * .78); } g.closePath(); g.lineWidth = 2.2; g.stroke();
+  for (let i = 0; i < 12; i++){ const ang = i * TAU / 12; g.beginPath(); g.moveTo(Math.cos(ang) * R * .84, Math.sin(ang) * R * .84); g.lineTo(Math.cos(ang) * R * (i % 3 ? .92 : .98), Math.sin(ang) * R * (i % 3 ? .92 : .98)); g.stroke(); }
+  if (reverse){ g.strokeStyle = '#ff3a3a'; g.lineWidth = 4.5; g.lineCap = 'round'; g.shadowColor = '#ff3a3a'; g.beginPath(); g.moveTo(-R * .45, -R * .45); g.lineTo(R * .45, R * .45); g.moveTo(R * .45, -R * .45); g.lineTo(-R * .45, R * .45); g.stroke(); }
+  const sp = { c, half:R + pad }; sigilCache.set(key, sp); return sp;
+}
+/** A spinning rune circle with a pentagram over the hexed monster, in the colour it was locked to; reverse hexes get a red X. Baked once per colour. */
 export function drawSigil(g, v){
-  const p = Math.min(1, v.t / v.dur), a = p < .2 ? p / .2 : p > .7 ? (1 - p) / .3 : 1, sc = .6 + .5 * ease(Math.min(1, p / .3)), r = 30 * sc, col = v.col || '#d09bff';
-  g.save(); g.translate(v.x, v.y); g.rotate(v.t * 2.2); g.globalAlpha = a;
-  g.strokeStyle = col; g.lineWidth = 2.2; g.shadowColor = col; g.shadowBlur = 10;
-  g.beginPath(); g.arc(0, 0, r, 0, TAU); g.stroke(); g.beginPath(); g.arc(0, 0, r * .8, 0, TAU); g.lineWidth = 1; g.stroke();
-  g.beginPath(); for (let i = 0; i < 5; i++){ const ang = -Math.PI / 2 + i * TAU * 2 / 5; g.lineTo(Math.cos(ang) * r * .78, Math.sin(ang) * r * .78); } g.closePath(); g.lineWidth = 1.8; g.stroke();
-  for (let i = 0; i < 12; i++){ const ang = i * TAU / 12; g.beginPath(); g.moveTo(Math.cos(ang) * r * .84, Math.sin(ang) * r * .84); g.lineTo(Math.cos(ang) * r * (i % 3 ? .92 : .98), Math.sin(ang) * r * (i % 3 ? .92 : .98)); g.stroke(); }
-  g.rotate(-v.t * 2.2); g.globalCompositeOperation = 'lighter';
-  const gg = g.createRadialGradient(0, 0, 0, 0, 0, r); gg.addColorStop(0, rgba(col, .35 * a)); gg.addColorStop(1, rgba(col, 0)); g.fillStyle = gg; g.fillRect(-r, -r, r * 2, r * 2);
-  if (v.reverse){ g.globalCompositeOperation = 'source-over'; g.strokeStyle = '#ff3a3a'; g.lineWidth = 3.5; g.lineCap = 'round'; g.shadowColor = '#ff3a3a'; g.beginPath(); g.moveTo(-r * .45, -r * .45); g.lineTo(r * .45, r * .45); g.moveTo(r * .45, -r * .45); g.lineTo(-r * .45, r * .45); g.stroke(); }
+  const p = Math.min(1, v.t / v.dur), a = p < .2 ? p / .2 : p > .7 ? (1 - p) / .3 : 1, sc = (.6 + .5 * ease(Math.min(1, p / .3))) * .75, sp = sigilSprite(v.col || '#d09bff', !!v.reverse);
+  g.save(); g.translate(v.x, v.y); g.rotate(v.t * 2.2); g.scale(sc, sc); g.globalAlpha = a; g.globalCompositeOperation = 'lighter';
+  g.drawImage(sp.c, -sp.half, -sp.half, sp.half * 2, sp.half * 2);
   g.restore();
 }
 

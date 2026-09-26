@@ -54,7 +54,7 @@ After each milestone the owner plays it on their phone. `npm run build`, then `.
 - Ask the owner before changing a rule they set. When a rule is ambiguous, propose a default, state it, and note it in the doc.
 - Balance changes must be justified with bot runs (before/after), not guesses.
 - Mobile first: touch targets ≥44 px, works one-handed, respects safe areas, no hover-only UI.
-- Performance: keep 60 fps on mid-range phones; pre-render sprites; avoid per-frame allocations in hot loops.
+- Performance: keep 60 fps on mid-range phones; pre-render sprites; avoid per-frame allocations in hot loops. **Never call the Toy Plastic painter (`S.part`, materials) or set `shadowBlur` in per-frame code**: bake into a cached sprite (see `sprite()` in `render/tools.js`, `bake()` in `render/fx.js`, `render/anim.js`) and blit with transforms. The scarecrow and the hex sigil once lagged the owner's phone for exactly this reason (2026-09-26).
 - Original IP only: don't use the names, art or text of "Pumpkins vs. Monsters" or Plants vs. Zombies; don't describe the game as a remake. Art stays original (drawn in code unless the owner provides assets). Sounds must be CC0 or owner-licensed and listed in `assets/sfx/SOURCES.md`.
 - Keep the game fully playable offline with no network requests other than Google Fonts (and plan to self-host fonts for the mobile build).
 

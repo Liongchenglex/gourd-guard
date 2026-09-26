@@ -6,6 +6,7 @@
 import { E, PL, RR, S, SM, SO, ell, pal, rgba, rng } from './paint.js';
 import { drawBlast } from './fx.js';
 import { CS, FENCE_Y } from '../state.js';
+import { K } from './canvas.js';
 import { TAU } from '../util.js';
 
 const WOOD = pal('#b48a58'), WOODD = pal('#6b4526'), STEEL = pal('#aab3c4'), IRON = pal('#4c505c'), RED = pal('#d8323c'), BRASS = pal('#d9a53a'),
@@ -91,6 +92,27 @@ export function scarecrow(g, P = {}){
   g.restore();
 }
 
+// ---------- baked sprites: everything on the field is painted once per canvas scale and blitted (the painter is far too slow per frame) ----------
+const cache = new Map();
+function sprite(key, w, h, ox, oy, fn){
+  const k = Math.min(2.5, Math.max(.5, K || 1)), ck = key + ':' + k.toFixed(2);
+  let sp = cache.get(ck); if (sp) return sp;
+  const c = document.createElement('canvas'); c.width = Math.ceil(w * k); c.height = Math.ceil(h * k);
+  const g = c.getContext('2d'); g.scale(k, k); g.translate(ox, oy); fn(g);
+  sp = { c, w, h, ox, oy }; cache.set(ck, sp); return sp;
+}
+const blit = (g, sp, x, y) => g.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h);
+const SC_FRAMES = 8, SC_WEAR = [0, .4, .8];
+const scSprite = (fi, wi, crow) => sprite(`sc:${fi}:${wi}:${crow ? 1 : 0}`, 120, 150, 60, 100, g => scarecrow(g, { sway:fi / SC_FRAMES, wear:SC_WEAR[wi], crow }));
+const mineSprite = blink => sprite(`mine:${blink}`, 52, 44, 26, 26, g => mine(g, blink));
+const moundSprite = () => sprite('mound', 48, 28, 24, 14, g => { S.part(g, E(0, 4, 16, 6), EARTHD, { x:0, y:4, r:16 }, { flat:true, mat:'stone', noEdge:true }); S.part(g, E(0, 0, 13, 6), EARTH, { x:0, y:0, r:13 }, { flat:true, mat:'stone' }); for (let i = 0; i < 4; i++) S.part(g, E(-9 + i * 6, -2 + (i % 2) * 2, 2, 1.4), EARTHD, { x:0, y:0, r:2 }, { flat:true, noEdge:true }); });
+const clodSprite = () => sprite('clod', 10, 8, 5, 4, g => S.part(g, E(0, 0, 3, 2.2), EARTH, { x:0, y:0, r:3 }, { flat:true }));
+const hammerSprite = () => sprite('hammer', 70, 70, 34, 34, g => hammer(g));
+const rocketSprite = () => sprite('rocket', 40, 76, 20, 38, g => rocket(g));
+const dynSprite = f => sprite(`dyn:${f}`, 60, 70, 30, 40, g => dynamite(g, f / 4));
+const lanternSprite = () => sprite('lantern', 60, 70, 30, 34, g => lantern(g, 1));
+const bombSprite = f => sprite(`bomb:${f}`, 60, 64, 30, 36, g => bomb(g, f / 4));
+
 // ---------- icons for the tray, shop, cards and drops ----------
 const iconCache = new Map();
 export function toolIcon(key, px = 44){
@@ -115,37 +137,33 @@ export function toolIcon(key, px = 44){
 const MINE_ARM_DEFAULT = 6;
 export function drawMinesFx(g, mines, t, fieldY, laneX, MINE_ARM = MINE_ARM_DEFAULT){
   for (const m of mines){
-    const x = laneX(m.lane), y = fieldY(m.p), tt = m.t || 0, R = rng(m.lane * 31 + Math.round(m.p * 97));
+    const x = laneX(m.lane), y = fieldY(m.p), tt = m.t || 0;
     if (tt < MINE_ARM){   // buried: a mound that trembles as the timer runs out, with a ring filling around it
       const f = tt / MINE_ARM, rumble = f > .8 ? Math.sin(t * 40) * (f - .8) * 8 : 0;
-      g.save(); g.translate(x + rumble, y);
-      S.part(g, E(0, 4, 16, 6), EARTHD, { x:0, y:4, r:16 }, { flat:true, mat:'stone', noEdge:true }); S.part(g, E(0, 0, 13, 6), EARTH, { x:0, y:0, r:13 }, { flat:true, mat:'stone' });
-      for (let i = 0; i < 4; i++) S.part(g, E(-9 + i * 6 + (R() - .5) * 3, -2 + (R() - .5) * 3, 2, 1.4), EARTHD, { x:0, y:0, r:2 }, { flat:true, noEdge:true });
-      if (f > .8) for (let i = 0; i < 3; i++){ const a = (t * 3 + i) % 1; S.dot(g, E((i - 1) * 8, -6 - a * 14, 1.8, 1.8), rgba(EARTH.base, 1 - a)); }
-      g.restore();
+      blit(g, moundSprite(), x + rumble, y);
+      if (f > .8) for (let i = 0; i < 3; i++){ const a = (t * 3 + i) % 1; g.globalAlpha = 1 - a; blit(g, clodSprite(), x + (i - 1) * 8, y - 6 - a * 14); } g.globalAlpha = 1;
       g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 4; g.beginPath(); g.arc(x, y, 19, 0, TAU); g.stroke();
       g.strokeStyle = 'rgba(255,211,90,.9)'; g.lineWidth = 3; g.beginPath(); g.arc(x, y, 19, -Math.PI / 2, -Math.PI / 2 + TAU * f); g.stroke();
       continue;
     }
-    const up = Math.min(1, (tt - MINE_ARM) / .35), s = .4 + .6 * ease(up) * (1 + .25 * Math.sin(up * Math.PI));   // pops up out of the ground
-    g.save(); g.translate(x, y + 4 - (1 - up) * 4);
-    S.part(g, E(0, 8, 18, 6), EARTHD, { x:0, y:8, r:18 }, { flat:true, mat:'stone', noEdge:true });
-    if (up < 1) for (let i = 0; i < 6; i++){ const a = -Math.PI * .9 + i * Math.PI * .8 / 5, d = 10 + up * 26; S.part(g, E(Math.cos(a) * d, Math.sin(a) * d * .6 + up * up * 20, 3, 2.2), EARTH, { x:0, y:0, r:3 }, { flat:true }); }
-    g.scale(s, s * (2 - s > 1 ? 1 : 1)); mine(g, Math.floor(t * 3) % 2);
-    g.restore();
+    const up = Math.min(1, (tt - MINE_ARM) / .35), sc = .4 + .6 * ease(up) * (1 + .25 * Math.sin(up * Math.PI));   // pops up out of the ground
+    g.fillStyle = 'rgba(0,0,0,.35)'; ell(g, x, y + 10, 18, 6); g.fill();
+    if (up < 1) for (let i = 0; i < 6; i++){ const a = -Math.PI * .9 + i * Math.PI * .8 / 5, d = 10 + up * 26; blit(g, clodSprite(), x + Math.cos(a) * d, y + 4 + Math.sin(a) * d * .6 + up * up * 20); }
+    g.save(); g.translate(x, y + 4 - (1 - up) * 4); g.scale(sc, sc); blit(g, mineSprite(Math.floor(t * 3) % 2), 0, 0); g.restore();
   }
 }
 /** Scarecrows: planted with a drop-in, sway in the wind, shake when chewed, fall apart as they lose health. */
 export function drawScarecrowsFx(g, scs, t, chewers){
   for (const sc of scs){
     const age = sc.age == null ? 1 : sc.age, plant = Math.min(1, age / .4), wear = 1 - sc.hp / sc.maxHp, chewed = chewers(sc);
-    const drop = (1 - ease(plant)) * -80, squash = plant < 1 ? 1 + .25 * Math.sin(plant * Math.PI) : 1;
+    const drop = (1 - ease(plant)) * -80, squash = plant < 1 ? 1 + .25 * Math.sin(plant * Math.PI) : 1, shake = chewed ? Math.sin(t * 40) * 2 : 0;
+    const fi = Math.floor(((t * .35 + sc.lane * .17) % 1) * SC_FRAMES), wi = wear < .3 ? 0 : wear < .65 ? 1 : 2;
     g.save(); g.translate(sc.x, sc.y + 20);
-    S.shadow(g, 0, 8, 22 * plant, 6 * plant);
-    if (plant < 1) for (let i = 0; i < 6; i++){ const a = i * Math.PI / 5, d = 8 + plant * 26; S.dot(g, E(Math.cos(a) * d, 6 - Math.sin(a) * d * .3 - plant * 6, 2.5, 1.8), rgba(EARTH.base, 1 - plant)); }
-    g.translate(0, drop); g.scale(1 / squash, squash); g.scale(.78, .78); g.translate(0, -46);
-    scarecrow(g, { sway:(t * .35 + sc.lane * .17) % 1, wear, shake:chewed ? t : 0, crow:!chewed && wear < .5 });
-    if (chewed) for (let i = 0; i < 3; i++){ const a = (t * 1.5 + i * .33) % 1; S.ln(g, [[-20 + i * 20, 10 + a * 40], [-24 + i * 20 + Math.sin(a * 8) * 4, 16 + a * 40]], STRAW, 2, 1 - a); }
+    g.fillStyle = 'rgba(0,0,0,.4)'; ell(g, 0, 8, 22 * plant, 6 * plant); g.fill();
+    if (plant < 1) for (let i = 0; i < 6; i++){ const a = i * Math.PI / 5, d = 8 + plant * 26; g.globalAlpha = 1 - plant; blit(g, clodSprite(), Math.cos(a) * d, 6 - Math.sin(a) * d * .3 - plant * 6); } g.globalAlpha = 1;
+    g.translate(shake, drop); g.scale(.78 / squash, .78 * squash);
+    blit(g, scSprite(fi, wi, !chewed && wear < .5), 0, -46);
+    if (chewed){ g.strokeStyle = STRAW.base; g.lineWidth = 2; g.lineCap = 'round'; for (let i = 0; i < 3; i++){ const a = (t * 1.5 + i * .33) % 1; g.globalAlpha = 1 - a; g.beginPath(); g.moveTo(-20 + i * 20, 10 + a * 40); g.lineTo(-24 + i * 20 + Math.sin(a * 8) * 4, 16 + a * 40); g.stroke(); } g.globalAlpha = 1; }
     g.restore();
     const bw = 40, bx = sc.x - bw / 2, by = sc.y + 30;
     g.fillStyle = 'rgba(0,0,0,.6)'; g.beginPath(); g.roundRect(bx - 1, by - 1, bw + 2, 7, 3); g.fill();
@@ -162,37 +180,37 @@ export function drawToolFx(g, v, t){
       const rise = .42, col = v.col || FW_COLS[v.i % 5];
       if (p < rise){ const q = ease(p / rise), y = FENCE_Y - 20 + (v.y - FENCE_Y + 20) * q, x = v.x + Math.sin(q * 6) * 6;
         g.save(); g.globalCompositeOperation = 'lighter'; for (let i = 0; i < 8; i++){ const f = i / 8; g.globalAlpha = (1 - f) * .6; S.dot(g, E(x, y + 6 + f * 40, 3 - f * 2, 5), '#ffd35a'); } g.restore();
-        g.save(); g.translate(x, y); g.rotate(Math.sin(q * 6) * .2); g.scale(.7, .7); rocket(g); g.restore(); }
+        g.save(); g.translate(x, y); g.rotate(Math.sin(q * 6) * .2); g.scale(.7, .7); blit(g, rocketSprite(), 0, 0); g.restore(); }
       else { const q = (p - rise) / (1 - rise), r = 18 + ease(q) * 62, R = rng(v.i * 7 + 3);
         g.save(); g.globalCompositeOperation = 'lighter'; g.translate(v.x, v.y);
         const gl = g.createRadialGradient(0, 0, 0, 0, 0, r * .8); gl.addColorStop(0, rgba(col, (1 - q) * .55)); gl.addColorStop(1, rgba(col, 0)); g.fillStyle = gl; g.fillRect(-r, -r, r * 2, r * 2);
         g.lineCap = 'round'; for (let i = 0; i < 14; i++){ const a = i * TAU / 14 + R() * .3, L = r * (.8 + R() * .3), inner = r * q * .5; g.globalAlpha = 1 - q; g.strokeStyle = i % 2 ? col : '#fff6d0'; g.lineWidth = 3 - q * 2; g.beginPath(); g.moveTo(Math.cos(a) * inner, Math.sin(a) * inner + q * q * 20); g.lineTo(Math.cos(a) * L, Math.sin(a) * L + q * q * 30); g.stroke();
-          g.fillStyle = '#fff'; S.dot(g, E(Math.cos(a) * L, Math.sin(a) * L + q * q * 30, 2.5 * (1 - q) + .5, 2.5 * (1 - q) + .5), '#fff'); }
+          g.fillStyle = '#fff'; ell(g, Math.cos(a) * L, Math.sin(a) * L + q * q * 30, 2.5 * (1 - q) + .5, 2.5 * (1 - q) + .5); g.fill(); }
         g.restore(); }
       break; }
     case 'hammer': {   // swings twice onto the wall with sparks and chips
       const sw = (p * 2) % 1, ang = sw < .5 ? -1.4 + ease(sw * 2) * 1.9 : .5 - (sw - .5) * 2 * 1.9 * .3;
-      g.save(); g.translate(v.x + 14, v.y - 38); g.rotate(ang); g.scale(.9, .9); hammer(g); g.restore();
-      if (sw > .45 && sw < .75){ const q = (sw - .45) / .3, R = rng(Math.floor(p * 2) * 5 + 1); for (let i = 0; i < 6; i++){ const a = -Math.PI * (.2 + R() * .6), d = 6 + q * 26; S.dot(g, E(v.x + Math.cos(a) * d, v.y - 10 + Math.sin(a) * d + q * q * 18, 2.4, 1.6), rgba(i % 2 ? WOOD.light : '#ffe27a', 1 - q)); } }
+      g.save(); g.translate(v.x + 14, v.y - 38); g.rotate(ang); g.scale(.9, .9); blit(g, hammerSprite(), 0, 0); g.restore();
+      if (sw > .45 && sw < .75){ const q = (sw - .45) / .3, R = rng(Math.floor(p * 2) * 5 + 1); for (let i = 0; i < 6; i++){ const a = -Math.PI * (.2 + R() * .6), d = 6 + q * 26; g.fillStyle = rgba(i % 2 ? WOOD.light : '#ffe27a', 1 - q); ell(g, v.x + Math.cos(a) * d, v.y - 10 + Math.sin(a) * d + q * q * 18, 2.4, 1.6); g.fill(); } }
       break; }
     case 'dynamite': {   // dropped on a grave, the fuse burns down, then it blows
-      if (p < .55){ const q = p / .55, fall = Math.min(1, q * 2.2); g.save(); g.translate(v.x, v.y - 12 - (1 - ease(fall)) * 60); g.scale(.75, .75); dynamite(g, q); g.restore(); }
+      if (p < .55){ const q = p / .55, fall = Math.min(1, q * 2.2); g.save(); g.translate(v.x, v.y - 12 - (1 - ease(fall)) * 60); g.scale(.75, .75); blit(g, dynSprite(Math.min(4, Math.floor(q * 5))), 0, 0); g.restore(); }
       else drawBlast(g, { x:v.x, y:v.y, t:(p - .55) / .45 * .6, dur:.6, r:CS * .7, seed:9 });
       break; }
     case 'lantern': {   // the lantern lifts from the fence line and a warm sweep runs up the field
       const lift = Math.min(1, p / .3), y = v.y - ease(lift) * 50;
-      g.save(); g.translate(v.x, y); g.scale(1.1, 1.1); lantern(g, 1); g.restore();
+      g.save(); g.translate(v.x, y); g.scale(1.1, 1.1); blit(g, lanternSprite(), 0, 0); g.restore();
       if (p > .25){ const q = (p - .25) / .75, r = 40 + ease(q) * 900; g.save(); g.globalCompositeOperation = 'lighter'; const gr = g.createRadialGradient(v.x, y, r * .7, v.x, y, r); gr.addColorStop(0, 'rgba(255,200,90,0)'); gr.addColorStop(.7, `rgba(255,210,110,${(1 - q) * .35})`); gr.addColorStop(1, 'rgba(255,200,90,0)'); g.fillStyle = gr; g.fillRect(v.x - r, y - r, r * 2, r * 2); g.restore(); }
       break; }
     case 'bombdrop': {   // falls from above onto the spot, shadow growing, fuse sparking
       const q = ease(p), y = v.y - (1 - q) * 360;
       g.fillStyle = `rgba(0,0,0,${.15 + .3 * q})`; ell(g, v.x, v.y + 6, 10 + 12 * q, 4 + 5 * q); g.fill();
-      g.save(); g.translate(v.x, y); g.rotate(p * 4); g.scale(1.1, 1.1); bomb(g, p); g.restore();
+      g.save(); g.translate(v.x, y); g.rotate(p * 4); g.scale(1.1, 1.1); blit(g, bombSprite(Math.min(4, Math.floor(p * 5))), 0, 0); g.restore();
       break; }
     case 'scbreak': {   // the post tips over and the straw scatters
       const R = rng(v.x | 0);
-      g.save(); g.translate(v.x, v.y + 20); g.rotate(ease(p) * 1.3); g.globalAlpha = 1 - p * .8; g.scale(.78, .78); g.translate(0, -46); scarecrow(g, { sway:0, wear:1 }); g.restore();
-      for (let i = 0; i < 12; i++){ const a = R() * TAU, d = 10 + ease(p) * (30 + R() * 30); S.ln(g, [[v.x + Math.cos(a) * d, v.y + Math.sin(a) * d * .5 + p * p * 40], [v.x + Math.cos(a) * d + 6, v.y + Math.sin(a) * d * .5 + p * p * 40 + 3]], STRAW, 2, 1 - p); }
+      g.save(); g.translate(v.x, v.y + 20); g.rotate(ease(p) * 1.3); g.globalAlpha = 1 - p * .8; g.scale(.78, .78); blit(g, scSprite(0, 2, false), 0, -46); g.restore();
+      g.strokeStyle = STRAW.base; g.lineWidth = 2; g.lineCap = 'round'; g.globalAlpha = 1 - p; for (let i = 0; i < 12; i++){ const a = R() * TAU, d = 10 + ease(p) * (30 + R() * 30); g.beginPath(); g.moveTo(v.x + Math.cos(a) * d, v.y + Math.sin(a) * d * .5 + p * p * 40); g.lineTo(v.x + Math.cos(a) * d + 6, v.y + Math.sin(a) * d * .5 + p * p * 40 + 3); g.stroke(); } g.globalAlpha = 1;
       break; }
   }
 }

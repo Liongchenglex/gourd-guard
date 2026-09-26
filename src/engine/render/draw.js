@@ -69,6 +69,7 @@ export function render(){
   drawWalls(t);
   drawGraves();
   if (G.aim === 'buster') drawAimGraves(t);
+  if (G.aim === 'repair') drawAimWalls(t);
   drawGrid(t);
   drawSproutBar();
   drawHintArrow(t);
@@ -340,6 +341,17 @@ export function drawBossBarsOverFog(g){
 }
 /** Landmines waiting on their tile. */
 export function drawMines(t){ drawMinesFx(ctx, G.mines || [], t, p => p == null ? FENCE_Y - 30 : FIELD_TOP + p * (FIELD_BOT - FIELD_TOP), LANE, MINE_ARM); }
+/** Wall repair armed (owner): a box around every fence segment; damaged ones pulse gold, full ones sit grey. */
+export function drawAimWalls(t){
+  const fy = FENCE_Y, pulse = 0.55 + 0.45 * Math.sin(t * 8);
+  for (let c = 0; c < COLS; c++){
+    const w = walls[c]; if (!w) continue;
+    const needs = w.hp < w.max, x0 = GX + c * CS;
+    ctx.lineWidth = needs ? 4 : 2; ctx.strokeStyle = needs ? `rgba(255,211,90,${pulse})` : 'rgba(255,255,255,.22)';
+    rrect(ctx, x0 + 3, fy - 48, CS - 6, 64, 10); ctx.stroke();
+    if (needs){ ctx.fillStyle = `rgba(255,211,90,${0.10 + 0.10 * pulse})`; rrect(ctx, x0 + 3, fy - 48, CS - 6, 64, 10); ctx.fill(); }
+  }
+}
 export function drawAimGraves(t){
   ctx.strokeStyle = `rgba(255,211,90,${0.6 + 0.4 * Math.sin(t * 8)})`; ctx.lineWidth = 4;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){

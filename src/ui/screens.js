@@ -40,10 +40,19 @@ export function showResult(win){
         msg = `🎉 ${BOSS_NAMES[g.def.boss]} is beaten! The rest of ${WORLDS[g.def.world].name} is open` + (nextW ? `, and ${nextW.name} awaits.` : '.'); SFX.perk();
       }
       const perk = PERKS.find(p => perkNight(p) === g.n);
-      if (perk){ msg += ` Perk unlocked: ${perk.name}. ${perk.desc} (It shows as a trophy when you pick pumpkins: tap it to switch it on or off, or use the pause menu.)`; SFX.perk(); }
+      const tw = $('#rTrophy'); tw.hidden = true; tw.innerHTML = ''; tw.classList.remove('show');
+      if (perk){   // level 20 (owner): a trophy drops in with rays and sparkles, and the level tile gets stamped when the book reopens
+        title = `Trophy earned!`;
+        msg = `🏆 ${perk.name}: ${perk.desc} It waits on the pumpkin-picking screen as a trophy you can switch on or off.`;
+        tw.appendChild(trophyIcon()); const nm = document.createElement('b'); nm.textContent = perk.name; tw.appendChild(nm);
+        for (let i = 0; i < 8; i++){ const sp = document.createElement('i'); sp.style.setProperty('--a', (i * 45) + 'deg'); sp.style.setProperty('--d', (0.9 + (i % 3) * 0.12) + 's'); tw.appendChild(sp); }
+        tw.hidden = false; setTimeout(() => tw.classList.add('show'), 60); setTimeout(() => SFX.star(), 700);
+        SFX.perk();
+      }
       stars = [0,1,2].map(i => `<span class="${i < st ? '' : 'off'}">★</span>`).join('');
       stats.push(['Monsters stopped', g.kills], ['Walls left', pct(wf)], ['Coins found', g.coins], ['Night bonus', bonus]);
       if (g.def.levelNo === 10) addBtn(box, 'Continue', () => { pendingUnlock = g.def.world + 1; curBook = null; openLevels(); });   // to the shelf, where the next storybook unlocks (owner)
+      else if (perk) addBtn(box, 'Continue', () => { pendingStamp = g.n; openBook(g.def.world, true); });   // back into the book: the level-20 tile is stamped with a flourish
       else {
         if (g.n < LEVELS) addBtn(box, 'Next level', () => openPreview(g.n + 1));
         addBtn(box, 'Shop', () => openShop('result'), 'alt');
@@ -111,6 +120,7 @@ let previewNight = 1, introQueue = [], introNext = null;
 
 /** Pre-level card (owner request, 2026-09-25): which monsters, the boss, your pumpkins, graves. Start goes through unseen intros first. */
 let pendingUnlock = null;   // world index whose storybook should play its unlock animation on the next shelf (set by a level-10 win)
+let pendingStamp = null;    // night whose level tile should play its stamp animation when the book opens (set by a level-20 win)
 export function openPreview(n){
   previewNight = n;
   const def = levelFor(n), prevGraves = n > 1 ? levelFor(n - 1).graves : 0;
@@ -275,6 +285,7 @@ export function openBook(wi, animate){
     if (d.boss) b.appendChild(monsterIcon(d.boss, 88, d.bossForm)); else b.textContent = d.level;
     if (!locked){ const sp = document.createElement('span'); sp.className = 'st'; sp.innerHTML = '★'.repeat(st) + '<span class="off">' + '★'.repeat(3 - st) + '</span>'; b.appendChild(sp); }
     b.onclick = () => { SFX.ui('level'); withHelp(() => openPreview(n)); };
+    if (pendingStamp === n){ pendingStamp = null; setTimeout(() => { b.classList.add('stamping'); SFX.star(); }, 700); setTimeout(() => { b.classList.remove('stamping'); b.classList.add('stamped'); }, 1900); }
     grid.appendChild(b);
   });
   grid.querySelectorAll('.pg').forEach((b, i) => { if (start + i === nextN) b.classList.add('next'); });

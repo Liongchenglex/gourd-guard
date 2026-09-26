@@ -263,3 +263,26 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 
 /* Level preview sits over the night's own map; the overlay is lighter so the map reads through (owner) */
 #ovPreview{ background:linear-gradient(rgba(8,5,14,.55), rgba(8,5,14,.35) 40%, rgba(8,5,14,.35) 70%, rgba(8,5,14,.6)); }
+
+/* Level-20 win (owner: "it should feel awesome"): the trophy drops in with rays and eight sparkles; the level tile gets stamped when the book reopens */
+.trophyWin{ position:relative; display:grid; place-items:center; gap:calc(var(--u)*4px); margin:calc(var(--u)*4px) auto calc(var(--u)*8px); width:calc(var(--u)*170px); height:calc(var(--u)*150px); }
+.trophyWin[hidden]{ display:none; }
+.trophyWin svg{ width:calc(var(--u)*110px); height:calc(var(--u)*110px); transform:scale(0) rotate(-30deg); opacity:0; filter:drop-shadow(0 0 calc(var(--u)*10px) rgba(255,193,74,.7)); }
+.trophyWin.show svg{ animation:trophyIn .9s cubic-bezier(.2,1.2,.3,1.1) forwards, trophyGlow 1.8s 1s ease-in-out infinite; }
+.trophyWin b{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-size:calc(var(--u)*24px); color:var(--candle); letter-spacing:1px; opacity:0; }
+.trophyWin.show b{ animation:inkIn .5s .6s forwards; }
+.trophyWin::before{ content:''; position:absolute; inset:calc(var(--u)*-20px); border-radius:50%; background:conic-gradient(from 0deg, rgba(255,193,74,0) 0 20deg, rgba(255,193,74,.28) 30deg, rgba(255,193,74,0) 40deg 65deg, rgba(255,193,74,.28) 75deg, rgba(255,193,74,0) 85deg 110deg, rgba(255,193,74,.28) 120deg, rgba(255,193,74,0) 130deg 155deg, rgba(255,193,74,.28) 165deg, rgba(255,193,74,0) 175deg 200deg, rgba(255,193,74,.28) 210deg, rgba(255,193,74,0) 220deg 245deg, rgba(255,193,74,.28) 255deg, rgba(255,193,74,0) 265deg 290deg, rgba(255,193,74,.28) 300deg, rgba(255,193,74,0) 310deg 335deg, rgba(255,193,74,.28) 345deg, rgba(255,193,74,0) 355deg); opacity:0; z-index:-1; }
+.trophyWin.show::before{ animation:raysIn .8s .4s forwards, raysSpin 14s 1.2s linear infinite; }
+.trophyWin i{ position:absolute; left:50%; top:46%; width:calc(var(--u)*8px); height:calc(var(--u)*8px); border-radius:50%; background:#ffe27a; box-shadow:0 0 calc(var(--u)*8px) #ffc14a; opacity:0; transform:rotate(var(--a)) translateY(0); }
+.trophyWin.show i{ animation:sparkFly var(--d) .55s ease-out forwards; }
+.trophyWin.show{ animation:trophyShake .5s .35s ease; }
+@keyframes trophyIn{ 0%{ transform:scale(0) rotate(-30deg); opacity:0; } 60%{ transform:scale(1.25) rotate(6deg); opacity:1; } 80%{ transform:scale(.94) rotate(-2deg); } 100%{ transform:none; opacity:1; } }
+@keyframes trophyGlow{ 0%,100%{ filter:drop-shadow(0 0 calc(var(--u)*8px) rgba(255,193,74,.5)); } 50%{ filter:drop-shadow(0 0 calc(var(--u)*22px) rgba(255,193,74,1)); } }
+@keyframes raysIn{ from{ opacity:0; transform:scale(.4); } to{ opacity:1; transform:scale(1); } }
+@keyframes raysSpin{ from{ transform:rotate(0); } to{ transform:rotate(360deg); } }
+@keyframes sparkFly{ 0%{ opacity:1; transform:rotate(var(--a)) translateY(0) scale(1); } 100%{ opacity:0; transform:rotate(var(--a)) translateY(calc(var(--u)*-95px)) scale(.3); } }
+@keyframes trophyShake{ 0%,100%{ transform:none; } 25%{ transform:translateX(-3px); } 50%{ transform:translateX(3px); } 75%{ transform:translateX(-2px); } }
+.pg.stamping{ animation:stampIn .8s cubic-bezier(.2,1.1,.3,1) both; z-index:2; }
+.pg.stamped{ box-shadow:0 0 0 calc(var(--u)*3px) var(--candle), 0 0 calc(var(--u)*16px) rgba(255,193,74,.8); }
+@keyframes stampIn{ 0%{ transform:scale(2.4) rotate(-14deg); opacity:0; } 55%{ transform:scale(.92) rotate(2deg); opacity:1; box-shadow:0 0 0 calc(var(--u)*6px) var(--candle), 0 0 calc(var(--u)*30px) rgba(255,193,74,1); } 100%{ transform:none; box-shadow:0 0 0 calc(var(--u)*3px) var(--candle), 0 0 calc(var(--u)*16px) rgba(255,193,74,.8); } }
+@media (prefers-reduced-motion: reduce){ .trophyWin.show svg, .trophyWin.show::before, .trophyWin.show i, .trophyWin.show, .pg.stamping{ animation:none; } .trophyWin svg{ transform:none; opacity:1; } .trophyWin b{ opacity:1; } }

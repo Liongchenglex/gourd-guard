@@ -79,7 +79,7 @@ canvas#cv{ position:absolute; inset:0; width:100%; height:100%; display:block; t
 #artFront{ animation:artBob 3.2s ease-in-out infinite; transform-origin:50% 100%; }
 @keyframes artBob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(calc(var(--u)*-5px)); } }
 #ovTitle .logo{ font-size:calc(var(--u)*96px); text-shadow:0 0 calc(var(--u)*30px) rgba(255,138,31,.7), 0 calc(var(--u)*6px) 0 #5a2200, 0 calc(var(--u)*10px) calc(var(--u)*18px) rgba(0,0,0,.7); }
-#ovTitle .tag{ text-shadow:0 2px 6px #000; margin-bottom:0; }
+#ovTitle .tag{ margin:calc(var(--u)*6px) 0 0; padding:calc(var(--u)*6px) calc(var(--u)*16px); border-radius:99px; background:rgba(20,8,24,.72); color:#fff3dc; opacity:1; font-weight:600; font-size:calc(var(--u)*17px); box-shadow:0 calc(var(--u)*4px) calc(var(--u)*12px) rgba(0,0,0,.45); }
 .titleStack{ margin-top:auto; padding:calc(var(--u)*18px) calc(var(--u)*16px) 0; }
 .keyart::after{ content:''; position:absolute; left:0; right:0; bottom:0; height:30%; background:linear-gradient(rgba(14,7,24,0), rgba(14,7,24,.85) 70%); }
 @media (prefers-reduced-motion: reduce){ #artFront{ animation:none; } }

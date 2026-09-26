@@ -59,7 +59,7 @@ export const TYPES = {
                  form2:{ hp:36, swapEvery:6.5, recolourEvery:12 } },
   // Vampire Count: holds, turns into bats to change lane, summons bats, raises castle walls, and enters a healing mode the player breaks with N hits.
   vampirecount: { boss:true, hp:24, r:34, sp:0.03, coins:50, eat:0, pts:320, drop:6, hold:0.3, laneEvery:9, batsEvery:10, bats:2, wallEvery:15, maxWalls:3, wallHp:15,
-                  healEvery:20, healRate:1.2, healHits:[2, 3, 4], stun:2, form2:{ hp:42, batsEvery:8, healEvery:16, healHits:[4, 5, 6], calm:4, regen:1, regenEvery:2 } },   // trance nerf (owner): ×2–4 hits in form 1, ×4–6 in form 2, heals 1.2 HP/s (was 2)
+                  healEvery:20, healRate:0.5, healHits:[2, 3, 4], stun:2, form2:{ hp:42, batsEvery:8, healEvery:16, healHits:[4, 5, 6], calm:4, regen:1, regenEvery:2 } },   // trance nerf (owner): ×2–4 hits in form 1, ×4–6 in form 2, heals 1 HP per 2 s (was 2 HP/s)
   // Twin Tides: two sea serpents on the sea row lobbing water bolts at walls. Both must die within `window` seconds or the dead one rises again after `revive` seconds.
   twintides: { boss:true, hp:14, r:32, sp:0.03, coins:30, eat:0, pts:200, drop:3, hold:0.12, boltEvery:6, bolt:3, boltSp:0.3, window:8, revive:8,
                form2:{ hp:24, boltEvery:4.5, boltSp:0.45, window:5, hold:0.5 } },   // form 2 comes halfway down the field (owner)

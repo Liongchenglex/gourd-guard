@@ -181,9 +181,9 @@ export const SFX = {
     if (n > 2) S('pop', 0.3, { rate: 1.35, delay: 0.18 }) || tone(720, 0.14, 'sine', 0.035, 1000, 0.18);
   },
   match(size, groups){   // one sparkly sound for any bunch (owner: no 3-vs-5 distinction); combos climb in pitch
-    const g = Math.min(groups, 4), rate = 1 + (g - 1) * 0.06, base = 1568 * Math.pow(2, (g - 1) * 3 / 12);
-    S('sparkle', 0.65, { rate }) || sparkle(0, 0.05);   // owner: sparkle only, no harp
-    [0, 4, 7, 12].forEach((s, i) => tone(base * Math.pow(2, s / 12), 0.14, 'sine', 0.035, null, 0.02 + i * 0.045));   // bright twinkle on top
+    const g = Math.min(groups, 4), rate = 0.72 + (g - 1) * 0.05, base = 784 * Math.pow(2, (g - 1) * 3 / 12);   // deeper sparkle (owner): clip played slow, twinkle an octave lower
+    S('sparkle', 0.7, { rate }) || sparkle(0, 0.05);
+    [0, 4, 7, 12].forEach((s, i) => tone(base * Math.pow(2, s / 12), 0.2, 'sine', 0.04, null, 0.02 + i * 0.05));   // warm twinkle underneath
   },
 
   // ---- pumpkins hitting monsters (type = pumpkin index; size for Brown; rainbow adds a sparkle) ----

@@ -22,7 +22,7 @@ BANK = {
   'pop':       [('pop_1.mp3',0,.25), ('pop_0.mp3',.12,.3)],
   'sparkle':   [('twinkle_1.mp3',0,1.3)],
   'magic':     [('twinkle_0.mp3',0,1.4)],
-  'coin':      [('treasure_0.mp3',0,.5), ('coinsbag_2.mp3',0,.5), ('coinsbag_1.mp3',0,.4)],   # treasure-chest coins, not arcade (owner)
+  'coin':      [('coinsbag_2.mp3',0,.5), ('coinsbag_1.mp3',0,.4), ('coinsbag_0.mp3',0,.6)],   # real coin clinks only; the game-style coin ding was still 'arcade' (owner)
   'heartbeat': [('heartbeat_0.mp3',0,.4), ('heartbeat_2.mp3',0,.5)],
   'whoosh':    [('throw_0.mp3',0,.35), ('throw_2.mp3',0,.5)],
   'whooshlong':[('throw_1.mp3',0,1.0)],

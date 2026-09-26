@@ -27,17 +27,17 @@ BANK = {
   'whooshlong':[('throw_1.mp3',0,1.0)],
   'reverse':   [('vanish_0.mp3',.05,.6), ('vanish_1.mp3',.05,.6)],
   # monsters
-  'ghoul':     [('ghoul_0.mp3',.12,.9), ('ghoul_1.mp3',.12,.8), ('ghoul_2.mp3',.2,.9), ('growl_1.mp3',.05,.6)],
-  'ghouldie':  [('ghouldie_0.mp3',0,.7), ('ghouldie_1.mp3',0,1.5)],
+  'ghoul':     [('cartoongrunt_1.mp3',0,.4), ('cartoongrunt_2.mp3',0,.4), ('cutemonster_2.mp3',0,.35), ('cutemonster_1.mp3',0,.6)],   # cute, short (owner)
+  'ghouldie':  [('cutemonster_0.mp3',0,.9), ('ghouldie_0.mp3',0,.6)],
   'groan':     [('ghoul_3.mp3',0,1.3)],
-  'bat':       [('bat_1.mp3',0,.42), ('bat_0.mp3',.05,.6)],
-  'batdie':    [('bat_0.mp3',.05,1.2)],
-  'imp':       [('imp_2.mp3',0,1.0), ('imp_0.mp3',0,1.0)],
-  'impdie':    [('impdie_0.mp3',.45,1.3)],
+  'bat':       [('cutesqueak_0.mp3',0,.25), ('bat_1.mp3',0,.3)],   # just a squeak (owner)
+  'batdie':    [('bat_1.mp3',0,.35)],
+  'imp':       [('giggle_0.mp3',0,.5), ('giggle_2.mp3',0,.6)],   # soft giggle (owner)
+  'impdie':    [('giggle_1.mp3',0,.9)],
   'giant':     [('giant_0.mp3',.1,1.0), ('giant_2.mp3',0,1.0)],
   'giantdie':  [('giantdie_1.mp3',0,1.6), ('giantdie_0.mp3',0,.85)],
   'ghost':     [('ghost3_0.mp3',0,.85), ('vanish_1.mp3',.05,.6)],
-  'ghostdie':  [('ghost_0.mp3',.05,1.5), ('ghostdie_1.mp3',.1,1.5)],
+  'ghostdie':  [('ghost_0.mp3',.05,1.1)],   # soft moan only, no scream (owner)
   'scream':    [('ghostdie_0.mp3',.05,1.8)],
   'human':     [('human_0.mp3',0,.35), ('human_1.mp3',.1,.6), ('human_2.mp3',.08,.5)],
   'humandie':  [('humandie_1.mp3',0,1.3), ('humandie_0.mp3',0,.5)],
@@ -47,7 +47,9 @@ BANK = {
   'metallight':[(K+'impactMetal_light_000.ogg',0,.4), (K+'impactMetal_light_002.ogg',0,.4)],
   'stonebreak':[('stonebreak_0.mp3',.08,1.6)],
   'hiss':      [('vamp2_1.mp3',0,.65), ('vamp2_0.mp3',.15,.9)],
-  'cathiss':   [('lizard2_0.mp3',0,.7), ('lizard2_1.mp3',.2,1.0)],
+  'chameleon': [('cutesqueak_2.mp3',0,.4), ('cutesqueak_0.mp3',0,.25)],   # cute hiccup / squeak (owner)
+  'stone':     [('stonehit_1.mp3',0,.8), ('stonehit_2.mp3',0,.8)],   # castle wall hits
+  'stonecrash':[('stonebig_1.mp3',0,1.6)],
   'splash':    [('splash_1.mp3',0,.6), ('splash_0.mp3',0,.8)],
   'bubbles':   [('bubbles_0.mp3',0,1.2)],
   'knock':     [('knock_0.mp3',0,.26), (K+'impactWood_medium_000.ogg',0,.4)],
@@ -90,7 +92,7 @@ BANK = {
   'uiunpick':  [(K+'drop_002.ogg',0,.4)],
   'uibad':     [(K+'error_002.ogg',0,.5)],
   'uistar':    [(K+'confirmation_002.ogg',0,.7)],
-  'win':       [('win_0.mp3',.1,2.0)],
+  'win':       [('win8bit_0.mp3',0,1.9)],   # 8-bit fanfare, Mario-like (owner)
   'lose':      [('lose_0.mp3',0,2.0)],
 }
 

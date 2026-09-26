@@ -5,7 +5,7 @@ import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, firstNightOf, typesForNight, gearUnlockNightOf } from '../data/worlds/index.js';
 import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS } from '../data/monsters.js';
 import { monsterIcon } from '../engine/render/monsters.js';
-import { SFX, ensureAudio } from '../engine/audio.js';
+import { SFX, ensureAudio, musicStop, musicSync } from '../engine/audio.js';
 import { beginEndless, beginNight, makeDemo, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
 import { bgWorld, buildBg, pumpkinIcon } from '../engine/render/sprites.js';
 import { G, setBannerTimer, setGest, setStateRaw, state } from '../engine/state.js';
@@ -319,7 +319,7 @@ export function buildLegend(){
 
 export function syncSound(){ const t = `Sound: ${save.muted ? 'off' : 'on'}`; $('#bSoundT').textContent = t; $('#bSoundP').textContent = t; }
 
-export function toggleSound(){ save.muted = !save.muted; persist(); ensureAudio(); syncSound(); }
+export function toggleSound(){ save.muted = !save.muted; persist(); ensureAudio(); musicSync(); syncSound(); }
 
 export function syncSpawn(){
   const i = SPAWN_STEPS.indexOf(save.spawnEvery);
@@ -384,5 +384,5 @@ export function wireButtons(){
 
   $('#bRestart').onclick = () => { save.coins += G.coins; persist(); if (G.mode === 'story') beginNight(G.n); else startGame('endless', 1, G.loadout); };   // restart goes through the pumpkin picker (owner)
 
-  $('#bQuit').onclick = () => { save.coins += G.coins; if (G.mode === 'endless' && G.score > save.best) save.best = G.score; persist(); setState('title'); };
+  $('#bQuit').onclick = () => { musicStop(); save.coins += G.coins; if (G.mode === 'endless' && G.score > save.best) save.best = G.score; persist(); setState('title'); };
 }

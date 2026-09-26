@@ -140,3 +140,26 @@ All recorded samples are CC0 (public domain) from Freesound or Kenney unless not
 ## Kenney packs (CC0)
 
 Files under `raw/kenney/` come from kenney.nl asset packs, all CC0: Impact Sounds (impact*), Interface Sounds (click, confirmation, back, select, drop, error, tick, pluck, open, close, switch), RPG Audio (cloth, chop, creak, handleCoins, knifeSlice, metalPot). https://kenney.nl/assets
+| cutesqueak_0.mp3 | Cute Computer Squeak | qubodup | https://freesound.org/s/857748/ | CC0 |
+| cutesqueak_1.mp3 | Cute Squeaking Door | qubodup | https://freesound.org/s/188634/ | CC0 |
+| cutesqueak_2.mp3 | weird hiccup.wav | Reitanna | https://freesound.org/s/344052/ | CC0 |
+| cutemonster_0.mp3 | Cute Monster Wiggle | qubodup | https://freesound.org/s/442880/ | CC0 |
+| cutemonster_1.mp3 | Saludo peludito.wav | Sol5 | https://freesound.org/s/447095/ | CC0 |
+| cutemonster_2.mp3 | Sonrisa burbujas peludit.wav | Sol5 | https://freesound.org/s/447093/ | CC0 |
+| cartoongrunt_0.mp3 | Grunt | nomiqbomi | https://freesound.org/s/578788/ | CC0 |
+| cartoongrunt_1.mp3 | grunt.wav | Reitanna | https://freesound.org/s/242623/ | CC0 |
+| cartoongrunt_2.mp3 | grunt2.wav | Reitanna | https://freesound.org/s/242622/ | CC0 |
+| giggle_0.mp3 | cute giggle.wav | Reitanna | https://freesound.org/s/252218/ | CC0 |
+| giggle_1.mp3 | Cute Anime Giggle Sound Effect | DarkNightPrincess | https://freesound.org/s/611780/ | CC0 |
+| giggle_2.mp3 | giggle8.wav | Reitanna | https://freesound.org/s/343991/ | CC0 |
+| chirp_0.mp3 | corne.wav | Soundwarf | https://freesound.org/s/387534/ | CC0 |
+| chirp_1.mp3 | ĐàoĐơnPhương 8 Hz | SieuAmThanh | https://freesound.org/s/546813/ | CC0 |
+| chirp_2.mp3 | Quét Điện Tử 1 | SieuAmThanh | https://freesound.org/s/699735/ | CC0 |
+| stonehit_0.mp3 | ROCK_IMPACT_GALETS_OUTDOORS_260128 50 | kevinklang | https://freesound.org/s/843548/ | CC0 |
+| stonehit_1.mp3 | impact-stone-heavy.wav | kasparsj | https://freesound.org/s/513694/ | CC0 |
+| stonehit_2.mp3 | Stone Impact Rubble Debris 14 | Sheyvan | https://freesound.org/s/569510/ | CC0 |
+| stonebig_0.mp3 | Stone crash | discofield | https://freesound.org/s/711657/ | CC0 |
+| stonebig_1.mp3 | Brick crash | discofield | https://freesound.org/s/711656/ | CC0 |
+| win8bit_0.mp3 | Victory 1 | pumodi | https://freesound.org/s/150224/ | CC0 |
+| win8bit_1.mp3 | Game FX #8 | danlucaz | https://freesound.org/s/517765/ | CC0 |
+| win8bit_2.mp3 | victory chime | 1bob | https://freesound.org/s/717771/ | CC0 |

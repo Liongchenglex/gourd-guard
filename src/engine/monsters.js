@@ -385,7 +385,7 @@ function updatePoltergeist(m, dt){
 function updateVampireCount(m, dt){
   const T = TYPES.vampirecount;
   if (m.stunT > 0){ m.stunT -= dt; return true; }
-  if (m.healing){ m.hp = Math.min(m.maxHp, m.hp + T.healRate * dt); return true; }
+  if (m.healing){ m.hp = Math.min(m.maxHp, m.hp + T.healRate * dt); m.pulseT = (m.pulseT || 0) - dt; if (m.pulseT <= 0){ m.pulseT = 0.9; SFX.bossSfx('vampirecount', 'pulse'); } return true; }
   if (m.p < 0.05) return false;
   if (m.form === 2){   // full form also heals when left alone
     m.calmT += dt;

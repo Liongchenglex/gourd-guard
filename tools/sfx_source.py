@@ -90,6 +90,16 @@ CATS = {
   'thunder':   ('thunder crack', 0.5, 3.0, 2),
   'win':       ('level complete', 0.8, 3.5, 2),
   'star':      ('achievement chime', 0.3, 2.0, 2),
+  'win8bit':   ('8-bit victory', 0.8, 4.0, 3),
+  'win8bit2':  ('chiptune level complete', 0.8, 4.0, 2),
+  'cutesqueak':('cute squeak', 0.1, 1.0, 3),
+  'cutemonster':('cute monster', 0.2, 1.5, 3),
+  'cartoongrunt':('cartoon grunt', 0.2, 1.2, 3),
+  'giggle':    ('cute giggle', 0.3, 1.5, 3),
+  'chirp':     ('cartoon chirp', 0.1, 1.0, 3),
+  'stonehit':  ('stone impact', 0.2, 1.5, 3),
+  'stonebig':  ('stone crash', 0.5, 2.5, 2),
+  'ghostsoft': ('soft ghost', 0.5, 2.5, 2),
 }
 
 def search(q, dmin, dmax, want):

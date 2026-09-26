@@ -229,8 +229,8 @@ export function damageCastle(w, amt){
   const y = castleY(w);
   addFloat(fmt(amt), LANE(w.lane) + rnd(-8, 8), y - 30, '#d8d0c8', 16, 0.7);
   for (let i = 0; i < 6; i++) chunk(LANE(w.lane), y, '#8a8d96', 160);
-  if (w.hp <= 0.001){ w.dead = true; for (let i = 0; i < 22; i++) chunk(LANE(w.lane), y, i % 2 ? '#8a8d96' : '#55585f', 260); ring(LANE(w.lane), y, 44, 'rgba(220,220,230,.9)'); SFX.smash(); G.shake = Math.max(G.shake, 0.5); }
-  else SFX.knock();
+  if (w.hp <= 0.001){ w.dead = true; for (let i = 0; i < 22; i++) chunk(LANE(w.lane), y, i % 2 ? '#8a8d96' : '#55585f', 260); ring(LANE(w.lane), y, 44, 'rgba(220,220,230,.9)'); SFX.wallDown('castle'); G.shake = Math.max(G.shake, 0.5); }
+  else SFX.wallHit('castle');
 }
 
 /** Purple spawn: a random loadout pumpkin (or rainbow) flies into a random empty patch cell. */

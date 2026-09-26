@@ -4,7 +4,7 @@ import { GEAR } from '../data/shop.js';
 import { PATTERNS } from '../data/patterns.js';
 import { NTYPES, PTYPES, POWER } from '../data/pumpkins.js';
 import { WORLDS, levelFor, typesForNight, highestOpen } from '../data/worlds/index.js';
-import { SFX, ensureAudio } from './audio.js';
+import { SFX, ensureAudio, musicStart, musicStop } from './audio.js';
 import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, landingCell, landingNear, flyInto, DIRV } from './board.js';
 import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle } from './combat.js';
 import { mS, mY, updateMonster, TILE_P, applyBulwarks } from './monsters.js';
@@ -69,7 +69,8 @@ export function startGame(mode, n, loadout){
   initWalls();
   resolveMatches();
   setGest(null);
-  setState('play');
+  setState('play'); musicStart('play');   // gameplay track loops until the night ends or the player quits
+
   if (mode === 'story'){
     const parts = [];
     for (const key of def.unlockPumpkins){ const P = PTYPES.find(p => p.key === key); if (P) parts.push(`New pumpkin: ${P.name}! It ${P.role}.`); }
@@ -91,6 +92,7 @@ export function startGame(mode, n, loadout){
 export function endGame(win){
   if (G.over) return;
   G.over = true; setGest(null);
+  musicStop(win ? 0.3 : 1.2);
   if (win) SFX.win(); else SFX.lose();
   setTimeout(() => showResult(win), win ? 1100 : 1000);
 }

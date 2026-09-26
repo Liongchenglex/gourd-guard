@@ -6,7 +6,7 @@ import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestO
 import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS } from '../data/monsters.js';
 import { monsterIcon } from '../engine/render/monsters.js';
 import { poolKey, prebakeAsync } from '../engine/render/anim.js';
-import { SFX, ensureAudio, musicStop, musicSync } from '../engine/audio.js';
+import { SFX, ensureAudio, musicStop, musicSync, musicStart } from '../engine/audio.js';
 import { beginEndless, beginNight, makeDemo, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
 import { bgWorld, buildBg, pumpkinIcon } from '../engine/render/sprites.js';
 import { G, setBannerTimer, setGest, setStateRaw, state } from '../engine/state.js';
@@ -76,6 +76,7 @@ export const OVS = { title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout',
 export let shopReturn = 'levels', helpNext = null, loadoutNext = null, loadoutAvail = [], loadoutSel = new Set(), loadoutMust = [], loadoutWhy = [];
 
 export function setState(s){
+  if (s === 'title' || s === 'levels' || s === 'loadout' || s === 'shop' || s === 'help') musicStart('menu');   // lobby track behind every menu (owner); startGame swaps in the world track
   setStateRaw(s);
   for (const [k, sel] of Object.entries(OVS)) $(sel).classList.toggle('show', k === s);
   $('#hud').classList.toggle('on', s === 'play' || s === 'pause');

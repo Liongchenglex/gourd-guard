@@ -196,7 +196,7 @@ export function updateMonster(m, dt){
       case 'archer': {   // holds near the top and shoots arrows down its lane
         if (m.p >= TYPES.archer.hold){
           sp = 0; m.shootT -= dt;
-          if (m.shootT <= 0 && walls[m.lane].hp > 0){ m.shootT = TYPES.archer.shootEvery; G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:0.4, dmg:TYPES.archer.arrow, dead:false }); SFX.monsterAct('archer', 'shoot'); }   // holds fire at a wall that is already down
+          if (m.shootT <= 0 && walls[m.lane].hp > 0){ m.shootT = TYPES.archer.shootEvery; G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:0.4, dmg:TYPES.archer.arrow, dead:false }); SFX.monsterAct('archer', 'shoot'); m.anim = { clip:'draw', t:0, dur:0.5 }; }   // holds fire at a wall that is already down
         }
         break;
       }
@@ -222,7 +222,7 @@ export function updateMonster(m, dt){
           m.hidden = !m.hidden;
           m.upT = m.hidden ? TYPES.diver.down : TYPES.diver.up; SFX.monsterAct('diver', m.hidden ? 'submerge' : 'surface');
           for (let i = 0; i < 10; i++) spark(m.x, mY(m), '#7fd0e8', 110);
-          if (!m.hidden && walls[m.lane].hp > 0){ G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:TYPES.diver.boltSp, dmg:TYPES.diver.bolt, dead:false, water:true }); SFX.monsterAct('diver', 'bolt'); }
+          if (!m.hidden && walls[m.lane].hp > 0){ G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:TYPES.diver.boltSp, dmg:TYPES.diver.bolt, dead:false, water:true }); SFX.monsterAct('diver', 'bolt'); m.anim = { clip:'throw', t:0, dur:0.5 }; }
         }
         break;
       }
@@ -239,7 +239,7 @@ export function updateMonster(m, dt){
         if (m.hexT <= 0 && m.p > 0.05){
           m.hexT = TYPES.witch.hexEvery;
           const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.rise <= 0 && o.p > 0);   // anything but bosses and true chameleons; may re-hex an already hexed monster; witches hex each other (owner)
-          if (pick.length){ const o = pick[Math.floor(Math.random() * pick.length)]; hexBolt(m, o); hexMonster(o, Math.random() >= TYPES.witch.chameleonChance); SFX.monsterAct('witch', 'hex'); }
+          if (pick.length){ const o = pick[Math.floor(Math.random() * pick.length)]; hexBolt(m, o); hexMonster(o, Math.random() >= TYPES.witch.chameleonChance); SFX.monsterAct('witch', 'hex'); m.anim = { clip:'hex', t:0, dur:0.5 }; }
         }
         m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
         break;
@@ -289,7 +289,7 @@ export function updateMonster(m, dt){
                 G.arrows.push({ lane, p:p0, sp:m.form === 2 ? T.form2.boltSp : T.boltSp, dmg:T.bolt, dead:false, water:true });
                 for (let i = 0; i < 12; i++) spark(LANE(lane), FIELD_TOP + p0 * (FIELD_BOT - FIELD_TOP), '#9fe0f0', 160);
               }
-              SFX.bossSfx('twintides', 'bolt');
+              SFX.bossSfx('twintides', 'bolt'); m.anim = { clip:'bolt', t:0, dur:0.6 };
             }
           }
           m.x = m.tx + Math.sin(m.ph * 1.4) * 4;
@@ -358,7 +358,7 @@ function updatePoltergeist(m, dt){
         ring(LANE(c1), GY + r1 * CS + CS / 2, 30, 'rgba(200,220,255,.9)');
       }
       addFloat('Swapped!', m.x, mY(m) - m.r - 30, '#cfe8f2', 16, 0.9);
-      SFX.bossSfx('poltergeist', 'swap');
+      SFX.bossSfx('poltergeist', 'swap'); m.anim = { clip:'swap', t:0, dur:0.6 };
       setTimeout(resolveMatches, 600);
     }
   }
@@ -374,7 +374,7 @@ function updatePoltergeist(m, dt){
             const others = G.loadout.filter(t => t !== cell.c);
             cell.c = others[Math.floor(Math.random() * others.length)]; cell.pop = 1;
           }
-          addFloat('Repainted!', m.x, mY(m) - m.r - 30, '#cfe8f2', 16, 0.9); SFX.bossSfx('poltergeist', 'repaint');
+          addFloat('Repainted!', m.x, mY(m) - m.r - 30, '#cfe8f2', 16, 0.9); SFX.bossSfx('poltergeist', 'repaint'); m.anim = { clip:'recolour', t:0, dur:0.6 };
           resolveMatches();
         }
       }
@@ -407,7 +407,7 @@ function updateVampireCount(m, dt){
   if (m.batsT <= 0){
     m.batsT = m.form === 2 ? T.form2.batsEvery : T.batsEvery;
     for (let i = 0; i < T.bats; i++) spawnMonster('bat', pickLane(), true, Math.max(0, m.p - 0.02));
-    SFX.bossSfx('vampirecount', 'bats');
+    SFX.bossSfx('vampirecount', 'bats'); m.anim = { clip:'bats', t:0, dur:0.6 };
   }
   m.wallT -= dt;
   if (m.wallT <= 0){
@@ -416,7 +416,7 @@ function updateVampireCount(m, dt){
       const used = new Set(G.castles.filter(w => !w.dead).map(w => w.lane));
       const free = [...Array(COLS).keys()].filter(l => !used.has(l));
       if (free.length){ const lane = free[Math.floor(Math.random() * free.length)]; const whp = G.mode === 'story' && G.def.castles ? G.def.castles.hp : T.wallHp;
-      G.castles.push({ lane, p:rnd(0.45, 0.7), hp:whp, maxHp:whp, flash:0, dead:false }); ring(LANE(lane), FIELD_TOP + 0.55 * (FIELD_BOT - FIELD_TOP), 40, 'rgba(200,180,220,.9)'); addFloat('A wall rises', m.x, mY(m) - m.r - 30, '#d8cfe0', 16, 1); SFX.bossSfx('vampirecount', 'wall'); }
+      G.castles.push({ lane, p:rnd(0.45, 0.7), hp:whp, maxHp:whp, flash:0, dead:false }); ring(LANE(lane), FIELD_TOP + 0.55 * (FIELD_BOT - FIELD_TOP), 40, 'rgba(200,180,220,.9)'); addFloat('A wall rises', m.x, mY(m) - m.r - 30, '#d8cfe0', 16, 1); SFX.bossSfx('vampirecount', 'wall'); m.anim = { clip:'wall', t:0, dur:0.7 }; }
     }
   }
   m.healT -= dt;
@@ -461,7 +461,7 @@ function updateHexwitch(m, dt){
     const pick = shuffle(G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.rise <= 0 && o.p > 0));   // same targets as a witch
     const n = T.hexCount[0] + Math.floor(Math.random() * (T.hexCount[1] - T.hexCount[0] + 1));
     for (const o of pick.slice(0, n)){ hexBolt(m, o); hexMonster(o, m.form === 2 ? Math.random() >= T.chameleonChance : true); }   // form 1: reverse only (owner); form 2: 25% chameleon, 75% reverse
-    if (pick.length) SFX.bossSfx('hexwitch', 'hex');
+    if (pick.length){ SFX.bossSfx('hexwitch', 'hex'); m.anim = { clip:'hex', t:0, dur:0.6 }; }
   }
   m.zoneT -= dt;
   if (m.zoneT <= 0){
@@ -471,7 +471,7 @@ function updateHexwitch(m, dt){
       const shape = shapes[Math.floor(Math.random() * shapes.length)];
       G.hexZones.push({ shape, lane:Math.floor(Math.random() * COLS), p:rnd(0.25, 0.8), t:T.zoneLast });
     }
-    addFloat('Hex zone!', m.x, mY(m) - m.r - 30, '#d09bff', 18, 1.2); SFX.bossSfx('hexwitch', 'zone');
+    addFloat('Hex zone!', m.x, mY(m) - m.r - 30, '#d09bff', 18, 1.2); SFX.bossSfx('hexwitch', 'zone'); m.anim = { clip:'zone', t:0, dur:0.7 };
   }
 }
 /** Is a monster inside a Hexwitch zone? (box: 3 lanes × 3 tile heights; col: whole column; row: 3 tile heights across the field) */

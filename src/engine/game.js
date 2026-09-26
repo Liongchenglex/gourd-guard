@@ -5,6 +5,7 @@ import { PATTERNS } from '../data/patterns.js';
 import { NTYPES, PTYPES, POWER } from '../data/pumpkins.js';
 import { WORLDS, levelFor, typesForNight, highestOpen } from '../data/worlds/index.js';
 import { SFX, ensureAudio, musicStart, musicStop } from './audio.js';
+import { MUSIC } from '../data/music.js';
 import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, landingCell, landingNear, flyInto, DIRV } from './board.js';
 import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle } from './combat.js';
 import { mS, mY, updateMonster, TILE_P, applyBulwarks } from './monsters.js';
@@ -71,7 +72,7 @@ export function startGame(mode, n, loadout){
   initWalls();
   resolveMatches();
   setGest(null);
-  setState('play'); musicStart('play');   // gameplay track loops until the night ends or the player quits
+  setState('play'); musicStart(def && MUSIC['w' + def.world] ? 'w' + def.world : 'play');   // one draft track per world for the owner to compare; endless uses the first draft
 
   if (mode === 'story'){
     const parts = [];

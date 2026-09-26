@@ -17,5 +17,7 @@ export { pumpkin };
 export function charKey(m){ const k = m.type === 'boss' ? m.kind : m.type; return CHARS[k] ? k : null; }
 /** Atlas key: a variant with its own costume gets its own strips. */
 export function atlasKey(k, vkey){ const C = CHARS[k]; return C && C.variants && vkey && C.variants[vkey] ? k + '|' + vkey : k; }
+/** The variant key a live monster draws with: its VARIANTS key, or one the character derives from state (chameleon colour). */
+export function vkeyOf(m, k){ const C = CHARS[k]; if (C && C.vkeyOf){ const v = C.vkeyOf(m); if (v) return v; } return m.vkey || null; }
 /** Whether a variant of this character has a drawn costume (then no colour tint is applied). */
 export function hasCostume(k, vkey){ const C = CHARS[k]; return !!(C && C.variants && vkey && C.variants[vkey]); }

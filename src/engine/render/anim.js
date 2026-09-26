@@ -3,7 +3,7 @@
 // Atlases are built on first use and dropped when the canvas is resized (K changes).
 // Spec: docs/superpowers/specs/2026-09-26-toy-plastic-sprites-design.md
 
-import { CHARS, atlasKey, charKey } from './chars.js';
+import { CHARS, atlasKey, charKey, vkeyOf } from './chars.js';
 import { TYPES } from '../../data/monsters.js';
 import { rgba } from './paint.js';
 import { TAU } from '../util.js';
@@ -60,7 +60,7 @@ export function pickFrame(m, key){
 
 /** Draw a character's current frame at the origin of `ctx` (already translated and scaled to the monster). tint = [colour, alpha] or null. */
 export function drawChar(ctx, m, key, tint, clipOverride){
-  const A = atlas(atlasKey(key, m.vkey)), [clip, fi] = clipOverride || pickFrame(m, key), cl = A.clips[clip] || A.clips.walk;
+  const A = atlas(atlasKey(key, vkeyOf(m, key))), [clip, fi] = clipOverride || pickFrame(m, key), cl = A.clips[clip] || A.clips.walk;
   const sx = fi * cl.fw;
   if (!tint){ ctx.drawImage(cl.c, sx, 0, cl.fw, cl.fh, A.dx, A.dy, A.dw, A.dh); return; }
   if (!scratch){ scratch = document.createElement('canvas'); }

@@ -8,7 +8,7 @@ import { CS } from '../state.js';
 
 let cx = ctx;   // drawing context; monsterIcon() swaps it for an offscreen canvas
 import { ell, mix, rrect, tri } from './util.js';
-import { CHARS, charKey, hasCostume } from './chars.js';
+import { CHARS, charKey, hasCostume, vkeyOf } from './chars.js';
 import { charIcon, drawChar } from './anim.js';
 import { clamp, TAU } from '../util.js';
 
@@ -25,7 +25,7 @@ export function drawMonster(m, t){
     if (m.type === 'imp') cx.translate(0, -m.hop * 14);
     if (m.rise > 0 && !CHARS[key].clips.collapse){ cx.translate(0, m.r * 0.6); cx.scale(1.15, 0.35); cx.globalAlpha = fade * 0.85; }   // a hexed ghoul lies flat until it rises
     if (m.type === 'boss' && !m.demo && m.age < 0.5) cx.globalAlpha = 1;   // the teleport-in clip fades itself
-    const tint = m.flash > 0 ? ['#ffffff', 0.85] : blue ? ['#7fd0ff', 0.5] : m.tint && !hasCostume(key, m.vkey) ? [m.tint, 0.45] : null;
+    const tint = m.flash > 0 ? ['#ffffff', 0.85] : blue ? ['#7fd0ff', 0.5] : m.tint && !hasCostume(key, vkeyOf(m, key)) ? [m.tint, 0.45] : null;
     drawChar(cx, m, key, tint);
   } else {
   cx.fillStyle = 'rgba(0,0,0,.35)';

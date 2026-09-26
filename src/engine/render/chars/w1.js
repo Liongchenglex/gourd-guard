@@ -8,8 +8,29 @@ import { TAU } from '../../util.js';
 
 const STEM = pal('#8a5a2c'), LEAF = pal('#4f9a3a'), IMP = pal('#ec5a3c'), IMPB = pal('#ffb98a'), HORN = pal('#f4dfa0'), GH = pal('#8dc06c'), GHD = pal('#6f9a52'), SHIRT = pal('#6a5a8a'), PANTS = pal('#4a3f5e'),
   WRAP = pal('#ece0c4'), CHAR = pal('#b8a98c'), ROBE = pal('#5a4a72'), ROBED = pal('#3f3352'), LAN = pal('#5b4b3a'), LANG = pal('#ffe3a0'), WOOD = pal('#b48a58'), PATCH = pal('#7a6a56'), LEATH = pal('#6b4a2e'),
-  BONE = pal('#d8d2e6'), ST = pal('#aab3c4'), BAT = pal('#5c4bb0'), BATW = pal('#7d5fd8'), BATB = pal('#8a78cc'),
-  HIDE = pal('#7a8a62'), HIDED = pal('#5f6c4a'), MOSS = pal('#5c9a3a'), MOSSD = pal('#3f7a2a'), TUSK = pal('#efe4d0'), CAP = pal('#d8703a');
+  BONE = pal('#d8d2e6'), ST = pal('#aab3c4'), BATV = pal('#5c4bb0'), BATWV = pal('#7d5fd8'), BATBV = pal('#8a78cc'),
+  HIDEV = pal('#7a8a62'), MOSS = pal('#5c9a3a'), MOSSD = pal('#3f7a2a'), TUSK = pal('#efe4d0'), CAP = pal('#d8703a'),
+  // world costumes for the returning fodder (docs/WORLDS.md §2): W2 bog / marsh, W3 wood / broom / owl, W4 crypt / keep / siege, W5 drowned / tide / sodden / bog turtle
+  GHBOG = pal('#6f9a5e'), GHWOOD = pal('#9a8448'), GHCRYPT = pal('#9a98aa'), GHDROWN = pal('#4f929a'), MUD = pal('#5a3f2a'), REED = pal('#7a9a3a'), KELP = pal('#2f6b3a'), BARK = pal('#6e4f2e'), LEAF2 = pal('#7fae3a'),
+  WEB = '#e8e4f0', STONE = pal('#8c8a96'), IMPMARSH = pal('#8aa04a'), IMPBROOM = pal('#a05ad0'), IMPTIDE = pal('#3aa0a8'), IMPKEEP = pal('#c46a4a'), IRON = pal('#8a8f9c'), HAT = pal('#3a2a4a'),
+  BATSWIFT = pal('#9a4ab8'), BATOWL = pal('#b07a3a'), OWLF = pal('#e8d4a8'), SHELL = pal('#3f7a62'), SHELLD = pal('#2c5a48'), WRAPWET = pal('#a9b8a0'), STAR = pal('#e88a5a');
+
+// ---------- costume helpers ----------
+/** Wet sheen: extra soft highlights and a couple of drips on a clip shape. */
+function wet(g, clip, b, drips = []){ g.save(); clip(g); g.clip(); g.fillStyle = 'rgba(255,255,255,.35)'; ell(g, b.x - b.r * .3, b.y - b.r * .2, b.r * .32, b.r * .1, -.5); g.fill(); ell(g, b.x + b.r * .25, b.y + b.r * .3, b.r * .18, b.r * .06, -.4); g.fill(); g.restore();
+  for (const [x, y, l] of drips){ S.tube(g, SO([[x, y], [x + 1, y + l]]), pal('#9fd8e8'), 2.2); S.dot(g, E(x + 1, y + l + 1.5, 1.8, 2.2), '#c8f0ff', .9); } }
+/** Kelp fronds hanging from a point. */
+function kelp(g, x, y, n = 3, len = 22){ const R = rng(x * 3 + y | 0); for (let i = 0; i < n; i++){ const dx = (i - (n - 1) / 2) * 7 + (R() - .5) * 4, L = len * (.7 + R() * .6); S.tube(g, SO([[x + dx, y], [x + dx + (R() - .5) * 10, y + L * .5], [x + dx + (R() - .5) * 12, y + L]]), KELP, 4.5); } }
+/** A few mud splats. */
+function mud(g, clip, spots){ g.save(); clip(g); g.clip(); for (const [x, y, r] of spots) S.part(g, E(x, y, r, r * .7), MUD, { x, y, r }, { flat:true, noEdge:true }); g.restore(); }
+/** Reeds or twigs stuck on. */
+function sprigs(g, x, y, col, n = 3, up = -14){ for (let i = 0; i < n; i++){ const dx = (i - (n - 1) / 2) * 5; S.tube(g, SO([[x + dx, y], [x + dx * 1.6, y + up]]), col, 2); S.part(g, E(x + dx * 1.7, y + up - 2, 2.2, 3.6, dx * .04), col, { x:x + dx * 1.7, y:y + up - 2, r:3 }, { flat:true }); } }
+/** Leaf sprig. */
+function leaves(g, x, y, n = 3){ for (let i = 0; i < n; i++){ const a = -1.2 + i * .9, lx = x + Math.cos(a) * 9, ly = y + Math.sin(a) * 7 - 4; S.part(g, E(lx, ly, 5, 2.6, a), LEAF2, { x:lx, y:ly, r:5 }, { flat:true }); S.ln(g, [[x, y], [lx, ly]], LEAF2, .9, .6); } }
+/** Cobweb strands between two points. */
+function web(g, x1, y1, x2, y2){ g.strokeStyle = 'rgba(232,228,240,.55)'; g.lineWidth = .8; for (let i = 0; i < 4; i++){ const t = i / 3; g.beginPath(); g.moveTo(x1, y1); g.quadraticCurveTo((x1 + x2) / 2, (y1 + y2) / 2 + 4 + i * 2, x2 + (x2 - x1) * t * .1, y2 + (y2 - y1) * t * .1); g.stroke(); } for (let i = 1; i < 4; i++){ const t = i / 4; g.beginPath(); g.moveTo(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t); g.lineTo(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t + 6); g.stroke(); } }
+/** A small starfish. */
+function starfish(g, x, y, r = 5){ g.save(); g.translate(x, y); S.part(g, g2 => { g2.beginPath(); for (let i = 0; i < 10; i++){ const a = i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? r * .45 : r; g2.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } g2.closePath(); }, STAR, { x:0, y:0, r }, { flat:true, mat:'skin' }); g.restore(); }
 
 // ---------- pumpkin ----------
 /** cols: a palette for the whole pumpkin, or an array of five rib palettes (rainbow). */
@@ -48,6 +69,7 @@ export function pumpkin(g, cols, lit, R = 40){
 
 // ---------- bat ----------
 export function bat(g, P = {}){
+  const V = P.variant, BAT = V === 'swiftBat' ? BATSWIFT : V === 'owlBat' ? BATOWL : BATV, BATW = V === 'swiftBat' ? pal('#c060d8') : V === 'owlBat' ? pal('#c8945a') : BATWV, BATB = V === 'owlBat' ? OWLF : BATBV;
   const f = P.walk == null ? .3 : Math.sin(P.walk * TAU), ch = P.chew, bite = ch == null ? 0 : Math.abs(Math.sin(ch * TAU));
   S.shadow(g, 0, 44, 20, 4);
   g.save(); g.translate(0, ch == null ? -f * 3 : Math.sin(ch * TAU) * 2);
@@ -61,8 +83,11 @@ export function bat(g, P = {}){
   for (const s of [-1, 1]){ S.part(g, SM([[s * 8, -20], [s * 14, -36], [s * 22, -46], [s * 26, -30], [s * 24, -16]], .7), BAT, { x:s * 17, y:-30, r:14 }, { flat:true, mat:'skin' }); S.dot(g, SM([[s * 12, -22], [s * 16, -33], [s * 21, -40], [s * 22, -28], [s * 21, -19]], .7), '#e896c8', .75); }
   const head = SM([[-26, -14], [-28, 2], [-20, 14], [0, 18], [20, 14], [28, 2], [26, -14], [14, -26], [-14, -26]]); S.part(g, head, BAT, { x:0, y:-4, r:27 }, { mat:'skin' });
   S.contact(g, body, 0, 12, 12, 5, .5);
-  S.eye(g, -10, -6, 9.5, 10, { lx:.15, ly:.1, pr:.36 }); S.eye(g, 10, -6, 9.5, 10, { lx:.15, ly:.1, pr:.36 });
-  S.dot(g, E(0, 6, 2.2, 1.6), '#2a1a30', .9);
+  if (V === 'owlBat'){ for (const s of [-1, 1]) S.part(g, E(s * 10, -6, 12, 12.5), OWLF, { x:s * 10, y:-6, r:12 }, { flat:true, noEdge:true }); for (const s of [-1, 1]) S.part(g, SM([[s * 6, -22], [s * 12, -40], [s * 20, -30], [s * 18, -20]], .7), BATOWL, { x:s * 13, y:-28, r:9 }, { flat:true, mat:'skin' }); }
+  if (V === 'swiftBat'){ for (const s of [-1, 1]) S.stroke(g, SO([[s * 30, -2], [s * 46, -4], [s * 58, -2]]), { deep:'#e8b8ff' }, 1.4, .5); }
+  S.eye(g, -10, -6, 9.5, 10, { lx:.15, ly:.1, pr:V === 'owlBat' ? .5 : .36, iris:V === 'owlBat' ? '#e0a020' : undefined }); S.eye(g, 10, -6, 9.5, 10, { lx:.15, ly:.1, pr:V === 'owlBat' ? .5 : .36, iris:V === 'owlBat' ? '#e0a020' : undefined });
+  if (V === 'owlBat') S.part(g, PL([[-3, 2], [3, 2], [0, 9]]), pal('#e8a040'), { x:0, y:5, r:4 }, { flat:true });
+  else S.dot(g, E(0, 6, 2.2, 1.6), '#2a1a30', .9);
   if (bite > .3){ S.dot(g, SM([[-7, 9], [0, 10 + bite * 6], [7, 9], [0, 7]], .8), '#3a1420'); }
   S.stroke(g, g2 => { g2.beginPath(); g2.moveTo(-7, 9); g2.quadraticCurveTo(0, 14, 7, 9); }, BAT, 1.6);
   S.dot(g, PL([[-6, 9], [-2.5, 9], [-4.2, 15]]), '#fff'); S.dot(g, PL([[2.5, 9], [6, 9], [4.2, 15]]), '#fff');
@@ -71,7 +96,7 @@ export function bat(g, P = {}){
 
 // ---------- imp ----------
 export function imp(g, P = {}){
-  const c = IMP, b = IMPB, h = HORN, w = P.walk, ch = P.chew;
+  const V = P.variant, c = V === 'marshImp' ? IMPMARSH : V === 'broomImp' ? IMPBROOM : V === 'tideImp' ? IMPTIDE : V === 'keepImp' ? IMPKEEP : IMP, b = V === 'tideImp' ? pal('#a8e8e0') : IMPB, h = V === 'keepImp' ? IRON : HORN, w = P.walk, ch = P.chew;
   const hop = w == null ? 0 : Math.max(0, Math.sin(w * TAU)), tuck = hop, bob = ch == null ? 0 : Math.sin(ch * TAU) * 3, jaw = ch == null ? 0 : Math.abs(Math.sin(ch * TAU));
   S.shadow(g, 0, 48, 30 - hop * 8, 6);
   const tailP = SO([[6, 26], [26, 36 - hop * 10], [46, 24 - hop * 6], [44, 4 - hop * 10]]); S.tube(g, tailP, c, 3.5); S.part(g, PL([[38, 8 - hop * 10], [50, 2 - hop * 10], [48, 14 - hop * 10]]), c, { x:45, y:8, r:7 }, { flat:true });
@@ -79,12 +104,18 @@ export function imp(g, P = {}){
   g.save(); g.translate(0, bob);
   const body = SM([[-17, 2], [-20, 20], [-10, 34], [10, 34], [20, 20], [17, 2], [0, -6]]); S.part(g, body, c, { x:0, y:16, r:20 }, { mat:'skin' });
   const belly = SM([[-9, 12], [-11, 24], [0, 31], [11, 24], [9, 12], [0, 9]]); S.part(g, belly, b, { x:0, y:20, r:11 }, { noEdge:true, flat:true }); S.contact(g, belly, 0, 10, 10, 4, .3);
-  for (const s of [-1, 1]){ const up = hop * 6; S.tube(g, SO([[s * 16, 8], [s * 30, 2 - up], [s * 38, -8 - up]]), c, 6); S.hand(g, s * 40, -12 - up, c, -Math.PI / 2 + s * .5, 3, 5); }
+  // arms hang while it walks and fly up on the hop (owner, 2026-09-26)
+  for (const s of [-1, 1]){ const k = hop, ax = s * (24 + 6 * k), ay = 20 - 28 * k, bx = s * (26 + 12 * k), by = 30 - 42 * k; S.tube(g, SO([[s * 16, 8], [ax, ay], [bx, by]]), c, 6); S.hand(g, s * (27 + 13 * k), 34 - 46 * k, c, Math.PI / 2 - k * Math.PI + s * .5 * k, 3, 5); }
+  if (V === 'broomImp'){ g.save(); g.translate(30, 26); g.rotate(-.5); S.tube(g, SO([[0, 30], [0, -34]]), WOOD, 3); S.part(g, SM([[-7, 30], [7, 30], [10, 46], [-10, 46]], .5), pal('#c9a45c'), { x:0, y:38, r:9 }, { flat:true, mat:'wood' }); for (let i = -8; i <= 8; i += 3) S.ln(g, [[i * .8, 32], [i, 46]], pal('#c9a45c'), .8, .5); g.restore(); }
   const head = SM([[-24, -18], [-27, -4], [-18, 10], [0, 14], [18, 10], [27, -4], [24, -18], [12, -32], [-12, -32]]);
   for (const s of [-1, 1]) S.part(g, SM([[s * 22, -14], [s * 40, -28], [s * 44, -16], [s * 34, -2]], .7), c, { x:s * 32, y:-16, r:12 }, { flat:true, mat:'skin' });
   for (const s of [-1, 1]) S.part(g, SM([[s * 10, -28], [s * 14, -46], [s * 8, -60], [s * 22, -48], [s * 22, -28]], .8), h, { x:s * 15, y:-42, r:14 }, { flat:true, mat:'horn' });
   S.part(g, head, c, { x:0, y:-10, r:27 }, { mat:'skin' }); S.contact(g, body, 0, 4, 14, 5, .5);
-  S.eye(g, -10, -12, 8.5, 9.5, { lx:.25, iris:'#c04a2a' }); S.eye(g, 10, -12, 8.5, 9.5, { lx:.25, iris:'#c04a2a' });
+  if (V === 'tideImp'){ wet(g, head, { x:0, y:-10, r:27 }, [[-20, 4, 6], [22, -2, 5]]); for (const s of [-1, 1]) S.part(g, SM([[s * 22, -14], [s * 42, -30], [s * 46, -14], [s * 34, -2]], .7), pal('#6ad0d8'), { x:s * 32, y:-16, r:12 }, { flat:true, mat:'gel' }); }
+  if (V === 'marshImp'){ mud(g, body, [[-8, 28, 5], [10, 30, 4], [14, 18, 3]]); sprigs(g, 10, -30, REED, 3, -16); }
+  if (V === 'keepImp'){ S.part(g, SM([[-22, -26], [-18, -44], [0, -50], [18, -44], [22, -26], [0, -22]], .8), IRON, { x:0, y:-36, r:22 }, { mat:'metal' }); for (const x of [-14, 0, 14]) S.rivet(g, x, -30, 1.8, IRON); S.part(g, SM([[14, 2], [30, -6], [34, 10], [20, 14]], .7), IRON, { x:24, y:4, r:10 }, { flat:true, mat:'metal' }); }
+  if (V === 'broomImp'){ S.part(g, SM([[-24, -28], [24, -28], [26, -24], [-26, -24]], .5), HAT, { x:0, y:-26, r:26 }, { flat:true, mat:'cloth' }); S.part(g, SM([[-14, -28], [-6, -60], [8, -74], [4, -50], [14, -28]], .8), HAT, { x:0, y:-46, r:16 }, { mat:'cloth' }); S.ln(g, [[-14, -32], [14, -32]], pal('#c09a3a'), 2.5, .9); }
+  S.eye(g, -10, -12, 8.5, 9.5, { lx:.25, iris:V === 'tideImp' ? '#2a8aa0' : '#c04a2a' }); S.eye(g, 10, -12, 8.5, 9.5, { lx:.25, iris:V === 'tideImp' ? '#2a8aa0' : '#c04a2a' });
   S.dot(g, SM([[-13, 2], [-6, 8 + jaw * 3], [0, 10 + jaw * 5], [6, 8 + jaw * 3], [13, 2], [0, 4]], .9), '#3a1420'); S.dot(g, E(0, 8 + jaw * 3, 6, 3), '#c8384a', .8);
   S.dot(g, PL([[-10, 3], [-4, 3], [-7, 10]]), '#fff'); S.dot(g, PL([[4, 3], [10, 3], [7, 10]]), '#fff');
   S.blush(g, 0, -2, .9);
@@ -93,7 +124,7 @@ export function imp(g, P = {}){
 
 // ---------- ghoul ----------
 export function ghoul(g, P = {}){
-  const c = GH, d = GHD, t = SHIRT, p = PANTS, w = P.walk, ch = P.chew;
+  const V = P.variant, c = V === 'bogGhoul' ? GHBOG : V === 'woodGhoul' ? GHWOOD : V === 'cryptGhoul' ? GHCRYPT : V === 'drownedGhoul' ? GHDROWN : GH, d = pal(c.dark), t = V === 'cryptGhoul' ? pal('#5a5468') : V === 'drownedGhoul' ? pal('#3f5f6a') : V === 'woodGhoul' ? pal('#6a5a3a') : SHIRT, p = V === 'drownedGhoul' ? pal('#2f4a54') : PANTS, w = P.walk, ch = P.chew;
   const L = s => { if (w == null) return [0, 0]; const ph = w * TAU + (s < 0 ? 0 : Math.PI); return [Math.cos(ph) * 5, -Math.max(0, Math.sin(ph)) * 7]; }, [lx, ly] = L(-1), [rx, ry] = L(1);
   const bob = w != null ? -Math.abs(Math.sin(w * TAU)) * 3 : ch != null ? Math.sin(ch * TAU) * 3 : 0, lean = w == null ? 0 : Math.sin(w * TAU) * .06, jaw = ch == null ? 0 : Math.abs(Math.sin(ch * TAU)) * 5;
   S.shadow(g, 2, 50, 32, 6);
@@ -106,8 +137,12 @@ export function ghoul(g, P = {}){
   S.dot(g, SM([[-8, 24], [-2, 20], [4, 26], [-1, 30]], .6), d.base);
   for (const s of [-1, 1]){ const sw = w != null ? Math.sin(w * TAU + (s < 0 ? Math.PI : 0)) * .25 : ch != null ? Math.sin(ch * TAU) * .12 : 0; g.save(); g.translate(s * 24, 3); g.rotate(sw * s); g.translate(-s * 24, -3);
     S.tube(g, SO([[s * 24, 3], [s * 38, 12], [s * 46, 26]]), c, 8); S.hand(g, s * 48, 30, c, Math.PI * (s < 0 ? .6 : .4), 3, 6); g.restore(); }
-  const head = SM([[-20, -20], [-22, -6], [-14, 6], [0, 9], [14, 6], [22, -6], [20, -20], [10, -30], [-10, -30]]); S.part(g, head, c, { x:0, y:-12, r:22 }, { mat:'skin' });
+  const head = SM([[-20, -20], [-22, -6], [-14, 6], [0, 9], [14, 6], [22, -6], [20, -20], [10, -30], [-10, -30]]); S.part(g, head, c, { x:0, y:-12, r:22 }, { mat:V === 'woodGhoul' ? 'wood' : V === 'cryptGhoul' ? 'stone' : 'skin' });
   S.contact(g, torso, 0, 6, 18, 6, .5);
+  if (V === 'bogGhoul'){ mud(g, torso, [[-14, 30, 6], [8, 34, 5], [18, 22, 4]]); mud(g, head, [[14, 0, 4]]); sprigs(g, -8, -30, REED, 3, -14); }
+  if (V === 'woodGhoul'){ leaves(g, 8, -30, 3); S.part(g, SM([[-22, -8], [-30, -20], [-26, -24], [-18, -14]], .6), BARK, { x:-24, y:-16, r:6 }, { flat:true, mat:'wood' }); S.part(g, SM([[12, -30], [16, -40], [20, -38], [16, -28]], .6), BARK, { x:16, y:-34, r:5 }, { flat:true, mat:'wood' }); }
+  if (V === 'cryptGhoul'){ web(g, -24, 4, -44, 24); web(g, 20, -20, 26, 2); S.dot(g, E(-6, -28, 2, 2), '#fff', .5); S.part(g, SM([[-8, -30], [-2, -40], [6, -32], [10, -28]], .6), STONE, { x:0, y:-33, r:6 }, { flat:true, mat:'stone' }); }
+  if (V === 'drownedGhoul'){ wet(g, head, { x:0, y:-12, r:22 }, [[-46, 34, 6], [40, 30, 5], [20, 8, 4]]); kelp(g, 2, -30, 4, 26); starfish(g, 22, 0, 5); S.dot(g, E(-16, -2, 3, 2.2), '#b8e8f0', .5); }
   for (const [x, y, r] of [[16, -24, 2.6], [-18, -2, 2.2]]) S.part(g, E(x, y, r, r), c, { x, y, r }, { flat:true, noEdge:true });
   S.dot(g, SM([[-6, -30], [-2, -38], [2, -32], [6, -38], [8, -30]], .5), d.dark);
   S.ln(g, [[-20, -12], [-8, -10]], c, 1.6); S.ln(g, [[-16, -15], [-15, -7]], c, 1.3); S.ln(g, [[-12, -15], [-11, -7]], c, 1.3);
@@ -120,7 +155,7 @@ export function ghoul(g, P = {}){
 
 // ---------- Mossback (brute): a hulking knuckle-walker with a mossy back ----------
 export function brute(g, P = {}){
-  const w = P.walk, ch = P.chew;
+  const V = P.variant, w = P.walk, ch = P.chew, HIDE = V === 'bogTurtle' ? pal('#5f8a78') : V === 'siegeBrute' ? pal('#8a7a66') : HIDEV, HIDED = pal(HIDE.dark);
   const sw = w == null ? 0 : Math.sin(w * TAU), bob = w != null ? -Math.abs(sw) * 2 : ch != null ? Math.sin(ch * TAU) * 2 : 0, jaw = ch == null ? 0 : Math.abs(Math.sin(ch * TAU)) * 6;
   S.shadow(g, 0, 52, 52, 8);
   // legs and flat feet
@@ -130,15 +165,20 @@ export function brute(g, P = {}){
   const body = SM([[-46, -6], [-50, 20], [-34, 44], [0, 48], [34, 44], [50, 20], [46, -6], [24, -36], [0, -42], [-24, -36]]); S.part(g, body, HIDE, { x:0, y:4, r:48 }, { mat:'stone', hx:-24, hy:-24 });
   S.dot(g, SM([[-18, 14], [-20, 36], [0, 42], [20, 36], [18, 14], [0, 8]], .9), HIDED.light, .35);
   // moss on the back and shoulders
-  const moss = SM([[-44, -8], [-40, -30], [-22, -44], [0, -50], [22, -44], [40, -30], [44, -8], [30, -14], [12, -24], [-12, -24], [-30, -14]], .8); S.part(g, moss, MOSS, { x:0, y:-24, r:44 }, { mat:'moss', hx:-20, hy:-38 });
+  const moss = SM([[-44, -8], [-40, -30], [-22, -44], [0, -50], [22, -44], [40, -30], [44, -8], [30, -14], [12, -24], [-12, -24], [-30, -14]], .8);
+  if (V === 'bogTurtle'){ S.part(g, moss, SHELL, { x:0, y:-24, r:44 }, { mat:'stone', hx:-20, hy:-38 }); g.save(); moss(g); g.clip(); for (const [x, y] of [[-20, -30], [8, -36], [30, -24], [-4, -14], [22, -8], [-30, -12]]) S.part(g, E(x, y, 9, 7), SHELLD, { x, y, r:9 }, { flat:true, noEdge:true, mat:'stone' }); g.restore(); S.stroke(g, moss, SHELLD, 2, .8); for (const [x, y, r] of [[-38, -10, 5], [36, -14, 4]]) S.part(g, E(x, y, r, r * .7), MOSSD, { x, y, r }, { flat:true, mat:'moss', noEdge:true }); }
+  else if (V === 'siegeBrute'){ S.part(g, moss, IRON, { x:0, y:-24, r:44 }, { mat:'metal', hx:-20, hy:-38 }); S.ln(g, [[-40, -20], [40, -20]], IRON, 1.6, .7); for (const x of [-30, -15, 0, 15, 30]) S.rivet(g, x, -20, 2.2, IRON); for (const [x, y] of [[-24, -40], [0, -48], [24, -40]]) S.part(g, PL([[x - 5, y + 4], [x, y - 12], [x + 5, y + 4]]), IRON, { x, y:y - 2, r:6 }, { flat:true, mat:'metal' }); S.tube(g, SO([[-44, 6], [-30, 14], [-14, 10]]), pal('#5a5a66'), 3); }
+  else { S.part(g, moss, MOSS, { x:0, y:-24, r:44 }, { mat:'moss', hx:-20, hy:-38 });
   for (const [x, y, r] of [[-36, -4, 7], [38, -6, 6], [-8, -46, 5], [16, -42, 6]]) S.part(g, E(x, y, r, r * .7), MOSSD, { x, y, r }, { flat:true, mat:'moss', noEdge:true });
-  S.part(g, SM([[22, -50], [26, -58], [34, -56], [34, -50]], .7), CAP, { x:28, y:-54, r:6 }, { flat:true }); S.tube(g, SO([[28, -50], [28, -44]]), TUSK, 2.5);
+  S.part(g, SM([[22, -50], [26, -58], [34, -56], [34, -50]], .7), CAP, { x:28, y:-54, r:6 }, { flat:true }); S.tube(g, SO([[28, -50], [28, -44]]), TUSK, 2.5); }
   // arms: knuckle-walking, swinging opposite to the legs
   for (const s of [-1, 1]){ const a = w == null ? 0 : Math.sin(w * TAU + (s < 0 ? Math.PI : 0)) * .18; g.save(); g.translate(s * 40, -10); g.rotate(a * s); g.translate(-s * 40, 10);
     S.tube(g, SO([[s * 40, -10], [s * 54, 14], [s * 56, 36]]), HIDE, 14); const fist = E(s * 56, 40, 11, 9); S.part(g, fist, HIDE, { x:s * 56, y:40, r:11 }, { flat:true, mat:'stone' }); for (const dd of [-6, -2, 2, 6]) S.ln(g, [[s * 56 + dd, 34], [s * 56 + dd, 38]], HIDE, 1.2, .5); g.restore(); }
   // small low head with a heavy brow, tusks and tiny eyes
   const head = SM([[-18, -22], [-20, -6], [-12, 8], [0, 10], [12, 8], [20, -6], [18, -22], [8, -30], [-8, -30]]); S.part(g, head, HIDE, { x:0, y:-10, r:20 }, { mat:'stone' });
   S.contact(g, body, 0, 4, 16, 6, .5);
+  if (V === 'siegeBrute'){ S.part(g, SM([[-20, -18], [-18, -34], [0, -40], [18, -34], [20, -18], [0, -14]], .8), IRON, { x:0, y:-28, r:20 }, { mat:'metal' }); S.part(g, PL([[-3, -40], [3, -40], [0, -54]]), IRON, { x:0, y:-46, r:6 }, { flat:true, mat:'metal' }); }
+  if (V === 'bogTurtle'){ wet(g, head, { x:0, y:-10, r:20 }, [[-40, 20, 5], [44, 24, 5]]); kelp(g, -30, -6, 2, 16); }
   S.ln(g, [[-14, -18], [-4, -14]], HIDED, 3, .8); S.ln(g, [[14, -18], [4, -14]], HIDED, 3, .8);
   S.eye(g, -8, -10, 4.5, 4, { lx:.2, pr:.55, lid:.4, tilt:-.4, lidCol:HIDE.base, iris:'#c05a2a' }); S.eye(g, 8, -10, 4.5, 4, { lx:.2, pr:.55, lid:.4, tilt:.4, lidCol:HIDE.base, iris:'#c05a2a' });
   for (const s of [-1, 1]) S.dot(g, E(s * 3, -3, 1.6, 1.2), '#2a2a24', .8);
@@ -148,8 +188,8 @@ export function brute(g, P = {}){
 }
 
 // ---------- mummy ----------
-function mummyStrips(g, t){   // wrappers unwinding to the ground as the mummy collapses
-  const c = WRAP, R = rng(77), strips = [];
+function mummyStrips(g, t, c = WRAP){   // wrappers unwinding to the ground as the mummy collapses
+  const R = rng(77), strips = [];
   for (let i = 0; i < 9; i++){ const ang = (i / 9) * Math.PI + (R() - .5) * .4, len = 26 + R() * 30, side = i % 2 ? 1 : -1; strips.push({ ang, len, side, curl:R() * 12 - 6 }); }
   for (const st of strips){ const ex = Math.cos(st.ang) * st.len * t * st.side, ey = 46 + Math.sin(st.ang) * 8 * t, sx = Math.cos(st.ang) * 8 * st.side, sy = 40 - (1 - t) * 24;
     S.tube(g, SO([[sx, sy], [(sx + ex) / 2 + st.curl, (sy + ey) / 2 - 8 * t], [ex, ey], [ex + st.side * 6, ey - 4 * t]]), c, 4.5); }
@@ -157,10 +197,10 @@ function mummyStrips(g, t){   // wrappers unwinding to the ground as the mummy c
     S.glow(g, -3, 40, 4, '#ffa030'); S.dot(g, E(-3, 40, 2, 2.4), '#3b1d0c'); g.restore(); }
 }
 export function mummy(g, P = {}){
-  const c = P.charred ? CHAR : WRAP, t = P.collapse ?? 0, w = P.walk, ch = P.chew;
-  if (t >= 1){ S.shadow(g, 0, 52, 30, 6); mummyStrips(g, 1); return; }
+  const V = P.variant, c = P.charred ? CHAR : V === 'soddenMummy' ? WRAPWET : WRAP, t = P.collapse ?? 0, w = P.walk, ch = P.chew;
+  if (t >= 1){ S.shadow(g, 0, 52, 30, 6); mummyStrips(g, 1, c); return; }
   S.shadow(g, 0, 52, 30, 6);
-  if (t > 0){ mummyStrips(g, t); g.save(); g.translate(0, 50); g.scale(1 - t * .2, 1 - t * .92); g.translate(0, -50); g.globalAlpha *= Math.max(0, 1 - t * 1.1); }
+  if (t > 0){ mummyStrips(g, t, c); g.save(); g.translate(0, 50); g.scale(1 - t * .2, 1 - t * .92); g.translate(0, -50); g.globalAlpha *= Math.max(0, 1 - t * 1.1); }
   const bob = w != null ? -Math.abs(Math.sin(w * TAU)) * 2.5 : ch != null ? Math.sin(ch * TAU) * 2 : 0, sway = w != null ? Math.sin(w * TAU) * .12 : ch != null ? Math.sin(ch * TAU) * .18 : 0;
   for (const s of [-1, 1]){ const ph = w == null ? null : w * TAU + (s < 0 ? 0 : Math.PI), dy = ph == null ? 0 : -Math.max(0, Math.sin(ph)) * 6, dx = ph == null ? 0 : Math.cos(ph) * 4;
     g.save(); g.translate(dx, dy);
@@ -180,8 +220,9 @@ export function mummy(g, P = {}){
   S.dot(g, SM([[-16, -34], [-4, -38], [8, -34], [6, -24], [-6, -22], [-16, -26]], .7), '#2a1a30');
   S.wrap(g, head, c, [[-26, -48, 26, -44], [-26, -16, 26, -20], [-26, -10, 26, -12], [8, -40, 26, -30]], 6);
   S.stroke(g, SO([[16, -46], [30, -52], [38, -44]]), c, 3.5, .9); S.stroke(g, SO([[16, -46], [30, -52], [38, -44]]), { deep:c.base }, 1.8, 1);
-  const eye = P.charred ? '#ff6a1a' : '#ffa030';
+  const eye = P.charred ? '#ff6a1a' : V === 'soddenMummy' ? '#7ef0d8' : '#ffa030';
   S.glow(g, -4, -30, 5, eye); S.dot(g, E(-4, -30, 2.4, 3), '#3b1d0c'); S.dot(g, E(-5.2, -31.4, .9, .9), '#fff');
+  if (V === 'soddenMummy'){ wet(g, head, { x:0, y:-30, r:22 }, [[-70, 10, 6], [66, 8, 5], [18, 32, 5]]); kelp(g, 6, -48, 3, 22); }
   g.restore(); g.restore();
   if (t > 0) g.restore();
 }
@@ -254,11 +295,11 @@ export function gravekeeper(g, P = {}){
 // scale/dy fit the drawing to the in-game footprint (feet at about r × 0.95 below the monster's centre).
 // box is the frame in drawing units; clips are baked by anim.js: n frames at fps; `once` clips play a single time.
 export const W1 = {
-  bat:   { draw:bat, scale:.56, dy:-3, box:{ x:-66, y:-50, w:132, h:100 }, clips:{ walk:{ n:6, fps:14, pose:t => ({ walk:t }) }, chew:{ n:4, fps:8, pose:t => ({ chew:t }) } }, still:{ walk:.3 } },
-  imp:   { draw:imp, scale:.57, dy:-12, box:{ x:-54, y:-64, w:108, h:120 }, clips:{ walk:{ n:8, fps:12, pose:t => ({ walk:t }) }, chew:{ n:4, fps:8, pose:t => ({ chew:t }) } }, still:{} },
-  ghoul: { draw:ghoul, scale:.7, dy:-15, box:{ x:-60, y:-46, w:120, h:104 }, clips:{ walk:{ n:8, fps:9, pose:t => ({ walk:t }) }, chew:{ n:4, fps:8, pose:t => ({ chew:t }) } }, still:{} },
-  brute: { draw:brute, scale:.66, dy:-6, box:{ x:-74, y:-66, w:148, h:124 }, clips:{ walk:{ n:8, fps:6, pose:t => ({ walk:t }) }, chew:{ n:4, fps:7, pose:t => ({ chew:t }) } }, still:{} },
-  mummy: { draw:mummy, scale:.6, dy:-10, box:{ x:-92, y:-58, w:176, h:118 }, clips:{ walk:{ n:8, fps:7, pose:t => ({ walk:t }) }, chew:{ n:4, fps:6, pose:t => ({ chew:t }) }, collapse:{ n:8, fps:16, once:true, pose:t => ({ collapse:t }) } }, still:{} },
+  bat:   { draw:bat, scale:.56, dy:-3, box:{ x:-66, y:-50, w:132, h:100 }, variants:{ swiftBat:true, owlBat:true }, clips:{ walk:{ n:6, fps:14, pose:t => ({ walk:t }) }, chew:{ n:4, fps:8, pose:t => ({ chew:t }) } }, still:{ walk:.3 } },
+  imp:   { draw:imp, scale:.57, dy:-12, box:{ x:-56, y:-78, w:112, h:134 }, variants:{ marshImp:true, broomImp:true, keepImp:true, tideImp:true }, clips:{ walk:{ n:8, fps:12, pose:t => ({ walk:t }) }, chew:{ n:4, fps:8, pose:t => ({ chew:t }) } }, still:{} },
+  ghoul: { draw:ghoul, scale:.7, dy:-15, box:{ x:-60, y:-48, w:120, h:106 }, variants:{ bogGhoul:true, woodGhoul:true, cryptGhoul:true, drownedGhoul:true }, clips:{ walk:{ n:8, fps:9, pose:t => ({ walk:t }) }, chew:{ n:4, fps:8, pose:t => ({ chew:t }) } }, still:{} },
+  brute: { draw:brute, scale:.66, dy:-6, box:{ x:-74, y:-66, w:148, h:124 }, variants:{ siegeBrute:true, bogTurtle:true }, clips:{ walk:{ n:8, fps:6, pose:t => ({ walk:t }) }, chew:{ n:4, fps:7, pose:t => ({ chew:t }) } }, still:{} },
+  mummy: { draw:mummy, scale:.6, dy:-10, box:{ x:-92, y:-58, w:176, h:118 }, variants:{ soddenMummy:true }, clips:{ walk:{ n:8, fps:7, pose:t => ({ walk:t }) }, chew:{ n:4, fps:6, pose:t => ({ chew:t }) }, collapse:{ n:8, fps:16, once:true, pose:t => ({ collapse:t }) } }, still:{} },
   firemummy: { draw:firemummy, scale:.6, dy:-10, box:{ x:-92, y:-70, w:176, h:130 }, clips:{ walk:{ n:8, fps:7, pose:t => ({ walk:t, flick:t * 2 }) }, chew:{ n:4, fps:6, pose:t => ({ chew:t, flick:t }) }, collapse:{ n:8, fps:16, once:true, pose:t => ({ collapse:t, flick:t }) } }, still:{} },
   gravekeeper: { draw:gravekeeper, scale:.68, dy:-13, box:{ x:-110, y:-98, w:206, h:200 }, clips:{ walk:{ n:8, fps:6, pose:t => ({ idle:t }) }, cast:{ n:6, fps:12, once:true, pose:t => ({ cast:t }) }, teleport:{ n:8, fps:16, once:true, pose:t => ({ cast:1, fade:t }) }, stab:{ n:8, fps:12, once:true, pose:t => ({ stab:t }) } }, still:{} },
 };

@@ -13,9 +13,10 @@ import { bgWorld, buildBg, pumpkinIcon, worldScene } from '../engine/render/spri
 import { BOOKS } from '../data/lore.js';
 import { BESTIARY, COMPANIONS } from '../data/bestiary.js';
 import { toolIcon } from '../engine/render/tools.js';
+import { titleArt } from '../engine/render/keyart.js';
 import { trophyIcon } from '../engine/render/trophies.js';
 import { PUMPKIN_LORE } from '../data/lore.js';
-import { G, setBannerTimer, setGest, setStateRaw, state } from '../engine/state.js';
+import { G, H, setBannerTimer, setGest, setStateRaw, state } from '../engine/state.js';
 import { $, clamp } from '../engine/util.js';
 import { wallFrac } from '../engine/walls.js';
 import { lvOf, persist, save } from '../save.js';
@@ -106,6 +107,7 @@ export function setState(s){
     if (!G || G.mode !== 'demo') makeDemo();
     if (bgWorld !== 0) buildBg(0);
     $('#bestTxt').textContent = save.best ? `Best endless score: ${save.best.toLocaleString()}` : '';
+    const art = titleArt(H); for (const [id, c] of [['#artBack', art.back], ['#artFront', art.front]]){ const cv = $(id); if (cv.width !== c.width || cv.height !== c.height){ cv.width = c.width; cv.height = c.height; } cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); cv.getContext('2d').drawImage(c, 0, 0); }   // key art (owner, 2026-09-27)
   }
   if (s !== 'play'){ setGest(null); $('#banner').classList.remove('show'); setBannerTimer(0); }
   if (s === 'pause'){ syncSpawn(); renderPerks(); }

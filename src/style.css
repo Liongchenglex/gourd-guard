@@ -72,7 +72,17 @@ canvas#cv{ position:absolute; inset:0; width:100%; height:100%; display:block; t
   gap:calc(var(--u)*14px); padding:calc(var(--u)*22px); text-align:center; background:rgba(8,5,14,.6); z-index:5; }
 .ov.show{ display:flex; animation:fade .22s ease; }
 .ov.clear{ background:linear-gradient(rgba(8,5,14,.1), rgba(8,5,14,.45) 45%, rgba(8,5,14,.2) 70%, rgba(8,5,14,.55)); }
-#ovTitle{ justify-content:flex-start; padding-top:calc(var(--u)*130px); }
+#ovTitle{ justify-content:flex-start; padding-top:calc(var(--u)*46px); padding-bottom:calc(var(--u)*34px); background:#0e0718; overflow:hidden; }
+#ovTitle > *:not(.keyart){ position:relative; z-index:1; }
+.keyart{ position:absolute; inset:0; z-index:0; pointer-events:none; }
+.keyart canvas{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+#artFront{ animation:artBob 3.2s ease-in-out infinite; transform-origin:50% 100%; }
+@keyframes artBob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(calc(var(--u)*-5px)); } }
+#ovTitle .logo{ font-size:calc(var(--u)*96px); text-shadow:0 0 calc(var(--u)*30px) rgba(255,138,31,.7), 0 calc(var(--u)*6px) 0 #5a2200, 0 calc(var(--u)*10px) calc(var(--u)*18px) rgba(0,0,0,.7); }
+#ovTitle .tag{ text-shadow:0 2px 6px #000; margin-bottom:0; }
+.titleStack{ margin-top:auto; padding:calc(var(--u)*18px) calc(var(--u)*16px) 0; }
+.keyart::after{ content:''; position:absolute; left:0; right:0; bottom:0; height:30%; background:linear-gradient(rgba(14,7,24,0), rgba(14,7,24,.85) 70%); }
+@media (prefers-reduced-motion: reduce){ #artFront{ animation:none; } }
 @keyframes fade{ from{ opacity:0; } to{ opacity:1; } }
 .card{ background:var(--panel); border:1px solid var(--line); border-radius:calc(var(--u)*22px); padding:calc(var(--u)*22px);
   width:100%; max-width:calc(var(--u)*476px); max-height:100%; overflow:auto; box-shadow:0 12px 40px rgba(0,0,0,.5); }

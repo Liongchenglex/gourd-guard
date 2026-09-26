@@ -1,6 +1,6 @@
 import { PERKS, perkEarned, perkOn, perkNight } from '../data/perks.js';
 import { SPAWN_STEPS } from '../data/patterns.js';
-import { LV_COST, NTYPES, PTYPES, lvDesc, pct } from '../data/pumpkins.js';
+import { LV_COST, NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, firstNightOf, typesForNight, gearUnlockNightOf } from '../data/worlds/index.js';
 import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS } from '../data/monsters.js';
@@ -375,7 +375,8 @@ function renderDetail(){
   d.innerHTML = '';
   d.appendChild(pumpkinIcon(t, true));
   const tx = document.createElement('div');
-  tx.innerHTML = `<b>${P.name}</b><small>Level ${L}${where ? ' \u00b7 ' + where : ''}</small><p class="ab">${P.role.charAt(0).toUpperCase() + P.role.slice(1)}. ${lvDesc(t, L).charAt(0).toUpperCase() + lvDesc(t, L).slice(1)}.</p><p class="lo">${PUMPKIN_LORE[P.key] || ''}</p>`;
+  const st = lvStats(t, L);
+  tx.innerHTML = `<b>${P.name}</b><small>Level ${L}${where ? ' \u00b7 ' + where : ''}</small><p class="ab"><span class="k">Power:</span> ${st.power}<br><span class="k">Knockback:</span> ${st.knockback}<br><span class="k">Special:</span> ${st.special}</p><p class="lo">${PUMPKIN_LORE[P.key] || ''}</p>`;
   d.appendChild(tx);
 }
 

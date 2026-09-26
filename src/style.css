@@ -184,6 +184,7 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .detail small{ color:var(--candle); font-size:calc(var(--u)*12.5px); margin-left:calc(var(--u)*6px); }
 .detail p{ margin:calc(var(--u)*2px) 0 0; font-size:calc(var(--u)*13px); line-height:1.35; }
 .detail p.lo{ color:var(--muted); font-style:italic; }
+.detail .k{ color:var(--candle); font-weight:600; }
 .pick .lv{ position:absolute; left:calc(var(--u)*6px); top:calc(var(--u)*6px); background:rgba(0,0,0,.45); color:var(--candle); font-size:calc(var(--u)*10.5px); font-weight:700; border-radius:99px; padding:1px 6px; }
 
 /* ---------- Storybook shelf and open book (level select, owner 2026-09-26) ---------- */

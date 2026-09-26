@@ -55,6 +55,26 @@ export const WILD_CHANCE = 0.03, WILD_CHANCE_PERK = 0.10;   // rainbow chance on
 
 export function pct(v){ return Math.round(v * 100) + '%'; }
 
+/** Structured level facts for the picking screen (owner, 2026-09-27): power, knockback and the special effect at level L. */
+export function lvStats(t, L){
+  const i = L - 1, kb = v => v ? pct(v) : 'none';
+  let power = String(t === 10 ? POWER[i] * TURQ_FRAC : POWER[i]), knock = kb(KB_CHANCE[i]), special = 'none';
+  switch (t){
+    case 1: special = `kills always pay coins, ×${COIN_MULT[i]}`; break;
+    case 2: knock = 'none'; special = `slows monsters for ${SLOW_T[i]} s${FREEZE_P[i] ? `, ${pct(FREEZE_P[i])} chance to freeze them solid` : ''}`; break;
+    case 3: knock = 'none'; special = `burns ${BURN_N[i]} times for ${BURN_AMT[i]} (the only thing that kills a mummy)`; break;
+    case 4: special = 'pierces every monster in its column and passes castle walls'; break;
+    case 5: special = `spawns 1 pumpkin per bunch, ${pct(SPAWN_P[i])} more per kill, ${pct(RAINBOW_P[i])} of them rainbow`; break;
+    case 6: special = i >= 2 ? 'a miss flies back beside a pumpkin of its colour' : 'a miss flies back to the top of its column'; break;
+    case 7: special = `blast splashes 3×${SPLASH_ROWS[i]} tiles for ${pct(SPLASH_FRAC[i])}${i >= 4 ? ', and the splash knocks back' : ''}`; break;
+    case 8: special = `lightning strikes ${CHAIN_N[i]} monsters in the row at ${pct(CHAIN_FRAC[i])}`; break;
+    case 9: knock = kb(KB_PINK[i]); special = `repairs the wall of its column by ${HEAL_AMT[i]} on every hit`; break;
+    case 10: special = 'a bunch of 2 is enough to launch'; break;
+    case 11: power = `${POWER[i] * 0.5} / ${POWER[i]} / ${POWER[i] * 2}`; knock = kb(BROWN_KB[i]); special = `grows small, medium, big: full size in ${BROWN_GROW[i][0]} s`; break;
+  }
+  return { power, knockback:knock, special };
+}
+
 export function lvDesc(t, L){
   const i = L - 1, parts = [`power ${POWER[i]}`];
   if (t === 2){ parts.push(`slows ${SLOW_T[i]}s`); if (FREEZE_P[i]) parts.push(`${pct(FREEZE_P[i])} freeze`); }

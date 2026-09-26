@@ -67,7 +67,7 @@ BANK = {
   'chuckle':   [('chuckle_1.mp3',0,1.0), ('chuckle_2.mp3',0,.8)],   # vampire snicker (owner)
   'combo':     [('harp_0.mp3',0,.7), ('arpeggio_2.mp3',0,.7)],   # five-bunch reward, Tetris-like (owner)
   'bigcute':   [('cutemonster_0.mp3',0,.8), ('cutemonster_1.mp3',0,.6)],   # Mossback: cute but big, played slow (owner)
-  'alarm':     [('alarm_1.mp3',0,.5), ('alarm_0.mp3',0,1.0)],   # boss warning
+  'siren':     [('siren2_1.mp3',0,2.2)],   # blaring siren when a boss is coming (owner)
   # bosses
   'roar':      [('roar_0.mp3',0,.9), ('growl_2.mp3',.2,1.0)],
   'roarbig':   [('roar_1.mp3',0,2.0)],

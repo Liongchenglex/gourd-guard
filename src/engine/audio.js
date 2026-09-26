@@ -387,7 +387,7 @@ export const SFX = {
   },
 
   // ---- boss warning: two alarm blasts while the music ducks (owner) ----
-  bossAlert(){ S('alarm', 0.55) || (tone(440, 0.25, 'square', 0.06, null), tone(440, 0.25, 'square', 0.06, null, 0.35)); S('alarm', 0.5, { delay: 0.65 }); musicDuck(0.3, 3.5); },
+  bossAlert(){ S('siren', 0.7) || [0, 0.5, 1.0, 1.5].forEach(d => tone(600, 0.45, 'sawtooth', 0.06, 900, d)); musicDuck(0.25, 3.5); },   // a blaring siren while the music ducks (owner)
 
   // ---- walls, wind, fog, level ----
   wallHit(kind){ if (!gate('wall', 120)) return; if (kind === 'castle'){ S('stone', 0.7) || (noise(0.1, 0.25, 500, 1), tone(120, 0.12, 'square', 0.06, 80)); return; } S('wood', 0.55) || (noise(0.1, 0.22, 800, 1), tone(200, 0.1, 'square', 0.05, 150)); },

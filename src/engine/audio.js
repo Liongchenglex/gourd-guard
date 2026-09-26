@@ -180,13 +180,10 @@ export const SFX = {
     if (n > 1) S('pop', 0.35, { rate: 1.2, delay: 0.09 }) || tone(620, 0.14, 'sine', 0.04, 900, 0.09);
     if (n > 2) S('pop', 0.3, { rate: 1.35, delay: 0.18 }) || tone(720, 0.14, 'sine', 0.035, 1000, 0.18);
   },
-  match(size, groups){   // 3–4: pop + three-note sparkle; 5+: five notes, a low punch and a sparkle, unmistakably bigger; combos climb in pitch
-    const base = 440 * Math.pow(2, (Math.min(groups, 4) - 1) * 3 / 12);
-    S('pop', 0.5, { rate: 0.85 + 0.1 * Math.min(groups, 4) });
-    if (size >= 5){
-      [0,4,7,12,16,19,24].forEach((s, i) => tone(base * Math.pow(2, s / 12), i === 6 ? 0.5 : 0.16, 'sine', 0.05, null, i * 0.05));   // soft rising run under the chime
-      S('combo', 0.6, { rate: 0.95 + 0.05 * Math.min(groups, 4) }) || S('sparkle', 0.45, { delay: 0.1 });
-    } else [0,4,7].forEach((s, i) => tone(base * Math.pow(2, s / 12), 0.16, 'triangle', 0.08, null, i * 0.05));
+  match(size, groups){   // one sparkly sound for any bunch (owner: no 3-vs-5 distinction); combos climb in pitch
+    const g = Math.min(groups, 4), rate = 1 + (g - 1) * 0.06, base = 1568 * Math.pow(2, (g - 1) * 3 / 12);
+    S('sparkle', 0.6, { rate }) || sparkle(0, 0.05); S('combo', 0.4, { rate: rate * 1.1, delay: 0.05 });
+    [0, 4, 7, 12].forEach((s, i) => tone(base * Math.pow(2, s / 12), 0.14, 'sine', 0.035, null, 0.02 + i * 0.045));   // bright twinkle on top
   },
 
   // ---- pumpkins hitting monsters (type = pumpkin index; size for Brown; rainbow adds a sparkle) ----
@@ -297,7 +294,7 @@ export const SFX = {
       case 'rider:break': S('cloth', 0.45) || noise(0.12, 0.2, 1200, 1, 0, 400); S('imp', 0.3, { delay: 0.05 }); break;
       case 'mirror:up': S('glassping', 0.4, { rate: 1.2 }) || tone(2400, 0.12, 'sine', 0.04, 3600); break;
       case 'mirror:reflect': S('glassping', 0.5, { rate: 0.8 }) || (tone(3200, 0.12, 'sine', 0.06, 2000), noise(0.06, 0.1, 5000, 2)); S('metallight', 0.3); break;
-      case 'witch:hex': S('darkcast', 0.45) || shimmer(); S('witch', 0.3, { delay: 0.05 }) || cackle(2, 620, 0.05, 0.04); break;
+      case 'witch:hex': S('zap', 0.55, { rate: 0.9 }) || shimmer(); S('witch', 0.3, { delay: 0.12 }) || cackle(2, 620, 0.05, 0.04); break;
       case 'slime:split': S('slime', 0.5, { rate: 1.15 }) || (tone(500, 0.06, 'sine', 0.08, 800), tone(560, 0.06, 'sine', 0.08, 900, 0.09)); break;
       case 'firemummy:ignite': S('fire', 0.5) || (noise(0.2, 0.2, 700, 0.8, 0, 300), noise(0.05, 0.14, 2600, 3, 0.05)); break;
       case 'mummy:rise': S('dig', 0.45) || noise(0.25, 0.14, 600, 0.6, 0, 250); break;
@@ -322,17 +319,17 @@ export const SFX = {
       case 'poltergeist:hit': S('ghost', 0.6) || tone(300, 0.2, 'triangle', 0.07, 200); S('glassping', 0.3, { delay: 0.03 }); break;
       case 'poltergeist:die': S('scream', 0.6) || tone(700, 1.4, 'sine', 0.1, 150); S('ghostdie', 0.5, { delay: 0.4 }); break;
       case 'hexwitch:arrive': S('witchlong', 0.7) || cackle(5, 720, 0, 0.08); break;                                              // witch laugh (owner)
-      case 'hexwitch:hex': S('darkcast', 0.65) || shimmer(); S('witch', 0.55, { delay: 0.05 }) || cackle(2, 660, 0.02, 0.05); break;   // magic + brief "haha" together (owner)
-      case 'hexwitch:zone': S('darkcast', 0.7, { rate: 0.8 }) || tone(50, 0.6, 'sine', 0.14, 40); S('witch', 0.55, { rate: 0.9 }) || cackle(2, 560, 0, 0.05); break;   // "hehe" + rumble (owner)
+      case 'hexwitch:hex': S('zap', 0.6, { rate: 0.85 }) || shimmer(); S('zap', 0.4, { rate: 1.1, delay: 0.12 }); S('witch', 0.45, { delay: 0.2 }) || cackle(2, 660, 0.02, 0.05); break;   // magic + brief "haha" together (owner)
+      case 'hexwitch:zone': S('magic', 0.65) || shimmer(); S('sparkle', 0.4, { rate: 0.8, delay: 0.15 }); S('darkcast', 0.3, { rate: 0.8, delay: 0.1 }) || tone(50, 0.6, 'sine', 0.14, 40); S('witch', 0.35, { rate: 0.9, delay: 0.3 }) || cackle(2, 560, 0, 0.05); break;   // "hehe" + rumble (owner)
       case 'hexwitch:drift': noise(0.2, 0.1, 1200, 1, 0, 500); break;
       case 'hexwitch:hit': S('witch', 0.6) || tone(900, 0.1, 'sawtooth', 0.05, 1300); break;
       case 'hexwitch:die': S('witchdie', 0.7) || cackle(2, 700, 0, 0.07); S('boom', 0.5, { delay: 0.35 }) || noise(0.4, 0.3, 700, 0.8, 0.25, 200); break;
-      case 'vampirecount:arrive': S('evillaugh', 0.6, { rate: 0.95 }) || [110, 138, 165, 220].forEach(f => tone(f, 1.2, 'sawtooth', 0.045)); [0.1, 0.25, 0.4].forEach(d => S('bat', 0.35, { delay: d }) || noise(0.05, 0.1, 2500, 1.5, d)); break;
+      case 'vampirecount:arrive': S('chuckle', 0.6, { rate: 0.8 }); S('chuckle', 0.45, { rate: 1.1, delay: 0.7 }) || [110, 138, 165, 220].forEach(f => tone(f, 1.2, 'sawtooth', 0.045)); [0.1, 0.25, 0.4].forEach(d => S('bat', 0.35, { delay: d }) || noise(0.05, 0.1, 2500, 1.5, d)); break;
       case 'vampirecount:burst': [0, 0.08, 0.16, 0.24].forEach(d => S('bat', 0.4, { delay: d, rate: 1.1 }) || noise(0.05, 0.12, 2500, 1.5, d)); break;
       case 'vampirecount:bats': [0, 0.09, 0.18].forEach(d => S('bat', 0.35, { delay: d }) || noise(0.05, 0.1, 2500, 1.5, d)); break;
       case 'vampirecount:wall': S('woodbreak', 0.5, { rate: 0.7 }) || noise(0.6, 0.22, 250, 2, 0, 120); break;
-      case 'vampirecount:trance': S('evillaugh', 0.6) || cackle(3, 300); [55, 82.5].forEach((f, i) => tone(f, 1.6, 'sine', 0.03 - i * 0.01, null, 0.3)); break;   // a laugh, then a soft low pad (owner: not loud)
-      case 'vampirecount:pulse': tone(62, 0.16, 'sine', 0.035, 48); tone(58, 0.14, 'sine', 0.028, 45, 0.16); break;   // a quiet lub-dub while the trance holds
+      case 'vampirecount:trance': S('chuckle', 0.55, { rate: 0.9 }) || cackle(3, 300); S('chuckle', 0.4, { rate: 1.15, delay: 0.6 }); break;   // a snicker; then only the quiet heartbeat (owner)
+      case 'vampirecount:pulse': tone(62, 0.16, 'sine', 0.018, 48); tone(58, 0.14, 'sine', 0.014, 45, 0.16); break;   // a faint lub-dub in the background while the trance holds
       case 'vampirecount:tick': tone(2000, 0.05, 'sine', 0.06, 2400); break;
       case 'vampirecount:break': S('glass', 0.5) || (noise(0.3, 0.3, 4000, 1, 0, 1500), tone(1500, 0.3, 'sine', 0.06, 600)); S('hiss', 0.4, { delay: 0.1 }); break;
       case 'vampirecount:hit': S('chuckle', 0.55, { rate: 1.05 }) || noise(0.2, 0.16, 5000, 1.2, 0, 3000); break;

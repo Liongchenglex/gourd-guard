@@ -238,7 +238,7 @@ export function updateMonster(m, dt){
         if (m.hexT <= 0 && m.p > 0.05){
           m.hexT = TYPES.witch.hexEvery;
           const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.rise <= 0 && o.p > 0);   // anything but bosses and true chameleons; may re-hex an already hexed monster; witches hex each other (owner)
-          if (pick.length){ hexMonster(pick[Math.floor(Math.random() * pick.length)], Math.random() >= TYPES.witch.chameleonChance); SFX.monsterAct('witch', 'hex'); }
+          if (pick.length){ const o = pick[Math.floor(Math.random() * pick.length)]; hexBolt(m, o); hexMonster(o, Math.random() >= TYPES.witch.chameleonChance); SFX.monsterAct('witch', 'hex'); }
         }
         m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
         break;
@@ -428,6 +428,13 @@ function updateVampireCount(m, dt){
   return false;
 }
 
+/** A crackling purple bolt from a witch to the monster it hexes (owner: hexes should zap and show lightning). */
+function hexBolt(from, o){
+  const y1 = mY(from), y2 = mY(o), n = 8;
+  for (let k = 0; k <= n; k++){ const f = k / n; G.parts.push({ x:from.x + (o.x - from.x) * f + rnd(-9, 9), y:y1 + (y2 - y1) * f + rnd(-9, 9), vx:0, vy:0, t:0, life:0.45, size:5, color:k % 2 ? '#d09bff' : '#f0e0ff', kind:'dot', grav:0 }); }
+  ring(o.x, y2, 32, 'rgba(208,155,255,.9)');
+}
+
 /** Turn a monster into a chameleon (or, with `reverse`, a reverse chameleon) of a random loadout colour. */
 export function hexMonster(o, reverse, quiet){
   const pool = (G.loadout || [0, 1]).filter(t => t !== RAINBOW);
@@ -452,7 +459,7 @@ function updateHexwitch(m, dt){
     m.hexT = m.form === 2 ? T.form2.hexEvery : T.hexEvery;
     const pick = shuffle(G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.rise <= 0 && o.p > 0));   // same targets as a witch
     const n = T.hexCount[0] + Math.floor(Math.random() * (T.hexCount[1] - T.hexCount[0] + 1));
-    for (const o of pick.slice(0, n)) hexMonster(o, m.form === 2 ? Math.random() >= T.chameleonChance : true);   // form 1: reverse only (owner); form 2: 25% chameleon, 75% reverse
+    for (const o of pick.slice(0, n)){ hexBolt(m, o); hexMonster(o, m.form === 2 ? Math.random() >= T.chameleonChance : true); }   // form 1: reverse only (owner); form 2: 25% chameleon, 75% reverse
     if (pick.length) SFX.bossSfx('hexwitch', 'hex');
   }
   m.zoneT -= dt;

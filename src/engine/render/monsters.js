@@ -2,6 +2,7 @@ import { sprites } from './sprites.js';
 import { PTYPES } from '../../data/pumpkins.js';
 import { mS, mY } from '../monsters.js';
 import { ctx } from './canvas.js';
+import { FIELD_TOP } from '../state.js';
 import { TYPES, VARIANTS } from '../../data/monsters.js';
 import { CS } from '../state.js';
 
@@ -63,7 +64,8 @@ export function drawMonster(m, t){
   cx.restore();
   if (m.demo) return;
   const lift = m.type === 'imp' ? m.hop * 14 * s : 0;
-  const by = y - m.r * s * 1.45 - 10 - lift - (m.type === 'boss' ? 30 : 0);
+  let by = y - m.r * s * 1.45 - 10 - lift - (m.type === 'boss' ? 30 : 0);
+  if (by < FIELD_TOP + 4) by = y + m.r * s * 1.25 + 8;   // a boss on the top row (Twin Tides) carries its bar below it, clear of the tools tray (owner)
   cx.globalAlpha = fade;
   if (m.maxHp > 8){
     const bw = Math.max(40, m.r * 1.7) * s, bx = m.x - bw / 2;

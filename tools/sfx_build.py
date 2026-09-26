@@ -63,7 +63,6 @@ BANK = {
   'cloth':     [('cloth_2.mp3',.2,.8), (K+'cloth1.ogg',0,.6), (K+'cloth2.ogg',0,.6)],
   'dig':       [('shovel_1.mp3',0,.7), ('shovel_0.mp3',0,.65)],
   'chuckle':   [('chuckle_1.mp3',0,1.0), ('chuckle_2.mp3',0,.8)],   # vampire snicker (owner)
-  'evillaugh': [('evillaugh_1.mp3',0,1.7), ('evillaugh_0.mp3',0,1.6)],   # Vampire Count before a trance (owner)
   'combo':     [('harp_0.mp3',0,.7), ('arpeggio_2.mp3',0,.7)],   # five-bunch reward, Tetris-like (owner)
   'bigcute':   [('cutemonster_0.mp3',0,.8), ('cutemonster_1.mp3',0,.6)],   # Mossback: cute but big, played slow (owner)
   'alarm':     [('alarm_1.mp3',0,.5), ('alarm_0.mp3',0,1.0)],   # boss warning

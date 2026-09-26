@@ -398,6 +398,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 | 2026-09-26 | Owner: boss health cut about 25% in form 1 and 15% in form 2 (Gravekeeper 15/30, Poltergeist 20/36, Hexwitch 22/40, Vampire Count 24/42, Twin Tides 14/24 each). |
 | 2026-09-26 | Owner: level 10 of every world spawns 35% more slowly (the bot lost every level-10 fight at the expected upgrades). |
 | 2026-09-26 | Owner: the level-10 slowdown is reverted (spawn gaps back to 3.3 / 3.1 / 2.8 / 3.0 / 2.9 s for worlds 1–5) now that boss health was cut; bot re-run recorded in the design doc §11. Shell Turtle hits sound thick and metallic. Puddle Diver and Twin Tides bolts are drawn as water balls and sound liquid. |
+| 2026-09-26 | Owner: 5-10 shoreline lowered (sea two rows deep, so the Twin Tides sit lower); a boss on the top row draws its health bar below itself so the tools tray never hides it; hexes draw lightning from the caster to each victim with a zap sound; the hex zone sounds magical; one sparkly bunch sound for all sizes; vampires only chuckle. Unreleased: the owner is collecting more feedback before the next phone build. |
 | 2026-09-26 | Owner: Mirror Sprite now arrives at 3-5 and the Chameleon at 3-8 (swapped). |
 | 2026-09-26 | Owner: chameleons have 2 HP; 3-10 spawns no chameleons; Hexwitch zones are 3×3, a 1-tall row or a 1-wide column. |
 | 2026-09-26 | Owner: two more pumpkins: Turquoise (3-6, bunches of 2 at half power) and Brown (5-7, grows small → medium → big); a rainbow intro card at 1-9. |

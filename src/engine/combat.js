@@ -29,6 +29,7 @@ export function launchGroup(ref){
   SFX.launch(cells.length);
   const skin = save.wardrobe && save.wardrobe.skins[type]; if (skin) SFX.skinLaunch(skin);   // a skin's launch accent, once per flick (owner, 2026-09-27)
   G.throws += cells.length;
+  if (cells.length >= 5) G.bigBunches = (G.bigBunches || 0) + 1;   // for the "bunches of 5" quest
   G.idle = 0; G.hint = null;
   resolveMatches();
 }

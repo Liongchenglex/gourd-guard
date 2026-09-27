@@ -400,6 +400,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-27 | Owner: stars come from three quests per level (quest 1 always "Finish the night"), shown on a Quests tab on the level card from 1-3 with a short tutorial; 1-1 and 1-2 give three stars. The result card lists quests and no longer reports wall health. Quests 2 and 3 are stand-ins until the owner's quest list arrives. |
 | 2026-09-26 | Owner: boss health cut about 25% in form 1 and 15% in form 2 (Gravekeeper 15/30, Poltergeist 20/36, Hexwitch 22/40, Vampire Count 24/42, Twin Tides 14/24 each). |
 | 2026-09-26 | Owner: level 10 of every world spawns 35% more slowly (the bot lost every level-10 fight at the expected upgrades). |
 | 2026-09-26 | Owner: the level-10 slowdown is reverted (spawn gaps back to 3.3 / 3.1 / 2.8 / 3.0 / 2.9 s for worlds 1–5) now that boss health was cut; bot re-run recorded in the design doc §11. Shell Turtle hits sound thick and metallic. Puddle Diver and Twin Tides bolts are drawn as water balls and sound liquid. |

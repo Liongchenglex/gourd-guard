@@ -22,6 +22,10 @@ if (!SPAWN_STEPS.includes(save.spawnEvery)) save.spawnEvery = 5;
 if (typeof save.repair !== 'number') save.repair = 0;
 
 if (!save.seenIntro || typeof save.seenIntro !== 'object') save.seenIntro = {};
+if (!save.quests || typeof save.quests !== 'object'){   // quests replace wall-based stars (2026-09-27): stars already earned count as the first quests done
+  save.quests = {}; for (const [n, st] of Object.entries(save.stars || {})) save.quests[n] = +n < 3 && st ? 7 : (1 << Math.min(3, st | 0)) - 1;   // 1-1 and 1-2 are always three stars once won (owner)
+  for (const n of [1, 2]) if (save.quests[n]) save.stars[n] = 3;
+}
 
 if (!save.perksOff || typeof save.perksOff !== 'object') save.perksOff = {};
 

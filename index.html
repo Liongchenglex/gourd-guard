@@ -146,14 +146,21 @@
   </div>
 
   <div class="ov" id="ovPreview">
-    <div class="card">
+    <div class="card pvCard">
+      <div class="pvTabs" id="pvTabs" role="tablist"><button class="pvTab" role="tab" id="pvTabMon" aria-selected="true">Monsters</button><button class="pvTab" role="tab" id="pvTabQuest" aria-selected="false">Quests <span class="qCount" id="pvQCount"></span></button></div>
       <h2 id="pvTitle">Level 1-1</h2>
       <p id="pvSub"></p>
-      <div class="pv-block"><h3>Monsters tonight</h3><div class="pv-row" id="pvMonsters"></div></div>
-      <div class="pv-block" id="pvBossBlock"><h3>Boss</h3><div class="pv-row" id="pvBoss"></div></div>
-      <div class="pv-block" id="pvNewBlock"><h3>New this level</h3><div class="pv-row" id="pvPumpkins"></div></div>
-      <div class="pv-block" id="pvPowersBlock"><h3>Powers</h3><div class="pv-row powers" id="pvPowers"></div><p class="why" id="pvPowerInfo" hidden></p></div>
-      <div class="pv-block sackBlock" id="pvSackBlock"><h3>Loot Sack</h3><div class="sackRow"><div class="tx" id="pvSackTx">Watch an ad to bring a Loot Sack into this night. Knock it down in time for a chest, tools or coins, plus a pumpkin seed.</div><button class="btn small" id="bPvSack">Watch ad</button></div></div>
+      <div id="pvPaneMon">
+        <div class="pv-block"><h3>Monsters tonight</h3><div class="pv-row" id="pvMonsters"></div></div>
+        <div class="pv-block" id="pvBossBlock"><h3>Boss</h3><div class="pv-row" id="pvBoss"></div></div>
+        <div class="pv-block" id="pvNewBlock"><h3>New this level</h3><div class="pv-row" id="pvPumpkins"></div></div>
+        <div class="pv-block" id="pvPowersBlock"><h3>Powers</h3><div class="pv-row powers" id="pvPowers"></div><p class="why" id="pvPowerInfo" hidden></p></div>
+        <div class="pv-block sackBlock" id="pvSackBlock"><h3>Loot Sack</h3><div class="sackRow"><div class="tx" id="pvSackTx">Watch an ad to bring a Loot Sack into this night. Knock it down in time for a chest, tools or coins, plus a pumpkin seed.</div><button class="btn small" id="bPvSack">Watch ad</button></div></div>
+      </div>
+      <div id="pvPaneQuest" hidden>
+        <p class="qNote" id="pvQuestNote" hidden></p>
+        <div class="qList" id="pvQuests"></div>
+      </div>
       <p id="pvInfo"></p>
       <div class="row">
         <button class="btn small alt" id="bPvBack">Back</button>
@@ -219,6 +226,7 @@
     <div class="card">
       <h2 id="rTitle">Night saved</h2>
       <div class="stars" id="rStars"></div>
+      <div class="qList result" id="rQuests" hidden></div>
       <div class="trophyWin" id="rTrophy" hidden></div>
       <p id="rMsg"></p>
       <div class="stats" id="rStats"></div>

@@ -10,7 +10,7 @@ import { render } from './engine/render/draw.js';
 import { G, LANE, bannerTimer, graves, grid, setBannerTimer, state, walls } from './engine/state.js';
 import { $ } from './engine/util.js';
 import { persist, save } from './save.js';
-import { buildLegend, setState, syncSound, wireButtons } from './ui/screens.js';
+import { buildLegend, setState, syncSound, wireButtons, openPreview } from './ui/screens.js';
 
 // ---------- Loop ----------
 
@@ -54,5 +54,5 @@ requestAnimationFrame(frame);
 
 if (new URLSearchParams(location.search).has('test')){
   window.__gg = { get G(){ return G; }, get grid(){ return grid; }, get graves(){ return graves; }, get walls(){ return walls; }, get state(){ return state; },
-    startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair };
+    startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair, openPreview };
 }

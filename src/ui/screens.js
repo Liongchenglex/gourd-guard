@@ -28,21 +28,24 @@ import { $, clamp } from '../engine/util.js';
 import { wallFrac } from '../engine/walls.js';
 import { lvOf, persist, save } from '../save.js';
 import { setHudSig, updateHud } from './hud.js';
+import { QUEST_START, questsFor, questText, questBits, countBits, settleQuests } from '../data/quests.js';
 
 export function showResult(win){
   const g = G, box = $('#rBtns'); box.innerHTML = '';
+  $('#rQuests').hidden = true;
   const stats = [];
   let title = '', msg = '', stars = '';
   const wf = wallFrac();
   if (g.mode === 'story'){
     if (win){
-      const st = wf >= 0.85 ? 3 : wf >= 0.5 ? 2 : 1;
-      const bonus = 10 + g.n * 3 + st * 5;
+      const qs = settleQuests(g.n, g.def, { wallPct:Math.round(wf * 100), toolsUsed:g.toolsUsed || 0, bigBunches:g.bigBunches || 0 });   // stars now come from quests (owner, 2026-09-27)
+      const st = countBits(qs.total), gained = countBits(qs.total) - countBits(qs.before);
+      const bonus = 10 + g.n * 3 + countBits(qs.now) * 5;
       save.coins += g.coins + bonus;
-      save.stars[g.n] = Math.max(save.stars[g.n] || 0, st);
       save.unlocked = Math.max(save.unlocked || 1, highestOpen());
       title = g.n === LEVELS ? 'Dawn at last' : 'Night saved';
-      msg = g.n === LEVELS ? 'Every night is safe. The patch thanks you.' : st === 3 ? 'The walls barely have a scratch.' : 'The walls held. Keep them healthier for more stars.';
+      msg = g.n === LEVELS ? 'Every night is safe. The patch thanks you.' : g.n < QUEST_START ? 'All three stars!' : st === 3 ? (gained ? 'Every quest done: all three stars!' : 'All three stars already earned here.') : gained ? `+${gained} star${gained > 1 ? 's' : ''}. Come back for the quests you missed.` : 'No new stars this time. Try the other quests.';
+      const rq = $('#rQuests'); rq.hidden = g.n < QUEST_START; if (g.n >= QUEST_START) questRows(rq, g.def, qs.total, qs.now, qs.before);
       const nk = ALL_LEVELS[g.n] && (ALL_LEVELS[g.n].unlockPumpkins || [])[0], nextP = nk && PTYPES.find(p => p.key === nk);
       if (nextP && g.n < LEVELS) msg += ` Next night unlocks the ${nextP.name} pumpkin.`;
       if (g.def.levelNo === 10){   // owner: beating the level-10 boss is a celebration: a world-unlock card, then back to the menu
@@ -60,7 +63,7 @@ export function showResult(win){
         SFX.perk();
       }
       stars = [0,1,2].map(i => `<span class="${i < st ? '' : 'off'}">★</span>`).join('');
-      stats.push(['Monsters stopped', g.kills], ['Walls left', pct(wf)], ['Coins found', g.coins], ['Night bonus', bonus]);
+      stats.push(['Monsters stopped', g.kills], ['Coins found', g.coins], ['Night bonus', bonus]);   // no wall health on the card: stars come from quests (owner, 2026-09-27)
       if (g.def.levelNo === 10) addBtn(box, 'Continue', () => { pendingUnlock = g.def.worldNo; curBook = null; openLevels(); });   // worldNo is 1-based story order = the next book's shelf index (def.world is the visual theme, not the order)   // to the shelf, where the next storybook unlocks (owner)
       else if (perk) addBtn(box, 'Continue', () => { pendingStamp = g.n; openBook(g.def.worldNo - 1, true); });   // back into the book: the level-20 tile is stamped with a flourish
       else {
@@ -156,11 +159,39 @@ function syncSack(){
   b.disabled = q; b.innerHTML = q ? 'Ready' : '<span class="play"></span>Watch ad';
   $('#pvSackTx').textContent = q ? 'A Loot Sack will waddle into this night. Knock it down before it runs off!' : 'Watch an ad to bring a Loot Sack into this night. Knock it down in time for a chest, tools or coins, plus a pumpkin seed.';
 }
+/** Level card tabs (owner): Monsters and, from 1-3, Quests. */
+function pvTab(which){
+  const q = which === 'quest';
+  $('#pvTabMon').setAttribute('aria-selected', q ? 'false' : 'true'); $('#pvTabQuest').setAttribute('aria-selected', q ? 'true' : 'false');
+  $('#pvPaneMon').hidden = q; $('#pvPaneQuest').hidden = !q; $('#pvTabQuest').classList.remove('pulse');
+}
+/** Rows for a level's three quests; bits = completed, fresh = met this run (result card). */
+function questRows(box, def, bits, fresh, before = 0){
+  box.innerHTML = '';
+  questsFor(def).forEach((q, i) => {
+    const done = !!(bits & (1 << i)), r = document.createElement('div'); r.className = 'qRow' + (done ? ' done' : '');
+    r.innerHTML = `<span class="qStar">★</span><span class="qTx"></span>`; r.querySelector('.qTx').textContent = questText(q);
+    if (fresh != null){ const tg = document.createElement('span'); tg.className = 'qTag' + (fresh & (1 << i) ? '' : ' miss'); tg.textContent = fresh & (1 << i) ? (!(before & (1 << i)) ? 'NEW ★' : 'Done') : 'Not yet'; r.appendChild(tg); }
+    box.appendChild(r);
+  });
+}
+function renderQuests(n, def){
+  const show = n >= QUEST_START; $('#pvTabs').hidden = !show;
+  if (!show){ pvTab('mon'); return; }
+  const bits = questBits(n); questRows($('#pvQuests'), def, bits);
+  $('#pvQCount').textContent = `${countBits(bits)}/3 ★`;
+  const first = !save.seenIntro.quests, note = $('#pvQuestNote'); note.hidden = !first;
+  if (first){   // brief tutorial the first time quests appear (1-3)
+    note.textContent = 'New: quests! Every night has three. Each quest you complete earns a star, and the first is always just finishing the night. Stars stay earned, so you can come back for the ones you missed.';
+    save.seenIntro.quests = true; persist(); pvTab('quest'); $('#pvTabQuest').classList.add('pulse');
+  } else pvTab('mon');
+}
 export function openPreview(n){
   previewNight = n; syncSack();
   const def = levelFor(n), prevGraves = n > 1 ? levelFor(n - 1).graves : 0;
   makePreview(n);   // the night's own map behind the card (owner: not a random background)
   $('#pvTitle').textContent = `Level ${def.label}`;
+  renderQuests(n, def);
   $('#pvSub').textContent = WORLD_NAMES[def.worldNo - 1];
   const mons = $('#pvMonsters'); mons.innerHTML = '';
   prebakeAsync([...def.pool.map(([t]) => poolKey(t, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), 'ghoul']);   // bake this level's sprite strips while the card is read
@@ -802,6 +833,7 @@ export function wireButtons(){
   });
   $('#bPvBack').onclick = openLevels;
   $('#bPvGo').onclick = () => { ensureAudio(); startPreviewedNight(); };
+  $('#pvTabMon').onclick = () => { SFX.ui('tap'); pvTab('mon'); }; $('#pvTabQuest').onclick = () => { SFX.ui('tap'); pvTab('quest'); };
   $('#bIntroOk').onclick = () => { ensureAudio(); showNextIntro(); };
 
   $('#rpBtn').onclick = useRepair;

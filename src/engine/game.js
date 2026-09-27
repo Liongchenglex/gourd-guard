@@ -123,7 +123,7 @@ export function endGame(win){
 
 export function useFirework(){
   if (state !== 'play' || G.over || save.fw <= 0) return;
-  save.fw--; persist();
+  save.fw--; persist(); G.toolsUsed = (G.toolsUsed || 0) + 1;
   SFX.tool('fw'); G.shake = 1; G.flash = 1;
   for (let i = 0; i < 5; i++){ const x = rnd(60, W - 60), y = rnd(FIELD_TOP, FIELD_TOP + 160); const col = ['#ffd35a', '#ff6a3a', '#d09bff', '#aee8ff', '#a6f06a'][i]; for (let k = 0; k < 12; k++) spark(x, y, col, 260); if (G.vfx) G.vfx.push({ kind:'firework', x, y, i, col, t:-i * 0.12, dur:1.1 }); }   // rockets climb from the fence and burst (render/tools.js)
   for (const m of G.monsters.slice()) if (!m.dead && !(m.rise > 0)){ m.lastHit = -1; damage(m, 3, '#ffd35a'); }
@@ -141,7 +141,7 @@ export function useBuster(){
 }
 export function bustGrave(r, c){
   if (!graves[r][c] || save.buster <= 0) return false;
-  graves[r][c] = false; save.buster--; persist();
+  graves[r][c] = false; save.buster--; persist(); G.toolsUsed = (G.toolsUsed || 0) + 1;
   const x = LANE(c), y = GY + r * CS + CS / 2;
   for (let i = 0; i < 18; i++) chunk(x, y, i % 2 ? '#8a8d96' : '#3b2a1c', 220);
   ring(x, y, 40, 'rgba(255,220,150,.9)');
@@ -153,7 +153,7 @@ export function bustGrave(r, c){
 export function useLantern(){
   if (state !== 'play' || G.over || save.lantern <= 0) return;
   if (!G.def || !G.def.fog.length){ addFloat('No fog here', W / 2, GY - 30, '#ffd35a', 18, 1); SFX.bad(); return; }
-  save.lantern--; persist();
+  save.lantern--; persist(); G.toolsUsed = (G.toolsUsed || 0) + 1;
   G.fogClear = 10; G.flash = 0.4;
   for (let i = 0; i < 20; i++) spark(rnd(40, W - 40), rnd(FIELD_TOP, FENCE_Y), '#ffe27a', 120);
   if (G.vfx) G.vfx.push({ kind:'lantern', x:W / 2, y:FENCE_Y - 30, t:0, dur:1.3 });
@@ -173,7 +173,7 @@ export const fieldY = p => FIELD_TOP + p * (FIELD_BOT - FIELD_TOP);
 export function placeMine(lane, p = 0.93){   // owner: a mine goes on any tile of the field and blasts the 3×3 around it
   const tile = CS / (FIELD_BOT - FIELD_TOP);
   if (save.mine <= 0 || G.mines.some(m => m.lane === lane && Math.abs(m.p - p) < tile)){ addFloat('Mine already there', LANE(lane), fieldY(p) - 20, '#ffd35a', 16, 1); SFX.bad(); G.aim = null; updateHud(true); return false; }
-  save.mine--; persist();
+  save.mine--; persist(); G.toolsUsed = (G.toolsUsed || 0) + 1;
   G.mines.push({ lane, p, t:0, dead:false });
   for (let i = 0; i < 10; i++) spark(LANE(lane), fieldY(p), '#ffd35a', 100);
   SFX.tool('mine'); G.aim = null; updateHud(true);
@@ -229,7 +229,7 @@ export function useScarecrow(){
 }
 export function placeScarecrow(lane){
   if (save.scarecrow <= 0 || G.scarecrows.some(s => s.lane === lane)){ addFloat('Scarecrow already there', LANE(lane), FENCE_Y - 60, '#ffd35a', 16, 1); SFX.bad(); G.aim = null; updateHud(true); return false; }
-  save.scarecrow--; persist();
+  save.scarecrow--; persist(); G.toolsUsed = (G.toolsUsed || 0) + 1;
   const p = 0.84;
   G.scarecrows.push({ lane, p, x:LANE(lane), y:FIELD_TOP + p * (FIELD_BOT - FIELD_TOP), hp:12, maxHp:12, dead:false, age:0 });
   for (let i = 0; i < 12; i++) spark(LANE(lane), FIELD_TOP + p * (FIELD_BOT - FIELD_TOP), '#c8b060', 120);
@@ -252,7 +252,7 @@ export function useBomb(){
 }
 export function dropBomb(x, y){
   if (save.bomb <= 0) return false;
-  save.bomb--; persist();
+  save.bomb--; persist(); G.toolsUsed = (G.toolsUsed || 0) + 1;
   const lane0 = clamp(Math.floor((x - GX) / CS), 0, COLS - 1), p0 = (y - FIELD_TOP) / (FIELD_BOT - FIELD_TOP), reach = 1.5 * TILE_P();
   G.flash = 0.6; G.shake = 1; SFX.tool('bomb');
   for (let k = 0; k < 20; k++) spark(x, y, k % 3 ? '#ffd35a' : '#ff6a3a', 320);
@@ -274,7 +274,7 @@ export function useRepair(){
 export function repairWall(lane){
   if (save.repair <= 0) return false;
   if (walls[lane].hp >= walls[lane].max){ addFloat('That wall is fine', LANE(lane), FENCE_Y - 40, '#ffd35a', 16, 1); SFX.bad(); G.aim = null; updateHud(true); return false; }
-  save.repair--; persist();
+  save.repair--; persist(); G.toolsUsed = (G.toolsUsed || 0) + 1;
   walls[lane].hp = walls[lane].max; for (let i = 0; i < 10; i++) spark(LANE(lane), FENCE_Y - 10, '#ffe27a', 140);
   if (G.vfx) G.vfx.push({ kind:'hammer', x:LANE(lane), y:FENCE_Y - 4, t:0, dur:0.7 });
   SFX.tool('repair'); G.aim = null; updateHud(true);

@@ -189,7 +189,7 @@ Speed is in "field lengths per second" before level multipliers (so 0.055 ≈ 18
 - Each column has its own wall: **18 health + 5 per Sturdy walls level** (max level 3 → 33).
 - A monster that reaches the wall stops and chews it at its *eat* rate (50% if slowed, 0 if frozen).
 - **A wall at 0 is down, not lost**: monsters at a fallen wall walk through the gap instead of chewing, and the night is lost about 1.2 s later when one is through (slowed monsters take longer, frozen ones don't move). Repairing the wall before that closes the gap. Archers, divers and the Twin Tides never shoot at a wall that is already down (owner, 2026-09-25).
-- Stars are based on total wall health left at the end: ≥85% = 3 stars, ≥50% = 2, else 1.
+- Stars come from **quests**, not wall health (owner, 2026-09-27; replaced "≥85% walls = 3 stars, ≥50% = 2, else 1"). Every level has three quests, one star each, shown on a Quests folder tab on the level card (`src/data/quests.js`). Quest 1 is always "Finish the night"; quests 2 and 3 come from the level's `quests` field, else a stand-in rotation (walls at 75%/60% or more, launch 1 or 2 bunches of 5+, win without a tool) until the owner's quest list arrives. Quests count only on a won night and stay earned (`save.quests[n]` is a 3-bit mask; `save.stars[n]` is its count). Quests start at 1-3, which opens on the Quests tab with a short tutorial note the first time (`seenIntro.quests`); 1-1 and 1-2 give three stars for a win. The result card lists the quests with NEW tags and no longer reports wall health. The night bonus is 10 + 3 × level + 5 per quest met that night. Old saves: stars already earned become the first quests done, and a won 1-1 or 1-2 becomes three stars.
 
 ---
 

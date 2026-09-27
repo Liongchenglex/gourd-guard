@@ -105,10 +105,17 @@
       <div class="tabs" role="tablist" id="shopTabs">
         <button class="tab" role="tab" data-tab="pumpkins" id="tabPumpkins">Pumpkins</button>
         <button class="tab" role="tab" data-tab="tools" id="tabTools">Tools</button>
+        <button class="tab" role="tab" data-tab="wardrobe" id="tabWardrobe">Wardrobe</button>
         <button class="tab" role="tab" data-tab="seeds" id="tabSeeds">Seeds</button>
       </div>
       <div class="tabPane" id="paneP"><div id="shopPumpkins"></div></div>
       <div class="tabPane" id="paneT" hidden><div id="shopList"></div></div>
+      <div class="tabPane" id="paneW" hidden>
+        <p class="seedIntro">Costumes are worn by every pumpkin at once and change the hit effect. Skins restyle one pumpkin colour, its lit face and its trail. Neither changes power.</p>
+        <h3 class="wHead">Costumes</h3><div class="wGrid" id="wCostumes"></div>
+        <h3 class="wHead">Skins</h3><div class="wGrid" id="wSkins"></div>
+        <button class="link" id="bSeedTest">Testing: add 500 seeds</button>
+      </div>
       <div class="tabPane" id="paneS" hidden>
         <p class="seedIntro">Pumpkin seeds are a second currency, used for special items in future shops.</p>
         <div id="shopSeedPacks"></div>

@@ -70,6 +70,23 @@ export const LIT_FACES = {
   rainbow(g, R){ glow(g, R, '#ffffff', '#ffd35a', '#fff3a0'); const ey = -R * .1; for (const s of [-1, 1]) almond(g, s * R * .3, ey, R * .21, R * .17); nose(g, R);
     g.beginPath(); g.moveTo(-R * .36, R * .22); g.quadraticCurveTo(0, R * .62, R * .36, R * .22); g.quadraticCurveTo(0, R * .34, -R * .36, R * .22); g.fill();
     dark(g, () => { for (const s of [-1, 1]){ const x = s * R * .3; g.fillStyle = '#7a2ad0'; star(g, x, ey - R * .02, R * .1); g.fillStyle = '#2a0e06'; brow(g, R, x - R * .16, ey - R * .32, x + R * .16, ey - R * .34); } }); },
+  // ---------- skin faces (owner, 2026-09-27): each skin's own lit expression, in the same carved / lit-eye styles ----------
+  // Candy corn: sugar-rush glee, eyes wide and looking up, raised brows, a huge grin with candy teeth
+  'skin:candycorn'(g, R){ glow(g, R, '#fffdf0', '#ffb030', '#ffd87a'); const ey = -R * .1; for (const s of [-1, 1]) almond(g, s * R * .3, ey, R * .21, R * .17); nose(g, R);
+    g.beginPath(); g.moveTo(-R * .44, R * .18); g.quadraticCurveTo(0, R * .74, R * .44, R * .18); g.quadraticCurveTo(0, R * .34, -R * .44, R * .18); g.fill();
+    dark(g, () => { for (const s of [-1, 1]){ pup(g, s * R * .3, ey - R * .06, R * .08); brow(g, R, s * R * .46, ey - R * .3, s * R * .14, ey - R * .34); } g.fillStyle = '#fff8e6'; for (const x of [-R * .2, 0, R * .2]){ g.beginPath(); g.moveTo(x - R * .06, R * .24); g.lineTo(x + R * .06, R * .24); g.lineTo(x, R * .34); g.closePath(); g.fill(); } }); },
+  // Magma: the Fire carving, burning white-hot
+  'skin:magma'(g, R){ glow(g, R, '#ffffe0', '#ffb000', '#ffd040'); const ey = -R * .08;
+    for (const s of [-1, 1]){ g.beginPath(); g.moveTo(s * R * .56, ey - R * .18); g.lineTo(s * R * .12, ey + R * .02); g.lineTo(s * R * .54, ey + R * .12); g.closePath(); g.fill(); }
+    g.beginPath(); g.moveTo(-R * .54, R * .2); for (let i = 0; i <= 8; i++) g.lineTo(-R * .54 + i * R * .135, R * (i % 2 ? .46 : .28)); g.lineTo(R * .54, R * .2); g.quadraticCurveTo(0, R * .66, -R * .54, R * .2); g.fill(); },
+  // Frost crystal: serene and icy, heavy lids with frost lashes, a small calm smile
+  'skin:frost'(g, R){ glow(g, R, '#ffffff', '#8ae0ff', '#c0f0ff'); const ey = -R * .08; for (const s of [-1, 1]) almond(g, s * R * .3, ey, R * .21, R * .13); nose(g, R);
+    g.beginPath(); g.moveTo(-R * .16, R * .3); g.quadraticCurveTo(0, R * .42, R * .16, R * .3); g.quadraticCurveTo(0, R * .35, -R * .16, R * .3); g.fill();
+    dark(g, () => { for (const s of [-1, 1]){ const x = s * R * .3; g.fillRect(x - R * .23, ey - R * .2, R * .46, R * .13); pup(g, x, ey + R * .02, R * .065); g.lineWidth = R * .03; for (const d of [-R * .12, 0, R * .12]){ g.beginPath(); g.moveTo(x + d, ey - R * .07); g.lineTo(x + d * 1.3, ey - R * .16); g.stroke(); } } }); },
+  // Galaxy: dreamy wonder, huge eyes with golden star pupils, soft raised brows, a small "oh"
+  'skin:galaxy'(g, R){ glow(g, R, '#ffffff', '#d890ff', '#e8b0ff'); const ey = -R * .1; for (const s of [-1, 1]) almond(g, s * R * .3, ey, R * .22, R * .18); nose(g, R);
+    g.beginPath(); g.ellipse(0, R * .33, R * .08, R * .09, 0, 0, TAU); g.fill();
+    dark(g, () => { for (const s of [-1, 1]){ const x = s * R * .3; g.fillStyle = '#3a1a7a'; pup(g, x, ey, R * .12); g.fillStyle = '#ffe070'; star(g, x, ey, R * .075); g.fillStyle = '#2a0e06'; brow(g, R, x - R * .16, ey - R * .32, x + R * .14, ey - R * .36, .06); } }); },
 };
 /** A face function for pumpkin(): nothing while unlit, the type's carved glow when lit. */
 export function faceFor(key){

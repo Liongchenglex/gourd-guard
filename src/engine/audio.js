@@ -386,6 +386,18 @@ export const SFX = {
     }
   },
 
+  // ---- worn costume hit accents (owner, 2026-09-27): quiet, gated so a busy fight never stacks them ----
+  costumeHit(key){
+    if (!gate('costume', 160)) return;
+    switch (key){
+      case 'poltergeist': S('ghost', 0.32, { rate: 0.8, jit: 0.1 }) || noise(0.3, 0.1, 700, 0.7, 0, 250); S('whoosh', 0.22, { rate: 0.75 }); break;   // a hollow whoosh
+      case 'vampirecount': S('cloth', 0.25, { rate: 1.4 }); break;
+      case 'twintides': S('slime', 0.25, { rate: 1.3 }) || noise(0.12, 0.12, 1800, 1.5); break;
+      case 'hexwitch': S('glassping', 0.18, { rate: 1.3 }); break;
+      case 'pirate': S('coin', 0.2, { rate: 1.1 }); break;
+    }
+  },
+
   // ---- boss warning: two alarm blasts while the music ducks (owner) ----
   bossAlert(){ S('siren', 0.7) || [0, 0.5, 1.0, 1.5].forEach(d => tone(600, 0.45, 'sawtooth', 0.06, 900, d)); musicDuck(0.25, 3.5); },   // a blaring siren while the music ducks (owner)
 

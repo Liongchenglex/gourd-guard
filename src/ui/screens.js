@@ -9,10 +9,12 @@ import { poolKey, prebakeAsync } from '../engine/render/anim.js';
 import { atlasKey } from '../engine/render/chars.js';
 import { SFX, ensureAudio, musicStop, musicSync, musicStart } from '../engine/audio.js';
 import { beginEndless, beginNight, makeDemo, makePreview, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
-import { bgWorld, buildBg, pumpkinIcon, worldScene } from '../engine/render/sprites.js';
+import { bgWorld, buildBg, buildSprites, pumpkinIcon, worldScene } from '../engine/render/sprites.js';
 import { BOOKS } from '../data/lore.js';
 import { BESTIARY, COMPANIONS } from '../data/bestiary.js';
 import { toolIcon } from '../engine/render/tools.js';
+import { COSTUMES, SKINS, costumeFor } from '../data/wardrobe.js';
+import { costumeIcon, skinIcon } from '../engine/render/wardrobe.js';
 import { titleArt } from '../engine/render/keyart.js';
 import { trophyIcon } from '../engine/render/trophies.js';
 import { PUMPKIN_LORE } from '../data/lore.js';
@@ -41,6 +43,8 @@ export function showResult(win){
       if (g.def.levelNo === 10){   // owner: beating the level-10 boss is a celebration: a world-unlock card, then back to the menu
         const nextName = WORLD_LEVELS[g.def.worldNo] && WORLD_LEVELS[g.def.worldNo].length ? WORLD_NAMES[g.def.worldNo] : null; title = nextName ? `${nextName} unlocked!` : 'Every boss beaten!';
         msg = `🎉 ${BOSS_NAMES[g.def.boss]} is beaten! The rest of ${WORLD_NAMES[g.def.worldNo - 1]} is open` + (nextName ? `, and ${nextName} awaits.` : '.'); SFX.perk();
+        const cos = costumeFor(g.def.boss);   // the boss drops its costume the first time (owner, 2026-09-27)
+        if (cos && !save.wardrobe.owned.includes(cos.key)){ save.wardrobe.owned.push(cos.key); persist(); msg += ` It dropped the ${cos.name}: wear it from the Wardrobe in the shop.`; }
       }
       const perk = PERKS.find(p => perkNight(p) === g.n);
       const tw = $('#rTrophy'); tw.hidden = true; tw.innerHTML = ''; tw.classList.remove('show');
@@ -430,10 +434,37 @@ export function syncLoadout(){
 export function openShop(ret){ shopReturn = ret || 'levels'; renderShop(); setState('shop'); }
 
 let shopTab = 'pumpkins';
+/** Wardrobe tab: buy with seeds, wear one costume for every pumpkin, wear one skin per colour (owner, 2026-09-27). */
+function renderWardrobe(){
+  const W = save.wardrobe, owned = k => W.owned.includes(k);
+  const buyBtn = (price, onBuy) => { const b = document.createElement('button'); b.className = 'btn small'; b.innerHTML = `<span class="seed"></span>${price}`; b.disabled = (save.seeds || 0) < price; b.onclick = () => { if ((save.seeds || 0) < price) return; save.seeds -= price; onBuy(); persist(); SFX.coin(); renderShop(); }; return b; };
+  const wearBtn = (on, fn) => { const b = document.createElement('button'); b.className = 'btn small' + (on ? ' alt' : ''); b.textContent = on ? 'Take off' : 'Wear'; b.onclick = () => { fn(); persist(); SFX.ui(on ? 'unpick' : 'pick'); renderShop(); }; return b; };
+  const cbox = $('#wCostumes'); cbox.innerHTML = '';
+  for (const c of COSTUMES){
+    const d = document.createElement('div'); d.className = 'wCard' + (W.costume === c.key ? ' worn' : '');
+    d.appendChild(costumeIcon(c.key, 72));
+    const nm = document.createElement('b'); nm.textContent = c.name; d.appendChild(nm);
+    if (c.boss){ const src = document.createElement('small'); src.className = 'src'; src.textContent = owned(c.key) ? `Won from ${BOSS_NAMES[c.boss]}` : `Free for beating ${BOSS_NAMES[c.boss]}`; d.appendChild(src); }
+    const ds = document.createElement('small'); ds.textContent = c.hit; d.appendChild(ds);
+    d.appendChild(owned(c.key) ? wearBtn(W.costume === c.key, () => { W.costume = W.costume === c.key ? null : c.key; }) : buyBtn(c.price, () => { W.owned.push(c.key); W.costume = c.key; }));
+    cbox.appendChild(d);
+  }
+  const sbox = $('#wSkins'); sbox.innerHTML = '';
+  for (const k of SKINS){
+    const on = W.skins[k.t] === k.key, d = document.createElement('div'); d.className = 'wCard' + (on ? ' worn' : '');
+    d.appendChild(skinIcon(k.key, 72, true));
+    const nm = document.createElement('b'); nm.textContent = k.name; d.appendChild(nm);
+    const src = document.createElement('small'); src.className = 'src'; src.textContent = `Skin for ${PTYPES[k.t].name}`; d.appendChild(src);
+    const ds = document.createElement('small'); ds.textContent = k.desc; d.appendChild(ds);
+    const apply = () => buildSprites();
+    d.appendChild(owned(k.key) ? wearBtn(on, () => { if (on) delete W.skins[k.t]; else W.skins[k.t] = k.key; apply(); }) : buyBtn(k.price, () => { W.owned.push(k.key); W.skins[k.t] = k.key; apply(); }));
+    sbox.appendChild(d);
+  }
+}
 function setShopTab(tab){
   shopTab = tab;
   for (const b of document.querySelectorAll('#shopTabs .tab')) b.setAttribute('aria-selected', b.dataset.tab === tab ? 'true' : 'false');
-  $('#paneP').hidden = tab !== 'pumpkins'; $('#paneT').hidden = tab !== 'tools'; $('#paneS').hidden = tab !== 'seeds';
+  $('#paneP').hidden = tab !== 'pumpkins'; $('#paneT').hidden = tab !== 'tools'; $('#paneW').hidden = tab !== 'wardrobe'; $('#paneS').hidden = tab !== 'seeds';
 }
 /** One stat line: now, and the next level's value when it changes. */
 const nxLine = (k, a, b) => `<span class="k">${k}</span><span>${a}${b != null && b !== a ? ` <span class="dim">\u2192</span> <span class="up">${b}</span>` : ''}</span>`;
@@ -476,6 +507,7 @@ export function renderShop(){
     };
     d.appendChild(b); pbox.appendChild(d);
   }
+  renderWardrobe();
   const sp = $('#shopSeedPacks'); sp.innerHTML = '';
   for (const pk of SEED_PACKS){
     const d = document.createElement('div'); d.className = 'item pack';
@@ -559,6 +591,7 @@ export function wireButtons(){
   $('#bLoGo').onclick = () => { if (loadoutSel.size < (perkOn('pick4') ? 4 : 5)) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo); };
 
   for (const b of document.querySelectorAll('#shopTabs .tab')) b.onclick = () => { SFX.ui('tap'); setShopTab(b.dataset.tab); };
+  $('#bSeedTest').onclick = () => { save.seeds = (save.seeds || 0) + 500; persist(); renderShop(); };   // TESTING ONLY until seed packs are sold: remove before release
   $('#bShopBack').onclick = () => { if (shopReturn === 'result') setState('result'); else openLevels(); };
 
   $('#pauseBtn').onclick = () => { if (state === 'play' && !G.over) setState('pause'); };

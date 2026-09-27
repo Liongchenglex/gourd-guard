@@ -29,6 +29,12 @@ if (typeof save.buster !== 'number') save.buster = 0;
 
 for (const k of ['lantern', 'mine', 'bomb', 'scarecrow']) if (typeof save[k] !== 'number') save[k] = 0;
 
+// Wardrobe (owner, 2026-09-27): owned costume and skin keys, the worn costume, and the skin worn per pumpkin type index
+if (!save.wardrobe || typeof save.wardrobe !== 'object') save.wardrobe = { owned:[], costume:null, skins:{} };
+if (!Array.isArray(save.wardrobe.owned)) save.wardrobe.owned = [];
+if (!save.wardrobe.skins || typeof save.wardrobe.skins !== 'object') save.wardrobe.skins = {};
+if (typeof save.seeds !== 'number') save.seeds = 0;
+
 // Old upgrades were replaced by pumpkin levels: refund what was spent on them.
 
 if (save.knife || save.oil){

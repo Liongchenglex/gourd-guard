@@ -4,6 +4,8 @@ import { K, dpr } from './canvas.js';
 import { ell, rrect } from './util.js';
 import { pumpkin } from './chars.js';
 import { faceFor } from './faces.js';
+import { skinnedPumpkin } from './wardrobe.js';
+import { save } from '../../save.js';
 import { E, pal, rng, rgba, mix, SM, SO } from './paint.js';
 import { COLS, CS, FENCE_Y, FIELD_TOP, GX, GY, H, ROWS, W } from '../state.js';
 import { TAU } from '../util.js';
@@ -18,7 +20,9 @@ export const RAINBOW_RIBS = [
 
 export function paintPumpkin(g, cx, cy, R, col, lit){
   g.save(); g.translate(cx, cy);
-  pumpkin(g, col.rainbow ? RAINBOW_RIBS.map(c => pal(c.base)) : pal(col.base), lit, R, faceFor(col.key));   // no face in the patch; a carved face per type when bunched (owner, 2026-09-27)
+  const skin = save.wardrobe && save.wardrobe.skins[PTYPES.indexOf(col)];   // a worn skin repaints this colour (owner, 2026-09-27)
+  if (skin) skinnedPumpkin(g, skin, R, lit);
+  else pumpkin(g, col.rainbow ? RAINBOW_RIBS.map(c => pal(c.base)) : pal(col.base), lit, R, faceFor(col.key));   // no face in the patch; a carved face per type when bunched (owner, 2026-09-27)
   g.restore();
 }
 

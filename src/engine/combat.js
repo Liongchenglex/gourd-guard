@@ -166,6 +166,8 @@ export function knockback(m){
 export function hitMonster(pr, m){
   pr.hit.add(m);
   const i = pr.lv - 1, y = mY(m);
+  const wc = save.wardrobe && save.wardrobe.costume;   // the worn costume's hit effect (visual only), capped so a big bunch stays cheap
+  if (wc && G.vfx && G.vfx.filter(v => v.kind === 'costumeHit').length < 5) { G.vfx.push({ kind:'costumeHit', key:wc, x:m.x, y:y - m.r * .3, t:0, dur:0.75 }); SFX.costumeHit(wc); }
   for (let k = 0; k < 10; k++) chunk(pr.x, pr.y, pr.vis === RAINBOW ? '#f0a020' : PTYPES[pr.vis].base, 200);
   let kb = pr.guar || (pr.type === PINK ? Math.random() < KB_PINK[i] : pr.type === BROWN ? Math.random() < BROWN_KB[i] : (pr.type <= 1 || pr.type >= 4) && Math.random() < KB_CHANCE[i]);
   if (pr.type === 2){

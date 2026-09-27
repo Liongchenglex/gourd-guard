@@ -257,6 +257,11 @@ Difficulty `1 + t/25`; the Gravekeeper every 100 s (form 2 once the world change
   - **Bomb** (consumable, 💥): tap the button, then tap a spot on the field. Everything within one lane either side and 1.5 tile heights up or down takes 4 damage, castle walls included. 45 coins, carry up to 3, one free at 3-4.
   - **Scarecrow** (consumable, 🌾): tap the button, then tap a column. A scarecrow with 12 health stands near that wall; monsters in the column stop at it and chew it at their eat rate until it breaks. One per column. 35 coins, carry up to 3, one free at 5-2.
   - **Tools are gated by introduction**: a consumable exists only from the level that introduces it (Wall repair 1-3, Firework 1-7, Grave buster 1-6, Lantern 2-2, Landmine 2-5, Scarecrow 3-2, Bomb 4-4, from level data `unlockGear`). Before that it shows in the tool tray dimmed with a padlock, is locked in the shop, and never drops from kills. New players start with 0 of everything and receive one unit on the introducing level.
+- **Wardrobe** (shop tab, added 2026-09-27, owner). Cosmetic only: nothing here changes power. Priced in pumpkin seeds; prices are first guesses.
+  - **Costumes** are worn by every pumpkin at once, in the patch and in flight, and add a hit effect and a quiet hit sound. One costume at a time. Boss costumes cost 300 seeds and are also granted free the first time that world's level-10 boss is beaten (the result message says so): Gravekeeper hood (tombstone, soul wisps, bone chips), Poltergeist sheet (cold mist, small ghosts, hollow whoosh), Hexwitch hat (hex sigil, sparks), Count's collar (bats), Tide crown (seawater splash, small fish). Shop-only costumes cost 150: Pirate tricorn (coins, cannon smoke) and Jester's cap (confetti).
+  - **Skins** restyle one pumpkin colour: its body, its lit face and a wide comet trail. The colour stays recognisable. One skin per colour. Candy corn (Yellow, 200), Frost crystal (Ice, 200), Magma (Fire, 250), Galaxy (Purple, 250).
+  - Saved as `save.wardrobe = { owned, costume, skins: { typeIndex: key } }`. Hit effects are capped at 5 on screen.
+  - Seeds have no earn source yet; a "Testing: add 500 seeds" link sits in the Wardrobe tab until seed packs are sold (**remove before release**).
 - Progress, coins, levels, loadout and settings are saved in the browser (localStorage key `gourdguard.v1`).
 
 ---

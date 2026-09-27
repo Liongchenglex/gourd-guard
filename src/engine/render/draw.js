@@ -9,6 +9,7 @@ import { mS, mY, TILE_P } from '../monsters.js';
 import { K, coinTarget, ctx } from './canvas.js';
 import { drawMonster } from './monsters.js';
 import { charKey, drawChar } from './anim.js';
+import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon } from './tools.js';
 import { castleSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
@@ -75,16 +76,19 @@ export function render(){
   drawHintArrow(t);
   drawHoldRing();
   for (const pr of g.projs){
-    ctx.globalCompositeOperation = 'lighter';
+    const skinKey = save.wardrobe && save.wardrobe.skins[pr.vis];
+    if (skinKey){ const s0 = pr.guar ? 0.76 : 0.66; wake(ctx, SKIN_ART[skinKey], pr.x, pr.y + 4, CS * s0 * .4, 96, t); }   // a skin's comet wake (owner)
+    else { ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < pr.trail.length; i += 2){
       const a = (i / pr.trail.length); ctx.globalAlpha = a * 0.35; ctx.fillStyle = PTYPES[pr.vis].spark;
       ell(ctx, pr.trail[i], pr.trail[i + 1], pr.r * a * 0.9, pr.r * a * 0.9);
     }
-    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
     const s = pr.guar ? 0.76 : 0.66;
     ctx.save(); ctx.translate(pr.x, pr.y); ctx.rotate(pr.rot);
     const ps = s * (pr.type === BROWN ? [0.62, 0.82, 1.06][pr.size == null ? 1 : pr.size] : 1);   // brown flies at its grown size
     ctx.drawImage(sprites[pr.vis][1], -CS * ps / 2, -CS * ps / 2, CS * ps, CS * ps);
+    if (save.wardrobe && save.wardrobe.costume) drawCostume(ctx, save.wardrobe.costume, 0, 3 * ps, CS * ps * .4, Math.round(CS * K));
     ctx.restore();
   }
   for (const p of g.parts){
@@ -407,6 +411,7 @@ export function drawCell(r, c, cell, t, hg){
   if (bsz === 2){ const gg = ctx.createRadialGradient(x, y, CS * 0.2, x, y, CS * 0.7); gg.addColorStop(0, 'rgba(255,190,90,.55)'); gg.addColorStop(1, 'rgba(255,190,90,0)'); ctx.fillStyle = gg; ctx.fillRect(x - CS * 0.7, y - CS * 0.7, CS * 1.4, CS * 1.4); }   // big brown: ripe glow
   ctx.save(); ctx.translate(x, y + sz * .38 - hop * 7); ctx.rotate(rot); ctx.scale(sx, sy);   // pivot at the base so the squash sits on the ground
   ctx.drawImage(sprites[cell.c][cell.lit ? 1 : 0], -sz / 2, -sz * .88, sz, sz);
+  const wc = save.wardrobe && save.wardrobe.costume; if (wc) drawCostume(ctx, wc, 0, -sz * .88 + sz * (0.5 + 3 / CS), sz * .4, Math.round(CS * K));   // the worn costume, on every pumpkin
   ctx.restore();
   if (bsz === 0){ ctx.fillStyle = '#7fd05a'; ell(ctx, x + CS * 0.12, y - CS * 0.3, 6, 3, -0.6); ell(ctx, x + CS * 0.2, y - CS * 0.36, 5, 2.5, 0.5); }   // small brown: a sprout
   if (cell.lit && cell.bsize >= 5){
@@ -464,6 +469,7 @@ function drawVfx(){
     if (v.t < 0) continue;   // a delayed effect
     const p = Math.min(1, v.t / v.dur);
     if (['firework', 'hammer', 'dynamite', 'lantern', 'bombdrop', 'scbreak'].includes(v.kind)){ drawToolFx(ctx, v, G.t); continue; }
+    if (v.kind === 'costumeHit'){ const fx = HIT_FX[v.key]; if (fx){ ctx.save(); ctx.translate(v.x, v.y); ctx.scale(1.25, 1.25); fx(ctx, p); ctx.restore(); } continue; }
     if (v.kind === 'pop'){
       const key = charKey(v.m); if (!key) continue;
       ctx.save(); ctx.translate(v.x, v.y); ctx.scale(v.s * (1 + p * 0.5), v.s * (1 - p * 0.85)); ctx.globalAlpha = 1 - p;

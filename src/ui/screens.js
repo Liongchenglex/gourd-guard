@@ -674,6 +674,7 @@ export function syncSound(){ const t = `Sound: ${save.muted ? 'off' : 'on'}`; $(
 
 export function toggleSound(){ save.muted = !save.muted; persist(); ensureAudio(); musicSync(); syncSound(); }
 
+let settingsFrom = 'levels';   // where Settings' Done returns to
 export function syncVolumes(){
   for (const [id, key] of [['#volMusic', 'musicVol'], ['#volSfx', 'sfxVol']]){ const v = Math.round((save[key] == null ? 1 : save[key]) * 100); $(id).value = v; $(id + 'Val').textContent = v + '%'; }
 }
@@ -699,8 +700,9 @@ export function wireButtons(){
 
   $('#bSoundT').onclick = toggleSound; $('#bSoundP').onclick = toggleSound;
 
-  $('#bLvSettings').onclick = () => setState('settings');   // gear on the storybook shelf (owner)
-  $('#bSettingsDone').onclick = () => { ensureAudio(); openLevels(); };
+  $('#bLvSettings').onclick = () => { settingsFrom = 'levels'; setState('settings'); };   // gear on the storybook shelf (owner)
+  $('#bPauseSettings').onclick = () => { settingsFrom = 'pause'; setState('settings'); };   // and from the pause menu (owner)
+  $('#bSettingsDone').onclick = () => { ensureAudio(); if (settingsFrom === 'pause') setState('pause'); else openLevels(); };
   for (const [id, key] of [['#volMusic', 'musicVol'], ['#volSfx', 'sfxVol']]){
     $(id).oninput = e => { save[key] = Math.round(+e.target.value) / 100; persist(); ensureAudio(); applyVolumes(); syncVolumes(); if (key === 'sfxVol') SFX.ui('tap'); };
   }

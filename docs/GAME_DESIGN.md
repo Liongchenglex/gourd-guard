@@ -57,7 +57,7 @@ Immovable obstacles placed on empty pattern cells at night start. They block sli
 | Drag a finger across the field | Every dropped pumpkin or tool the finger passes over is collected (owner, 2026-09-25). |
 | Space / F / R / P or Esc | Launch best bunch / firework / wall repair / pause (desktop). |
 | Restart (pause menu) | Goes back through the pumpkin picker before the level restarts (owner, 2026-09-26). |
-| Pause menu | Resume, Restart, Quit to menu and Sound on/off only. Sprout timing and powers are settled before the night starts (owner, 2026-09-27). |
+| Pause menu | Resume, Restart, Settings (the same volume panel; Done returns to the pause menu), Quit to menu and Sound on/off only. Sprout timing and powers are settled before the night starts (owner, 2026-09-27). |
 | Settings | A gear button beside Shop on the storybook shelf opens Music and Sound effects volume sliders (0–100%, saved as `save.musicVol` / `save.sfxVol`); each drives its own gain bus under the limiter. |
 
 Hints: after ~6 s idle with no lit bunch, the game outlines one pumpkin with an arrow showing a slide/push that builds a bunch (weighted toward columns with monsters).

@@ -7,6 +7,7 @@ import { MUSIC } from '../data/music.js';
 // cartoon-foley feel the owner asked for, and a small synthesiser for musical accents (bunch chords, alarms) and as a
 // fallback while the bank is still decoding. Design tables live in docs/AUDIO.md.
 
+export let sfxBus = null, musicBus = null;   // volume buses under the limiter (settings: save.sfxVol / save.musicVol)
 export let AC = null, master = null, noiseBuf = null, lastCoin = 0, lastHit = 0, lastThrow = 0, lastChomp = 0;
 
 const buffers = {};        // bank key -> decoded AudioBuffers (sparse while decoding)
@@ -20,6 +21,7 @@ export function ensureAudio(){
       // Limiter: every sound is mixed hot so it carries on a phone speaker; the compressor keeps stacked layers from clipping.
       const comp = AC.createDynamicsCompressor(); comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 10; comp.attack.value = 0.002; comp.release.value = 0.12;
       master.connect(comp); comp.connect(AC.destination);
+      sfxBus = AC.createGain(); musicBus = AC.createGain(); sfxBus.connect(master); musicBus.connect(master); applyVolumes();
       noiseBuf = AC.createBuffer(1, Math.floor(AC.sampleRate * 1), AC.sampleRate);
       const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     }
@@ -54,7 +56,7 @@ export function musicStart(key = 'play'){
   const play = buf => {
     if (musicWant !== key || musicSrc) return;
     musicGain = AC.createGain(); musicGain.gain.setValueAtTime(0.0001, AC.currentTime); musicGain.gain.exponentialRampToValueAtTime(save.muted ? 0.0001 : MUSIC_GAIN, AC.currentTime + 1.2);
-    musicSrc = AC.createBufferSource(); musicSrc.buffer = buf; musicSrc.loop = true; musicSrc.connect(musicGain); musicGain.connect(master); musicSrc.start(); musicKey = key;
+    musicSrc = AC.createBufferSource(); musicSrc.buffer = buf; musicSrc.loop = true; musicSrc.connect(musicGain); musicGain.connect(musicBus); musicSrc.start(); musicKey = key;
   };
   if (musicBufs[key]) return play(musicBufs[key]);
   const uri = MUSIC[key]; if (!uri) return;
@@ -95,7 +97,7 @@ export function tone(f, d, type, v, f2, delay){
   if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + d);
   g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(v, t0 + 0.012);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
-  o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + d + 0.05);
+  o.connect(g); g.connect(sfxBus); o.start(t0); o.stop(t0 + d + 0.05);
 }
 
 export function noise(d, v, f, q, delay, f2){
@@ -105,7 +107,7 @@ export function noise(d, v, f, q, delay, f2){
   const bq = AC.createBiquadFilter(); bq.type = 'bandpass'; bq.frequency.setValueAtTime(f, t0); bq.Q.value = q || 1;
   if (f2) bq.frequency.exponentialRampToValueAtTime(f2, t0 + d);
   const g = AC.createGain(); g.gain.setValueAtTime(v, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
-  s.connect(bq); bq.connect(g); g.connect(master); s.start(t0); s.stop(t0 + d + 0.05);
+  s.connect(bq); bq.connect(g); g.connect(sfxBus); s.start(t0); s.stop(t0 + d + 0.05);
 }
 
 // Play one clip of a bank key. v: gain (1 = a full-scale hit), opts: rate (pitch/speed), delay (s), jit (extra detune),
@@ -123,7 +125,7 @@ export function sample(key, v = 1, opts = {}){
   const spread = (opts.jit != null ? opts.jit : 0.05) + jitter;
   s.playbackRate.value = (opts.rate || 1) * (1 + (Math.random() - 0.5) * 2 * spread);
   const g = AC.createGain(); g.gain.value = v * SAMPLE_GAIN * layerGain;
-  s.connect(g); g.connect(master); s.start(AC.currentTime + (opts.delay || 0));
+  s.connect(g); g.connect(sfxBus); s.start(AC.currentTime + (opts.delay || 0));
   return true;
 }
 const S = sample;
@@ -424,3 +426,10 @@ export const SFX = {
   perk(){ S('magic', 0.6); [0,4,7,12,16].forEach((s, i) => tone(523 * Math.pow(2, s / 12), 0.25, 'sine', 0.08, null, i * 0.08)); },
   star(){ S('uistar', 0.5) || tone(1568, 0.2, 'sine', 0.07, 1760); },
 };
+
+/** Apply the saved music and sound-effects volumes (0–1) to their buses. */
+export function applyVolumes(){
+  if (!AC || !sfxBus) return;
+  const t = AC.currentTime, vol = x => (x == null ? 1 : Math.max(0, Math.min(1, x)));
+  sfxBus.gain.setTargetAtTime(vol(save.sfxVol), t, 0.03); musicBus.gain.setTargetAtTime(vol(save.musicVol), t, 0.03);
+}

@@ -349,7 +349,7 @@ Rules that came with it: authored levels have no random graves (world 1's drawn 
 
 ## 8b. Level-20 perks
 
-Beating level 10 opens the next world; beating **level 20** grants a permanent perk (owner, 2026-09-25). Perks stack, apply on every level, and can each be switched off in the pause menu. The bot's expected profile assumes the perks of earlier worlds are on.
+Beating level 10 opens the next world; beating **level 20** grants a permanent perk (owner, 2026-09-25). Perks stack, apply on every level, and are chosen per night on the level preview card (formerly switched off in the pause menu. The bot's expected profile assumes the perks of earlier worlds are on.
 
 | Beat | Perk | Effect |
 |---|---|---|

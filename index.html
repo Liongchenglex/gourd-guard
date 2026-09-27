@@ -52,6 +52,7 @@
       <div class="row">
         <button class="btn small alt" id="bLvBack">Back</button>
         <button class="btn small" id="bLvShop">Shop</button>
+        <button class="btn small alt gearBtn" id="bLvSettings" aria-label="Settings">⚙</button>
       </div>
       <button class="link" id="bUnlockAll">Testing: unlock all levels</button>
     </div>
@@ -171,7 +172,7 @@
         <div><span class="k">2</span><span>Swipe a pumpkin to slide it until it hits the edge, a grave, or another pumpkin. If it is already touching a pumpkin that way, it pushes the whole line in front of it.</span></div>
         <div><span class="k">3</span><span>When 3 or more of the same color touch, they light up. Flick a lit pumpkin upward, or tap it, and its whole bunch flies up, each pumpkin up its own column.</span></div>
         <div><span class="k">4</span><span>A bunch of 5 or more always knocks monsters back one space (bosses are too heavy).</span></div>
-        <div><span class="k">5</span><span>Pumpkins sprout every few seconds (set the timing in the pause menu). Fallen monsters drop pumpkins: tap them to send them over the wall.</span></div>
+        <div><span class="k">5</span><span>Pumpkins sprout every few seconds (sooner with the Eager sprouts power). Fallen monsters drop pumpkins: tap them to send them over the wall.</span></div>
         <div><span class="k">6</span><span>Graves show up in later nights. They never move and block slides. Press and hold a pumpkin to smash it.</span></div>
         <div><span class="k">7</span><span>New pumpkins unlock as you go. Level each one up in the shop, and once six are unlocked pick the 5 you want to bring.</span></div>
       </div>
@@ -180,21 +181,20 @@
     </div>
   </div>
 
+  <div class="ov" id="ovSettings">
+    <div class="card stack">
+      <h2>Settings</h2>
+      <label class="setting vol" for="volMusic"><span>Music</span><input type="range" id="volMusic" min="0" max="100" step="5"><b id="volMusicVal">100%</b></label>
+      <label class="setting vol" for="volSfx"><span>Sound effects</span><input type="range" id="volSfx" min="0" max="100" step="5"><b id="volSfxVal">100%</b></label>
+      <button class="btn" id="bSettingsDone">Done</button>
+    </div>
+  </div>
   <div class="ov" id="ovPause">
     <div class="card stack">
       <h2>Paused</h2>
       <button class="btn" id="bResume">Resume</button>
       <button class="btn alt" id="bRestart">Restart</button>
       <button class="btn alt" id="bQuit">Quit to menu</button>
-      <div class="setting">
-        <span>New pumpkin every</span>
-        <div class="stepper">
-          <button class="step" id="spMinus" aria-label="Sprout pumpkins faster">−</button>
-          <b id="spVal" aria-live="polite">5s</b>
-          <button class="step" id="spPlus" aria-label="Sprout pumpkins slower">+</button>
-        </div>
-      </div>
-      <div id="perkList"></div>
       <button class="link" id="bSoundP">Sound: on</button>
     </div>
   </div>

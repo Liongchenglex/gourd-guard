@@ -7,7 +7,7 @@ import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_
 import { monsterIcon } from '../engine/render/monsters.js';
 import { poolKey, prebakeAsync } from '../engine/render/anim.js';
 import { atlasKey } from '../engine/render/chars.js';
-import { SFX, ensureAudio, musicStop, musicSync, musicStart } from '../engine/audio.js';
+import { SFX, ensureAudio, musicStop, musicSync, musicStart, applyVolumes } from '../engine/audio.js';
 import { beginEndless, beginNight, continueNight, continueState, makeDemo, makePreview, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
 import { bgWorld, buildBg, buildSprites, pumpkinIcon, worldScene } from '../engine/render/sprites.js';
 import { BOOKS } from '../data/lore.js';
@@ -118,7 +118,7 @@ export function addBtn(box, label, fn, cls){ const b = document.createElement('b
 
 // ---------- UI ----------
 
-export const OVS = { title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult', chest:'#ovChest', preview:'#ovPreview', intro:'#ovIntro' };
+export const OVS = { settings:'#ovSettings', title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult', chest:'#ovChest', preview:'#ovPreview', intro:'#ovIntro' };
 
 export let shopReturn = 'levels', helpNext = null, loadoutNext = null, loadoutAvail = [], loadoutSel = new Set(), loadoutMust = [], loadoutWhy = [];
 
@@ -135,7 +135,7 @@ export function setState(s){
     const art = titleArt(H); for (const [id, c] of [['#artBack', art.back], ['#artFront', art.front]]){ const cv = $(id); if (cv.width !== c.width || cv.height !== c.height){ cv.width = c.width; cv.height = c.height; } cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); cv.getContext('2d').drawImage(c, 0, 0); }   // key art (owner, 2026-09-27)
   }
   if (s !== 'play'){ setGest(null); $('#banner').classList.remove('show'); setBannerTimer(0); }
-  if (s === 'pause'){ syncSpawn(); renderPerks(); }
+  if (s === 'settings') syncVolumes();
   syncSound();
   setHudSig('');
   if (s === 'play' || s === 'pause') updateHud(true);
@@ -674,6 +674,9 @@ export function syncSound(){ const t = `Sound: ${save.muted ? 'off' : 'on'}`; $(
 
 export function toggleSound(){ save.muted = !save.muted; persist(); ensureAudio(); musicSync(); syncSound(); }
 
+export function syncVolumes(){
+  for (const [id, key] of [['#volMusic', 'musicVol'], ['#volSfx', 'sfxVol']]){ const v = Math.round((save[key] == null ? 1 : save[key]) * 100); $(id).value = v; $(id + 'Val').textContent = v + '%'; }
+}
 export function syncSpawn(){
   const i = SPAWN_STEPS.indexOf(save.spawnEvery);
   $('#spVal').textContent = save.spawnEvery + 's';
@@ -696,7 +699,11 @@ export function wireButtons(){
 
   $('#bSoundT').onclick = toggleSound; $('#bSoundP').onclick = toggleSound;
 
-  $('#spMinus').onclick = () => stepSpawn(-1); $('#spPlus').onclick = () => stepSpawn(1);
+  $('#bLvSettings').onclick = () => setState('settings');   // gear on the storybook shelf (owner)
+  $('#bSettingsDone').onclick = () => { ensureAudio(); openLevels(); };
+  for (const [id, key] of [['#volMusic', 'musicVol'], ['#volSfx', 'sfxVol']]){
+    $(id).oninput = e => { save[key] = Math.round(+e.target.value) / 100; persist(); ensureAudio(); applyVolumes(); syncVolumes(); if (key === 'sfxVol') SFX.ui('tap'); };
+  }
 
   $('#bLvBack').onclick = () => { setState('title'); makeDemo(); };   // the title gets its own scene back after a level map was shown
   $('#bBkClose').onclick = closeBook;

@@ -57,6 +57,8 @@ Immovable obstacles placed on empty pattern cells at night start. They block sli
 | Drag a finger across the field | Every dropped pumpkin or tool the finger passes over is collected (owner, 2026-09-25). |
 | Space / F / R / P or Esc | Launch best bunch / firework / wall repair / pause (desktop). |
 | Restart (pause menu) | Goes back through the pumpkin picker before the level restarts (owner, 2026-09-26). |
+| Pause menu | Resume, Restart, Quit to menu and Sound on/off only. Sprout timing and powers are settled before the night starts (owner, 2026-09-27). |
+| Settings | A gear button beside Shop on the storybook shelf opens Music and Sound effects volume sliders (0–100%, saved as `save.musicVol` / `save.sfxVol`); each drives its own gain bus under the limiter. |
 
 Hints: after ~6 s idle with no lit bunch, the game outlines one pumpkin with an arrow showing a slide/push that builds a bunch (weighted toward columns with monsters).
 
@@ -131,7 +133,7 @@ The balance bot's expected upgrade profile has not been re-checked against these
 
 ## 6. Pumpkin supply
 
-- **Sprouts**: **two pumpkins** every *N* seconds, each in its own random empty cell with an independent colour (one if only one cell is free, none if the patch is full). *N* defaults to **5 s**; the player can set 2, 3, 4, 5, 6, 7, 8 or 10 s in the pause menu. When fewer than 10 pumpkins are on the patch, sprouting runs **2× faster** (catch-up rule, added because 5 s alone starved later nights).
+- **Sprouts**: **two pumpkins** every *N* seconds, each in its own random empty cell with an independent colour (one if only one cell is free, none if the patch is full). *N* is fixed at 5 s (`SPROUT_EVERY` in `src/data/rules.js`), 4 s with the Eager sprouts power; it is no longer adjustable in the pause menu (owner, 2026-09-27). When fewer than 10 pumpkins are on the patch, sprouting runs **2× faster** (catch-up rule, added because 5 s alone starved later nights).
 - **Kill rewards**: every non-boss kill rolls exactly **one** reward: **weapon 10%**, **pumpkin 30%**, **coins 60%** (`src/data/rules.js`). A pumpkin roll drops `max(1, round(drop))` pumpkins in the field; a weapon roll drops one consumable (Wall repair or Firework, chosen among those below their carry limit; if all are full the roll pays coins instead); a coin roll pays the monster's coins. Bosses skip the roll and always pay coins plus their pumpkin drop. Drops fade after 7 s (blinking in the last 2 s). Tap to collect.
 - **Purple spawns**: see above.
 - **Smashing** (hold) removes a pumpkin to make space.
@@ -241,7 +243,7 @@ Levels 11–19 of every world are hand-authored (`docs/WORLDS.md` §8a) with the
 
 ### Unlocks and progression
 - Level 1 of a world opens when the previous world's level 10 has been beaten. Every other level opens when the level before it has been beaten. Beating level 10 therefore opens levels 11–20 and the next world at once.
-- **Level-20 perks** (`src/data/perks.js`): beating a world's level 20 grants a permanent perk, toggleable in the pause menu: 1-20 quick smash (0.35 s hold), 2-20 sprouts 1 s sooner, 3-20 half of sprout ticks bring 3 pumpkins, 4-20 rainbow chance 10%, 5-20 loadouts of 4 allowed. The result screen announces the perk.
+- **Level-20 perks** (`src/data/perks.js`): beating a world's level 20 grants a permanent perk, chosen per night among the powers on the level preview card (no longer toggleable in the pause menu, owner 2026-09-27): 1-20 quick smash (0.35 s hold), 2-20 sprouts 1 s sooner, 3-20 half of sprout ticks bring 3 pumpkins, 4-20 rainbow chance 10%, 5-20 loadouts of 4 allowed. The result screen announces the perk.
 - **Unlocks are global**: once a pumpkin or tool is unlocked it can be used on every level, including earlier ones (owner, 2026-09-25). Availability is computed from the highest open level, not the level being played.
 - Unlocks sit in levels 1–10 so nothing is missable. World 1: Yellow 1-2, Wall repair 1-3, Ice 1-5, Grave buster 1-6, Firework 1-7, Fire 1-8 (owner reorder, 2026-09-26). World 2: Lantern 2-2, White 2-3, Landmine 2-5, Pink 2-8. World 3 (Witchwood): Scarecrow 3-2, Purple 3-3. World 4 (Crumbling Keep): Bomb 4-4, Grey 4-6, Black 4-9. World 5 (Drowned Marsh): Deep Blue 5-4. World order was changed by the owner on 2026-09-25; level addresses inside the monster and gimmick tables use the new numbering.
 - Stars are keyed by global night index in the save; `save.unlocked` mirrors the highest open night for older code and the endless-mode loadout.

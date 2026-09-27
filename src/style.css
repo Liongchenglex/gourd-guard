@@ -419,3 +419,10 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .adCard2[hidden], .tradeCard[hidden]{ display:none; }
 .btn.buyItems[disabled]{ opacity:.75; }
 .btn.buyItems[disabled] small{ color:#efe4d6; }
+
+/* Settings (owner, 2026-09-27): a gear beside Shop on the storybook shelf opens music and sound-effects volume */
+.gearBtn{ min-width:calc(var(--u)*48px); font-size:calc(var(--u)*22px); line-height:1; padding-left:calc(var(--u)*12px); padding-right:calc(var(--u)*12px); }
+.setting.vol{ gap:calc(var(--u)*10px); }
+.setting.vol span{ flex:none; min-width:calc(var(--u)*120px); text-align:left; }
+.setting.vol input[type=range]{ flex:1; min-width:0; height:calc(var(--u)*44px); accent-color:var(--pumpkin); }
+.setting.vol b{ flex:none; min-width:calc(var(--u)*48px); text-align:right; font-weight:600; }

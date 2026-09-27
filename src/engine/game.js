@@ -21,6 +21,7 @@ import { initWalls, damageWall } from './walls.js';
 import { persist, save } from '../save.js';
 import { banner, updateHud } from '../ui/hud.js';
 import { openLoadout, setState, showResult } from '../ui/screens.js';
+import { SPROUT_EVERY } from '../data/rules.js';
 
 // ---------- Flow ----------
 
@@ -236,7 +237,7 @@ export function placeScarecrow(lane){
   return true;
 }
 /** Seconds between sprouts: the player's setting, one less with the 2-20 perk. */
-export function sproutEvery(){ return Math.max(1, save.spawnEvery - (perkOn('sprout') ? 1 : 0)); }
+export function sproutEvery(){ return Math.max(1, SPROUT_EVERY - (perkOn('sprout') ? 1 : 0)); }   // fixed interval; only the Eager sprouts power changes it (owner)
 export function raiseCastles(n, hp){
   const lanes = shuffle([...Array(COLS).keys()]).slice(0, n);
   for (const lane of lanes) G.castles.push({ lane, p:rnd(0.4, 0.72), hp, maxHp:hp, flash:0, dead:false });

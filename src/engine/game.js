@@ -92,7 +92,7 @@ export function startGame(mode, n, loadout){
   initWalls();
   resolveMatches();
   setGest(null);
-  setState('play'); musicStart(def && MUSIC['w' + def.world] ? 'w' + def.world : 'play');   // one draft track per world for the owner to compare; endless uses the first draft
+  setState('play'); musicStart(def && MUSIC['w' + def.worldNo] ? 'w' + def.worldNo : 'play');   // one track per world in story order (worldNo; def.world is the visual theme); endless plays the world-1 track
 
   if (mode === 'story'){
     const parts = [];

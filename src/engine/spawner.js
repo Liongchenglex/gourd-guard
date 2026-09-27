@@ -7,6 +7,7 @@ import { G } from './state.js';
 import { rnd } from './util.js';
 import { banner } from '../ui/hud.js';
 import { SPAWN_GAP, SPAWN_BURST, SPAWN_BURST_EARLY, SPAWN_LATE_FROM } from '../data/rules.js';
+import { musicStart } from './audio.js';
 
 export function pickFrom(pool){
   let tot = 0; for (const [, w] of pool) tot += w;
@@ -33,7 +34,7 @@ export function storySpawn(dt){
   }
   if (d.boss && !G.bossSpawned && G.spawned >= Math.floor(d.total * 0.4)){
     spawnMonster('boss'); G.bossSpawned = true;
-    banner(BOSS_NAMES[d.boss] || 'Boss', (BOSS_INTRO[d.boss] || {})[d.bossForm] || 'Monsters keep coming until it falls.', 3); SFX.bossAlert(); setTimeout(() => SFX.bossSfx(d.boss, 'arrive'), 900);
+    banner(BOSS_NAMES[d.boss] || 'Boss', (BOSS_INTRO[d.boss] || {})[d.bossForm] || 'Monsters keep coming until it falls.', 3); SFX.bossAlert(); setTimeout(() => SFX.bossSfx(d.boss, 'arrive'), 900); setTimeout(() => { if (G && !G.over && G.mode === 'story') musicStart('boss'); }, 1600);   // stakes rise: the boss track takes over (owner)
   }
 }
 

@@ -372,6 +372,7 @@ export function drawGrid(t){
   for (const [r, c, cell] of flying) drawCell(r, c, cell, t, hg);
 }
 
+const LIT_HALO = [[140, 255, 90], [255, 214, 70], [140, 220, 255], [255, 110, 50], [225, 230, 245], [200, 120, 255], [235, 242, 255], [255, 140, 50], [120, 160, 255], [255, 130, 200], [90, 240, 225], [240, 170, 80], [255, 230, 140]];
 export function drawCell(r, c, cell, t, hg){
   const held = hg != null && cell.lit && cell.gids.includes(hg);
   let x = LANE(c) + cell.ox, y = GY + r * CS + CS / 2 + cell.oy;
@@ -386,7 +387,8 @@ export function drawCell(r, c, cell, t, hg){
     const rad = CS * (cell.bsize >= 5 ? 0.78 : 0.62) * (held ? 1.2 : 1);
     ctx.globalCompositeOperation = 'lighter';
     const gr = ctx.createRadialGradient(x, y + 4, 4, x, y + 4, rad);
-    gr.addColorStop(0, `rgba(255,190,70,${(held ? 0.8 : 0.5) * fl})`); gr.addColorStop(1, 'rgba(255,120,20,0)');
+    const hc = LIT_HALO[cell.c] || [255, 190, 70];   // each bunch glows in its own colour (owner, 2026-09-27)
+    gr.addColorStop(0, `rgba(${hc[0]},${hc[1]},${hc[2]},${(held ? 0.8 : 0.55) * fl})`); gr.addColorStop(1, `rgba(${hc[0]},${hc[1]},${hc[2]},0)`);
     ctx.fillStyle = gr; ctx.fillRect(x - rad, y + 4 - rad, rad * 2, rad * 2);
     ctx.globalCompositeOperation = 'source-over';
     if (held){ s *= 1.1; y -= 4; }

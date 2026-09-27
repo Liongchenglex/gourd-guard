@@ -1,0 +1,33 @@
+<title>Paint Pumpkin</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Creepster&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap">
+<style>
+:root{ color-scheme:dark; --bg:#120a1c; --panel:#221633; --ink:#fbefdc; --muted:#c3b1c9; --gold:#ffd36a; --line:rgba(255,211,106,.22); }
+html{ background:#120a1c; }
+body{ margin:0; min-height:100vh; background:radial-gradient(ellipse at 50% -10%, #2c1a4a, var(--bg) 60%) fixed; color:var(--ink); font-family:Nunito, system-ui, sans-serif; }
+.wrap{ max-width:1120px; margin:0 auto; padding-block:30px 60px; padding-inline:16px; }
+h1{ font-family:Creepster, fantasy; font-weight:400; color:var(--gold); font-size:clamp(40px,7vw,66px); margin:0; letter-spacing:1px; text-shadow:0 0 26px rgba(255,211,106,.45); }
+.lede{ color:var(--muted); max-width:66ch; margin:8px 0 22px; line-height:1.5; }
+#opts{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:12px 14px 16px; }
+.card canvas{ display:block; border-radius:12px; margin:8px auto; }
+.card h3{ font-family:Fredoka, sans-serif; font-weight:700; font-size:21px; margin:0; }
+.tag{ display:inline-block; font:700 12px Fredoka, sans-serif; color:#2a1400; background:var(--gold); border-radius:999px; padding:1px 9px; margin-bottom:4px; }
+.card p{ margin:6px 0 0; font-size:14px; line-height:1.45; }
+.card p.hit{ color:var(--muted); } .card p.hit b{ color:var(--gold); }
+.small{ display:flex; gap:18px; align-items:flex-end; margin-top:12px; font-size:12px; color:var(--muted); }
+.small span{ display:flex; flex-direction:column; align-items:center; gap:4px; } .small canvas{ margin:0; border-radius:8px; }
+.ideas{ max-width:70ch; color:#e8dcf0; line-height:1.5; padding-left:20px; } .ideas b{ color:#ffd36a; }
+</style>
+<div class="wrap">
+  <h1>Paint Pumpkin</h1>
+  <p class="lede">An archive design for a future pumpkin: white, spattered with the other pumpkins' colours. Three looks, each shown in the patch without a face, lit in a bunch with a face and a cheeky paint dab, as a shop icon, and flying into a ghoul with a paint-drop trail and a paint-splat hit. Nothing here is in the game.</p>
+  <section id="opts"></section>
+  <h2 style="font-family:Fredoka,sans-serif;color:#ffd36a;margin:30px 0 6px">Ability ideas</h2>
+  <ul class="ideas">
+    <li><b>Wet paint.</b> A hit coats the monster in the Paint pumpkin's colour of the night, and the next pumpkin of that colour to hit it does double damage.</li>
+    <li><b>Repaint.</b> When a Paint bunch launches, each pumpkin next to its column is repainted to match the biggest neighbouring bunch, helping build the next bunch.</li>
+    <li><b>Colour thief.</b> It counts as any colour in the patch like Rainbow, but only for bunches of 4 or more, so it rewards bigger bunches.</li>
+  </ul>
+</div>
+<canvas id="cv" width="1" height="1" hidden></canvas><div id="wrap" hidden></div>
+<script>

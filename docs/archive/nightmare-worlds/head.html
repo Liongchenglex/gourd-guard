@@ -1,0 +1,31 @@
+<title>Nightmare Worlds</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Creepster&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap">
+<style>
+:root{ color-scheme:dark; --bg:#120a1c; --panel:#221633; --ink:#fbefdc; --muted:#c3b1c9; --gold:#ffd36a; --line:rgba(255,211,106,.22); }
+body{ margin:0; background:radial-gradient(ellipse at 50% -10%, #2c1a4a, var(--bg) 60%) fixed; color:var(--ink); font-family:Nunito, system-ui, sans-serif; }
+.wrap{ max-width:1120px; margin:0 auto; padding-block:30px 60px; padding-inline:16px; }
+h1{ font-family:Creepster, fantasy; font-weight:400; color:var(--gold); font-size:clamp(40px,7vw,66px); margin:0; letter-spacing:1px; text-shadow:0 0 26px rgba(255,211,106,.45); }
+.lede{ color:var(--muted); max-width:66ch; margin:8px 0 22px; line-height:1.5; }
+#opts{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:12px 14px 16px; }
+.card canvas{ display:block; border-radius:12px; margin:8px auto; }
+.card h3{ font-family:Fredoka, sans-serif; font-weight:700; font-size:21px; margin:0; }
+.tag{ display:inline-block; font:700 12px Fredoka, sans-serif; color:#2a1400; background:var(--gold); border-radius:999px; padding:1px 9px; margin-bottom:4px; }
+.card p{ margin:6px 0 0; font-size:14px; line-height:1.45; }
+.card p.hit{ color:var(--muted); } .card p.hit b{ color:var(--gold); }
+.small{ display:flex; gap:18px; align-items:flex-end; margin-top:12px; font-size:12px; color:var(--muted); }
+.small span{ display:flex; flex-direction:column; align-items:center; gap:4px; } .small canvas{ margin:0; border-radius:8px; }
+html{ background:#120a1c; } body{ min-height:100vh; }
+#opts{ grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); }
+canvas.sky{ width:100%; height:auto; border-radius:12px; margin:8px 0 0 !important; display:block; }
+.pair{ display:flex; gap:10px; align-items:flex-end; margin-top:8px; }
+.pair canvas.big{ width:48%; height:auto; border-radius:12px; margin:0 !important; }
+.was{ width:30%; display:flex; flex-direction:column; gap:4px; } .was canvas{ width:100%; height:auto; border-radius:10px; opacity:.85; margin:0 !important; } .was small{ color:#c3b1c9; font-size:12px; text-align:center; }
+</style>
+<div class="wrap">
+  <h1>Nightmare Worlds</h1>
+  <p class="lede">Archive designs for later: the map for Hallow's End (world 6) and a nightmare version of each of the five worlds. Each is drawn at full phone size with the field and the patch, the way it would look in play, beside today's world for comparison. Nothing here is in the game.</p>
+  <section id="opts"></section>
+</div>
+<canvas id="cv" width="1" height="1" hidden></canvas><div id="wrap" hidden></div>
+<script>

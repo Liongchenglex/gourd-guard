@@ -433,6 +433,18 @@ Coins picked up during the night plus the win bonus (10 + 3 × night + 5 × star
 
 Reading: the owner played all five worlds to level 10 and had about 15,000 coins, which fits this one-pass figure once replays of lost nights are counted (about 1.6×). Today's coin scale therefore already matches the owner's experience; the draft price list in `monetization.md` is judged against about 15,000 coins by 5-10 and roughly twice that by the end of Release 1. Not applied to the game yet: the owner is deciding the compromise.
 
+### Later levels spaced out (2026-09-27, expected profile; before = 1 run per level, after = 2 runs per level)
+
+Levels 11–20 of every world: spawn gap ×1.3 and bursts 10% instead of 18%, monster counts unchanged (owner).
+
+| Levels | Before: wins, mean walls, mean length | After: wins, mean walls, mean length |
+|---|---|---|
+| World 1, 11–20 | 1/10, 64%, 85 s | 6/20, 71%, 118 s |
+| Worlds 2–5, 15 and 20 | 2/8, 67%, 93 s | 2/16, 62%, 118 s |
+| All 18 levels | 3/18 (17%), 66% | 8/36 (22%), 67% |
+
+Reading: nights now last about 30% longer and world 1's second half became clearly more winnable (1-11, 1-14 and 1-16 won in both runs). Worlds 2–5 barely moved for the bot; their difficulty there comes from gimmicks (fog, hexes, castles, the sea) rather than pace. Single and double runs are noisy; treat per-level rows as indications. The bot still plays at the old expected profile (level 4–5 pumpkins in the second half).
+
 ---
 
 ## 12. Art, audio, tech

@@ -1,6 +1,6 @@
 import { PERKS, perkEarned, perkOn, perkNight, rented, RENT_COST } from '../data/perks.js';
 import { SPAWN_STEPS } from '../data/patterns.js';
-import { LV_COST, NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
+import { NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, firstNightOf, typesForNight, gearUnlockNightOf } from '../data/worlds/index.js';
 import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS } from '../data/monsters.js';
@@ -8,12 +8,17 @@ import { monsterIcon } from '../engine/render/monsters.js';
 import { poolKey, prebakeAsync } from '../engine/render/anim.js';
 import { atlasKey } from '../engine/render/chars.js';
 import { SFX, ensureAudio, musicStop, musicSync, musicStart } from '../engine/audio.js';
-import { beginEndless, beginNight, makeDemo, makePreview, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
+import { beginEndless, beginNight, endGame, makeDemo, makePreview, reviveNight, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
 import { bgWorld, buildBg, buildSprites, pumpkinIcon, worldScene } from '../engine/render/sprites.js';
 import { BOOKS } from '../data/lore.js';
 import { BESTIARY, COMPANIONS } from '../data/bestiary.js';
 import { toolIcon } from '../engine/render/tools.js';
-import { COSTUMES, SKINS, costumeFor } from '../data/wardrobe.js';
+import { COSTUMES, SKINS } from '../data/wardrobe.js';
+import { upgradeCost, SEED_PACKS, BOSS_ITEMS_FOR_COSTUME, BOSS_ITEM_SEED_PACK, BOSS_ITEM_COINS, CHESTS, SEED_ADS_PER_DAY } from '../data/economy.js';
+import { showRewarded, seedAdsLeft, adsBusy } from '../engine/ads.js';
+import { storeReady, buyPack } from '../engine/store.js';
+import { rollChest, grant, bossItemsFor, foundThisNight, queueSack, sackIsQueued } from '../engine/loot.js';
+import { chestIcon, bossItemIcon, BOSS_ITEM_NAMES, seedIcon as seedArt } from '../engine/render/loot.js';
 import { costumeIcon, skinIcon } from '../engine/render/wardrobe.js';
 import { titleArt } from '../engine/render/keyart.js';
 import { trophyIcon } from '../engine/render/trophies.js';
@@ -43,8 +48,6 @@ export function showResult(win){
       if (g.def.levelNo === 10){   // owner: beating the level-10 boss is a celebration: a world-unlock card, then back to the menu
         const nextName = WORLD_LEVELS[g.def.worldNo] && WORLD_LEVELS[g.def.worldNo].length ? WORLD_NAMES[g.def.worldNo] : null; title = nextName ? `${nextName} unlocked!` : 'Every boss beaten!';
         msg = `🎉 ${BOSS_NAMES[g.def.boss]} is beaten! The rest of ${WORLD_NAMES[g.def.worldNo - 1]} is open` + (nextName ? `, and ${nextName} awaits.` : '.'); SFX.perk();
-        const cos = costumeFor(g.def.boss);   // the boss drops its costume the first time (owner, 2026-09-27)
-        if (cos && !save.wardrobe.owned.includes(cos.key)){ save.wardrobe.owned.push(cos.key); persist(); msg += ` It dropped the ${cos.name}: wear it from the Wardrobe in the shop.`; }
       }
       const perk = PERKS.find(p => perkNight(p) === g.n);
       const tw = $('#rTrophy'); tw.hidden = true; tw.innerHTML = ''; tw.classList.remove('show');
@@ -84,20 +87,33 @@ export function showResult(win){
     addBtn(box, 'Shop', () => openShop('result'), 'alt');
     addBtn(box, 'Menu', () => setState('title'), 'alt');
   }
+  if (g.mode === 'story'){
+    const f = foundThisNight();
+    if (f.seeds) stats.push(['Seeds found', f.seeds]);
+    if (f.chests) stats.push(['Chests found', f.chests]);
+  }
   persist();
   $('#rTitle').textContent = title; $('#rMsg').textContent = msg;
   $('#rStars').innerHTML = stars; $('#rStars').style.display = stars ? '' : 'none';
   $('#rStats').innerHTML = stats.map(([a, b]) => `<span>${a}</span><span>${b}</span>`).join('');
+  refreshResultLoot();
   setState('result');
 }
 
+/** The chest and free-seed prompts under the result card's buttons. */
+function refreshResultLoot(){
+  let ex = $('#rExtra'); if (!ex){ ex = document.createElement('div'); ex.id = 'rExtra'; ex.className = 'row rExtra'; $('#rBtns').after(ex); }
+  ex.innerHTML = '';
+  if (save.chests.length){ const b = document.createElement('button'); b.className = 'btn small chestBtn'; b.appendChild(dom(chestIcon(save.chests[0].kind, false, 34))); b.insertAdjacentHTML('beforeend', `Open chest${save.chests.length > 1 ? `s (${save.chests.length})` : ''}`); b.onclick = () => openChests('result'); ex.appendChild(b); }
+  if (seedAdsLeft() > 0){ const b = document.createElement('button'); b.className = 'adPill'; b.innerHTML = `<span class="play"></span>Free seed <small>${seedAdsLeft()} left</small>`; b.onclick = () => watchSeedAd(refreshResultLoot); ex.appendChild(b); }
+}
 export function fmtTime(s){ const m = Math.floor(s / 60), r = Math.floor(s % 60); return m ? `${m}m ${r}s` : `${r}s`; }
 
 export function addBtn(box, label, fn, cls){ const b = document.createElement('button'); b.className = 'btn small' + (cls ? ' ' + cls : ''); b.textContent = label; b.onclick = () => { ensureAudio(); fn(); }; box.appendChild(b); }
 
 // ---------- UI ----------
 
-export const OVS = { title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult', preview:'#ovPreview', intro:'#ovIntro' };
+export const OVS = { title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult', revive:'#ovRevive', chest:'#ovChest', preview:'#ovPreview', intro:'#ovIntro' };
 
 export let shopReturn = 'levels', helpNext = null, loadoutNext = null, loadoutAvail = [], loadoutSel = new Set(), loadoutMust = [], loadoutWhy = [];
 
@@ -129,8 +145,14 @@ let previewNight = 1, introQueue = [], introNext = null;
 /** Pre-level card (owner request, 2026-09-25): which monsters, the boss, your pumpkins, graves. Start goes through unseen intros first. */
 let pendingUnlock = null;   // world index whose storybook should play its unlock animation on the next shelf (set by a level-10 win)
 let pendingStamp = null;    // night whose level tile should play its stamp animation when the book opens (set by a level-20 win)
+/** The level card's Loot Sack offer: an ad summons one into the next night started. */
+function syncSack(){
+  const q = sackIsQueued(), b = $('#bPvSack');
+  b.disabled = q; b.innerHTML = q ? 'Ready' : '<span class="play"></span>Watch ad';
+  $('#pvSackTx').textContent = q ? 'A Loot Sack will waddle into this night. Knock it down before it runs off!' : 'Watch an ad to bring a Loot Sack into this night. Knock it down in time for a chest, tools or coins, plus a pumpkin seed.';
+}
 export function openPreview(n){
-  previewNight = n;
+  previewNight = n; syncSack();
   const def = levelFor(n), prevGraves = n > 1 ? levelFor(n - 1).graves : 0;
   makePreview(n);   // the night's own map behind the card (owner: not a random background)
   $('#pvTitle').textContent = `Level ${def.label}`;
@@ -245,7 +267,7 @@ export function renderPerks(){
 let curBook = null;   // the open storybook (world index), so Back from a preview or the loadout returns to its pages
 /** Level select: a shelf of storybooks, one per world; an open book shows the world's lore and its level grid (owner, 2026-09-26). */
 export function openLevels(){
-  $('#lvCoins').textContent = save.coins.toLocaleString();
+  $('#lvCoins').textContent = save.coins.toLocaleString(); syncSeedPrompts();
   $('#bUnlockAll').textContent = save.testUnlock ? 'Testing: relock levels' : 'Testing: unlock all levels';
   if (curBook != null){ openBook(curBook, false); return; }
   const shelf = $('#shelf'); shelf.innerHTML = '';
@@ -444,9 +466,26 @@ function renderWardrobe(){
     const d = document.createElement('div'); d.className = 'wCard' + (W.costume === c.key ? ' worn' : '');
     d.appendChild(costumeIcon(c.key, 72));
     const nm = document.createElement('b'); nm.textContent = c.name; d.appendChild(nm);
-    if (c.boss){ const src = document.createElement('small'); src.className = 'src'; src.textContent = owned(c.key) ? `Won from ${BOSS_NAMES[c.boss]}` : `Free for beating ${BOSS_NAMES[c.boss]}`; d.appendChild(src); }
-    const ds = document.createElement('small'); ds.textContent = c.hit; d.appendChild(ds);
-    d.appendChild(owned(c.key) ? wearBtn(W.costume === c.key, () => { W.costume = W.costume === c.key ? null : c.key; }) : buyBtn(c.price, () => { W.owned.push(c.key); W.costume = c.key; }));
+    const ds = document.createElement('small'); ds.textContent = c.hit;
+    if (c.boss && !owned(c.key)){   // traded for 30 of the boss's items (owner's monetization.md)
+      const have = bossItemsFor(c.boss), need = BOSS_ITEMS_FOR_COSTUME;
+      const pr = document.createElement('div'); pr.className = 'bossItems'; pr.appendChild(dom(bossItemIcon(c.boss, 30)));
+      pr.insertAdjacentHTML('beforeend', `<span><b>${Math.min(have, need)} / ${need}</b> ${BOSS_ITEM_NAMES[c.boss]}s</span><i style="--f:${Math.min(1, have / need)}"></i>`); d.appendChild(pr);
+      const src = document.createElement('small'); src.className = 'src'; src.textContent = `From ${BOSS_NAMES[c.boss]}'s level-20 chest`; d.appendChild(src); d.appendChild(ds);
+      if (have >= need){ const b = document.createElement('button'); b.className = 'btn small'; b.textContent = 'Make costume'; b.onclick = () => { save.bossItems[c.boss] -= need; W.owned.push(c.key); W.costume = c.key; persist(); SFX.perk(); renderShop(); }; d.appendChild(b); }
+      else {
+        const row = document.createElement('div'); row.className = 'twoBtns';
+        const bs = document.createElement('button'); bs.className = 'btn small'; bs.innerHTML = `+${BOSS_ITEM_SEED_PACK.items} <span class="seed"></span>${BOSS_ITEM_SEED_PACK.seeds}`; bs.disabled = (save.seeds || 0) < BOSS_ITEM_SEED_PACK.seeds; bs.setAttribute('aria-label', `Buy ${BOSS_ITEM_SEED_PACK.items} ${BOSS_ITEM_NAMES[c.boss]}s for ${BOSS_ITEM_SEED_PACK.seeds} seeds`);
+        bs.onclick = () => { if ((save.seeds || 0) < BOSS_ITEM_SEED_PACK.seeds) return; save.seeds -= BOSS_ITEM_SEED_PACK.seeds; save.bossItems[c.boss] = have + BOSS_ITEM_SEED_PACK.items; persist(); SFX.coin(); renderShop(); };
+        const bc = document.createElement('button'); bc.className = 'btn small alt'; bc.innerHTML = `+1 <span class="coin"></span>${BOSS_ITEM_COINS}`; bc.disabled = save.coins < BOSS_ITEM_COINS; bc.setAttribute('aria-label', `Buy one ${BOSS_ITEM_NAMES[c.boss]} for ${BOSS_ITEM_COINS} coins`);
+        bc.onclick = () => { if (save.coins < BOSS_ITEM_COINS) return; save.coins -= BOSS_ITEM_COINS; save.bossItems[c.boss] = have + 1; persist(); SFX.coin(); renderShop(); };
+        row.appendChild(bs); row.appendChild(bc); d.appendChild(row);
+      }
+    } else {
+      if (c.boss){ const src = document.createElement('small'); src.className = 'src'; src.textContent = `${BOSS_NAMES[c.boss]}'s costume`; d.appendChild(src); }
+      d.appendChild(ds);
+      d.appendChild(owned(c.key) ? wearBtn(W.costume === c.key, () => { W.costume = W.costume === c.key ? null : c.key; }) : buyBtn(c.price, () => { W.owned.push(c.key); W.costume = c.key; }));
+    }
     cbox.appendChild(d);
   }
   const sbox = $('#wSkins'); sbox.innerHTML = '';
@@ -468,12 +507,93 @@ function setShopTab(tab){
 }
 /** One stat line: now, and the next level's value when it changes. */
 const nxLine = (k, a, b) => `<span class="k">${k}</span><span>${a}${b != null && b !== a ? ` <span class="dim">\u2192</span> <span class="up">${b}</span>` : ''}</span>`;
-const SEED_PACKS = [
-  { n:100,  name:'Handful of seeds', price:'$0.99' },
-  { n:550,  name:'Pouch of seeds',   price:'$4.99' },
-  { n:1200, name:'Sack of seeds',    price:'$9.99' },
-  { n:2600, name:'Barrel of seeds',  price:'$19.99' },
-];
+/** A fresh copy of a cached icon canvas, so one icon can sit in several places in the page at once. */
+function dom(c){ const d = document.createElement('canvas'); d.width = c.width; d.height = c.height; d.getContext('2d').drawImage(c, 0, 0); return d; }
+const PACK_NAMES = { 10:'Handful of seeds', 25:'Pouch of seeds', 50:'Sack of seeds' };
+/** Seeds tab (owner's monetization.md): free seed ads first, waiting chests, then the real-money packs. */
+function renderSeedsPane(){
+  const left = seedAdsLeft();
+  $('#adSeedLeft').textContent = left ? `${left} of ${SEED_ADS_PER_DAY} left today.` : `That's all ${SEED_ADS_PER_DAY} for today. More tomorrow.`;
+  const ab = $('#bSeedAd'); ab.disabled = !left; ab.textContent = left ? 'Watch ad' : 'Done today';
+  const ai = $('#adSeedIc'); if (!ai.firstChild) ai.appendChild(dom(seedArt(44)));
+  const nc = save.chests.length; $('#chestCard').hidden = !nc; $('#chestCardT').textContent = `${nc} treasure chest${nc === 1 ? '' : 's'} waiting`;
+  const ci = $('#chestCardIc'); ci.innerHTML = ''; if (nc) ci.appendChild(dom(chestIcon(save.chests[0].kind, false, 44)));
+  const sp = $('#shopSeedPacks'); sp.innerHTML = ''; const live = storeReady();
+  for (const pk of SEED_PACKS){
+    const d = document.createElement('div'); d.className = 'item pack';
+    const ic = seedIcon(48, pk.seeds * 20); ic.className = 'ic'; d.appendChild(ic);
+    const tx = document.createElement('div'); tx.className = 'tx'; tx.innerHTML = `<b>${PACK_NAMES[pk.seeds] || 'Seeds'}${pk.tag ? ` <span class="tag">${pk.tag}</span>` : ''}</b><p>${pk.seeds} pumpkin seeds</p>`; d.appendChild(tx);
+    const b = document.createElement('button'); b.className = 'btn small'; b.textContent = live ? pk.price : `${pk.price}`; b.disabled = !live; if (!live) b.title = 'On sale with the app store release';
+    b.onclick = async () => { if (await buyPack(pk.sku)){ SFX.perk(); renderShop(); } };
+    d.appendChild(b); sp.appendChild(d);
+  }
+  $('#seedNote').textContent = live ? 'Purchases are handled by your app store.' : 'Seed packs go on sale with the app store release. Nothing here charges you.';
+  syncSeedPrompts();
+}
+/** Keep every "free seed" and "chest waiting" prompt in step (shop header, Seeds tab dot, book shelf). */
+export function syncSeedPrompts(){
+  const left = seedAdsLeft(), nc = save.chests.length;
+  for (const id of ['#bShopAd', '#bLvAd']){ const b = $(id); if (!b) continue; b.hidden = !left; b.innerHTML = `<span class="play"></span>Free seed <small>${left} left</small>`; b.setAttribute('aria-label', `Watch an ad for a free pumpkin seed, ${left} left today`); }
+  const lc = $('#bLvChest'); if (lc){ lc.hidden = !nc; lc.textContent = `Open chest${nc > 1 ? 's' : ''} (${nc})`; }
+  const dot = $('#seedDot'); if (dot) dot.hidden = !(left || nc);
+  const sv = $('#lvSeeds'); if (sv) sv.textContent = (save.seeds || 0).toLocaleString();
+}
+/** Watch one seed ad; refresh wherever the player is. */
+export async function watchSeedAd(after){
+  if (adsBusy() || seedAdsLeft() <= 0) return;
+  if (await showRewarded('seed')){ save.seeds = (save.seeds || 0) + 1; persist(); SFX.coin(); }
+  syncSeedPrompts(); if (after) after();
+}
+
+// ---------- Treasure chests (owner's monetization.md) ----------
+let chestReturn = null, chestRoll = null, chestRerolled = false;
+export function openChests(ret){ chestReturn = ret; showChest(); }
+function lootRow(r){
+  const d = document.createElement('div'); d.className = 'lootRow';
+  if (r.type === 'coins'){ d.innerHTML = `<span class="coin big"></span><b>${r.n.toLocaleString()} coins</b>`; }
+  else if (r.type === 'seeds'){ d.appendChild(dom(seedArt(36))); d.insertAdjacentHTML('beforeend', `<b>${r.n} pumpkin seed${r.n > 1 ? 's' : ''}</b>`); }
+  else if (r.type === 'bossItem'){ d.appendChild(dom(bossItemIcon(r.boss, 40))); d.insertAdjacentHTML('beforeend', `<b>${BOSS_ITEM_NAMES[r.boss]}</b><small>${bossItemsFor(r.boss) + 1} of ${BOSS_ITEMS_FOR_COSTUME} for the ${BOSS_NAMES[r.boss].replace('The ', '')} costume</small>`); }
+  else if (r.type === 'tools'){ d.classList.add('tools'); const b = document.createElement('b'); b.textContent = 'A set of 5 tools'; d.appendChild(b); const w = document.createElement('div'); w.className = 'toolSet'; for (const [k, n] of Object.entries(r.items)){ const t = document.createElement('span'); t.appendChild(dom(toolIcon(k, 34))); t.insertAdjacentHTML('beforeend', `<i>×${n}</i>`); w.appendChild(t); } d.appendChild(w); }
+  return d;
+}
+function showChest(){
+  const ch = save.chests[0];
+  if (!ch){ leaveChests(); return; }
+  chestRoll = null; chestRerolled = false;
+  const C = CHESTS[ch.kind] || CHESTS.normal;
+  $('#chTitle').textContent = ch.boss && ch.kind === 'boss' ? `${BOSS_NAMES[ch.boss].replace('The ', '')}'s chest` : C.name;
+  const art = $('#chArt'); art.innerHTML = ''; art.appendChild(dom(chestIcon(ch.kind, false, 132))); art.className = 'chestArt shake';
+  $('#chLoot').innerHTML = ''; $('#chNote').textContent = `${C.slots} prizes inside. ${save.chests.length > 1 ? `${save.chests.length - 1} more waiting after this one.` : ''}`;
+  const box = $('#chBtns'); box.innerHTML = '';
+  addBtn(box, 'Open', () => { chestRoll = rollChest(ch); SFX.perk(); showChestLoot(); });
+  addBtn(box, 'Later', leaveChests, 'alt');
+  setState('chest');
+}
+function showChestLoot(){
+  const ch = save.chests[0];
+  const art = $('#chArt'); art.innerHTML = ''; art.appendChild(dom(chestIcon(ch.kind, true, 132))); art.className = 'chestArt pop';
+  const L = $('#chLoot'); L.innerHTML = ''; chestRoll.forEach((r, i) => { const row = lootRow(r); row.style.animationDelay = (0.15 + i * 0.18) + 's'; L.appendChild(row); });
+  $('#chNote').textContent = chestRerolled ? 'Rerolled.' : 'Not what you hoped for? Watch an ad to roll this chest again, once.';
+  const box = $('#chBtns'); box.innerHTML = '';
+  addBtn(box, 'Collect', () => {
+    const over = grant(chestRoll); save.chests.shift(); persist(); SFX.coin();
+    if (over) addFloatMsg(`Tools past their carry limit paid ${over} coins.`);
+    if (save.chests.length) showChest(); else leaveChests();
+  });
+  if (!chestRerolled){ const b = document.createElement('button'); b.className = 'btn small alt adBtn'; b.innerHTML = '<span class="play"></span>Reroll'; b.onclick = async () => { if (await showRewarded('chest')){ chestRerolled = true; chestRoll = rollChest(ch); SFX.perk(); showChestLoot(); } }; box.appendChild(b); }
+}
+function addFloatMsg(t){ $('#chNote').textContent = t; }
+function leaveChests(){
+  syncSeedPrompts();
+  if (chestReturn === 'shop'){ renderShop(); setState('shop'); }
+  else if (chestReturn === 'result'){ refreshResultLoot(); setState('result'); }
+  else openLevels();
+}
+
+// ---------- Second chance (owner's monetization.md: "reconvene lost nights") ----------
+export function offerRevive(){ setState('revive'); }
+function acceptRevive(){ showRewarded('revive').then(ok => { if (ok){ setState('play'); reviveNight(); } }); }
+function declineRevive(){ setState('play'); endGame(false); }
 function seedIcon(px, n){
   const c = document.createElement('canvas'); c.width = c.height = px * 2; const g = c.getContext('2d'); g.scale(2, 2);
   const k = Math.min(5, 1 + Math.floor(Math.log2(n / 100 + 1) * 1.5));
@@ -488,7 +608,7 @@ export function renderShop(){
   const pbox = $('#shopPumpkins'); pbox.innerHTML = '';
   const order = [...Array(NTYPES).keys()].sort((x, y) => (x < 2 ? 0 : unlockNightOf(PTYPES[x].key)) - (y < 2 ? 0 : unlockNightOf(PTYPES[y].key)) || x - y);   // first unlocked first (owner)
   for (const t of order){
-    const P = PTYPES[t], L = lvOf(t), un = t < 2 ? 1 : unlockNightOf(P.key), unlocked = t < 2 || un <= highestOpen(), maxed = L >= 5, cost = LV_COST[L - 1];
+    const P = PTYPES[t], L = lvOf(t), un = t < 2 ? 1 : unlockNightOf(P.key), unlocked = t < 2 || un <= highestOpen(), maxed = L >= 5, uc = maxed ? null : upgradeCost(P.key, L), inSeeds = !!(uc && uc.seeds), cost = uc ? (uc.seeds || uc.coins) : 0, afford = inSeeds ? (save.seeds || 0) >= cost : save.coins >= cost;
     const d = document.createElement('div'); d.className = 'item';
     const ic = pumpkinIcon(t, true); ic.className = 'ic'; d.appendChild(ic);
     const tx = document.createElement('div'); tx.className = 'tx';
@@ -500,22 +620,16 @@ export function renderShop(){
     const b = document.createElement('button'); b.className = 'btn small';
     if (!unlocked){ b.textContent = '\ud83d\udd12'; b.disabled = true; b.setAttribute('aria-label', 'Locked'); }
     else if (maxed){ b.textContent = 'Maxed'; b.disabled = true; }
-    else { b.innerHTML = `<span class="coin"></span>${cost}`; b.disabled = save.coins < cost; b.setAttribute('aria-label', `Level up ${P.name} for ${cost} coins`); }
+    else { b.innerHTML = `<span class="${inSeeds ? 'seed' : 'coin'}"></span>${cost.toLocaleString()}`; b.disabled = !afford; b.setAttribute('aria-label', `Level up ${P.name} for ${cost} ${inSeeds ? 'seeds' : 'coins'}`); }
     b.onclick = () => {
-      if (!unlocked || maxed || save.coins < cost) return;
-      save.coins -= cost; save.lv[P.key] = L + 1; persist(); ensureAudio(); SFX.coin(); renderShop();
+      if (!unlocked || maxed || !afford) return;
+      if (inSeeds) save.seeds -= cost; else save.coins -= cost;
+      save.lv[P.key] = L + 1; persist(); ensureAudio(); SFX.coin(); renderShop();
     };
     d.appendChild(b); pbox.appendChild(d);
   }
   renderWardrobe();
-  const sp = $('#shopSeedPacks'); sp.innerHTML = '';
-  for (const pk of SEED_PACKS){
-    const d = document.createElement('div'); d.className = 'item pack';
-    const ic = seedIcon(48, pk.n); ic.className = 'ic'; d.appendChild(ic);
-    const tx = document.createElement('div'); tx.className = 'tx'; tx.innerHTML = `<b>${pk.name}</b><p>${pk.n.toLocaleString()} pumpkin seeds</p>`; d.appendChild(tx);
-    const b = document.createElement('button'); b.className = 'btn small'; b.textContent = pk.price; b.disabled = true; b.title = 'On sale with the app store release'; d.appendChild(b);
-    sp.appendChild(d);
-  }
+  renderSeedsPane();
   const list = $('#shopList'); list.innerHTML = '';
   for (const it of GEAR){
     const lvl = save[it.key] || 0, maxed = lvl >= it.max;
@@ -591,6 +705,14 @@ export function wireButtons(){
   $('#bLoGo').onclick = () => { if (loadoutSel.size < (perkOn('pick4') ? 4 : 5)) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo); };
 
   for (const b of document.querySelectorAll('#shopTabs .tab')) b.onclick = () => { SFX.ui('tap'); setShopTab(b.dataset.tab); };
+  $('#bSeedAd').onclick = () => watchSeedAd(renderShop);
+  $('#bShopAd').onclick = () => watchSeedAd(renderShop);
+  $('#bLvAd').onclick = () => watchSeedAd(() => { $('#lvCoins').textContent = save.coins.toLocaleString(); });
+  $('#bLvChest').onclick = () => openChests('levels');
+  $('#bOpenChest').onclick = () => openChests('shop');
+  $('#bReviveAd').onclick = acceptRevive;
+  $('#bReviveNo').onclick = declineRevive;
+  $('#bPvSack').onclick = async () => { if (sackIsQueued()) return; if (await showRewarded('sack')){ queueSack(); SFX.perk(); syncSack(); } };
   $('#bSeedTest').onclick = () => { save.seeds = (save.seeds || 0) + 500; persist(); renderShop(); };   // TESTING ONLY until seed packs are sold: remove before release
   $('#bShopBack').onclick = () => { if (shopReturn === 'result') setState('result'); else openLevels(); };
 

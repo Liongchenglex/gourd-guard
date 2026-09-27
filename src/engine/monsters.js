@@ -1,11 +1,12 @@
 import { endGame, shoreP } from './game.js';
+import { SACK } from '../data/economy.js';
 import { resolveMatches } from './board.js';
 import { TYPES, MODS, VARIANTS } from '../data/monsters.js';
 import { BURN_EVERY, RAINBOW } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
 import { PTYPES } from '../data/pumpkins.js';
-import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, LANE, grid, ROWS, GY, walls } from './state.js';
+import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, LANE, grid, ROWS, GY, W, walls } from './state.js';
 import { clamp, rnd, shuffle } from './util.js';
 import { damageWall } from './walls.js';
 
@@ -21,7 +22,7 @@ export function spMulNow(){ return G.mode === 'story' ? G.def.spMul : 0.85 + (G.
 
 export function hpExtra(){ return G.mode === 'story' ? 0 : Math.min(2, Math.floor((G.diff - 1) / 10)); }
 
-export function lanesOf(m){ return [m.lane]; }
+export function lanesOf(m){ return m.type === 'sack' ? [m.lane, m.lane + 1] : [m.lane]; }   // the Loot Sack spans two lanes
 
 export function pickLane(){
   const busy = new Set(G.monsters.filter(m => m.p < 0.15).map(m => m.lane));
@@ -80,7 +81,7 @@ export function spawnMonster(key, lane, minion, p){
     colourLock:null, colourImmune:null, reflecting:false, mirrorT:T.open || 0, hexT:T.hexEvery || 0, zoneT:T.zoneEvery || 0, bulk:1 };
   if (T.noKnockback) m.noKnockback = true;
   if (form === 2 && T.form2 && T.form2.hold != null) m.hold = T.form2.hold;
-  if (G.def && G.def.hexAll && type !== 'boss' && type !== 'chameleon' && type !== 'rchameleon') hexMonster(m, G.def.hexAll === 'reverse', true);
+  if (G.def && G.def.hexAll && type !== 'boss' && type !== 'sack' && type !== 'chameleon' && type !== 'rchameleon') hexMonster(m, G.def.hexAll === 'reverse', true);
   if (type === 'turtle' && !puddle && G.puddles && G.puddles.length && p == null){ const pd = G.puddles[Math.floor(Math.random() * G.puddles.length)]; m.lane = pd.lane; m.x = m.tx = LANE(pd.lane); m.p = pd.p; }
   if (type === 'chameleon' || type === 'rchameleon'){   // takes one of the player's colours
     const pool = (G.loadout || [0, 1]).filter(t => t !== RAINBOW);
@@ -110,6 +111,7 @@ function standsStill(o){
   if (o.type === 'boss') return o.p >= (o.hold || 1) - 0.001;
   if (o.type === 'archer') return o.p >= TYPES.archer.hold;
   if (o.type === 'diver') return !o.walker;
+  if (o.type === 'sack') return true;
   return false;
 }
 export function aheadLimit(m){
@@ -126,6 +128,22 @@ export function aheadLimit(m){
 
 /** Short puff of dust/particles where the Gravekeeper vanishes or appears. */
 function puff(x, y){ for (let i = 0; i < 14; i++) spark(x, y, i % 2 ? '#c9b6ff' : '#5a3a7a', 150); ring(x, y, 30, 'rgba(200,170,255,.8)'); }
+/** The Loot Sack waddles down to its hold point, taunts, and flees when its time is up (economy.js SACK). */
+function updateSack(m, dt, sp){
+  m.stay -= dt;
+  if (!m.fleeing && m.stay <= 0){ m.fleeing = true; m.age = 0; addFloat('The Loot Sack got away!', m.x, mY(m) - m.r - 30, '#ffd35a', 18, 1.4); SFX.bad(); }
+  if (m.fleeing){ m.p -= dt * 0.22; if (m.p < -0.14) m.dead = true; return; }   // removed quietly: no kill, no reward
+  if (m.p < m.hold) m.p = Math.min(m.hold, m.p + sp * dt);
+}
+/** Spawn the ad-summoned Loot Sack across two neighbouring lanes. */
+export function spawnSack(){
+  const lane = Math.floor(Math.random() * (COLS - 1)), m = spawnMonster('sack', lane, true, -0.04);
+  m.x = m.tx = (LANE(lane) + LANE(lane + 1)) / 2; m.hw = CS * 0.95;
+  m.hp = m.maxHp = SACK.hpBase + SACK.hpPerWorld * ((G.def ? G.def.worldNo : 1) - 1);
+  m.hold = SACK.hold; m.sp = SACK.sp; m.stay = SACK.stay; m.stayMax = SACK.stay; m.fleeing = false; m.noKnockback = true;
+  addFloat('A Loot Sack! Knock it down before it runs!', W / 2, FIELD_TOP + 120, '#ffd35a', 18, 2);
+  return m;
+}
 export function updateMonster(m, dt){
   m.age += dt; m.ph += dt;
   if (m.flash > 0) m.flash -= dt;
@@ -149,6 +167,7 @@ export function updateMonster(m, dt){
     m.p = Math.max(-0.05, m.p - st); m.kb -= st;
     return;
   }
+  if (m.type === 'sack'){ updateSack(m, dt, sp); return; }
   if (m.eating){
     m.shield = false;   // a shield knight lowers its shield to chew
     m.reflecting = false;   // a mirror sprite drops its mirror to chew
@@ -247,7 +266,7 @@ export function updateMonster(m, dt){
         m.hexT -= dt;
         if (m.hexT <= 0 && m.p > 0.05){
           m.hexT = TYPES.witch.hexEvery;
-          const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.rise <= 0 && o.p > 0);   // anything but bosses and true chameleons; may re-hex an already hexed monster; witches hex each other (owner)
+          const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'sack' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.rise <= 0 && o.p > 0);   // anything but bosses and true chameleons; may re-hex an already hexed monster; witches hex each other (owner)
           if (pick.length){ const o = pick[Math.floor(Math.random() * pick.length)]; hexBolt(m, o); hexMonster(o, Math.random() >= TYPES.witch.chameleonChance); SFX.monsterAct('witch', 'hex'); m.anim = { clip:'hex', t:0, dur:0.5 }; }
         }
         m.x = m.tx + Math.sin(m.ph * 1.6) * 2;

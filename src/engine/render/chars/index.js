@@ -10,8 +10,9 @@ import { W2 } from './w2.js';
 import { W3 } from './w3.js';
 import { W4 } from './w4.js';
 import { W5 } from './w5.js';
+import { EXTRA } from './extra.js';
 
-export const CHARS = { ...W1, ...W2, ...W3, ...W4, ...W5 };
+export const CHARS = { ...W1, ...W2, ...W3, ...W4, ...W5, ...EXTRA };
 export { pumpkin };
 /** The type or boss kind a monster is drawn as, or null when it still uses the old vector drawing. */
 export function charKey(m){ const k = m.type === 'boss' ? m.kind : m.type; return CHARS[k] ? k : null; }

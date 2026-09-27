@@ -8,7 +8,9 @@ import { SFX, ensureAudio, musicStart, musicStop } from './audio.js';
 import { MUSIC } from '../data/music.js';
 import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, landingCell, landingNear, flyInto, DIRV } from './board.js';
 import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle } from './combat.js';
-import { mS, mY, updateMonster, TILE_P, applyBulwarks } from './monsters.js';
+import { mS, mY, updateMonster, TILE_P, applyBulwarks, spawnSack } from './monsters.js';
+import { SACK } from '../data/economy.js';
+import { takeSack } from './loot.js';
 import { bgWorld, buildBg } from './render/sprites.js';
 import { poolKey, prebake } from './render/anim.js';
 import { atlasKey } from './render/chars.js';
@@ -18,7 +20,7 @@ import { rnd, shuffle, clamp, TAU } from './util.js';
 import { initWalls, damageWall } from './walls.js';
 import { persist, save } from '../save.js';
 import { banner, updateHud } from '../ui/hud.js';
-import { openLoadout, setState, showResult } from '../ui/screens.js';
+import { openLoadout, setState, showResult, offerRevive } from '../ui/screens.js';
 
 // ---------- Flow ----------
 
@@ -77,7 +79,9 @@ export function startGame(mode, n, loadout){
     monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], groups:{},
     t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
+    loot:{ chests:0, seeds:0 }, chestDropped:false, revived:false, sackT:0,
   });
+  if (mode === 'story' && takeSack()) G.sackT = SACK.spawnAt;
   if (def) prebake([...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), 'ghoul']);   // bake this level's sprite strips now, not on first sight
   if (def && def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
   else if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
@@ -110,6 +114,7 @@ export function startGame(mode, n, loadout){
 
 export function endGame(win){
   if (G.over) return;
+  if (!win && G.mode === 'story' && !G.revived){ G.revived = true; offerRevive(); return; }   // one ad-paid second chance per night (owner's monetization.md)
   G.over = true; setGest(null); clearRentals();   // a rented power lasts one night
   musicStop(win ? 0.3 : 1.2);
   if (win) SFX.win(); else SFX.lose();
@@ -406,7 +411,8 @@ export function update(dt){
     g.hintT -= dt;
     if (g.hintT <= 0){ g.hintT = 1.5; g.hint = bestLitGroup() ? null : bestMove(); }
   }
-  if (!g.over && g.mode === 'story' && (g.def.boss ? g.bossDead : g.spawned >= g.def.total) && g.monsters.length === 0) endGame(true);
+  if (g.sackT > 0 && !g.over){ g.sackT -= dt; if (g.sackT <= 0) spawnSack(); }   // the ad-summoned Loot Sack
+  if (!g.over && g.mode === 'story' && (g.def.boss ? g.bossDead : g.spawned >= g.def.total) && g.monsters.every(m => m.type === 'sack')) endGame(true);   // a Loot Sack still waddling about does not hold up the win
   updateHud(false);
 }
 
@@ -431,4 +437,13 @@ export function demoUpdate(dt){
   for (const m of G.monsters){ m.ph += dt; if (m.type === 'imp') m.hop = Math.max(0, Math.sin(m.ph * 4.5)); if (m.type === 'bat') m.x = m.tx + Math.sin(m.ph * 3) * 6; }
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c]) grid[r][c].t += dt;
   commonFx(dt);
+}
+
+/** After a revive ad: every wall rebuilt, monsters pushed back up the field, the breach forgotten. */
+export function reviveNight(){
+  for (const w of walls){ w.hp = w.max; }
+  for (const m of G.monsters){ if (m.dead || m.type === 'boss' || m.type === 'sack') continue; m.eating = false; m.breach = 0; m.p = Math.min(m.p, 0.45) - 0.15; }
+  G.brokeAt = null; G.flash = 0.6; G.shake = 0.5;
+  addFloat('Walls rebuilt!', W / 2, FENCE_Y - 40, '#9fe0a0', 22, 1.4); SFX.tool('repair');
+  updateHud(true);
 }

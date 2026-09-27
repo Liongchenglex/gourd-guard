@@ -34,6 +34,10 @@ if (!save.wardrobe || typeof save.wardrobe !== 'object') save.wardrobe = { owned
 if (!Array.isArray(save.wardrobe.owned)) save.wardrobe.owned = [];
 if (!save.wardrobe.skins || typeof save.wardrobe.skins !== 'object') save.wardrobe.skins = {};
 if (typeof save.seeds !== 'number') save.seeds = 0;
+// Monetization (owner, 2026-09-27): unopened chests, boss items per boss kind, today's rewarded-ad count
+if (!Array.isArray(save.chests)) save.chests = [];
+if (!save.bossItems || typeof save.bossItems !== 'object') save.bossItems = {};
+if (!save.ads || typeof save.ads !== 'object') save.ads = { day:'', seed:0 };
 
 // Old upgrades were replaced by pumpkin levels: refund what was spent on them.
 

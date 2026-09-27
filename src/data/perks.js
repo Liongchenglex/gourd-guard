@@ -20,7 +20,7 @@ export function perkEarned(key){
 }
 
 /** Powers rented for the next night only (owner, 2026-09-27): coins buy one night of a power you have not won yet. Cleared when a night ends. */
-export const RENT_COST = 60;
+export { RENT_COST } from './economy.js';   // owner's monetization.md: 100 coins
 export const rented = new Set();
 export const clearRentals = () => rented.clear();
 

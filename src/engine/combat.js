@@ -7,6 +7,8 @@ import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS, walls, FENCE_Y } 
 import { TAU, clamp, fmt, rnd } from './util.js';
 import { lvOf, save, persist } from '../save.js';
 import { KILL_REWARD } from '../data/rules.js';
+import { SACK, BOSS_SEED, CHEST_KILL_CHANCE } from '../data/economy.js';
+import { addChest, addSeeds, grant, toolSet } from './loot.js';
 import { GEAR } from '../data/shop.js';
 import { toolsForNight, highestOpen } from '../data/worlds/index.js';
 import { banner } from '../ui/hud.js';
@@ -92,6 +94,25 @@ export function dropWeapon(m){
   const y = clamp(mY(m), FIELD_TOP + 20, FIELD_BOT - 30);
   G.drops.push({ kind:'weapon', item:gear.key, x:clamp(m.x, 26, W - 26), y, t:0, life:7, ph:Math.random() * TAU, dead:false });
 }
+/** Monetization loot (owner's monetization.md): the rare chest, boss seeds and chests, and the Loot Sack's prize. */
+function lootOnKill(m, reward, y){
+  if (G.mode !== 'story') return;
+  const pop = (kind, text, col) => { addFloat(text, m.x, y - m.r - 44, col, 19, 1.5); if (G.vfx) G.vfx.push({ kind:'loot', item:kind, x:m.x, y:y - 10, t:0, dur:1.4 }); };
+  if (reward === 'sack'){
+    const r = Math.random(), D = SACK.drop;
+    if (r < D.chest){ addChest('normal'); pop('chest', 'Treasure chest!', '#ffd35a'); }
+    else if (r < D.chest + D.tools){ const set = toolSet(); grant([set]); pop('tools', 'A set of 5 tools!', '#ffd35a'); }
+    else { const c = Math.round(rnd(SACK.coins[0], SACK.coins[1])); G.coins += c; pop('coins', `+${c} coins!`, '#ffe27a'); }
+    const seeds = SACK.guaranteedSeeds + (Math.random() < SACK.seedChance ? 1 : 0);
+    addSeeds(seeds); setTimeout(() => { if (G.vfx) G.vfx.push({ kind:'loot', item:'seed', x:m.x + 30, y:y - 20, t:0, dur:1.4 }); addFloat(`+${seeds} seed${seeds > 1 ? 's' : ''}!`, m.x, y - m.r - 70, '#fff3c8', 18, 1.5); }, 350);
+    return;
+  }
+  if (reward === 'boss'){
+    if (Math.random() < BOSS_SEED.chance){ const n = BOSS_SEED.min + Math.floor(Math.random() * (BOSS_SEED.max - BOSS_SEED.min + 1)); addSeeds(n); pop('seed', `+${n} seed${n > 1 ? 's' : ''}!`, '#fff3c8'); }
+    return;   // the boss chest is given once the boss is truly down (see kill)
+  }
+  if (!G.chestDropped && Math.random() < CHEST_KILL_CHANCE){ G.chestDropped = true; addChest('normal'); pop('chest', 'Treasure chest!', '#ffd35a'); }
+}
 export function kill(m){
   if (m.dead) return;
   if (m.type === 'boss' && m.kind === 'twintides' && !m.trueDeath){   // twins: one down alone rises again unless the other falls within the window
@@ -130,9 +151,9 @@ export function kill(m){
   m.dead = true;
   G.kills++; if (!m.minion) G.resolved++;
   G.score += m.pts;
-  const reward = m.type === 'boss' ? 'boss' : m.lastHit === YELLOW ? 'gold' : rollReward();
+  const reward = m.type === 'sack' ? 'sack' : m.type === 'boss' ? 'boss' : m.lastHit === YELLOW ? 'gold' : rollReward();
   const y = mY(m), s = mS(m);
-  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', chameleon:'#6ab04a', rchameleon:'#3a3a4a', mirror:'#c8d8f0', firemummy:'#ff8a3a', fogwalker:'#b8c8d8', witch:'#6a3a8a', bulwark:'#8090a8', turtle:'#4a7a5a', boss:'#6a3a7a' }[m.type] || '#aaa';
+  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', chameleon:'#6ab04a', rchameleon:'#3a3a4a', mirror:'#c8d8f0', firemummy:'#ff8a3a', fogwalker:'#b8c8d8', witch:'#6a3a8a', bulwark:'#8090a8', turtle:'#4a7a5a', sack:'#b08850', boss:'#6a3a7a' }[m.type] || '#aaa';
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
   ring(m.x, y, m.r * s * 2.2, 'rgba(255,220,150,.8)');
   if (G.vfx) G.vfx.push({ kind:'pop', m:{ type:m.type, kind:m.kind, ph:m.ph, eating:m.eating, hop:m.hop, tint:m.tint, age:5, rise:0, flash:0, slowT:0, frozenT:0, r:m.r }, x:m.x, y, s, t:0, dur:0.35 });   // the last frame squashes and fades (baked characters only)
@@ -143,6 +164,7 @@ export function kill(m){
     const nc = Math.min(m.coins, m.type === 'boss' ? 12 : 5);
     for (let i = 0; i < nc; i++) G.coinFx.push({ sx:m.x + rnd(-12, 12), sy:y + rnd(-10, 10), t:-i * 0.05, dur:0.65 + Math.random() * 0.2 });
   }
+  lootOnKill(m, reward, y);
   if (reward === 'boss') dropPumpkins(m, Math.floor(m.drop));
   else if (reward === 'pumpkin') dropPumpkins(m, Math.max(1, Math.round(m.drop)));
   else if (reward === 'weapon') dropWeapon(m);
@@ -153,6 +175,7 @@ export function kill(m){
   }
   if (m.type === 'boss'){
     const twinAlive = m.kind === 'twintides' && m.twin && !m.twin.dead;
+    if (!twinAlive && G.mode === 'story' && G.def && (G.def.levelNo === 10 || G.def.levelNo === 20)){ addChest(G.def.levelNo === 20 ? 'boss' : 'normal', m.kind); addFloat(G.def.levelNo === 20 ? 'Boss chest!' : 'Treasure chest!', m.x, mY(m) - m.r - 70, '#ffd35a', 22, 2); if (G.vfx) G.vfx.push({ kind:'loot', item:G.def.levelNo === 20 ? 'bossChest' : 'chest', x:m.x, y:mY(m) - 20, t:0, dur:1.8 }); }
     if (!twinAlive){ G.bossDead = true; G.shake = 1.2; banner(`${BOSS_NAMES[m.kind]} ${m.kind === 'twintides' ? 'fall' : 'falls'}!`, 'Finish the stragglers and grab the pumpkins it dropped!', 2.4); SFX.bossSfx(m.kind, 'die'); }
   }
 }

@@ -112,8 +112,14 @@ Details:
 - **Purple**: on a kill, may spawn an extra random pumpkin (from the loadout, never rainbow unless the level allows) that flies directly into a random empty cell of the patch. Nothing spawns if the patch is full.
 - **Rainbow sources**: Purple level 4–5 spawns; 3% of sprouts and drops; every boss drop includes one rainbow.
 
-### Upgrade costs (coins) per pumpkin type
-Level 2: 40 · Level 3: 80 · Level 4: 130 · Level 5: 200.
+### Upgrade costs per pumpkin type (owner's `monetization.md`, 2026-09-27; data in `src/data/economy.js`)
+| Group | 1→2 | 2→3 | 3→4 | 4→5 |
+|---|---|---|---|---|
+| Green, Yellow | 100 coins | 300 coins | 600 coins | 1,500 coins |
+| Fire, Ice, White, Pink, Purple, Turquoise | 100 coins | 500 coins | 3,000 coins | 50 seeds |
+| Grey, Black, Deep Blue, Brown | 1,000 coins | 2,500 coins | 50 seeds | 100 seeds |
+
+The balance bot's expected upgrade profile has not been re-checked against these prices yet.
 
 ### Loadout
 - While 5 or fewer types are unlocked, every unlocked type is in play (world 1: 2, 3, then 4 colours).
@@ -250,7 +256,8 @@ Difficulty `1 + t/25`; the Gravekeeper every 100 s (form 2 once the world change
 - Coins per kill (see monster table; paid on 60% of kills, see §6 kill rewards). Weapons also drop from 10% of kills. Night bonus on a win: `10 + 3n + 5 × stars`. Coins found are kept on a loss. Consumables also drop from 10% of kills (§6).
 - Shop ("Pumpkin shed"):
   - Pumpkin levels (per type, see costs above; locked types show their unlock night).
-  - **Sturdy walls**: +5 wall health per level, 3 levels, 40 / 80 / 130.
+  - **Sturdy walls**: +5 wall health per level, 3 levels, 500 / 1,000 / 1,500.
+  - **Every consumable tool costs 300 coins** (owner, 2026-09-27; the per-tool prices below are superseded). Renting a level-20 power costs 100 coins.
   - **Wall repair** (consumable): fully repairs every wall. 40 coins, carry up to 3, player starts with 1.
   - **Firework** (consumable): 3 damage to every monster. 30 coins, carry up to 5, player starts with 1.
   - **Grave buster** (consumable, 🧨 icon): tap the button, then tap a grave to dig it out. 30 coins, carry up to 3, one free at level 1-6. Tapping anywhere else cancels.
@@ -260,10 +267,19 @@ Difficulty `1 + t/25`; the Gravekeeper every 100 s (form 2 once the world change
   - **Scarecrow** (consumable, 🌾): tap the button, then tap a column. A scarecrow with 12 health stands near that wall; monsters in the column stop at it and chew it at their eat rate until it breaks. One per column. 35 coins, carry up to 3, one free at 5-2.
   - **Tools are gated by introduction**: a consumable exists only from the level that introduces it (Wall repair 1-3, Firework 1-7, Grave buster 1-6, Lantern 2-2, Landmine 2-5, Scarecrow 3-2, Bomb 4-4, from level data `unlockGear`). Before that it shows in the tool tray dimmed with a padlock, is locked in the shop, and never drops from kills. New players start with 0 of everything and receive one unit on the introducing level.
 - **Wardrobe** (shop tab, added 2026-09-27, owner). Cosmetic only: nothing here changes power. Priced in pumpkin seeds; prices are first guesses.
-  - **Costumes** are worn by every pumpkin at once, in the patch and in flight, and add a hit effect and a quiet hit sound. One costume at a time. Boss costumes cost 300 seeds and are also granted free the first time that world's level-10 boss is beaten (the result message says so): Gravekeeper hood (tombstone, soul wisps, bone chips), Poltergeist sheet (cold mist, small ghosts, hollow whoosh), Hexwitch hat (hex sigil, sparks), Count's collar (bats), Tide crown (seawater splash, small fish). Shop-only costumes cost 150: Pirate tricorn (coins, cannon smoke) and Jester's cap (confetti).
-  - **Skins** restyle one pumpkin colour: its body, its lit face and a wide comet trail. The colour stays recognisable. One skin per colour. Each skin adds a quiet launch accent under the shared whoosh, once per flick: Frost a crystalline chime, Magma a low rumble and sizzle, Candy corn a sugary sparkle pop, Galaxy a soft shimmer. Hit sounds stay per pumpkin type because they carry game information; costumes get no launch sound because every pumpkin wears them. Candy corn (Yellow, 200), Frost crystal (Ice, 200), Magma (Fire, 250), Galaxy (Purple, 250).
+  - **Costumes** are worn by every pumpkin at once, in the patch and in flight, and add a hit effect and a quiet hit sound. One costume at a time. Boss costumes are **traded for 30 of that boss's items** (see Monetization below); costumes already owned stay owned: Gravekeeper hood (tombstone, soul wisps, bone chips), Poltergeist sheet (cold mist, small ghosts, hollow whoosh), Hexwitch hat (hex sigil, sparks), Count's collar (bats), Tide crown (seawater splash, small fish). Shop-only costumes cost 25 seeds: Pirate tricorn (coins, cannon smoke) and Jester's cap (confetti).
+  - **Skins** restyle one pumpkin colour: its body, its lit face and a wide comet trail. The colour stays recognisable. One skin per colour. Each skin adds a quiet launch accent under the shared whoosh, once per flick: Frost a crystalline chime, Magma a low rumble and sizzle, Candy corn a sugary sparkle pop, Galaxy a soft shimmer. Hit sounds stay per pumpkin type because they carry game information; costumes get no launch sound because every pumpkin wears them. Candy corn (Yellow, 30 seeds), Frost crystal (Ice, 30), Magma (Fire, 40), Galaxy (Purple, 40). Wardrobe prices were rescaled to the seed economy below (default).
   - Saved as `save.wardrobe = { owned, costume, skins: { typeIndex: key } }`. Hit effects are capped at 5 on screen.
-  - Seeds have no earn source yet; a "Testing: add 500 seeds" link sits in the Wardrobe tab until seed packs are sold (**remove before release**).
+  - A "Testing: add 500 seeds" link sits in the Seeds tab (**remove before release**).
+- **Monetization** (owner's `monetization.md`, built 2026-09-27; every number in `src/data/economy.js`, marked "default" where the sheet gave none):
+  - **Pumpkin seeds** are the premium currency: top pumpkin levels, skins, costumes and boss items. Sources: rewarded ads (1 seed each, 15 a day), seed packs (10 for $3.99, 25 for $7.99, 50 for $10.99), treasure chests, any boss kill (5% chance of 1–3), and the Loot Sack.
+  - **Player awareness**: a pulsing green "Free seed, N left" pill on the book shelf, in the shop header and under every result card; a dot on the shop's Seeds tab while free seeds or chests wait; the Seeds tab opens with the ad card.
+  - **Rewarded ads** go through one call (`src/engine/ads.js`, `showRewarded(placement)`). The Capacitor build supplies `window.GGAds`; in the browser a placeholder ad counts down 5 s. Placements: free seed, chest reroll, second chance, Loot Sack.
+  - **Seed packs** go through `src/engine/store.js` (`window.GGStore.buy(sku)` in the app build). In the browser the pack buttons are disabled and say nothing is charged.
+  - **Treasure chests**: a normal chest drops from 1% of normal kills (at most one a night, default), from every level-10 boss, and from half of Loot Sacks; level-20 bosses drop a boss chest. A normal chest holds 2 prizes, a boss chest 3. Each prize rolls: boss item (0% / 5%), 1 seed (2% / 5%), a set of 5 random introduced tools (40% / 60%), else coins (100–200 / 250–500, default). Tools past their carry limit pay 100 coins each (default). Chests are saved the moment they drop and opened from the result card, the shelf or the Seeds tab; one ad rerolls a chest once. With tools at 60%, coins are not the most common boss-chest prize, unlike the sheet's note.
+  - **Boss items**: one per boss (Grave key, Sheet scrap, Hex charm, Bat wing, Tide pearl). 30 make that boss's costume in the Wardrobe. They come from level-20 boss chests, or cost 10 seeds for 10 or 400 coins for 1 (default). The level-10 boss no longer gives its costume free.
+  - **Second chance** ("reconvene lost nights"): when a wall falls and a monster walks through, the night pauses and offers an ad. Watching rebuilds every wall and pushes non-boss monsters back up the field. Once per night, story mode only.
+  - **Loot Sack**: the level card offers an ad to summon one into that night. It waddles in 4 s after the start across two lanes, stops at 38% of the field, never chews walls, and flees after 25 s (gold timer bar under its health). Health 10 + 4 per world. Beaten, it drops a chest (50%), a tool set (25%) or 80–160 coins (25%), plus 1 guaranteed seed and a 5% chance of another. A Loot Sack still on the field does not hold up the win.
 - Progress, coins, levels, loadout and settings are saved in the browser (localStorage key `gourdguard.v1`).
 
 ---

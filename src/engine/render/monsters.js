@@ -82,6 +82,7 @@ export function drawMonster(m, t){
     const bw = Math.max(40, m.r * 1.7) * s, bx = m.x - bw / 2;
     cx.fillStyle = 'rgba(0,0,0,.6)'; rrect(cx, bx - 1, by - 1, bw + 2, 8, 3.5); cx.fill();
     cx.fillStyle = '#c77dff'; rrect(cx, bx, by, Math.max(0, bw * m.hp / m.maxHp), 6, 3); cx.fill();
+    if (m.type === 'sack' && m.stayMax && !m.fleeing){ cx.fillStyle = 'rgba(0,0,0,.6)'; rrect(cx, bx - 1, by + 8, bw + 2, 6, 3); cx.fill(); cx.fillStyle = m.stay < 6 ? '#ff6a3a' : '#ffd35a'; rrect(cx, bx, by + 9, Math.max(0, bw * m.stay / m.stayMax), 4, 2); cx.fill(); }   // the Loot Sack's time left
   } else if (m.maxHp >= 2 || m.hp < m.maxHp){
     const n = Math.ceil(m.maxHp), d = 8, gap = 3, tw = n * d + (n - 1) * gap;
     for (let i = 0; i < n; i++){

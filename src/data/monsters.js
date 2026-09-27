@@ -4,6 +4,7 @@
 
 export const TYPES = {
   ghoul:  { hp:1,  r:21, sp:0.055, coins:3,  eat:0.5, pts:10, drop:1 },
+  sack:   { hp:10, r:40, sp:0.05, coins:0, eat:0, pts:100, drop:0, noKnockback:true },   // Loot Sack (economy.js SACK sets its real health, stay and drops)
   bat:    { hp:1,  r:16, sp:0.085, coins:3,  eat:0.4, pts:12, drop:1 },
   imp:    { hp:2,  r:17, sp:0.074, coins:5,  eat:0.6, pts:14, drop:2 },
   brute:  { hp:4,  r:28, sp:0.028, coins:10, eat:1.1, pts:30, drop:3 },
@@ -98,7 +99,7 @@ export const VARIANTS = {
 export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch' };
 export const BOSS_NAME = BOSS_NAMES.gravekeeper;   // legacy alias used by endless mode
 
-export const MNAME = { ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss' };
+export const MNAME = { sack:'Loot Sack', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss' };
 
 export const BOSS_INTRO = {
   gravekeeper: { 1:'It stops a third of the way down and never reaches the wall, but it teleports between lanes and raises ghouls. Monsters keep coming until it falls.',

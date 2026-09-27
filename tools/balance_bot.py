@@ -124,6 +124,7 @@ def main():
                     page.evaluate("([n, lo]) => window.__gg.startGame('story', n, lo)", [n, loadout])
                 t0 = time.time()
                 while time.time() - t0 < args.timeout and page.evaluate("window.__gg.state") != 'result':
+                    if page.evaluate("window.__gg.state") == 'revive': page.click('#bReviveNo')   # balance is measured without ad-paid second chances
                     time.sleep(0.5)
                 r = page.evaluate(RESULT_JS)
                 r['pumpkin_level'] = lv; r['fence'] = fence; r['offset'] = args.offset

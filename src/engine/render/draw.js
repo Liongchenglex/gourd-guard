@@ -10,6 +10,7 @@ import { K, coinTarget, ctx } from './canvas.js';
 import { drawMonster } from './monsters.js';
 import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
+import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon } from './tools.js';
 import { castleSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
@@ -53,6 +54,7 @@ export function render(){
   const fogOn = (bands.length || fogCols.length) && !(g.fogClear > 0);
   for (const m of ms){
     if (m.hidden && m.type !== 'diver') continue;                       // wraith: invisible (a submerged diver still shows ripples)
+    if (m.type === 'sack' && fogOn) continue;   // drawn over the fog below: the ad-summoned Loot Sack must never hide
     if (fogOn && m.type !== 'boss' && m.p > -0.02 && (bands.some(([a, b]) => m.p >= a && m.p <= b) || fogCols.includes(m.lane))) continue;   // inside a fog bank (bosses glow through)
     drawMonster(m, t);
   }
@@ -64,6 +66,7 @@ export function render(){
   if (bands.length) drawFog(t, bands, g.fogClear > 0);
   if (fogCols.length) drawFogCols(t, fogCols, g.fogClear > 0);
   if (bands.length || fogCols.length) drawBossBarsOverFog(g);   // owner: the boss's health bar must show through the mist
+  if (fogOn) for (const m of ms) if (m.type === 'sack') drawMonster(m, t);
   if (g.gustDir) drawWindArrows(t);
   drawMines(t);
   drawDrops(t);
@@ -469,6 +472,13 @@ function drawVfx(){
     if (v.t < 0) continue;   // a delayed effect
     const p = Math.min(1, v.t / v.dur);
     if (['firework', 'hammer', 'dynamite', 'lantern', 'bombdrop', 'scbreak'].includes(v.kind)){ drawToolFx(ctx, v, G.t); continue; }
+    if (v.kind === 'loot'){   // a chest, seed, tools or coins bursting out of a kill and floating up (baked icons, blitted)
+      const ic = v.item === 'chest' ? chestIcon('normal', false, 64) : v.item === 'bossChest' ? chestIcon('boss', false, 64) : v.item === 'seed' ? seedIcon(44) : v.item === 'tools' ? toolIcon('fw', 44) : null;
+      const k = p < 0.2 ? 0.6 + p * 3 : 1.2 - Math.min(0.2, (p - 0.2)), a = p > 0.7 ? 1 - (p - 0.7) / 0.3 : 1, sz = (ic ? 52 : 34) * k;
+      ctx.save(); ctx.globalAlpha = a; ctx.translate(v.x, v.y - p * 60);
+      if (ic) ctx.drawImage(ic, -sz / 2, -sz / 2, sz, sz); else { ctx.fillStyle = '#ffd35a'; for (let i = 0; i < 3; i++){ ctx.beginPath(); ctx.arc((i - 1) * 12, (i % 2) * 6, 8, 0, TAU); ctx.fill(); } }
+      ctx.restore(); continue;
+    }
     if (v.kind === 'costumeHit'){ const fx = HIT_FX[v.key]; if (fx){ ctx.save(); ctx.translate(v.x, v.y); ctx.scale(1.25, 1.25); fx(ctx, p); ctx.restore(); } continue; }
     if (v.kind === 'pop'){
       const key = charKey(v.m); if (!key) continue;

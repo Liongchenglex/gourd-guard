@@ -47,7 +47,7 @@
   <div class="ov" id="ovLevels">
     <div class="library" id="shelfView">
       <h2>Choose a storybook</h2>
-      <div class="bankline"><span class="coin"></span><span id="lvCoins">0</span></div>
+      <div class="bankline"><span class="coin"></span><span id="lvCoins">0</span><span class="seed" aria-hidden="true"></span><span id="lvSeeds">0</span><button class="adPill" id="bLvAd" hidden></button><button class="chestPill" id="bLvChest" hidden></button></div>
       <div id="shelf"></div>
       <div class="row">
         <button class="btn small alt" id="bLvBack">Back</button>
@@ -101,12 +101,12 @@
   <div class="ov" id="ovShop">
     <div class="card">
       <h2>Pumpkin shed</h2>
-      <div class="bankline"><span class="coin"></span><span id="shopCoins">0</span><span class="seed" aria-hidden="true"></span><span id="shopSeeds">0</span></div>
+      <div class="bankline"><span class="coin"></span><span id="shopCoins">0</span><span class="seed" aria-hidden="true"></span><span id="shopSeeds">0</span><button class="adPill" id="bShopAd" hidden></button></div>
       <div class="tabs" role="tablist" id="shopTabs">
         <button class="tab" role="tab" data-tab="pumpkins" id="tabPumpkins">Pumpkins</button>
         <button class="tab" role="tab" data-tab="tools" id="tabTools">Tools</button>
         <button class="tab" role="tab" data-tab="wardrobe" id="tabWardrobe">Wardrobe</button>
-        <button class="tab" role="tab" data-tab="seeds" id="tabSeeds">Seeds</button>
+        <button class="tab" role="tab" data-tab="seeds" id="tabSeeds">Seeds<i class="dot" id="seedDot" hidden></i></button>
       </div>
       <div class="tabPane" id="paneP"><div id="shopPumpkins"></div></div>
       <div class="tabPane" id="paneT" hidden><div id="shopList"></div></div>
@@ -114,12 +114,22 @@
         <p class="seedIntro">Costumes are worn by every pumpkin at once and change the hit effect. Skins restyle one pumpkin colour, its lit face and its trail. Neither changes power.</p>
         <h3 class="wHead">Costumes</h3><div class="wGrid" id="wCostumes"></div>
         <h3 class="wHead">Skins</h3><div class="wGrid" id="wSkins"></div>
-        <button class="link" id="bSeedTest">Testing: add 500 seeds</button>
       </div>
       <div class="tabPane" id="paneS" hidden>
-        <p class="seedIntro">Pumpkin seeds are a second currency, used for special items in future shops.</p>
+        <div class="adCard2" id="adSeedCard">
+          <div class="adIc" id="adSeedIc"></div>
+          <div class="tx"><b>Free pumpkin seeds</b><p>Watch a short ad and get 1 seed. <span id="adSeedLeft"></span></p></div>
+          <button class="btn small" id="bSeedAd">Watch ad</button>
+        </div>
+        <div class="adCard2" id="chestCard" hidden>
+          <div class="adIc" id="chestCardIc"></div>
+          <div class="tx"><b id="chestCardT">Treasure chests</b><p>Open them for coins, tools, seeds and boss items.</p></div>
+          <button class="btn small" id="bOpenChest">Open</button>
+        </div>
+        <p class="seedIntro">Seeds buy the top pumpkin levels, skins, costumes and boss items.</p>
         <div id="shopSeedPacks"></div>
-        <p class="seedNote">Seed packs go on sale with the app store release. Nothing here charges you.</p>
+        <p class="seedNote" id="seedNote">Seed packs go on sale with the app store release. Nothing here charges you.</p>
+        <button class="link" id="bSeedTest">Testing: add 500 seeds</button>
       </div>
       <div class="row"><button class="btn small alt" id="bShopBack">Done</button></div>
     </div>
@@ -133,6 +143,7 @@
       <div class="pv-block" id="pvBossBlock"><h3>Boss</h3><div class="pv-row" id="pvBoss"></div></div>
       <div class="pv-block" id="pvNewBlock"><h3>New this level</h3><div class="pv-row" id="pvPumpkins"></div></div>
       <div class="pv-block" id="pvPowersBlock"><h3>Powers</h3><div class="pv-row powers" id="pvPowers"></div><p class="why" id="pvPowerInfo" hidden></p></div>
+      <div class="pv-block sackBlock" id="pvSackBlock"><h3>Loot Sack</h3><div class="sackRow"><div class="tx" id="pvSackTx">Watch an ad to bring a Loot Sack into this night. Knock it down in time for a chest, tools or coins, plus a pumpkin seed.</div><button class="btn small" id="bPvSack">Watch ad</button></div></div>
       <p id="pvInfo"></p>
       <div class="row">
         <button class="btn small alt" id="bPvBack">Back</button>
@@ -181,6 +192,24 @@
       </div>
       <div id="perkList"></div>
       <button class="link" id="bSoundP">Sound: on</button>
+    </div>
+  </div>
+
+  <div class="ov" id="ovRevive">
+    <div class="card">
+      <h2>A wall is falling!</h2>
+      <p>Watch a short ad to rebuild every wall and push the monsters back. You get one second chance per night.</p>
+      <div class="row"><button class="btn small" id="bReviveAd">Watch ad and keep defending</button><button class="btn small alt" id="bReviveNo">Give up</button></div>
+    </div>
+  </div>
+
+  <div class="ov" id="ovChest">
+    <div class="card chestCard">
+      <h2 id="chTitle">Treasure chest</h2>
+      <div class="chestArt" id="chArt"></div>
+      <div class="chestLoot" id="chLoot"></div>
+      <p class="dim" id="chNote"></p>
+      <div class="row" id="chBtns"></div>
     </div>
   </div>
 

@@ -2,6 +2,7 @@
 // Painted once into two canvases (the scene, and the pumpkin front line that bobs) and cached per screen height.
 
 import { CHARS, pumpkin } from './chars.js';
+import { faceFor } from './faces.js';
 import { pal, rgba, ell } from './paint.js';
 import { PTYPES } from '../../data/pumpkins.js';
 import { W } from '../state.js';
@@ -22,18 +23,19 @@ function horde(g, H){
 }
 function front(g, H){
   // the pumpkin front line along the bottom, lit and glaring up at the horde, one in mid-flight with a trail
+  const HALO = { green:'140,255,90', fire:'255,110,50', yellow:'255,214,70', ice:'140,220,255', purple:'200,120,255', pink:'255,130,200', blue:'120,160,255', black:'255,140,50', brown:'240,170,80' };
   const base = H * .665, cols = ['fire', 'green', 'yellow', 'ice', 'purple', 'green', 'pink', 'blue'];
   const P = k => pal(PTYPES.find(p => p.key === k).base);
   const glow = g.createLinearGradient(0, base - 120, 0, H); glow.addColorStop(0, 'rgba(255,150,40,0)'); glow.addColorStop(.5, 'rgba(255,150,40,.22)'); glow.addColorStop(1, 'rgba(20,8,20,.9)');
   g.fillStyle = glow; g.fillRect(0, base - 120, W, H - base + 120);
-  const row = (y, R, n, off, lit) => { for (let i = 0; i < n; i++){ const x = off + i * (W - off * 2) / (n - 1); g.save(); g.translate(x, y + (i % 2) * 6); pumpkin(g, P(cols[(i * 3 + n) % cols.length]), lit, R); g.restore(); } };
-  row(base - 10, 36, 5, 56, true);
+  const row = (y, R, n, off, lit) => { for (let i = 0; i < n; i++){ const x = off + i * (W - off * 2) / (n - 1); g.save(); g.translate(x, y + (i % 2) * 6); const k = cols[(i * 3 + n) % cols.length]; if (lit){ const hc = HALO[k] || '255,190,70', gl = g.createRadialGradient(0, 0, R * .4, 0, 0, R * 1.5); gl.addColorStop(0, `rgba(${hc},.55)`); gl.addColorStop(1, `rgba(${hc},0)`); g.fillStyle = gl; g.fillRect(-R * 1.6, -R * 1.6, R * 3.2, R * 3.2); } pumpkin(g, P(k), lit, R, faceFor(k)); g.restore(); } };   // plain in the patch, carved glowing faces in the bunch (owner, 2026-09-27)
+  { const R = 36, n = 5, off = 56; for (let i = 0; i < n; i++){ const x = off + i * (W - off * 2) / (n - 1), k = ['green', 'green', 'fire', 'fire', 'fire'][i]; g.save(); g.translate(x, base - 10 + (i % 2) * 6); const hc = HALO[k], gl = g.createRadialGradient(0, 0, R * .4, 0, 0, R * 1.5); gl.addColorStop(0, `rgba(${hc},.55)`); gl.addColorStop(1, `rgba(${hc},0)`); g.fillStyle = gl; g.fillRect(-R * 1.6, -R * 1.6, R * 3.2, R * 3.2); pumpkin(g, P(k), true, R, faceFor(k)); g.restore(); } }
   row(base + 62, 46, 4, 72, false);
   row(base + 134, 40, 5, 50, false);
   // the throw: a lit pumpkin streaking up toward the Gravekeeper
   const fx = 300, fy = H * .56;
   for (let i = 0; i < 14; i++){ const f = i / 14; g.fillStyle = rgba('#ffb640', (1 - f) * .45); ell(g, fx - 30 * f, fy + 110 * f, 22 * (1 - f * .6), 22 * (1 - f * .6)); g.fill(); }
-  g.save(); g.translate(fx, fy); g.rotate(.3); pumpkin(g, P('fire'), true, 28); g.restore();
+  g.save(); g.translate(fx, fy); g.rotate(.3); pumpkin(g, P('fire'), true, 28, faceFor('fire')); g.restore();
 }
 export function titleArt(H){
   if (built && built.H === H) return built;

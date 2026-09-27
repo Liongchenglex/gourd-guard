@@ -206,7 +206,7 @@ Per level the data gives: starting pattern, graves, wave size, spawn gap, speed 
 
 World 1 starting numbers (2026-09-25, to be tuned by the bot): wave 9 → 20 over levels 1–10 and 22 → 36 over 11–20; spawn gap 3.84 s → 2.7 s; speed ×0.76 → ×0.868 by level 10, then +0.02 per level to ×1.068; pool adds Bat at 1-2, Imp at 1-4, Mossback at 1-6 (weight 3 + 0.2 × level), Mummy at 1-9.
 
-Spawn pacing (owner, 2026-09-27): in levels 11–20 of every world the level's spawn gap is multiplied by 1.3 and the chance that a monster follows almost at once (gap ×0.3) drops from 18% to 10%; monster counts are unchanged. Levels 1–10 keep gap ×1 and 18%. Every gap is randomised ×0.6–1.4. Numbers live in `src/data/rules.js`.
+Spawn pacing (owner, 2026-09-27): in levels 11–20 of every world the level's spawn gap is multiplied by 1.15 and the chance that a monster follows almost at once (gap ×0.3) drops from 18% to 14%; monster counts are unchanged. Levels 1–10 keep gap ×1 and 18%. Exceptions set per level: 4-20 keeps ×1.3 and 10% (the owner found it right at that pace); 5-20 (Twin Tides) keeps the original ×1 and 18%. A first try at ×1.3 and 10% for all of 11–20 was too easy for the owner, who needed no tools. Every gap is randomised ×0.6–1.4. Numbers live in `src/data/rules.js`.
 
 World 2 (Foggy Hollow) starting numbers (2026-09-25, untuned): wave 11 → 21 over levels 1–10 and 22 → 36 over 11–20; spawn gap 3.64 s → 2.5 s; speed ×0.8 → ×0.908 by level 10, then +0.02 per level; pool Bog Ghoul 10 and Wisp 5 from 2-1, Wraith 5 from 2-4, Swift Bat 5 from 2-6, Wisp Rider 4 from 2-7, Marsh Imp 5 from 2-8, Plague Doctor 3 from 2-9; graves 0 (1–5), 1 (6–12), 2 (13–20).
 

@@ -27,8 +27,9 @@ export function storySpawn(dt){
     counts[t] = (counts[t] || 0) + 1; spawnMonster(t);
     G.spawned++;
     const late = d.levelNo >= SPAWN_LATE_FROM;   // the harder half of each world is spaced out (owner)
-    G.spawnTimer = d.interval * (late ? SPAWN_GAP : 1) * rnd(0.6, 1.4);
-    if (Math.random() < (late ? SPAWN_BURST : SPAWN_BURST_EARLY)) G.spawnTimer *= 0.3;
+    const gap = d.spawnGap != null ? d.spawnGap : late ? SPAWN_GAP : 1, burst = d.spawnBurst != null ? d.spawnBurst : late ? SPAWN_BURST : SPAWN_BURST_EARLY;   // per-level overrides win
+    G.spawnTimer = d.interval * gap * rnd(0.6, 1.4);
+    if (Math.random() < burst) G.spawnTimer *= 0.3;
   }
   if (d.boss && !G.bossSpawned && G.spawned >= Math.floor(d.total * 0.4)){
     spawnMonster('boss'); G.bossSpawned = true;

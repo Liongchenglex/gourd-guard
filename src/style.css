@@ -466,12 +466,14 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .dInfo .src, .dInfo .dd{ margin:0; padding:0; text-align:left; }
 
 /* Quests (owner, 2026-09-27): folder tabs on the level card; three quests, one star each */
-.pvCard{ position:relative; margin-top:calc(var(--u)*34px); overflow:visible; }
-.pvTabs{ position:absolute; left:calc(var(--u)*18px); top:calc(var(--u)*-38px); display:flex; gap:calc(var(--u)*6px); }
+.pvCard{ position:relative; margin-top:calc(var(--u)*54px); overflow:visible; }
+.pvTabs{ position:absolute; left:calc(var(--u)*18px); bottom:calc(100% - 1px); display:flex; align-items:flex-end; gap:calc(var(--u)*6px); }
 .pvTabs[hidden]{ display:none; }
-.pvTab{ font:inherit; font-weight:700; font-size:calc(var(--u)*15px); color:var(--muted); background:rgba(40,26,54,.92); border:1px solid var(--line); border-bottom:none; border-radius:calc(var(--u)*12px) calc(var(--u)*12px) 0 0; padding:calc(var(--u)*8px) calc(var(--u)*16px); min-height:calc(var(--u)*44px); cursor:pointer; display:inline-flex; align-items:center; gap:calc(var(--u)*6px); }
-.pvTab[aria-selected="true"]{ color:var(--candle); background:var(--panel); box-shadow:0 calc(var(--u)*3px) 0 var(--panel); position:relative; z-index:1; }
+.pvTab{ font:inherit; font-weight:700; font-size:calc(var(--u)*14px); color:rgba(205,185,164,.75); background:rgba(30,20,42,.85); border:1px solid rgba(255,190,110,.15); border-bottom:none; border-radius:calc(var(--u)*12px) calc(var(--u)*12px) 0 0; padding:calc(var(--u)*6px) calc(var(--u)*14px); min-height:calc(var(--u)*44px); cursor:pointer; display:inline-flex; align-items:center; gap:calc(var(--u)*6px); transition:min-height .15s, background .15s; }
+.pvTab[aria-selected="true"]{ color:#2a1400; background:linear-gradient(#ffc14a, #ff8a1f); border-color:#ffd98a; min-height:calc(var(--u)*52px); font-size:calc(var(--u)*16px); padding-inline:calc(var(--u)*18px); box-shadow:0 calc(var(--u)*-3px) calc(var(--u)*12px) rgba(255,138,31,.45), inset 0 calc(var(--u)*2px) 0 rgba(255,255,255,.45); position:relative; z-index:1; }
+.pvCard:has(.pvTabs:not([hidden])){ border-top:calc(var(--u)*3px) solid #ff8a1f; }
 .pvTab .qCount{ color:var(--candle); font-size:calc(var(--u)*13px); }
+.pvTab[aria-selected="true"] .qCount{ color:#5a2600; }
 .pvTab.pulse{ animation:qPulse 1.4s ease-in-out infinite; }
 @keyframes qPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,193,74,0); } 50%{ box-shadow:0 0 calc(var(--u)*14px) rgba(255,193,74,.8); } }
 .qNote{ font-size:calc(var(--u)*14.5px) !important; color:var(--ink) !important; background:rgba(255,193,74,.12); border:1px solid rgba(255,193,74,.45); border-radius:calc(var(--u)*12px); padding:calc(var(--u)*10px) calc(var(--u)*12px); margin:0 0 calc(var(--u)*10px) !important; text-align:left; }
@@ -484,7 +486,7 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .qRow .qTag{ font-size:calc(var(--u)*11px); font-weight:700; letter-spacing:.5px; color:#2a1400; background:var(--candle); border-radius:99px; padding:calc(var(--u)*2px) calc(var(--u)*8px); }
 .qRow .qTag.miss{ color:var(--muted); background:rgba(255,255,255,.08); }
 @media (prefers-reduced-motion: reduce){ .pvTab.pulse{ animation:none; } }
-.pvTab:focus:not(:focus-visible){ outline:none; }
+.pvTab:focus{ outline:none; }   /* the card focuses its first button on open; the orange fill already shows the selected tab */
 
 /* ---------- Crown of Stars reveal (owner, 2026-09-27) ---------- */
 .crownReveal{ position:absolute; inset:0; z-index:150; display:flex; align-items:center; justify-content:center; padding:0 16px; background:radial-gradient(ellipse at 50% 40%, rgba(60,36,100,.92), rgba(8,4,14,.95)); animation:crIn .4s ease-out; }

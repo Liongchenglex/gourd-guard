@@ -407,3 +407,15 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .bossItems i{ height:calc(var(--u)*6px); border-radius:999px; background:linear-gradient(90deg, var(--candle) calc(var(--f) * 100%), rgba(255,255,255,.12) 0); }
 .twoBtns{ display:flex; gap:calc(var(--u)*6px); flex-wrap:wrap; justify-content:center; } .twoBtns .btn{ padding-inline:calc(var(--u)*10px) !important; }
 .sackRow{ display:flex; align-items:center; gap:calc(var(--u)*10px); } .sackRow .tx{ flex:1; font-size:calc(var(--u)*13px); color:var(--muted); text-align:left; }
+
+/* seeds-for-coins trade and the boss-item buy button (owner, 2026-09-27) */
+.tradeCard{ padding:calc(var(--u)*10px) calc(var(--u)*12px); margin-bottom:calc(var(--u)*10px); border-radius:calc(var(--u)*16px); border:1px solid var(--line); background:rgba(255,255,255,.04); }
+.tradeCard .tx b{ font-size:calc(var(--u)*16px); } .tradeCard .tx p{ margin:calc(var(--u)*2px) 0 calc(var(--u)*8px); font-size:calc(var(--u)*13px); color:var(--muted); }
+.trades{ display:grid; grid-template-columns:repeat(3, 1fr); gap:calc(var(--u)*8px); }
+.btn.trade{ padding-inline:calc(var(--u)*6px) !important; font-size:calc(var(--u)*14px) !important; display:inline-flex; align-items:center; justify-content:center; gap:calc(var(--u)*3px); white-space:nowrap; }
+.btn.trade .seed{ margin-left:0; width:calc(var(--u)*10px); height:calc(var(--u)*13px); } .btn.trade .coin{ width:calc(var(--u)*14px); height:calc(var(--u)*14px); } .btn.trade .arrow{ opacity:.6; margin:0 calc(var(--u)*2px); }
+.btn.buyItems{ display:flex; flex-direction:column; align-items:center; line-height:1.15; padding:calc(var(--u)*6px) calc(var(--u)*14px) !important; }
+.btn.buyItems small{ font-size:calc(var(--u)*12px); font-weight:600; } .btn.buyItems .seed{ margin-left:0; margin-right:calc(var(--u)*4px); width:calc(var(--u)*10px); height:calc(var(--u)*13px); }
+.adCard2[hidden], .tradeCard[hidden]{ display:none; }
+.btn.buyItems[disabled]{ opacity:.75; }
+.btn.buyItems[disabled] small{ color:#efe4d6; }

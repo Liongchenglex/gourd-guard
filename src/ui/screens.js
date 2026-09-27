@@ -14,7 +14,7 @@ import { BOOKS } from '../data/lore.js';
 import { BESTIARY, COMPANIONS } from '../data/bestiary.js';
 import { toolIcon } from '../engine/render/tools.js';
 import { COSTUMES, SKINS } from '../data/wardrobe.js';
-import { upgradeCost, SEED_PACKS, BOSS_ITEMS_FOR_COSTUME, BOSS_ITEM_SEED_PACK, CHESTS, SEED_ADS_PER_DAY } from '../data/economy.js';
+import { upgradeCost, COINS_PER_SEED, SEED_TRADES, SEED_PACKS, BOSS_ITEMS_FOR_COSTUME, BOSS_ITEM_SEED_PACK, CHESTS, SEED_ADS_PER_DAY } from '../data/economy.js';
 import { showRewarded, seedAdsLeft, adsBusy } from '../engine/ads.js';
 import { storeReady, buyPack } from '../engine/store.js';
 import { rollChest, grant, bossItemsFor, foundThisNight, queueSack, sackIsQueued } from '../engine/loot.js';
@@ -480,7 +480,7 @@ function renderWardrobe(){
       if (have >= need){ const b = document.createElement('button'); b.className = 'btn small'; b.textContent = 'Make costume'; b.onclick = () => { save.bossItems[c.boss] -= need; W.owned.push(c.key); W.costume = c.key; persist(); SFX.perk(); renderShop(); }; d.appendChild(b); }
       else {
         const row = document.createElement('div'); row.className = 'twoBtns';
-        const bs = document.createElement('button'); bs.className = 'btn small'; bs.innerHTML = `+${BOSS_ITEM_SEED_PACK.items} <span class="seed"></span>${BOSS_ITEM_SEED_PACK.seeds}`; bs.disabled = (save.seeds || 0) < BOSS_ITEM_SEED_PACK.seeds; bs.setAttribute('aria-label', `Buy ${BOSS_ITEM_SEED_PACK.items} ${BOSS_ITEM_NAMES[c.boss]}s for ${BOSS_ITEM_SEED_PACK.seeds} seeds`);
+        const bs = document.createElement('button'); bs.className = 'btn small'; bs.classList.add('buyItems'); bs.innerHTML = `<small>Buy ${BOSS_ITEM_SEED_PACK.items} ${BOSS_ITEM_NAMES[c.boss]}s</small><span><span class="seed"></span>${BOSS_ITEM_SEED_PACK.seeds}</span>`; bs.disabled = (save.seeds || 0) < BOSS_ITEM_SEED_PACK.seeds; bs.setAttribute('aria-label', `Buy ${BOSS_ITEM_SEED_PACK.items} ${BOSS_ITEM_NAMES[c.boss]}s for ${BOSS_ITEM_SEED_PACK.seeds} seeds`);
         bs.onclick = () => { if ((save.seeds || 0) < BOSS_ITEM_SEED_PACK.seeds) return; save.seeds -= BOSS_ITEM_SEED_PACK.seeds; save.bossItems[c.boss] = have + BOSS_ITEM_SEED_PACK.items; persist(); SFX.coin(); renderShop(); };
         row.appendChild(bs); d.appendChild(row);   // seeds only: boss items are never sold for coins (owner)
       }
@@ -521,6 +521,14 @@ function renderSeedsPane(){
   const ai = $('#adSeedIc'); if (!ai.firstChild) ai.appendChild(dom(seedArt(44)));
   const nc = save.chests.length; $('#chestCard').hidden = !nc; $('#chestCardT').textContent = `${nc} treasure chest${nc === 1 ? '' : 's'} waiting`;
   const ci = $('#chestCardIc'); ci.innerHTML = ''; if (nc) ci.appendChild(dom(chestIcon(save.chests[0].kind, false, 44)));
+  const tr = $('#seedTrades'); tr.innerHTML = '';
+  for (const n of SEED_TRADES){   // seeds for coins, 1 seed = 100 coins (owner)
+    const b = document.createElement('button'); b.className = 'btn small trade'; const c = n * COINS_PER_SEED;
+    b.innerHTML = `<span class="seed"></span>${n}<span class="arrow">→</span><span class="coin"></span>${c.toLocaleString()}`;
+    b.disabled = (save.seeds || 0) < n; b.setAttribute('aria-label', `Trade ${n} seed${n > 1 ? 's' : ''} for ${c.toLocaleString()} coins`);
+    b.onclick = () => { if ((save.seeds || 0) < n) return; save.seeds -= n; save.coins += c; persist(); SFX.coin(); renderShop(); };
+    tr.appendChild(b);
+  }
   const sp = $('#shopSeedPacks'); sp.innerHTML = ''; const live = storeReady();
   for (const pk of SEED_PACKS){
     const d = document.createElement('div'); d.className = 'item pack';

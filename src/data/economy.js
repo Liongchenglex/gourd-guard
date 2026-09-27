@@ -8,7 +8,9 @@ const C = [{ coins:1000 }, { coins:2500 }, { seeds:50 }, { seeds:100 }];        
 export const UPGRADE_COST = { green:A, yellow:A, fire:B, ice:B, white:B, pink:B, purple:B, turquoise:B, grey:C, black:C, blue:C, brown:C };
 export const upgradeCost = (key, lv) => (UPGRADE_COST[key] || A)[lv - 1] || null;
 
-export const TOOL_COST = 300;                       // every consumable tool
+export const TOOL_COST = 300;
+export const COINS_PER_SEED = 100;                  // the Seeds tab trades seeds for coins (owner); never the other way
+export const SEED_TRADES = [1, 10, 50];             // seeds per trade offered                       // every consumable tool
 export const FENCE_COST = [500, 1000, 1500];        // Sturdy walls levels 1-3
 export const RENT_COST = 100;                       // renting a level-20 power for one night
 

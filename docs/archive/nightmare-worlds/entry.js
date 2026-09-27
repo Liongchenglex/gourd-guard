@@ -60,6 +60,33 @@ function web(g, x, y, r){ g.strokeStyle = 'rgba(220,220,225,.35)'; g.lineWidth =
   g.fillStyle = '#0a0a0c'; g.beginPath(); g.ellipse(x + r * .35, y + r * .55, 2.6, 3.2, 0, 0, TAU); g.fill(); g.strokeStyle = '#0a0a0c'; g.lineWidth = .8; for (const d of [-1, 1]) for (let i = 0; i < 3; i++){ g.beginPath(); g.moveTo(x + r * .35, y + r * .55); g.lineTo(x + r * .35 + d * 5, y + r * .55 - 2 + i * 2.5); g.stroke(); } }
 function skullStake(g, x, y, s){ g.strokeStyle = '#1a1a1e'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - s * 3); g.stroke(); g.fillStyle = '#d8d8dc'; g.beginPath(); g.ellipse(x, y - s * 3.4, s * .8, s * .75, 0, 0, TAU); g.fill(); g.fillRect(x - s * .45, y - s * 3, s * .9, s * .5); g.fillStyle = '#0a0a0c'; for (const d of [-1, 1]){ g.beginPath(); g.ellipse(x + d * s * .32, y - s * 3.45, s * .22, s * .25, 0, 0, TAU); g.fill(); } }
 
+
+function countFigure(g, x, y, h){   // the Vampire Count on the tower top, cape spread, red eyes
+  g.fillStyle = '#020306'; g.beginPath(); g.moveTo(x - h * .15, y); g.lineTo(x - h * .12, y - h * .7); g.quadraticCurveTo(x, y - h * .95, x + h * .12, y - h * .7); g.lineTo(x + h * .15, y); g.closePath(); g.fill();
+  g.beginPath(); g.arc(x, y - h * .82, h * .13, 0, TAU); g.fill();
+  for (const d of [-1, 1]){ g.beginPath(); g.moveTo(x + d * h * .1, y - h * .7); g.quadraticCurveTo(x + d * h * .55, y - h * .9, x + d * h * .72, y - h * .45); g.lineTo(x + d * h * .58, y - h * .38); g.lineTo(x + d * h * .5, y - h * .2); g.lineTo(x + d * h * .36, y - h * .28); g.lineTo(x + d * h * .2, y - h * .05); g.closePath(); g.fill();   // cape wing
+    g.beginPath(); g.moveTo(x + d * h * .08, y - h * .88); g.lineTo(x + d * h * .2, y - h * 1.02); g.lineTo(x + d * h * .12, y - h * .84); g.fill(); }   // collar points
+  glow(g, x, y - h * .83, 10, '#ff1a1a', .6); g.fillStyle = '#ff3a2a'; for (const d of [-1, 1]){ g.beginPath(); g.ellipse(x + d * h * .05, y - h * .83, 1.3, .8, 0, 0, TAU); g.fill(); }
+}
+function gargoyle(g, x, y, s, dir){   // a crouched gargoyle on the wall, eyes glowing
+  g.save(); g.translate(x, y); g.scale(dir, 1); g.fillStyle = '#06070c';
+  g.beginPath(); g.moveTo(-s, 0); g.quadraticCurveTo(-s * 1.1, -s * .9, -s * .2, -s * 1.1); g.quadraticCurveTo(s * .3, -s * 1.7, s * .9, -s * 1.3); g.lineTo(s * 1.2, -s * .9); g.quadraticCurveTo(s * .7, -s * .7, s * .6, 0); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(-s * .5, -s * 1.1); g.lineTo(-s * 1.6, -s * 2.1); g.lineTo(-s * 1.2, -s * 1.2); g.lineTo(-s * 1.9, -s * 1.3); g.lineTo(-s * .8, -s * .7); g.closePath(); g.fill();   // wing
+  g.beginPath(); g.moveTo(s * .6, -s * 1.55); g.lineTo(s * .75, -s * 2); g.lineTo(s * .85, -s * 1.5); g.fill();   // horn
+  g.restore(); glow(g, x + dir * s * .85, y - s * 1.25, 6, '#ffb020', .6); g.fillStyle = '#ffd040'; g.beginPath(); g.ellipse(x + dir * s * .85, y - s * 1.25, 1.2, .7, 0, 0, TAU); g.fill();
+}
+function tentacle(g, x, y, h, curl, w, col, rim){   // rising out of the sea, curling at the tip, with suckers
+  const pts = [[x, y]]; let px = x, py = y, n = 22, step = h / n; for (let i = 1; i <= n; i++){ const f = i / n, a = Math.sign(curl) * (f * f * f * Math.abs(curl) * 1.6 + Math.sin(f * 4) * .18); px += Math.sin(a) * step; py -= Math.cos(a) * step; pts.push([px, py]); }   // rises, sways, and curls over at the tip
+  for (let i = 0; i < pts.length - 1; i++){ const f = i / (pts.length - 1), lw = w * (1 - f * .85); g.strokeStyle = col; g.lineWidth = lw; g.lineCap = 'round'; g.beginPath(); g.moveTo(...pts[i]); g.lineTo(...pts[i + 1]); g.stroke();
+    g.strokeStyle = rgba(rim, .35); g.lineWidth = Math.max(.6, lw * .2); g.beginPath(); g.moveTo(pts[i][0] - lw * .3, pts[i][1]); g.lineTo(pts[i + 1][0] - lw * .3, pts[i + 1][1]); g.stroke();
+    if (i % 3 === 1 && f < .8){ g.fillStyle = rgba('#ffb0a0', .5); g.beginPath(); g.ellipse(pts[i][0] + lw * .32, pts[i][1], lw * .16, lw * .12, 0, 0, TAU); g.fill(); } }
+}
+function fin(g, x, y, s, col, rim){ g.fillStyle = col; g.beginPath(); g.moveTo(x - s, y); g.quadraticCurveTo(x - s * .2, y - s * 1.6, x + s * .5, y - s * 1.8); g.quadraticCurveTo(x + s * .2, y - s * .8, x + s * .8, y); g.closePath(); g.fill(); g.strokeStyle = rgba(rim, .4); g.lineWidth = 1; g.beginPath(); g.moveTo(x - s * 1.6, y + 1); g.quadraticCurveTo(x, y - 1, x + s * 1.6, y + 1); g.stroke(); }
+function ghostShip(g, x, y, s){ g.save(); g.globalAlpha = .45; g.fillStyle = '#ffd0c8'; g.beginPath(); g.moveTo(x - s * 2, y); g.lineTo(x + s * 2, y); g.lineTo(x + s * 1.6, y + s * .5); g.lineTo(x - s * 1.7, y + s * .5); g.closePath(); g.fill();
+  g.strokeStyle = '#ffd0c8'; g.lineWidth = 1; for (const mx of [-.8, .5]){ g.beginPath(); g.moveTo(x + mx * s, y); g.lineTo(x + mx * s, y - s * 2.4); g.stroke();
+    g.beginPath(); g.moveTo(x + mx * s - s * .6, y - s * 2.1); g.lineTo(x + mx * s + s * .6, y - s * 2.0); g.lineTo(x + mx * s + s * .45, y - s * .9); g.lineTo(x + mx * s + s * .1, y - s * 1.2); g.lineTo(x + mx * s - s * .2, y - s * .8); g.lineTo(x + mx * s - s * .55, y - s * 1.1); g.closePath(); g.globalAlpha = .3; g.fill(); g.globalAlpha = .45; }   // tattered sails
+  g.restore(); glow(g, x, y - s, s * 3, '#ffb0a0', .12); }
+
 // ---------- the themes ----------
 const THEMES = [
   { key:'hallow', name:"Hallow's End", tag:'World 6', base:0, desc:"The heart of Halloween. A giant jack-o'-lantern moon grins over a crooked town of spires and lit windows, an orange and violet aurora ripples across the sky, lanterns drift upward and a great twisted tree hangs heavy with glowing pumpkins.",
@@ -69,9 +96,9 @@ const THEMES = [
     w:{ sky:['#050204','#2a0806','#c2410f'], ground:['#2e1a16','#120a08'], moon:'#1a0808', halo:'#ff7a1a', sil:['#1a0808','#080303'], rim:'#ff8a3a', soil:['#5e3620','#3a1e10','#1a0c06'] } },
   { key:'fogN', name:'Foggy Hollow: Nightmare', tag:'Nightmare', base:1, desc:'A sickly green moon over a black marsh. Poison-green fog swallows sinking gravestones and a capsized boat, bony hands reach out of the bog, a tall hooded figure stands in the mist, and red eyes watch from everywhere.',
     w:{ sky:['#020604','#0b1f12','#2f6a3a'], ground:['#16261a','#08110a'], moon:'#d8ffb0', halo:'#5aff7a', sil:['#0d2014','#040a06'], rim:'#9aff9a', soil:['#3e4a2c','#232c18','#10150a'] } },
-  { key:'keepN', name:'Crumbling Keep: Nightmare', tag:'Nightmare', base:2, desc:'A thunderstorm breaks over the keep. Black clouds, forked lightning striking the towers, sheets of rain and a cold blue flash that turns the castle to silhouette.',
+  { key:'keepN', name:'Crumbling Keep: Nightmare', tag:'Nightmare', base:2, desc:'A thunderstorm breaks over the keep. Forked lightning lights up the Vampire Count on the tallest tower, cape spread and eyes red; gargoyles with burning eyes crouch on the walls, crows line the battlements and the portcullis hangs broken in the rain.',
     w:{ sky:['#03050c','#141c33','#3a4a6a'], ground:['#2a2c36','#12131a'], moon:'#c8d4ff', halo:'#6a80c8', sil:['#10131e','#05060b'], rim:'#b8c8ff', soil:['#4a4c58','#2c2e38','#15161c'] } },
-  { key:'marshN', name:'Drowned Marsh: Nightmare', tag:'Nightmare', base:3, desc:'The red sea. A huge blood moon hangs low over water turned crimson, its reflection a trail of red light, with the wreck black against it.',
+  { key:'marshN', name:'Drowned Marsh: Nightmare', tag:'Nightmare', base:3, desc:'The red sea. A huge blood moon hangs low over crimson water. Tentacles rise beside the wreck, shark fins circle, a ghost ship with tattered sails drifts on the horizon and the lighthouse burns red.',
     w:{ sky:['#0c0206','#3e0610','#a8141c'], ground:['#3a1c1a','#170a0a'], moon:'#ff3a26', halo:'#c01010', sil:['#2a0508','#100203'], rim:'#ff7a60', soil:['#6a3a2c','#43221a','#21100c'] }, moonAt:[110, 70, 44] },
   { key:'woodN', name:'Witchwood: Nightmare', tag:'Nightmare', base:4, desc:'All the colour drained away, except for what watches you. Bare skeletal trees with screaming faces in their trunks, iron cages swinging from the branches, cobwebs and a spider, skulls on stakes, ash falling, and the witch\'s window burning red.',
     w:{ sky:['#0c0c0e','#2a2a2e','#6a6a70'], ground:['#34343a','#141418'], moon:'#f0f0f0', halo:'#b8b8c0', sil:['#26262c','#0c0c10'], rim:'#e0e0e8', soil:['#5a5a60','#38383e','#1a1a1e'] }, grey:true },
@@ -141,14 +168,22 @@ function post(T, g, w, R, hz, mx, my, mr){
     for (let i = 0; i < 5; i++) cloud(g, 90 + i * 34, hz - 110 - i * 20, 60 + i * 10, 18, '#150808', .6);
     for (let i = 0; i < 40; i++) spark(g, 30 + R() * 260, hz - 160 + R() * 150, .8 + R() * 1.2, R() < .5 ? '#ffb050' : '#ff6a20', .6 + R() * .4);
     for (let i = 0; i < 6; i++) bird(g, 200 + R() * 280, 40 + R() * 70, .9 + R() * .6, 'rgba(8,2,2,.9)'); }
-  if (T.key === 'keepN'){ for (let i = 0; i < 5; i++) bat(g, 60 + R() * 420, 50 + R() * 60, .7 + R() * .6, 'rgba(4,5,10,.9)'); }
+  if (T.key === 'keepN'){ for (let i = 0; i < 5; i++) bat(g, 60 + R() * 420, 50 + R() * 60, .7 + R() * .6, 'rgba(4,5,10,.9)');
+    countFigure(g, 236, 58, 34);
+    gargoyle(g, 150, 90, 6, 1); gargoyle(g, 194, 90, 5.5, -1); gargoyle(g, 380, 94, 6, 1);
+    for (const x of [352, 364, 404, 414]) bird(g, x, 90, .55, 'rgba(2,3,6,.95)');
+    g.fillStyle = '#05060b'; for (let i = 0; i < 5; i++){ const x = 290 + i * 5, l = [8, 14, 6, 11, 4][i]; g.fillRect(x, 108, 2, l); g.beginPath(); g.moveTo(x - .5, 108 + l); g.lineTo(x + 1, 111 + l); g.lineTo(x + 2.5, 108 + l); g.fill(); } }   // broken portcullis teeth
   if (T.key === 'fogN'){
     for (const [x, t] of [[70, -.25], [96, .18], [122, -.08], [488, .3]]) sinkingStone(g, x, hz + 4, 12, 22, t, '#0e1d12', w.rim);
     boat(g, 420, hz + 2, 26, '#081208', w.rim);
     for (const [x, h, l] of [[176, 26, -6], [196, 18, 5], [352, 30, 8], [512, 20, -4]]) boneHand(g, x, hz + 4, h, l, 'rgba(200,225,195,.75)');
     shadeFigure(g, 284, hz - 2, 64, '#caffc0');
     for (let i = 0; i < 7; i++) cloud(g, R() * W, hz - 20 - R() * 60, 120 + R() * 80, 16, '#3aa060', .28); }
-  if (T.key === 'marshN'){ for (let i = 0; i < 5; i++) bird(g, 280 + R() * 220, 50 + R() * 60, .9, 'rgba(20,0,0,.85)'); }
+  if (T.key === 'marshN'){ for (let i = 0; i < 5; i++) bird(g, 280 + R() * 220, 50 + R() * 60, .9, 'rgba(20,0,0,.85)');
+    ghostShip(g, 360, hz - 44, 9);
+    for (const [x, h, c, wd] of [[322, 96, 2.6, 13], [372, 74, -2.8, 10], [130, 62, 2.4, 8]]) tentacle(g, x, hz + 4, h, c, wd, '#1a0306', '#ff6a50');
+    fin(g, 60, hz - 4, 10, '#140204', '#ff7a60'); fin(g, 210, hz - 8, 7, '#140204', '#ff7a60'); fin(g, 470, hz - 6, 8, '#140204', '#ff7a60');
+    glow(g, 507, 42, 44, '#ff1a1a', .6); g.fillStyle = '#ff5a40'; g.beginPath(); g.ellipse(507, 42, 4, 3.4, 0, 0, TAU); g.fill(); const bg2 = g.createLinearGradient(507, 42, 300, 30); bg2.addColorStop(0, 'rgba(255,50,30,.6)'); bg2.addColorStop(1, 'rgba(255,50,30,0)'); g.fillStyle = bg2; g.beginPath(); g.moveTo(507, 39); g.lineTo(300, 6); g.lineTo(300, 56); g.lineTo(507, 45); g.closePath(); g.fill(); }   // the lighthouse burns red
 }
 function after(T, g, w, R, hz){
   if (T.key === 'keepN') rain(g, rng(5), 520, .14);

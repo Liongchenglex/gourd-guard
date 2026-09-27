@@ -160,7 +160,7 @@ let pendingStamp = null;    // night whose level tile should play its stamp anim
 function syncSack(){
   const q = sackIsQueued(), b = $('#bPvSack');
   b.disabled = q; b.innerHTML = q ? 'Ready' : '<span class="play"></span>Watch ad';
-  $('#pvSackTx').textContent = q ? 'A Loot Sack will waddle into this night. Knock it down before it runs off!' : 'Watch an ad to bring a Loot Sack into this night. Knock it down in time for a chest, tools or coins, plus a pumpkin seed.';
+  $('#pvSackTx').textContent = q ? 'A Loot Sack will waddle into this night. Knock it down before it runs off!' : 'Watch an ad to bring a Loot Sack into this night. Knock it down in time for a chest, tools or coins, and maybe a pumpkin seed.';
 }
 /** Level card tabs (owner): Monsters and, from 1-3, Quests. */
 function pvTab(which){

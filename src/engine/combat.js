@@ -97,17 +97,20 @@ export function dropWeapon(m){
   const y = clamp(mY(m), FIELD_TOP + 20, FIELD_BOT - 30);
   G.drops.push({ kind:'weapon', item:gear.key, x:clamp(m.x, 26, W - 26), y, t:0, life:7, ph:Math.random() * TAU, dead:false });
 }
+/** A treasure chest lying on the field (owner, 2026-09-27): tap it to pick it up before it fades. Boss chests are still given at once. */
+const CHEST_LIFE = 10;
+function dropChest(m, y){ G.drops.push({ kind:'chest', x:clamp(m.x, 30, W - 30), y:clamp(y, FIELD_TOP + 24, FIELD_BOT - 34), t:0, life:CHEST_LIFE, ph:Math.random() * TAU, dead:false }); }
 /** Monetization loot (owner's monetization.md): the rare chest, boss seeds and chests, and the Loot Sack's prize. */
 function lootOnKill(m, reward, y){
   if (G.mode !== 'story') return;
   const pop = (kind, text, col) => { addFloat(text, m.x, y - m.r - 44, col, 19, 1.5); if (G.vfx) G.vfx.push({ kind:'loot', item:kind, x:m.x, y:y - 10, t:0, dur:1.4 }); };
   if (reward === 'sack'){
     const r = Math.random(), D = SACK.drop;
-    if (r < D.chest){ addChest('normal'); pop('chest', 'Treasure chest!', '#ffd35a'); }
+    if (r < D.chest){ dropChest(m, y); addFloat('Treasure chest! Tap it', m.x, y - m.r - 44, '#ffd35a', 19, 1.5); }
     else if (r < D.chest + D.tools){ const set = toolSet(); grant([set]); pop('tools', 'A set of 5 tools!', '#ffd35a'); }
     else { const c = Math.round(rnd(SACK.coins[0], SACK.coins[1])); G.coins += c; pop('coins', `+${c} coins!`, '#ffe27a'); }
     const seeds = SACK.guaranteedSeeds + (Math.random() < SACK.seedChance ? 1 : 0);
-    addSeeds(seeds); setTimeout(() => { if (G.vfx) G.vfx.push({ kind:'loot', item:'seed', x:m.x + 30, y:y - 20, t:0, dur:1.4 }); addFloat(`+${seeds} seed${seeds > 1 ? 's' : ''}!`, m.x, y - m.r - 70, '#fff3c8', 18, 1.5); }, 350);
+    if (seeds > 0) addSeeds(seeds); if (seeds > 0) setTimeout(() => { if (G.vfx) G.vfx.push({ kind:'loot', item:'seed', x:m.x + 30, y:y - 20, t:0, dur:1.4 }); addFloat(`+${seeds} seed${seeds > 1 ? 's' : ''}!`, m.x, y - m.r - 70, '#fff3c8', 18, 1.5); }, 350);
     return;
   }
   if (reward === 'boss'){
@@ -115,7 +118,7 @@ function lootOnKill(m, reward, y){
     return;   // the boss chest is given once the boss is truly down (see kill)
   }
   // normal nights only: boss nights give their own chest (owner)
-  if (!G.chestDropped && !(G.def && G.def.boss) && Math.random() < CHEST_KILL_CHANCE){ G.chestDropped = true; addChest('normal'); pop('chest', 'Treasure chest!', '#ffd35a'); }
+  if (!G.chestDropped && !(G.def && G.def.boss) && Math.random() < CHEST_KILL_CHANCE){ G.chestDropped = true; dropChest(m, y); addFloat('Treasure chest! Tap it', m.x, y - m.r - 44, '#ffd35a', 19, 1.5); }
 }
 export function kill(m){
   if (m.dead) return;
@@ -192,6 +195,8 @@ export function knockback(m){
   SFX.knock();
 }
 
+/** A launched pumpkin's hit power: Turquoise pairs half, Brown by size (small ×0.5, medium ×1, big ×2). Used for monsters and castle walls. */
+export function pumpkinPower(pr){ return POWER[pr.lv - 1] * (pr.type === TURQUOISE && pr.grp && pr.grp.small ? TURQ_FRAC : pr.type === BROWN ? BROWN_SIZE_MULT[pr.size == null ? 1 : pr.size] : 1); }
 let hitBy = null;   // the pumpkin whose hit is being resolved (quest counters credit its kills)
 export function hitMonster(pr, m){ hitBy = pr; try { hitMonsterNow(pr, m); } finally { hitBy = null; } }
 function hitMonsterNow(pr, m){
@@ -215,7 +220,7 @@ function hitMonsterNow(pr, m){
     return;
   }
   m.lastHit = pr.type; m.lastHitLv = pr.lv;
-  const hitPower = POWER[i] * (pr.type === TURQUOISE && pr.grp && pr.grp.small ? TURQ_FRAC : pr.type === BROWN ? BROWN_SIZE_MULT[pr.size == null ? 1 : pr.size] : 1);   // Turquoise: half; Brown: by size
+  const hitPower = pumpkinPower(pr);
   damage(m, hitPower, PTYPES[pr.type].spark);
   if (pr.type === PINK){   // Pink: repairs the wall of the column it flew up
     const w = walls[pr.lane]; if (w.hp < w.max){ G.q.heal++; w.hp = Math.min(w.max, w.hp + HEAL_AMT[i]); addFloat(`Wall +${HEAL_AMT[i]}`, LANE(pr.lane), FENCE_Y - 40, '#ffb3e6', 16, 0.9); SFX.extra('heal'); for (let k = 0; k < 6; k++) spark(LANE(pr.lane), FENCE_Y - 10, '#ffb3e6', 100); }

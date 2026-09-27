@@ -41,4 +41,5 @@ export const BOSS_ITEM_SEED_PACK = { items:1, seeds:10 };    // one boss item co
 
 /** The Loot Sack: summoned by watching an ad on the level card. Two lanes wide, never chews walls, flees when its time is up. */
 export const SACK = { hpBase:10, hpPerWorld:4, stay:25, hold:0.38, sp:0.05, spawnAt:4,
-  drop:{ chest:0.50, tools:0.25, coins:0.25 }, seedChance:0.05, guaranteedSeeds:1, coins:[80, 160] };
+  drop:{ chest:0.50, tools:0.25, coins:0.25 }, seedChance:0.5, guaranteedSeeds:0,   // one seed half the time (owner, 2026-09-27; was 1 guaranteed + 5% for a second)
+   coins:[80, 160] };

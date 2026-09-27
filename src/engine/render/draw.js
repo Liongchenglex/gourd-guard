@@ -188,7 +188,8 @@ export function drawDrops(t){
     ctx.strokeStyle = 'rgba(255,220,130,.85)'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(d.x, y, 25, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(left / d.life, 0, 1)); ctx.stroke();
     const sz = CS * 0.66;
-    if (d.kind === 'weapon'){
+    if (d.kind === 'chest'){ const ic = chestIcon('normal', false, 64); ctx.drawImage(ic, d.x - 24, y - 28, 48, 54); }   // cached sprite
+    else if (d.kind === 'weapon'){
       ctx.fillStyle = '#2a1636'; ctx.beginPath(); ctx.arc(d.x, y, 20, 0, TAU); ctx.fill();
       ctx.strokeStyle = '#ffd35a'; ctx.lineWidth = 2; ctx.stroke();
       const ic = toolIcon(d.item, 36); ctx.drawImage(ic, d.x - 17, y - 17, 34, 34);

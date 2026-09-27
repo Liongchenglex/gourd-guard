@@ -8,6 +8,7 @@ import { addFloat, chunk, dropHop, spark } from './combat.js';
 import { COLS, CS, G, GX, GY, LANE, ROWS, gest, graves, grid, nextGid, setGraves, setGrid } from './state.js';
 import { clamp, shuffle } from './util.js';
 import { persist, save, lvOf } from '../save.js';
+import { addChest } from './loot.js';
 import { banner, updateHud } from '../ui/hud.js';
 
 export function newCell(c){ return { c, lit:false, gids:[], bsize:0, ox:0, oy:0, pop:0, grow:1, fly:0, wig:0, t:Math.random() * 10, age:0 }; }
@@ -244,6 +245,11 @@ export function landingNear(x, colour){
 }
 export function collectDrop(d){
   if (!d || d.dead) return false;
+  if (d.kind === 'chest'){   // a treasure chest tapped on the field (owner, 2026-09-27)
+    addChest('normal'); d.dead = true;
+    addFloat('Treasure chest!', d.x, d.y - 40, '#ffd35a', 19, 1.2); if (G.vfx) G.vfx.push({ kind:'loot', item:'chest', x:d.x, y:d.y - 10, t:0, dur:1.4 });
+    SFX.collect(); return true;
+  }
   if (d.kind === 'weapon'){
     const gear = GEAR.find(g => g.key === d.item);
     save[d.item] = Math.min(gear.max, (save[d.item] || 0) + 1); persist();

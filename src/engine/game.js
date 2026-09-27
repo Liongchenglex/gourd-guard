@@ -8,10 +8,10 @@ import { WORLDS, levelFor, typesForNight, highestOpen } from '../data/worlds/ind
 import { SFX, ensureAudio, musicStart, musicStop } from './audio.js';
 import { MUSIC } from '../data/music.js';
 import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, landingCell, landingNear, flyInto, DIRV } from './board.js';
-import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle } from './combat.js';
+import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle, pumpkinPower } from './combat.js';
 import { mS, mY, updateMonster, TILE_P, applyBulwarks, spawnSack } from './monsters.js';
 import { SACK } from '../data/economy.js';
-import { takeSack } from './loot.js';
+import { takeSack, addChest } from './loot.js';
 import { bgWorld, buildBg } from './render/sprites.js';
 import { poolKey, prebake } from './render/anim.js';
 import { atlasKey } from './render/chars.js';
@@ -117,6 +117,7 @@ export function startGame(mode, n, loadout){
 export function endGame(win){
   if (G.over) return;
   G.over = true; setGest(null); clearRentals();   // a rented power lasts one night
+  if (win) for (const d of G.drops) if (d.kind === 'chest' && !d.dead){ d.dead = true; addChest('normal'); }   // a chest still lying there when the night is won is kept
   musicStop(win ? 0.3 : 1.2);
   if (win) SFX.win(); else SFX.lose();
   setTimeout(() => showResult(win), win ? 1100 : 1000);
@@ -302,7 +303,7 @@ export function update(dt){
         if (w.dead || pr.hitWalls.has(w) || w.lane !== pr.lane || pr.y > castleY(w) + 20) continue;
         pr.hitWalls.add(w);
         const i = pr.lv - 1;
-        damageCastle(w, pr.type === 7 ? POWER[i] * 1.5 : POWER[i]);
+        damageCastle(w, pr.type === 7 ? POWER[i] * 1.5 : pumpkinPower(pr));   // Brown by size, Turquoise pairs half, as on monsters (owner bug report 2026-09-27: a big Brown did only base damage)
         if (pr.type === 7){
           ring(pr.x, castleY(w), 70, 'rgba(255,154,58,.9)'); for (let k = 0; k < 20; k++) spark(pr.x, castleY(w), '#ff9a3a', 240);
           for (const o of g.monsters.slice()) if (!o.dead && !o.hidden && o.rise <= 0 && Math.abs(o.lane - w.lane) <= 1 && Math.abs(mY(o) - castleY(w)) < CS * 1.2){ o.lastHit = 7; damage(o, POWER[i] / 2, '#ff9a3a', true); }

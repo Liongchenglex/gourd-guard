@@ -400,6 +400,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-27 | Owner: 5-20's paired quest is 14 big-Brown kills (was 5 kills in one launch, too easy). |
 | 2026-09-27 | Owner: a "freeze OR burn" quest is one or the other on a level (Ice 15 or Fire 15), never both; the 3-13 and 3-17 reflection limit is 50, not 10. |
 | 2026-09-27 | Owner's quest lists in (`src/data/questTable.js` via `tools/quest_gen.mjs`): Silver in the 4-20 team became Grey; the big-Brown quest starts at 5-7 (Brown's unlock), not 4-11; must-have quests name one or two pumpkins, Deep Blue and Brown only in world 5; 3-14's wrong-colour quest counts hits on its reversed-hex monsters. Level-20 quests 2 and 3 count only together. In-night trackers replace the wall readout; the pause menu lists live quest progress. |
 | 2026-09-27 | Owner: stars come from three quests per level (quest 1 always "Finish the night"), shown on a Quests tab on the level card from 1-3 with a short tutorial; 1-1 and 1-2 give three stars. The result card lists quests and no longer reports wall health. Quests 2 and 3 are stand-ins until the owner's quest list arrives. |

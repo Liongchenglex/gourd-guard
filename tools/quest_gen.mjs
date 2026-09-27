@@ -65,7 +65,7 @@ function fixed(d){
     2: [q('noTools', l), ['team', ['green', 'pink', 'fire', 'white']]],
     3: [q('wallMin', l), ['team', ['turquoise', 'purple', 'white', 'ice']]],
     4: [q('castlesAll', l), ['team', ['black', 'fire', 'grey', 'ice']]],
-    5: [['oneLaunch', 5], ['team', ['blue', 'brown', 'turquoise', 'pink']]],
+    5: [['brownBig', 14], ['team', ['blue', 'brown', 'turquoise', 'pink']]],   // owner: 14 big-Brown kills (was 5 kills in one launch, too easy)
   }[w];
   if (l === 10) return {
     1: [q('noTools', l), q('wallMin', l)], 2: [q('noTools', l), q('wallMin', l)], 3: [['heal', 15], q('noTools', l)],

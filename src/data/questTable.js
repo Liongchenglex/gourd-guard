@@ -15,7 +15,7 @@ export const QUEST_TABLE = {
   '4-10': [['castlesAll'],['noTools']],
   '4-20': [['castlesAll'],['team',['black','fire','grey','ice']]],
   '5-10': [['noTools'],['wallAvg',70]],
-  '5-20': [['oneLaunch',5],['team',['blue','brown','turquoise','pink']]],
+  '5-20': [['brownBig',14],['team',['blue','brown','turquoise','pink']]],
   '1-3': [['noTouch','ghoul'],['wallMin',55]],
   '1-4': [['oneLaunch',2],['noTools']],
   '1-5': [['noTouch','ghoul'],['wallMin',55]],

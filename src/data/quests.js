@@ -49,7 +49,7 @@ export const QUEST_TYPES = {
   castlesAll:{ text: () => 'Destroy every castle wall', short:'Castle walls left', check: s => ({ done:s.castlesLeft === 0, txt:`${s.castlesLeft}` }) },
   pierce:    { text: p => `Pierce ${p} monsters with Grey`, short:'Grey pierces', check: (s, p) => ({ done:s.q.pierce >= p, txt:`${Math.min(s.q.pierce, p)}/${p}` }) },
   brownBig:  { text: p => `Defeat ${p} monsters with a big Brown pumpkin`, short:'Big Brown kills', check: (s, p) => ({ done:s.q.brown >= p, txt:`${Math.min(s.q.brown, p)}/${p}` }) },
-  must:      { text: ks => `Bring ${list(ks)} in your team`, short:'Team', check: (s, ks) => { const ok = ks.every(k => s.keys.includes(k)); return { done:ok, failed:!ok, txt:ok ? '✓' : '✗' }; } },
+  must:      { text: ks => `Win with ${list(ks)} in your team`, short:'Team', check: (s, ks) => { const ok = ks.every(k => s.keys.includes(k)); return { done:ok, failed:!ok, txt:ok ? '✓' : '✗' }; } },
   team:      { text: ks => `Win with a team of ${list(ks)} (plus one more of any colour)`, short:'Team', check: (s, ks) => { const ok = ks.every(k => s.keys.includes(k)) && s.keys.length <= ks.length + 1; return { done:ok, failed:!ok, txt:ok ? '✓' : '✗' }; } },
 };
 

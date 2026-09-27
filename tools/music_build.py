@@ -11,7 +11,7 @@ SRC, ENC = ROOT / 'assets/music', ROOT / 'assets/music/enc'
 #   menu: the previous lobby track (first draft at 85% tempo, low-passed, 96 bpm, B minor) up to its phrase end at 0:50.5, then a
 #         0.3 s crossfade into the journey-3 clarinet slowed to the same 96 bpm (atempo 0.857, pitch kept, same key), low-passed
 #         3.8 kHz, -3 dB; about 131 s, looping with a 1.5 s fade. The first cut crossfaded 4 s at 0:44 between 96 and 112 bpm: a stumbling beat.; play (endless): the clarinet world-1 track.
-TRACKS = { 'play': 'w1_patch_clarinet.mp3', 'w1': 'w1_patch_clarinet.mp3', 'w2': 'w2_hollow_harp.mp3', 'w3': 'w3_witchwood_duet.mp3', 'w4': 'w4_keep_bassoon.mp3', 'w5': 'w5_marsh_underwater_harp.mp3', 'boss': 'boss_upright_rising.mp3', 'menu': 'menu_to_staccato.mp3' }
+TRACKS = { 'play': 'w1_patch_clarinet.mp3', 'w1': 'w1_patch_clarinet.mp3', 'w2': 'w2_hollow_harp.mp3', 'w3': 'w3_witchwood_duet.mp3', 'w4': 'w4_keep_bassoon.mp3', 'w5': 'w5_marsh_underwater_harp.mp3', 'boss': 'boss_upright_rising.mp3', 'menu': 'menu_lobby.mp3' }   # back on the original lobby until the owner's new lobby piece arrives (menu_to_staccato.mp3 kept as a record)
 def main():
     ENC.mkdir(exist_ok=True); uris, keys = {}, {}
     for key, name in TRACKS.items():

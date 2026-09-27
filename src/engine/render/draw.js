@@ -398,9 +398,14 @@ export function drawCell(r, c, cell, t, hg){
     ctx.beginPath(); ctx.arc(x, y + 2, CS * 0.42, 0, TAU); ctx.stroke();
     ctx.globalCompositeOperation = 'source-over';
   }
+  // idle life (owner, 2026-09-27): every pumpkin breathes and sways on its own rhythm; lit ones bounce a little livelier
+  const ph = (r * 7 + c * 13) * .37, br = Math.sin(t * (cell.lit ? 3.4 : 2.1) + ph), hop = Math.max(0, Math.sin(t * .7 + ph * 2.3)) ** 24;
+  const sx = 1 + br * .025, sy = 1 - br * .03 - hop * .06, rot = Math.sin(t * 1.3 + ph * 1.7) * (cell.lit ? .05 : .035);
   const sz = CS * s;
   if (bsz === 2){ const gg = ctx.createRadialGradient(x, y, CS * 0.2, x, y, CS * 0.7); gg.addColorStop(0, 'rgba(255,190,90,.55)'); gg.addColorStop(1, 'rgba(255,190,90,0)'); ctx.fillStyle = gg; ctx.fillRect(x - CS * 0.7, y - CS * 0.7, CS * 1.4, CS * 1.4); }   // big brown: ripe glow
-  ctx.drawImage(sprites[cell.c][cell.lit ? 1 : 0], x - sz / 2, y - sz / 2, sz, sz);
+  ctx.save(); ctx.translate(x, y + sz * .38 - hop * 7); ctx.rotate(rot); ctx.scale(sx, sy);   // pivot at the base so the squash sits on the ground
+  ctx.drawImage(sprites[cell.c][cell.lit ? 1 : 0], -sz / 2, -sz * .88, sz, sz);
+  ctx.restore();
   if (bsz === 0){ ctx.fillStyle = '#7fd05a'; ell(ctx, x + CS * 0.12, y - CS * 0.3, 6, 3, -0.6); ell(ctx, x + CS * 0.2, y - CS * 0.36, 5, 2.5, 0.5); }   // small brown: a sprout
   if (cell.lit && cell.bsize >= 5){
     ctx.fillStyle = '#ffe27a'; ctx.strokeStyle = 'rgba(60,30,0,.7)'; ctx.lineWidth = 1.5;

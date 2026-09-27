@@ -34,7 +34,8 @@ function starfish(g, x, y, r = 5){ g.save(); g.translate(x, y); S.part(g, g2 => 
 
 // ---------- pumpkin ----------
 /** cols: a palette for the whole pumpkin, or an array of five rib palettes (rainbow). */
-export function pumpkin(g, cols, lit, R = 40){
+/** face: optional (g, R, pal, lit) that replaces the standard face, used by skins (owner: skins change the face, costumes do not). */
+export function pumpkin(g, cols, lit, R = 40, face = null){
   const ribs = [[-.66, .36, .72], [.62, .4, .74], [-.34, .46, .8], [.3, .48, .82], [-.02, .5, .84]];
   const rainbow = Array.isArray(cols), c = rainbow ? cols[4] : cols;
   if (lit){ const gl = g.createRadialGradient(0, 0, R * .5, 0, 0, R * 1.6); gl.addColorStop(0, 'rgba(255,190,60,.45)'); gl.addColorStop(1, 'rgba(255,190,60,0)'); g.fillStyle = gl; g.fillRect(-R * 1.7, -R * 1.7, R * 3.4, R * 3.4); }
@@ -53,6 +54,7 @@ export function pumpkin(g, cols, lit, R = 40){
   S.ln(g, [[-R * .18, -R * .86], [-R * .5, -R * .92]], LEAF, .8, .6);
   g.restore();
   if (rainbow){ g.fillStyle = 'rgba(255,255,255,.75)'; for (const [sx, sy, s] of [[-.45, -.3, .09], [.4, .25, .07], [.1, -.45, .06]]){ ell(g, sx * R, sy * R, s * R, s * R * .35); g.fill(); ell(g, sx * R, sy * R, s * R * .35, s * R); g.fill(); } }
+  if (face){ face(g, R, c, lit); return; }
   const ey = -R * .1, ex = R * .33;
   if (lit){
     g.save(); g.shadowColor = '#ffb020'; g.shadowBlur = 14;

@@ -37,18 +37,14 @@ function brushStem(g, R, P){
   g.restore();
 }
 const PALETTES = [
-  { key:'orange', name:'Classic orange', rec:true, base:'#ee8a26', paints:['#2f6fe0', '#ffffff', '#e8418c', '#7ad04a'], face:'green',
-    why:'The only orange pumpkin in the set, so it can never be mistaken for another type. Reads as a real jack-o’-lantern that met a paint bucket. Recommended.' },
-  { key:'canvas', name:'Artist canvas', base:'#efe3c8', paints:['#e8413c', '#2f6fe0', '#ffc83a', '#2fb86a'], face:'white',
-    why:'Primary colours on raw canvas: the most "painter" look, but the cream base sits close to the White pumpkin in a busy patch.' },
-  { key:'neon', name:'Glow paint', base:'#2d2638', paints:['#ff4fa8', '#b6ff4a', '#35e0ff', '#ffe14a'], face:'black',
-    why:'Neon paint on a dark rind, very Halloween and striking lit, but the dark base can read as the Black pumpkin when unlit.' },
-  { key:'pastel', name:'Pastel', base:'#c9b6f0', paints:['#7fe0c3', '#ffb59a', '#fff0a0', '#8ec5ff'], face:'purple',
-    why:'Soft and cute, but the lilac base drifts toward Purple and Pink at small size.' },
+  { key:'pastel', name:'Paint pumpkin, pastel', rec:true, base:'#c9b6f0', paints:['#7fe0c3', '#ffb59a', '#fff0a0', '#8ec5ff'], face:'purple',
+    why:'The chosen look (owner, 2026-09-27): a soft lilac rind with big mint, peach, butter and sky-blue paint patches, and a normal pumpkin stem. Its trail is pastel paint drops and its hit throws the patches out as splats.' },
+  { key:'brushskin', name:'Future skin: paintbrush stem', brush:true, base:'#c9b6f0', paints:['#7fe0c3', '#ffb59a', '#fff0a0', '#8ec5ff'], face:'purple',
+    why:'Kept for later as a skin: the same pumpkin with a paintbrush for a stem, its bristle tip dipped in paint.' },
 ];
 const bake = (w, h, fn) => { const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2; const g = c.getContext('2d'); g.scale(2, 2); fn(g); return c; };
 const faceOf = P => { const f = faceFor(P.face); return (g, R, c, lit) => { paintPatches(g, R, P); f(g, R, c, lit); }; };
-const icon = (P, R, lit) => bake(R * 3.4, R * 3.6, g => { g.translate(R * 1.7, R * 2.0); pumpkin(g, pal(P.base), lit, R, faceOf(P)); brushStem(g, R, P); });
+const icon = (P, R, lit) => bake(R * 3.4, R * 3.6, g => { g.translate(R * 1.7, R * 2.0); pumpkin(g, pal(P.base), lit, R, faceOf(P)); if (P.brush) brushStem(g, R, P); });   // the pumpkin keeps its normal stem; the brush stem is saved for a skin
 function trail(g, x, y, R, t, P){ const Rr = rng(4); for (let i = 0; i < 16; i++){ const f = (Rr() + t * 2.4) % 1, px = x + (Rr() - .5) * R * 1.6 * (1 - f * .5), py = y + 8 + f * 90, s = (1 - f) * (3 + Rr() * 4); g.fillStyle = rgba(P.paints[i % 4], 1 - f); g.beginPath(); g.ellipse(px, py, s, s * 1.3, 0, 0, TAU); g.fill(); } }
 function hit(g, t, P){ const R = rng(21), st = Math.min(1, t * 4), fade = t < .6 ? 1 : 1 - (t - .6) / .4;
   PATCHES.slice(0, 3).forEach((pts, i) => { g.save(); g.globalAlpha = fade * .9; g.translate([0, -26, 24][i], [2, 18, 14][i]); g.scale(st * [34, 18, 16][i], st * [30, 16, 14][i]); smooth(g, pts.map(([x, y]) => [x - .2, y - .2]), 1); g.fillStyle = P.paints[i]; g.fill(); g.restore(); });
@@ -56,7 +52,7 @@ function hit(g, t, P){ const R = rng(21), st = Math.min(1, t * 4), fade = t < .6
 const W = 340, H = 300;
 function card(P){
   const el = document.createElement('article'); el.className = 'card' + (P.rec ? ' rec' : '');
-  el.innerHTML = `${P.rec ? '<div class="tag">Recommended</div>' : '<div class="tag dim">Option</div>'}<h3>${P.name}</h3><div class="sw">${[P.base, ...P.paints].map((c, i) => `<i style="background:${c}" title="${c}"></i>${i === 0 ? '<b>+</b>' : ''}`).join('')}</div>`;
+  el.innerHTML = `${P.rec ? '<div class="tag">Chosen</div>' : '<div class="tag dim">Skin idea</div>'}<h3>${P.name}</h3><div class="sw">${[P.base, ...P.paints].map((c, i) => `<i style="background:${c}" title="${c}"></i>${i === 0 ? '<b>+</b>' : ''}`).join('')}</div>`;
   const cv = document.createElement('canvas'); cv.width = W * 2; cv.height = H * 2; cv.style.width = W + 'px'; cv.style.maxWidth = '100%'; el.appendChild(cv);
   el.insertAdjacentHTML('beforeend', `<p>${P.why}</p><div class="small"><span>In the patch</span><span>Lit</span><span>Shop icon</span></div><div class="mixLabel">In a mixed patch, unlit (can you spot it?)</div>`);
   const row = el.querySelector('.small'); [[icon(P, 22, false), 74], [icon(P, 22, true), 74], [icon(P, 16, true), 54]].forEach(([c, w], i) => { c.style.width = w + 'px'; row.children[i].prepend(c); });

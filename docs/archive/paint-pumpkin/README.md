@@ -40,3 +40,8 @@ In `sketch/`. The owner sketched the pumpkin they have in mind: a few **big, smo
 | Pastel | `#c9b6f0` + mint, peach, butter, sky | Cute, but drifts toward Purple and Pink |
 
 Patches are smooth closed curves (`PATCHES` in R units) clipped to the rind, each with a wet gloss along its upper edge and a darker paint rim, plus one drip off the big blob. Its hit throws the patch shapes out as splats; its trail is paint drops in its own colours. Rebuild with the same esbuild command using `sketch/entry.js` and `sketch/head.html`. Published preview: https://claude.ai/artifact/Kae9RoqGsjCETqwg54bonB
+
+### Decision (owner, 2026-09-27)
+- **The Paint pumpkin uses the Pastel palette** (lilac `#c9b6f0` rind; mint `#7fe0c3`, peach `#ffb59a`, butter `#fff0a0`, sky `#8ec5ff` patches) with a **normal pumpkin stem**. `sketch/entry.js` now shows only this version plus the skin idea below.
+- **The paintbrush stem becomes a future skin** for this pumpkin (`brushStem()` in `sketch/entry.js`, drawn when a palette has `brush:true`).
+- Watch-out for the build: the butter and sky-blue patches are faint on the lilac rind. If they get lost at game size, deepen those two a step (for example butter `#ffe27a`, sky `#6aaeff`) rather than changing the base. The lilac base also sits nearest Purple and Pink, so give the unlit sprite its patches at full strength.

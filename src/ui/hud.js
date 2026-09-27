@@ -5,7 +5,9 @@ import { $, clamp } from '../engine/util.js';
 import { wallFrac } from '../engine/walls.js';
 import { save } from '../save.js';
 import { toolIcon } from '../engine/render/tools.js';
+import { QUEST_START, questsFor, questLive, questShort } from '../data/quests.js';
 let trayDrawn = false;
+let qNext = -1, qHtml = '', qFor = null;   // quest trackers, rebuilt 4 times a second rather than every frame
 
 export function banner(big, sub, dur){
   $('#bnBig').textContent = big; $('#bnSub').textContent = sub || '';
@@ -29,14 +31,23 @@ export function updateHud(force){
   const tools = toolsForNight(G.mode === 'story' ? Math.max(G.n, highestOpen()) : highestOpen());
   if (!trayDrawn){ trayDrawn = true; for (const [btn, key] of [['#rpBtn', 'repair'], ['#fwBtn', 'fw'], ['#gbBtn', 'buster'], ['#lnBtn', 'lantern'], ['#lmBtn', 'mine'], ['#bmBtn', 'bomb'], ['#scBtn', 'scarecrow']]){ const cv = $(btn).querySelector('canvas.ti'); if (!cv) continue; const ic = toolIcon(key, 40); cv.width = ic.width; cv.height = ic.height; cv.getContext('2d').drawImage(ic, 0, 0); } }
   const seeds = save.seeds || 0;
-  const sig = [wf, coins, seeds, Math.round(prog * 100), label, save.fw, save.repair, save.buster, save.lantern, save.mine, save.bomb, save.scarecrow, G.aim, tools.join(','), Math.round(G.fogClear || 0)].join('|');
+  const questOn = G.mode === 'story' && G.n >= QUEST_START;   // quests replace the wall readout (owner, 2026-09-27)
+  if (questOn && (force || G.t >= qNext || qFor !== G)){
+    qNext = G.t + 0.25; qFor = G;
+    qHtml = questsFor(G.def).slice(1).map(q => { const L = questLive(q); return `<span class="qt${L.done ? ' ok' : L.failed ? ' bad' : ''}"><b>${L.txt}</b> ${questShort(q)}</span>`; }).join('');
+  }
+  const sig = [questOn ? qHtml : '', wf, coins, seeds, Math.round(prog * 100), label, save.fw, save.repair, save.buster, save.lantern, save.mine, save.bomb, save.scarecrow, G.aim, tools.join(','), Math.round(G.fogClear || 0)].join('|');
   if (sig === hudSig && !force) return;
   const coinsChanged = hudSig && hudSig.split('|')[1] !== String(coins);
   hudSig = sig;
   const wEl = $('#walls');
-  wEl.innerHTML = `${wf}%<small>walls</small>`;
-  wEl.style.color = wf > 60 ? '#b6f07a' : wf > 30 ? '#ffc14a' : '#ff5a4d';
-  wEl.setAttribute('aria-label', `Walls at ${wf}% health`);
+  wEl.classList.toggle('quests', questOn);
+  if (questOn){ wEl.innerHTML = qHtml; wEl.style.color = ''; wEl.setAttribute('aria-label', 'Quest progress: ' + wEl.textContent); }
+  else {
+    wEl.innerHTML = `${wf}%<small>walls</small>`;
+    wEl.style.color = wf > 60 ? '#b6f07a' : wf > 30 ? '#ffc14a' : '#ff5a4d';
+    wEl.setAttribute('aria-label', `Walls at ${wf}% health`);
+  }
   $('#lvlLabel').textContent = label;
   $('#prog').style.width = (clamp(prog, 0, 1) * 100).toFixed(1) + '%';
   $('#coinTxt').textContent = coins.toLocaleString(); $('#seedTxt').textContent = seeds.toLocaleString();

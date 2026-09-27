@@ -358,7 +358,7 @@ export function updateMonster(m, dt){
   let np = Math.min(m.p + sp * dt, aheadLimit(m));
   if (m.chewing && !m.chewing.dead) np = Math.min(np, m.chewing.p);   // held at a scarecrow
   if (np > m.p) m.p = np;
-  if (m.p >= 1){ m.p = 1; m.eating = true; }
+  if (m.p >= 1){ m.p = 1; m.eating = true; if (G.q) G.q.touched[m.type] = true; }   // quests: "do not let a ghoul reach the fence"
 }
 
 /** The Poltergeist (world 2 boss): drifts between neighbouring lanes, swaps two pumpkins every few seconds; form 2 also recolours one. */

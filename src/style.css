@@ -507,3 +507,13 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .starProg .bigStar{ grid-row:span 2; font-size:calc(var(--u)*26px); color:#ffd36a; text-shadow:0 0 calc(var(--u)*8px) rgba(255,211,106,.6); line-height:1; }
 .starProg i{ background:linear-gradient(90deg, #ffd36a calc(var(--f) * 100%), rgba(255,255,255,.12) 0) !important; }
 .dInfo .dLore{ margin:calc(var(--u)*2px) 0 0; padding-left:calc(var(--u)*10px); border-left:2px solid rgba(255,193,74,.45); font-style:italic; font-size:calc(var(--u)*13px); line-height:1.4; color:var(--ink); opacity:.9; text-align:left; }
+
+/* In-night quest trackers where the wall readout was (owner, 2026-09-27) */
+#walls.quests{ text-align:left; display:flex; flex-direction:column; gap:calc(var(--u)*2px); max-width:calc(var(--u)*132px); }
+#walls .qt{ display:block; font-size:calc(var(--u)*10.5px); font-weight:500; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.15; }
+#walls .qt b{ font-size:calc(var(--u)*14px); font-weight:700; color:var(--ink); }
+#walls .qt.ok b{ color:#b6f07a; } #walls .qt.bad b{ color:#ff5a4d; } #walls .qt.bad{ text-decoration:line-through; text-decoration-color:rgba(255,90,77,.6); }
+.qRow .qTag.bad{ color:#fff; background:#c8413a; }
+.qPair{ display:grid; gap:calc(var(--u)*6px); padding:calc(var(--u)*6px); border:2px dashed rgba(255,193,74,.7); border-radius:calc(var(--u)*16px); background:rgba(255,193,74,.06); }
+.qPairHd{ font-size:calc(var(--u)*12px); font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--candle); text-align:center; }
+#pQuests{ width:100%; margin:0 0 calc(var(--u)*4px); }

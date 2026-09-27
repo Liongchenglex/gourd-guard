@@ -400,6 +400,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-09-27 | Owner's quest lists in (`src/data/questTable.js` via `tools/quest_gen.mjs`): Silver in the 4-20 team became Grey; the big-Brown quest starts at 5-7 (Brown's unlock), not 4-11; must-have quests name one or two pumpkins, Deep Blue and Brown only in world 5; 3-14's wrong-colour quest counts hits on its reversed-hex monsters. Level-20 quests 2 and 3 count only together. In-night trackers replace the wall readout; the pause menu lists live quest progress. |
 | 2026-09-27 | Owner: stars come from three quests per level (quest 1 always "Finish the night"), shown on a Quests tab on the level card from 1-3 with a short tutorial; 1-1 and 1-2 give three stars. The result card lists quests and no longer reports wall health. Quests 2 and 3 are stand-ins until the owner's quest list arrives. |
 | 2026-09-26 | Owner: boss health cut about 25% in form 1 and 15% in form 2 (Gravekeeper 15/30, Poltergeist 20/36, Hexwitch 22/40, Vampire Count 24/42, Twin Tides 14/24 each). |
 | 2026-09-26 | Owner: level 10 of every world spawns 35% more slowly (the bot lost every level-10 fight at the expected upgrades). |

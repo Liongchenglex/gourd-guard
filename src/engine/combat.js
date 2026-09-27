@@ -16,7 +16,7 @@ import { banner } from '../ui/hud.js';
 export function launchGroup(ref){
   if (!ref || !ref.lit || !G || G.over) return;
   const gid = primaryGid(ref), grp = G.groups[gid];
-  const bunch = { spawned:false, small:!!grp && grp.size < 3 };   // shared by every projectile of this launch (Purple's one-per-bunch spawn; Turquoise pairs are half power)
+  const bunch = { spawned:false, small:!!grp && grp.size < 3, kills:0 };   // shared by every projectile of this launch (Purple's one-per-bunch spawn; Turquoise pairs are half power)
   if (!grp) return;
   const cells = groupCells(gid);
   if (!cells.length) return;
@@ -29,7 +29,7 @@ export function launchGroup(ref){
   SFX.launch(cells.length);
   const skin = save.wardrobe && save.wardrobe.skins[type]; if (skin) SFX.skinLaunch(skin);   // a skin's launch accent, once per flick (owner, 2026-09-27)
   G.throws += cells.length;
-  if (cells.length >= 5) G.bigBunches = (G.bigBunches || 0) + 1;   // for the "bunches of 5" quest
+  if (cells.length >= 5) G.q.big++;   // quests: bunches of 5
   G.idle = 0; G.hint = null;
   resolveMatches();
 }
@@ -41,10 +41,12 @@ export function damage(m, amt, color, small){
     return;
   }
   if (m.colourLock != null && m.lastHit >= 0 && m.lastHit !== m.colourLock){   // chameleon: wrong colour
+    G.q.wrong++;
     m.flash = 0.1; addFloat('Wrong colour', m.x, mY(m) - m.r * mS(m) - 14, PTYPES[m.colourLock].light, 15, 0.7); SFX.monsterHit(m.type, true);
     return;
   }
   if (m.colourImmune != null && m.lastHit === m.colourImmune){   // reverse chameleon: its own colour
+    G.q.wrong++;
     m.flash = 0.1; addFloat('Immune', m.x, mY(m) - m.r * mS(m) - 14, PTYPES[m.colourImmune].light, 15, 0.7); SFX.monsterHit(m.type, true);
     return;
   }
@@ -151,6 +153,7 @@ export function kill(m){
     return;
   }
   m.dead = true;
+  if (hitBy){ const b = hitBy.grp; if (b){ b.kills++; if (b.kills > G.q.best) G.q.best = b.kills; } if (hitBy.type === BROWN && hitBy.size === 2) G.q.brown++; }   // quests: kills in one launch, big Brown kills
   G.kills++; if (!m.minion) G.resolved++;
   G.score += m.pts;
   const reward = m.type === 'sack' ? 'sack' : m.type === 'boss' ? 'boss' : m.lastHit === YELLOW ? 'gold' : rollReward();
@@ -189,7 +192,9 @@ export function knockback(m){
   SFX.knock();
 }
 
-export function hitMonster(pr, m){
+let hitBy = null;   // the pumpkin whose hit is being resolved (quest counters credit its kills)
+export function hitMonster(pr, m){ hitBy = pr; try { hitMonsterNow(pr, m); } finally { hitBy = null; } }
+function hitMonsterNow(pr, m){
   pr.hit.add(m);
   const i = pr.lv - 1, y = mY(m);
   const wc = save.wardrobe && save.wardrobe.costume;   // the worn costume's hit effect (visual only), capped so a big bunch stays cheap
@@ -197,12 +202,14 @@ export function hitMonster(pr, m){
   for (let k = 0; k < 10; k++) chunk(pr.x, pr.y, pr.vis === RAINBOW ? '#f0a020' : PTYPES[pr.vis].base, 200);
   let kb = pr.guar || (pr.type === PINK ? Math.random() < KB_PINK[i] : pr.type === BROWN ? Math.random() < BROWN_KB[i] : (pr.type <= 1 || pr.type >= 4) && Math.random() < KB_CHANCE[i]);
   if (pr.type === 2){
+    G.q.chill++;
     if (m.type !== 'boss' && Math.random() < FREEZE_P[i]){ m.frozenT = Math.max(m.frozenT, SLOW_T[i]); addFloat('Frozen!', m.x, y - m.r - 34, '#bfefff', 18, 0.9); SFX.freeze(); }
     else m.slowT = Math.max(m.slowT, SLOW_T[i]);
     ring(m.x, y, 42, 'rgba(180,240,255,.9)');
   }
-  if (pr.type === 3){ m.burnLeft = Math.max(m.burnLeft, BURN_N[i]); m.burnAmt = Math.max(m.burnAmt, BURN_AMT[i]); m.burnTick = BURN_EVERY; }
+  if (pr.type === 3){ G.q.burn++; m.burnLeft = Math.max(m.burnLeft, BURN_N[i]); m.burnAmt = Math.max(m.burnAmt, BURN_AMT[i]); m.burnTick = BURN_EVERY; }
   if (m.type === 'mirror' && m.reflecting){   // bounces the pumpkin back down its lane into the wall
+    G.q.refl++;
     G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:TYPES.mirror.boltSp, dmg:POWER[i], dead:false, mirror:true, vis:pr.vis });
     addFloat('Reflected!', m.x, y - m.r - 24, '#e8f4ff', 16, 0.9); ring(m.x, y, 34, 'rgba(232,244,255,.9)'); SFX.monsterAct('mirror', 'reflect');
     return;
@@ -211,7 +218,7 @@ export function hitMonster(pr, m){
   const hitPower = POWER[i] * (pr.type === TURQUOISE && pr.grp && pr.grp.small ? TURQ_FRAC : pr.type === BROWN ? BROWN_SIZE_MULT[pr.size == null ? 1 : pr.size] : 1);   // Turquoise: half; Brown: by size
   damage(m, hitPower, PTYPES[pr.type].spark);
   if (pr.type === PINK){   // Pink: repairs the wall of the column it flew up
-    const w = walls[pr.lane]; if (w.hp < w.max){ w.hp = Math.min(w.max, w.hp + HEAL_AMT[i]); addFloat(`Wall +${HEAL_AMT[i]}`, LANE(pr.lane), FENCE_Y - 40, '#ffb3e6', 16, 0.9); SFX.extra('heal'); for (let k = 0; k < 6; k++) spark(LANE(pr.lane), FENCE_Y - 10, '#ffb3e6', 100); }
+    const w = walls[pr.lane]; if (w.hp < w.max){ G.q.heal++; w.hp = Math.min(w.max, w.hp + HEAL_AMT[i]); addFloat(`Wall +${HEAL_AMT[i]}`, LANE(pr.lane), FENCE_Y - 40, '#ffb3e6', 16, 0.9); SFX.extra('heal'); for (let k = 0; k < 6; k++) spark(LANE(pr.lane), FENCE_Y - 10, '#ffb3e6', 100); }
   }
   if (pr.type === 5 && pr.grp && !pr.grp.spawned){   // Purple: every launched bunch spawns one pumpkin on its first hit
     pr.grp.spawned = true; purpleSpawn(m, y, i);
@@ -238,7 +245,7 @@ export function hitMonster(pr, m){
   if (m.dead && pr.type === 5 && Math.random() < SPAWN_P[i]) purpleSpawn(m, y, i);   // Purple: extra spawn per kill
   SFX.pumpkinHit(pr.type, pr.size, pr.vis === RAINBOW);   // pumpkin layer
   if (m.type === 'boss') SFX.bossSfx(m.kind, 'hit'); else SFX.monsterHit(m.type);   // monster layer
-  if (pr.type === 4 && pr.hit.size > 1) SFX.extra('pierce');
+  if (pr.type === 4 && pr.hit.size > 1){ G.q.pierce++; SFX.extra('pierce'); }
 }
 
 // ---------- Effects ----------

@@ -3,6 +3,7 @@ import { MINTRO, TYPES, BOSS_NAMES, VARIANTS } from '../data/monsters.js';
 import { GEAR } from '../data/shop.js';
 import { PATTERNS } from '../data/patterns.js';
 import { NTYPES, PTYPES, POWER } from '../data/pumpkins.js';
+import { newQuestCounters } from '../data/quests.js';
 import { WORLDS, levelFor, typesForNight, highestOpen } from '../data/worlds/index.js';
 import { SFX, ensureAudio, musicStart, musicStop } from './audio.js';
 import { MUSIC } from '../data/music.js';
@@ -26,7 +27,7 @@ import { SPROUT_EVERY } from '../data/rules.js';
 // ---------- Flow ----------
 
 export function makeDemo(){
-  setG({ mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], gustT:0, gustDir:null });
+  setG({ q:newQuestCounters(), mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], gustT:0, gustDir:null });
   initBoard(1, 2);
   [[4,0],[4,1],[4,2],[3,1]].forEach(([r, c]) => { if (grid[r][c]) grid[r][c].c = 0; });
   resolveMatches();
@@ -40,7 +41,7 @@ export function makeDemo(){
 /** The night's own map behind the level preview (owner): the field, walls, graves, castles, puddles, shore and fog of level n, no monsters. */
 export function makePreview(n){
   const def = levelFor(n);
-  setG({ mode:'demo', n, def, world:def.world, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], gustT:0, gustDir:null, sproutT:0, aim:null, over:false, spawned:0, bossSpawned:false, hint:null, hintT:0 });
+  setG({ q:newQuestCounters(), mode:'demo', n, def, world:def.world, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], gustT:0, gustDir:null, sproutT:0, aim:null, over:false, spawned:0, bossSpawned:false, hint:null, hintT:0 });
   if (def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
   else if (def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def.puddles) placePuddles(def.puddles);
@@ -73,7 +74,7 @@ export function startGame(mode, n, loadout){
   ensureAudio();
   const def = mode === 'story' ? levelFor(n) : null;
   setG({
-    mode, n:n || 1, def, world:def ? def.world : 0, loadout:loadout.slice(),
+    mode, n:n || 1, def, world:def ? def.world : 0, loadout:loadout.slice(), q:newQuestCounters(),
     coins:0, score:0, kills:0, resolved:0, throws:0, missed:0,
     total:def ? def.total + (def.boss ? 1 : 0) : 0,
     spawned:0, spawnTimer:2.6, bossSpawned:false, bossTimer:100, diff:1, sproutT:0,
@@ -123,7 +124,7 @@ export function endGame(win){
 
 export function useFirework(){
   if (state !== 'play' || G.over || save.fw <= 0) return;
-  save.fw--; persist(); G.toolsUsed = (G.toolsUsed || 0) + 1;
+  save.fw--; persist(); G.q.tools++;
   SFX.tool('fw'); G.shake = 1; G.flash = 1;
   for (let i = 0; i < 5; i++){ const x = rnd(60, W - 60), y = rnd(FIELD_TOP, FIELD_TOP + 160); const col = ['#ffd35a', '#ff6a3a', '#d09bff', '#aee8ff', '#a6f06a'][i]; for (let k = 0; k < 12; k++) spark(x, y, col, 260); if (G.vfx) G.vfx.push({ kind:'firework', x, y, i, col, t:-i * 0.12, dur:1.1 }); }   // rockets climb from the fence and burst (render/tools.js)
   for (const m of G.monsters.slice()) if (!m.dead && !(m.rise > 0)){ m.lastHit = -1; damage(m, 3, '#ffd35a'); }
@@ -141,7 +142,7 @@ export function useBuster(){
 }
 export function bustGrave(r, c){
   if (!graves[r][c] || save.buster <= 0) return false;
-  graves[r][c] = false; save.buster--; persist(); G.toolsUsed = (G.toolsUsed || 0) + 1;
+  graves[r][c] = false; save.buster--; persist(); G.q.tools++;
   const x = LANE(c), y = GY + r * CS + CS / 2;
   for (let i = 0; i < 18; i++) chunk(x, y, i % 2 ? '#8a8d96' : '#3b2a1c', 220);
   ring(x, y, 40, 'rgba(255,220,150,.9)');
@@ -153,7 +154,7 @@ export function bustGrave(r, c){
 export function useLantern(){
   if (state !== 'play' || G.over || save.lantern <= 0) return;
   if (!G.def || !G.def.fog.length){ addFloat('No fog here', W / 2, GY - 30, '#ffd35a', 18, 1); SFX.bad(); return; }
-  save.lantern--; persist(); G.toolsUsed = (G.toolsUsed || 0) + 1;
+  save.lantern--; persist(); G.q.tools++;
   G.fogClear = 10; G.flash = 0.4;
   for (let i = 0; i < 20; i++) spark(rnd(40, W - 40), rnd(FIELD_TOP, FENCE_Y), '#ffe27a', 120);
   if (G.vfx) G.vfx.push({ kind:'lantern', x:W / 2, y:FENCE_Y - 30, t:0, dur:1.3 });
@@ -173,7 +174,7 @@ export const fieldY = p => FIELD_TOP + p * (FIELD_BOT - FIELD_TOP);
 export function placeMine(lane, p = 0.93){   // owner: a mine goes on any tile of the field and blasts the 3×3 around it
   const tile = CS / (FIELD_BOT - FIELD_TOP);
   if (save.mine <= 0 || G.mines.some(m => m.lane === lane && Math.abs(m.p - p) < tile)){ addFloat('Mine already there', LANE(lane), fieldY(p) - 20, '#ffd35a', 16, 1); SFX.bad(); G.aim = null; updateHud(true); return false; }
-  save.mine--; persist(); G.toolsUsed = (G.toolsUsed || 0) + 1;
+  save.mine--; persist(); G.q.tools++;
   G.mines.push({ lane, p, t:0, dead:false });
   for (let i = 0; i < 10; i++) spark(LANE(lane), fieldY(p), '#ffd35a', 100);
   SFX.tool('mine'); G.aim = null; updateHud(true);
@@ -229,7 +230,7 @@ export function useScarecrow(){
 }
 export function placeScarecrow(lane){
   if (save.scarecrow <= 0 || G.scarecrows.some(s => s.lane === lane)){ addFloat('Scarecrow already there', LANE(lane), FENCE_Y - 60, '#ffd35a', 16, 1); SFX.bad(); G.aim = null; updateHud(true); return false; }
-  save.scarecrow--; persist(); G.toolsUsed = (G.toolsUsed || 0) + 1;
+  save.scarecrow--; persist(); G.q.tools++;
   const p = 0.84;
   G.scarecrows.push({ lane, p, x:LANE(lane), y:FIELD_TOP + p * (FIELD_BOT - FIELD_TOP), hp:12, maxHp:12, dead:false, age:0 });
   for (let i = 0; i < 12; i++) spark(LANE(lane), FIELD_TOP + p * (FIELD_BOT - FIELD_TOP), '#c8b060', 120);
@@ -252,7 +253,7 @@ export function useBomb(){
 }
 export function dropBomb(x, y){
   if (save.bomb <= 0) return false;
-  save.bomb--; persist(); G.toolsUsed = (G.toolsUsed || 0) + 1;
+  save.bomb--; persist(); G.q.tools++;
   const lane0 = clamp(Math.floor((x - GX) / CS), 0, COLS - 1), p0 = (y - FIELD_TOP) / (FIELD_BOT - FIELD_TOP), reach = 1.5 * TILE_P();
   G.flash = 0.6; G.shake = 1; SFX.tool('bomb');
   for (let k = 0; k < 20; k++) spark(x, y, k % 3 ? '#ffd35a' : '#ff6a3a', 320);
@@ -274,7 +275,7 @@ export function useRepair(){
 export function repairWall(lane){
   if (save.repair <= 0) return false;
   if (walls[lane].hp >= walls[lane].max){ addFloat('That wall is fine', LANE(lane), FENCE_Y - 40, '#ffd35a', 16, 1); SFX.bad(); G.aim = null; updateHud(true); return false; }
-  save.repair--; persist(); G.toolsUsed = (G.toolsUsed || 0) + 1;
+  save.repair--; persist(); G.q.tools++;
   walls[lane].hp = walls[lane].max; for (let i = 0; i < 10; i++) spark(LANE(lane), FENCE_Y - 10, '#ffe27a', 140);
   if (G.vfx) G.vfx.push({ kind:'hammer', x:LANE(lane), y:FENCE_Y - 4, t:0, dur:0.7 });
   SFX.tool('repair'); G.aim = null; updateHud(true);
@@ -322,7 +323,7 @@ export function update(dt){
       pr.dead = true;
       if (!pr.hit.size){
         const spot = pr.type === 6 ? (pr.lv >= 3 ? landingNear(pr.x, pr.vis) : landingCell(pr.x)) : null;   // White: boomerang back into the patch (level 3+: beside its colour)
-        if (spot){ flyInto(spot[0], spot[1], pr.vis, pr.x, FIELD_TOP); addFloat('Back!', pr.x, FIELD_TOP + 30, '#ffffff', 16, 0.8); SFX.extra('return'); resolveMatches(); }
+        if (spot){ G.q.boom++; flyInto(spot[0], spot[1], pr.vis, pr.x, FIELD_TOP); addFloat('Back!', pr.x, FIELD_TOP + 30, '#ffffff', 16, 0.8); SFX.extra('return'); resolveMatches(); }
         else { g.missed++; SFX.extra('miss'); }
       }
       for (let i = 0; i < 8; i++) spark(pr.x, pr.y, PTYPES[pr.vis].spark, 110);
@@ -446,12 +447,12 @@ export function continueState(){
   const alive = g.monsters.filter(m => !m.dead && !m.minion && m.type !== 'boss' && m.type !== 'sack').length;
   const remaining = alive + Math.max(0, g.def.total - g.spawned);
   const bosses = g.monsters.filter(m => !m.dead && m.type === 'boss').map(m => Math.max(1, Math.ceil(m.hp)));
-  return { n:g.n, loadout:g.loadout.slice(), remaining, bossSpawned:g.bossSpawned, bossDead:g.bossDead, bossHp:bosses };
+  return { n:g.n, loadout:g.loadout.slice(), q:JSON.parse(JSON.stringify(g.q)), remaining, bossSpawned:g.bossSpawned, bossDead:g.bossDead, bossHp:bosses };
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
 export function continueNight(c){
   startGame('story', c.n, c.loadout);
-  G.continued = true;
+  G.continued = true; if (c.q) G.q = c.q;   // quest progress carries into the continued night
   G.spawned = G.resolved = Math.max(0, G.def.total - c.remaining);   // the progress bar picks up where the lost night left off
   if (c.bossSpawned){ G.bossDead = c.bossDead; G.bossHp = c.bossHp.slice(); if (c.bossDead) G.bossSpawned = true; }
   banner('Night continues', `${c.remaining} monster${c.remaining === 1 ? '' : 's'} left${c.bossSpawned && !c.bossDead ? ', and the boss is still hurt' : ''}. Hold the walls!`, 3);

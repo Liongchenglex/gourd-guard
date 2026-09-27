@@ -29,7 +29,7 @@ import { $, clamp } from '../engine/util.js';
 import { wallFrac } from '../engine/walls.js';
 import { lvOf, persist, save } from '../save.js';
 import { setHudSig, updateHud } from './hud.js';
-import { QUEST_START, questsFor, questText, questBits, countBits, settleQuests } from '../data/quests.js';
+import { QUEST_START, questsFor, questText, questBits, countBits, settleQuests, questLive, isPair } from '../data/quests.js';
 
 export function showResult(win){
   const g = G, box = $('#rBtns'); box.innerHTML = '';
@@ -39,14 +39,14 @@ export function showResult(win){
   const wf = wallFrac();
   if (g.mode === 'story'){
     if (win){
-      const qs = settleQuests(g.n, g.def, { wallPct:Math.round(wf * 100), toolsUsed:g.toolsUsed || 0, bigBunches:g.bigBunches || 0 });   // stars now come from quests (owner, 2026-09-27)
+      const qs = settleQuests(g.n, g.def);   // stars now come from quests (owner, 2026-09-27)
       const st = countBits(qs.total), gained = countBits(qs.total) - countBits(qs.before);
       const bonus = 10 + g.n * 3 + countBits(qs.now) * 5;
       save.coins += g.coins + bonus;
       save.unlocked = Math.max(save.unlocked || 1, highestOpen());
       title = g.n === LEVELS ? 'Dawn at last' : 'Night saved';
       msg = g.n === LEVELS ? 'Every night is safe. The patch thanks you.' : g.n < QUEST_START ? 'All three stars!' : st === 3 ? (gained ? 'Every quest done: all three stars!' : 'All three stars already earned here.') : gained ? `+${gained} star${gained > 1 ? 's' : ''}. Come back for the quests you missed.` : 'No new stars this time. Try the other quests.';
-      const rq = $('#rQuests'); rq.hidden = g.n < QUEST_START; if (g.n >= QUEST_START) questRows(rq, g.def, qs.total, qs.now, qs.before);
+      const rq = $('#rQuests'); rq.hidden = g.n < QUEST_START; if (g.n >= QUEST_START) questRows(rq, g.def, qs.total, { fresh:qs.now, before:qs.before });
       const nk = ALL_LEVELS[g.n] && (ALL_LEVELS[g.n].unlockPumpkins || [])[0], nextP = nk && PTYPES.find(p => p.key === nk);
       if (nextP && g.n < LEVELS) msg += ` Next night unlocks the ${nextP.name} pumpkin.`;
       if (g.def.levelNo === 10){   // owner: beating the level-10 boss is a celebration: a world-unlock card, then back to the menu
@@ -141,6 +141,7 @@ export function setState(s){
   }
   if (s !== 'play'){ setGest(null); $('#banner').classList.remove('show'); setBannerTimer(0); }
   if (s === 'settings') syncVolumes();
+  if (s === 'pause'){ const on = G && G.mode === 'story' && G.n >= QUEST_START, pq = $('#pQuests'); pq.hidden = !on; if (on) questRows(pq, G.def, questBits(G.n), { live:true }); }   // tonight's quests with live progress (owner)
   syncSound();
   setHudSig('');
   if (s === 'play' || s === 'pause') updateHud(true);
@@ -168,13 +169,21 @@ function pvTab(which){
   $('#pvPaneMon').hidden = q; $('#pvPaneQuest').hidden = !q; $('#pvTabQuest').classList.remove('pulse');
 }
 /** Rows for a level's three quests; bits = completed, fresh = met this run (result card). */
-function questRows(box, def, bits, fresh, before = 0){
+/** Rows for a level's three quests. bits = stars earned; opts.fresh/before = met this run (result card); opts.live = progress tonight (pause menu).
+ *  Level 20 wraps quests 2 and 3 in one bracket: they only count together, in one run (owner). */
+function questRows(box, def, bits, opts = {}){
   box.innerHTML = '';
+  const pair = isPair(def); let pairBox = null;
   questsFor(def).forEach((q, i) => {
     const done = !!(bits & (1 << i)), r = document.createElement('div'); r.className = 'qRow' + (done ? ' done' : '');
     r.innerHTML = `<span class="qStar">★</span><span class="qTx"></span>`; r.querySelector('.qTx').textContent = questText(q);
-    if (fresh != null){ const tg = document.createElement('span'); tg.className = 'qTag' + (fresh & (1 << i) ? '' : ' miss'); tg.textContent = fresh & (1 << i) ? (!(before & (1 << i)) ? 'NEW ★' : 'Done') : 'Not yet'; r.appendChild(tg); }
-    box.appendChild(r);
+    const tag = (txt, cls) => { const tg = document.createElement('span'); tg.className = 'qTag' + (cls ? ' ' + cls : ''); tg.textContent = txt; r.appendChild(tg); };
+    if (opts.fresh != null){ const f = opts.fresh & (1 << i); tag(f ? (!((opts.before || 0) & (1 << i)) ? 'NEW ★' : 'Done') : 'Not yet', f ? '' : 'miss'); }
+    else if (opts.live && i > 0){ const L = questLive(q); tag(L.failed ? 'Missed' : L.done ? (L.txt && L.txt !== '✓' ? L.txt + ' ✓' : 'On track') : L.txt, L.failed ? 'bad' : L.done ? '' : 'miss'); }
+    if (pair && i > 0){
+      if (!pairBox){ pairBox = document.createElement('div'); pairBox.className = 'qPair'; pairBox.innerHTML = '<div class="qPairHd">Both in one run: 2 stars</div>'; box.appendChild(pairBox); }
+      pairBox.appendChild(r);
+    } else box.appendChild(r);
   });
 }
 function renderQuests(n, def){

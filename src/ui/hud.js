@@ -28,7 +28,8 @@ export function updateHud(force){
   const wf = Math.round(wallFrac() * 100);
   const tools = toolsForNight(G.mode === 'story' ? Math.max(G.n, highestOpen()) : highestOpen());
   if (!trayDrawn){ trayDrawn = true; for (const [btn, key] of [['#rpBtn', 'repair'], ['#fwBtn', 'fw'], ['#gbBtn', 'buster'], ['#lnBtn', 'lantern'], ['#lmBtn', 'mine'], ['#bmBtn', 'bomb'], ['#scBtn', 'scarecrow']]){ const cv = $(btn).querySelector('canvas.ti'); if (!cv) continue; const ic = toolIcon(key, 40); cv.width = ic.width; cv.height = ic.height; cv.getContext('2d').drawImage(ic, 0, 0); } }
-  const sig = [wf, coins, Math.round(prog * 100), label, save.fw, save.repair, save.buster, save.lantern, save.mine, save.bomb, save.scarecrow, G.aim, tools.join(','), Math.round(G.fogClear || 0)].join('|');
+  const seeds = save.seeds || 0;
+  const sig = [wf, coins, seeds, Math.round(prog * 100), label, save.fw, save.repair, save.buster, save.lantern, save.mine, save.bomb, save.scarecrow, G.aim, tools.join(','), Math.round(G.fogClear || 0)].join('|');
   if (sig === hudSig && !force) return;
   const coinsChanged = hudSig && hudSig.split('|')[1] !== String(coins);
   hudSig = sig;
@@ -38,7 +39,7 @@ export function updateHud(force){
   wEl.setAttribute('aria-label', `Walls at ${wf}% health`);
   $('#lvlLabel').textContent = label;
   $('#prog').style.width = (clamp(prog, 0, 1) * 100).toFixed(1) + '%';
-  $('#coinTxt').textContent = coins.toLocaleString();
+  $('#coinTxt').textContent = coins.toLocaleString(); $('#seedTxt').textContent = seeds.toLocaleString();
   $('#fwCount').textContent = save.fw; $('#fwBtn').disabled = save.fw <= 0;
   $('#rpCount').textContent = save.repair; $('#rpBtn').disabled = save.repair <= 0;
   $('#gbCount').textContent = save.buster; $('#gbBtn').disabled = save.buster <= 0; $('#gbBtn').classList.toggle('aim', G.aim === 'buster');

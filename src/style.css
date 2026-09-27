@@ -426,3 +426,5 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .setting.vol span{ flex:none; min-width:calc(var(--u)*120px); text-align:left; }
 .setting.vol input[type=range]{ flex:1; min-width:0; height:calc(var(--u)*44px); accent-color:var(--pumpkin); }
 .setting.vol b{ flex:none; min-width:calc(var(--u)*48px); text-align:right; font-weight:600; }
+
+#coinBox .seed{ margin-left:calc(var(--u)*8px); width:calc(var(--u)*11px); height:calc(var(--u)*14px); }   /* seeds beside the coins in the top bar (owner) */

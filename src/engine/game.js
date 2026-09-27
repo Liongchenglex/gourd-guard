@@ -452,7 +452,7 @@ export function continueState(){
 export function continueNight(c){
   startGame('story', c.n, c.loadout);
   G.continued = true;
-  G.spawned = Math.max(0, G.def.total - c.remaining);
+  G.spawned = G.resolved = Math.max(0, G.def.total - c.remaining);   // the progress bar picks up where the lost night left off
   if (c.bossSpawned){ G.bossDead = c.bossDead; G.bossHp = c.bossHp.slice(); if (c.bossDead) G.bossSpawned = true; }
   banner('Night continues', `${c.remaining} monster${c.remaining === 1 ? '' : 's'} left${c.bossSpawned && !c.bossDead ? ', and the boss is still hurt' : ''}. Hold the walls!`, 3);
 }

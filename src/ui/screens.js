@@ -480,7 +480,7 @@ function renderWardrobe(){
       if (have >= need){ const b = document.createElement('button'); b.className = 'btn small'; b.textContent = 'Make costume'; b.onclick = () => { save.bossItems[c.boss] -= need; W.owned.push(c.key); W.costume = c.key; persist(); SFX.perk(); renderShop(); }; d.appendChild(b); }
       else {
         const row = document.createElement('div'); row.className = 'twoBtns';
-        const bs = document.createElement('button'); bs.className = 'btn small'; bs.classList.add('buyItems'); bs.innerHTML = `<small>Buy ${BOSS_ITEM_SEED_PACK.items} ${BOSS_ITEM_NAMES[c.boss]}s</small><span><span class="seed"></span>${BOSS_ITEM_SEED_PACK.seeds}</span>`; bs.disabled = (save.seeds || 0) < BOSS_ITEM_SEED_PACK.seeds; bs.setAttribute('aria-label', `Buy ${BOSS_ITEM_SEED_PACK.items} ${BOSS_ITEM_NAMES[c.boss]}s for ${BOSS_ITEM_SEED_PACK.seeds} seeds`);
+        const bs = document.createElement('button'); bs.className = 'btn small'; bs.classList.add('buyItems'); bs.innerHTML = `<small>Buy ${BOSS_ITEM_SEED_PACK.items > 1 ? `${BOSS_ITEM_SEED_PACK.items} ${BOSS_ITEM_NAMES[c.boss]}s` : `1 ${BOSS_ITEM_NAMES[c.boss]}`}</small><span><span class="seed"></span>${BOSS_ITEM_SEED_PACK.seeds}</span>`; bs.disabled = (save.seeds || 0) < BOSS_ITEM_SEED_PACK.seeds; bs.setAttribute('aria-label', `Buy ${BOSS_ITEM_SEED_PACK.items} ${BOSS_ITEM_NAMES[c.boss]}s for ${BOSS_ITEM_SEED_PACK.seeds} seeds`);
         bs.onclick = () => { if ((save.seeds || 0) < BOSS_ITEM_SEED_PACK.seeds) return; save.seeds -= BOSS_ITEM_SEED_PACK.seeds; save.bossItems[c.boss] = have + BOSS_ITEM_SEED_PACK.items; persist(); SFX.coin(); renderShop(); };
         row.appendChild(bs); d.appendChild(row);   // seeds only: boss items are never sold for coins (owner)
       }

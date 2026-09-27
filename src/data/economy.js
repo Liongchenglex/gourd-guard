@@ -37,7 +37,7 @@ export const BOSS_SEED = { chance:0.05, min:1, max:3 };   // any boss kill
 
 /** Boss items: collect BOSS_ITEMS_FOR_COSTUME of one boss's item to trade for its costume. */
 export const BOSS_ITEMS_FOR_COSTUME = 30;
-export const BOSS_ITEM_SEED_PACK = { items:10, seeds:10 };   // boss items are bought with seeds only, never coins (owner); price (default)
+export const BOSS_ITEM_SEED_PACK = { items:1, seeds:10 };    // one boss item costs 10 seeds; never sold for coins (owner, 2026-09-27)
 
 /** The Loot Sack: summoned by watching an ad on the level card. Two lanes wide, never chews walls, flees when its time is up. */
 export const SACK = { hpBase:10, hpPerWorld:4, stay:25, hold:0.38, sp:0.05, spawnAt:4,

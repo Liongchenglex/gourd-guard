@@ -417,15 +417,19 @@ Second follow-up (2026-09-26): the owner reverted the ×1.35 spawn slowdown afte
 
 ### Coin income measurement for the monetization draft (2026-09-27, `--repeats 1`, expected profile, one pass per level)
 
-Coins picked up during the night plus the win bonus (10 + 3 × night + 5 × stars; losses keep only the night's coins). The bot won 22 of 44 nights.
+Coins picked up during the night plus the win bonus (10 + 3 × night + 5 × stars; losses keep only the night's coins). The bot won 22 of 44 nights. World 1 was played in full; worlds 2–5 were sampled at levels 1, 5, 9, 10, 15 and 20, and their levels 1–10 are estimated from the average of the sampled levels 1–10.
 
-| Stretch | Coins earned (bot, one pass) | Scaled ×15 |
-|---|---|---|
-| World 1, levels 1–10 | 1,042 | about 15,600 |
-| World 1, all 20 levels | 1,931 | about 29,000 |
-| Worlds 2–5, per level (6 sampled levels each) | 110–250 average | 1,650–3,750 |
+| Stretch | Coins earned (bot, one pass) |
+|---|---|
+| World 1, levels 1–10 (measured) | 1,042 |
+| World 2, levels 1–10 (est.) | about 2,300 |
+| World 3, levels 1–10 (est.) | about 1,500 |
+| World 4, levels 1–10 (est.) | about 1,700 |
+| World 5, levels 1–10 (est.) | about 2,600 |
+| **All five worlds to each level-10 boss** | **about 9,200** |
+| World 1, all 20 levels (measured) | 1,931 |
 
-Reading: the owner's draft price list (`monetization.md`) assumes about 15,000 coins by level 10, fifteen times today's income. Multiplying every coin source by 15 matches that assumption almost exactly while keeping the drafted prices. At that scale later worlds earn roughly 35,000–65,000 coins each, more than the draft's total coin prices (about 40,600 for all pumpkin levels plus 3,000 for walls), so the late game needs extra coin sinks, and the scarce currency becomes seeds. Real players replay lost nights and earn more than one pass; treat these as lower bounds. Not applied to the game yet: the owner is deciding the compromise.
+Reading: the owner played all five worlds to level 10 and had about 15,000 coins, which fits this one-pass figure once replays of lost nights are counted (about 1.6×). Today's coin scale therefore already matches the owner's experience; the draft price list in `monetization.md` is judged against about 15,000 coins by 5-10 and roughly twice that by the end of Release 1. Not applied to the game yet: the owner is deciding the compromise.
 
 ---
 

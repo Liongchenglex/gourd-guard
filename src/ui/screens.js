@@ -19,7 +19,7 @@ import { showRewarded, seedAdsLeft, adsBusy } from '../engine/ads.js';
 import { storeReady, buyPack } from '../engine/store.js';
 import { rollChest, grant, bossItemsFor, foundThisNight, queueSack, sackIsQueued } from '../engine/loot.js';
 import { chestIcon, bossItemIcon, BOSS_ITEM_NAMES, seedIcon as seedArt } from '../engine/render/loot.js';
-import { costumeIcon, skinIcon } from '../engine/render/wardrobe.js';
+import { costumeIcon, skinIcon, previewScene } from '../engine/render/wardrobe.js';
 import { titleArt } from '../engine/render/keyart.js';
 import { trophyIcon } from '../engine/render/trophies.js';
 import { PUMPKIN_LORE } from '../data/lore.js';
@@ -462,51 +462,125 @@ export function openShop(ret){ shopReturn = ret || 'levels'; renderShop(); setSt
 
 let shopTab = 'pumpkins';
 /** Wardrobe tab: buy with seeds, wear one costume for every pumpkin, wear one skin per colour (owner, 2026-09-27). */
+// ---------- Shop browsers (owner, 2026-09-27): a detail panel on top, filter chips, then a compact tile grid ----------
+let wTab = 'costumes', pSel = null, pFilt = 'all', prevScene = null, prevRaf = 0, prevT0 = 0;
+const wSel = { costumes:null, skins:null }, wFilt = { costumes:'all', skins:'all' }, WICON = new Map();
+const shortN = n => n >= 1000 ? (n % 1000 ? (n / 1000).toFixed(1) : n / 1000) + 'k' : String(n);
+const reduceMotion = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+function wIcon(kind, key){ const k = kind + key; if (!WICON.has(k)) WICON.set(k, kind === 'c' ? costumeIcon(key, 64) : skinIcon(key, 64, true)); return dom(WICON.get(k)); }
+function chipRow(box, opts, cur, pick){
+  box.innerHTML = '';
+  for (const o of opts){
+    const b = document.createElement('button'); b.className = 'chip' + (o.key === cur ? ' on' : ''); b.setAttribute('aria-pressed', o.key === cur);
+    if (o.icon) b.appendChild(o.icon); b.insertAdjacentHTML('beforeend', `<span>${o.label}</span>`);
+    b.onclick = () => { if (o.key !== cur){ SFX.ui('tap'); pick(o.key); } }; box.appendChild(b);
+  }
+}
+function tileBtn(icon, name, badge, cls, sel, tap, aria, corner){
+  const b = document.createElement('button'); b.className = 'tile' + (cls ? ' ' + cls : '') + (sel ? ' sel' : ''); b.setAttribute('aria-pressed', !!sel); b.setAttribute('aria-label', aria || name);
+  if (corner) b.insertAdjacentHTML('beforeend', `<span class="tl">${corner}</span>`);
+  b.appendChild(icon); b.insertAdjacentHTML('beforeend', `<span class="tn">${name}</span>${badge ? `<span class="tb">${badge}</span>` : ''}`);
+  b.onclick = () => { SFX.ui('tap'); tap(); }; return b;
+}
+function startPreview(kind, key){
+  const cv = $('#wPreview'), w = 300, h = 124; if (cv.width !== w * 2){ cv.width = w * 2; cv.height = h * 2; }
+  const k = kind + ':' + key; if (!prevScene || prevScene.k !== k){ prevScene = previewScene(kind, key, w, h); prevScene.k = k; }
+  const g = cv.getContext('2d'); g.setTransform(2, 0, 0, 2, 0, 0);
+  if (reduceMotion()){ prevScene.draw(g, 0.8); return; }
+  if (prevRaf) return;
+  prevT0 = performance.now();
+  const loop = now => { if (state !== 'shop' || $('#paneW').hidden){ prevRaf = 0; return; } prevScene.draw(g, (now - prevT0) / 1000); prevRaf = requestAnimationFrame(loop); };
+  prevRaf = requestAnimationFrame(loop);
+}
+/** Wardrobe tab: Costumes / Skins, a live preview of the selected item, filters and a tile grid. */
 function renderWardrobe(){
-  const W = save.wardrobe, owned = k => W.owned.includes(k);
-  const buyBtn = (price, onBuy) => { const b = document.createElement('button'); b.className = 'btn small'; b.innerHTML = `<span class="seed"></span>${price}`; b.disabled = (save.seeds || 0) < price; b.onclick = () => { if ((save.seeds || 0) < price) return; save.seeds -= price; onBuy(); persist(); SFX.coin(); renderShop(); }; return b; };
+  const W = save.wardrobe, owned = k => W.owned.includes(k), seeds = save.seeds || 0, isC = wTab === 'costumes';
+  for (const b of document.querySelectorAll('#wSeg button')){ const on = b.dataset.w === wTab; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); b.onclick = () => { if (wTab !== b.dataset.w){ wTab = b.dataset.w; SFX.ui('tap'); renderWardrobe(); } }; }
+  const f = wFilt[wTab];
+  let opts, pass;
+  if (isC){ opts = [{ key:'all', label:'All' }, { key:'owned', label:'Owned' }, { key:'boss', label:'Boss' }, { key:'shop', label:'Shop' }];
+    pass = c => f === 'all' || (f === 'owned' && owned(c.key)) || (f === 'boss' && c.boss) || (f === 'shop' && !c.boss); }
+  else { const cols = [...new Set(SKINS.map(k => k.t))];
+    opts = [{ key:'all', label:'All' }, { key:'owned', label:'Owned' }, ...cols.map(t => ({ key:'t' + t, label:PTYPES[t].name, icon:pumpkinIcon(t, false, 40) }))];
+    pass = k => f === 'all' || (f === 'owned' && owned(k.key)) || f === 't' + k.t; }
+  chipRow($('#wChips'), opts, f, k => { wFilt[wTab] = k; renderWardrobe(); });
+  const all = isC ? COSTUMES : SKINS, list = all.filter(pass);
+  const worn = it => isC ? W.costume === it.key : W.skins[it.t] === it.key;
+  let sel = list.find(it => it.key === wSel[wTab]) || list.find(worn) || list[0] || all.find(it => it.key === wSel[wTab]) || all[0]; wSel[wTab] = sel.key;   // a filter that hides the selection moves it to the first item shown
+  const grid = $('#wGrid'); grid.innerHTML = '';
+  if (!list.length) grid.innerHTML = `<p class="empty">Nothing here yet. Try another filter.</p>`;
+  for (const it of list){
+    let badge, cls = '';
+    if (worn(it)){ badge = 'Wearing'; cls = 'worn'; }
+    else if (owned(it.key)){ badge = 'Owned'; cls = 'owned'; }
+    else if (isC && it.boss){ const have = Math.min(bossItemsFor(it.boss), BOSS_ITEMS_FOR_COSTUME); badge = `${have}/${BOSS_ITEMS_FOR_COSTUME}`; cls = 'prog'; }
+    else { badge = `<span class="seed"></span>${it.price}`; cls = seeds >= it.price ? 'afford' : ''; }
+    grid.appendChild(tileBtn(wIcon(isC ? 'c' : 's', it.key), it.name, badge, cls, it.key === sel.key, () => { wSel[wTab] = it.key; renderWardrobe(); $('#wDetail').scrollIntoView({ block:'nearest', behavior:reduceMotion() ? 'auto' : 'smooth' }); }, `${it.name}, ${badge.replace(/<[^>]+>/g, '')}${isC || owned(it.key) || worn(it) ? '' : ' seeds'}`));
+  }
+  // detail panel for the selected item
+  const info = $('#wInfo'); info.innerHTML = '';
+  const add = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; e.textContent = txt; info.appendChild(e); return e; };
+  add('b', 'dn', sel.name);
+  add('small', 'src', isC ? (sel.boss ? `${BOSS_NAMES[sel.boss]}'s costume` : 'Shop costume · worn by every pumpkin') : `Skin for ${PTYPES[sel.t].name}`);
+  add('p', 'dd', isC ? sel.hit : sel.desc);
+  const actions = document.createElement('div'); actions.className = 'dAct'; info.appendChild(actions);
+  const buyBtn = (price, onBuy) => { const b = document.createElement('button'); b.className = 'btn small'; b.innerHTML = `Buy <span class="seed"></span>${price}`; b.disabled = seeds < price; b.onclick = () => { if ((save.seeds || 0) < price) return; save.seeds -= price; onBuy(); persist(); SFX.coin(); renderShop(); }; return b; };
   const wearBtn = (on, fn) => { const b = document.createElement('button'); b.className = 'btn small' + (on ? ' alt' : ''); b.textContent = on ? 'Take off' : 'Wear'; b.onclick = () => { fn(); persist(); SFX.ui(on ? 'unpick' : 'pick'); renderShop(); }; return b; };
-  const cbox = $('#wCostumes'); cbox.innerHTML = '';
-  for (const c of COSTUMES){
-    const d = document.createElement('div'); d.className = 'wCard' + (W.costume === c.key ? ' worn' : '');
-    d.appendChild(costumeIcon(c.key, 72));
-    const nm = document.createElement('b'); nm.textContent = c.name; d.appendChild(nm);
-    const ds = document.createElement('small'); ds.textContent = c.hit;
-    if (c.boss && !owned(c.key)){   // traded for 30 of the boss's items (owner's monetization.md)
+  if (isC){
+    const c = sel;
+    if (c.boss && !owned(c.key)){   // traded for 30 of the boss's items (owner's monetization.md); boss items cost seeds only
       const have = bossItemsFor(c.boss), need = BOSS_ITEMS_FOR_COSTUME;
       const pr = document.createElement('div'); pr.className = 'bossItems'; pr.appendChild(dom(bossItemIcon(c.boss, 30)));
-      pr.insertAdjacentHTML('beforeend', `<span><b>${Math.min(have, need)} / ${need}</b> ${BOSS_ITEM_NAMES[c.boss]}s</span><i style="--f:${Math.min(1, have / need)}"></i>`); d.appendChild(pr);
-      const src = document.createElement('small'); src.className = 'src'; src.textContent = `From ${BOSS_NAMES[c.boss]}'s level-20 chest`; d.appendChild(src); d.appendChild(ds);
-      if (have >= need){ const b = document.createElement('button'); b.className = 'btn small'; b.textContent = 'Make costume'; b.onclick = () => { save.bossItems[c.boss] -= need; W.owned.push(c.key); W.costume = c.key; persist(); SFX.perk(); renderShop(); }; d.appendChild(b); }
+      pr.insertAdjacentHTML('beforeend', `<span><b>${Math.min(have, need)} / ${need}</b> ${BOSS_ITEM_NAMES[c.boss]}s · from ${BOSS_NAMES[c.boss]}'s level-20 chest</span><i style="--f:${Math.min(1, have / need)}"></i>`); info.insertBefore(pr, actions);
+      if (have >= need){ const b = document.createElement('button'); b.className = 'btn small'; b.textContent = 'Make costume'; b.onclick = () => { save.bossItems[c.boss] -= need; W.owned.push(c.key); W.costume = c.key; persist(); SFX.perk(); renderShop(); }; actions.appendChild(b); }
       else {
-        const row = document.createElement('div'); row.className = 'twoBtns';
-        const bs = document.createElement('button'); bs.className = 'btn small'; bs.classList.add('buyItems'); bs.innerHTML = `<small>Buy ${BOSS_ITEM_SEED_PACK.items > 1 ? `${BOSS_ITEM_SEED_PACK.items} ${BOSS_ITEM_NAMES[c.boss]}s` : `1 ${BOSS_ITEM_NAMES[c.boss]}`}</small><span><span class="seed"></span>${BOSS_ITEM_SEED_PACK.seeds}</span>`; bs.disabled = (save.seeds || 0) < BOSS_ITEM_SEED_PACK.seeds; bs.setAttribute('aria-label', `Buy ${BOSS_ITEM_SEED_PACK.items} ${BOSS_ITEM_NAMES[c.boss]}s for ${BOSS_ITEM_SEED_PACK.seeds} seeds`);
+        const bs = document.createElement('button'); bs.className = 'btn small'; bs.innerHTML = `Buy 1 ${BOSS_ITEM_NAMES[c.boss]} <span class="seed"></span>${BOSS_ITEM_SEED_PACK.seeds}`; bs.disabled = seeds < BOSS_ITEM_SEED_PACK.seeds;
         bs.onclick = () => { if ((save.seeds || 0) < BOSS_ITEM_SEED_PACK.seeds) return; save.seeds -= BOSS_ITEM_SEED_PACK.seeds; save.bossItems[c.boss] = have + BOSS_ITEM_SEED_PACK.items; persist(); SFX.coin(); renderShop(); };
-        row.appendChild(bs); d.appendChild(row);   // seeds only: boss items are never sold for coins (owner)
+        actions.appendChild(bs);
       }
-    } else {
-      if (c.boss){ const src = document.createElement('small'); src.className = 'src'; src.textContent = `${BOSS_NAMES[c.boss]}'s costume`; d.appendChild(src); }
-      d.appendChild(ds);
-      d.appendChild(owned(c.key) ? wearBtn(W.costume === c.key, () => { W.costume = W.costume === c.key ? null : c.key; }) : buyBtn(c.price, () => { W.owned.push(c.key); W.costume = c.key; }));
-    }
-    cbox.appendChild(d);
+    } else actions.appendChild(owned(c.key) ? wearBtn(W.costume === c.key, () => { W.costume = W.costume === c.key ? null : c.key; }) : buyBtn(c.price, () => { W.owned.push(c.key); W.costume = c.key; }));
+  } else {
+    const k = sel, on = W.skins[k.t] === k.key;
+    actions.appendChild(owned(k.key) ? wearBtn(on, () => { if (on) delete W.skins[k.t]; else W.skins[k.t] = k.key; buildSprites(); }) : buyBtn(k.price, () => { W.owned.push(k.key); W.skins[k.t] = k.key; buildSprites(); }));
   }
-  const sbox = $('#wSkins'); sbox.innerHTML = '';
-  for (const k of SKINS){
-    const on = W.skins[k.t] === k.key, d = document.createElement('div'); d.className = 'wCard' + (on ? ' worn' : '');
-    d.appendChild(skinIcon(k.key, 72, true));
-    const nm = document.createElement('b'); nm.textContent = k.name; d.appendChild(nm);
-    const src = document.createElement('small'); src.className = 'src'; src.textContent = `Skin for ${PTYPES[k.t].name}`; d.appendChild(src);
-    const ds = document.createElement('small'); ds.textContent = k.desc; d.appendChild(ds);
-    const apply = () => buildSprites();
-    d.appendChild(owned(k.key) ? wearBtn(on, () => { if (on) delete W.skins[k.t]; else W.skins[k.t] = k.key; apply(); }) : buyBtn(k.price, () => { W.owned.push(k.key); W.skins[k.t] = k.key; apply(); }));
-    sbox.appendChild(d);
+  if (!$('#paneW').hidden) startPreview(isC ? 'costume' : 'skin', sel.key);
+}
+/** Pumpkins tab: the selected pumpkin's now → next stats and level-up button on top, filters, then a tile per pumpkin. */
+function renderPumpkinShop(){
+  const order = [...Array(NTYPES).keys()].sort((x, y) => (x < 2 ? 0 : unlockNightOf(PTYPES[x].key)) - (y < 2 ? 0 : unlockNightOf(PTYPES[y].key)) || x - y);   // first unlocked first (owner)
+  const info = t => { const P = PTYPES[t], L = lvOf(t), un = t < 2 ? 1 : unlockNightOf(P.key), unlocked = t < 2 || un <= highestOpen(), maxed = L >= 5, uc = maxed ? null : upgradeCost(P.key, L), inSeeds = !!(uc && uc.seeds), cost = uc ? (uc.seeds || uc.coins) : 0;
+    return { t, P, L, un, unlocked, maxed, inSeeds, cost, afford:unlocked && !maxed && (inSeeds ? (save.seeds || 0) >= cost : save.coins >= cost) }; };
+  const all = order.map(info);
+  chipRow($('#pChips'), [{ key:'all', label:'All' }, { key:'unlocked', label:'Unlocked' }, { key:'up', label:'Can level up' }], pFilt, k => { pFilt = k; renderPumpkinShop(); });
+  const list = all.filter(p => pFilt === 'all' || (pFilt === 'unlocked' && p.unlocked) || (pFilt === 'up' && p.afford));
+  let sel = list.find(p => p.t === pSel) || list.find(p => p.unlocked && !p.maxed) || list[0] || all.find(p => p.t === pSel) || all[0]; pSel = sel.t;
+  const grid = $('#shopPumpkins'); grid.innerHTML = '';
+  if (!list.length) grid.innerHTML = `<p class="empty">Nothing to level up right now. Earn more coins or seeds.</p>`;
+  for (const p of list){
+    const ic = pumpkinIcon(p.t, true, 64); if (!p.unlocked) ic.classList.add('mystery');
+    const badge = !p.unlocked ? '🔒' : p.maxed ? 'MAX' : `<span class="${p.inSeeds ? 'seed' : 'coin'}"></span>${shortN(p.cost)}`;
+    grid.appendChild(tileBtn(ic, p.unlocked ? p.P.name : '???', badge, !p.unlocked ? 'locked' : p.maxed ? 'maxed' : p.afford ? 'afford' : '', p.t === sel.t, () => { pSel = p.t; renderPumpkinShop(); $('#pDetail').scrollIntoView({ block:'nearest', behavior:reduceMotion() ? 'auto' : 'smooth' }); },
+      p.unlocked ? `${p.P.name}, level ${p.L}${p.maxed ? ', maxed' : `, level up for ${p.cost} ${p.inSeeds ? 'seeds' : 'coins'}`}` : 'Locked pumpkin', p.unlocked ? `Lv ${p.L}` : ''));
   }
+  const d = $('#pDetail'); d.innerHTML = '';
+  const ic = pumpkinIcon(sel.t, true, 96); ic.className = 'dIc'; if (!sel.unlocked) ic.classList.add('mystery'); d.appendChild(ic);
+  const tx = document.createElement('div'); tx.className = 'dInfo';
+  if (!sel.unlocked) tx.innerHTML = `<b class="dn">??? pumpkin</b><p class="dd">${sel.un === Infinity ? 'Unlocks in a later world.' : `Unlocks at level ${levelFor(sel.un).label}.`}</p>`;   // nothing is revealed before it unlocks (owner)
+  else { const a = lvStats(sel.t, sel.L), n = sel.maxed ? null : lvStats(sel.t, sel.L + 1);
+    const pips = Array.from({ length:5 }, (_, i) => `<i class="${i < sel.L ? 'on' : ''}"></i>`).join('');
+    tx.innerHTML = `<b class="dn">${sel.P.name}, level ${sel.L}${sel.maxed ? ' (max)' : ` <span class="dim">→ ${sel.L + 1}</span>`}</b><div class="pips">${pips}</div><div class="nx">${nxLine('Power', a.power, n && n.power)}${nxLine('Knockback', a.knockback, n && n.knockback)}${nxLine('Special', a.special, n && n.special)}</div>`; }
+  const b = document.createElement('button'); b.className = 'btn small';
+  if (!sel.unlocked){ b.textContent = 'Locked'; b.disabled = true; }
+  else if (sel.maxed){ b.textContent = 'Maxed'; b.disabled = true; }
+  else { b.innerHTML = `Level up <span class="${sel.inSeeds ? 'seed' : 'coin'}"></span>${sel.cost.toLocaleString()}`; b.disabled = !sel.afford; b.setAttribute('aria-label', `Level up ${sel.P.name} for ${sel.cost} ${sel.inSeeds ? 'seeds' : 'coins'}`); }
+  b.onclick = () => { if (!sel.afford) return; if (sel.inSeeds) save.seeds -= sel.cost; else save.coins -= sel.cost; save.lv[sel.P.key] = sel.L + 1; persist(); ensureAudio(); SFX.coin(); renderShop(); };
+  const act = document.createElement('div'); act.className = 'dAct'; act.appendChild(b); tx.appendChild(act); d.appendChild(tx);
 }
 function setShopTab(tab){
   shopTab = tab;
   for (const b of document.querySelectorAll('#shopTabs .tab')) b.setAttribute('aria-selected', b.dataset.tab === tab ? 'true' : 'false');
   $('#paneP').hidden = tab !== 'pumpkins'; $('#paneT').hidden = tab !== 'tools'; $('#paneW').hidden = tab !== 'wardrobe'; $('#paneS').hidden = tab !== 'seeds';
+  if (tab === 'wardrobe' && prevScene) startPreview(prevScene.k.split(':')[0], prevScene.k.split(':')[1]); else if (tab === 'wardrobe') renderWardrobe();
 }
 /** One stat line: now, and the next level's value when it changes. */
 const nxLine = (k, a, b) => `<span class="k">${k}</span><span>${a}${b != null && b !== a ? ` <span class="dim">\u2192</span> <span class="up">${b}</span>` : ''}</span>`;
@@ -612,29 +686,7 @@ function seedIcon(px, n){
 export function renderShop(){
   $('#shopCoins').textContent = save.coins.toLocaleString(); $('#shopSeeds').textContent = (save.seeds || 0).toLocaleString();
   setShopTab(shopTab);
-  const pbox = $('#shopPumpkins'); pbox.innerHTML = '';
-  const order = [...Array(NTYPES).keys()].sort((x, y) => (x < 2 ? 0 : unlockNightOf(PTYPES[x].key)) - (y < 2 ? 0 : unlockNightOf(PTYPES[y].key)) || x - y);   // first unlocked first (owner)
-  for (const t of order){
-    const P = PTYPES[t], L = lvOf(t), un = t < 2 ? 1 : unlockNightOf(P.key), unlocked = t < 2 || un <= highestOpen(), maxed = L >= 5, uc = maxed ? null : upgradeCost(P.key, L), inSeeds = !!(uc && uc.seeds), cost = uc ? (uc.seeds || uc.coins) : 0, afford = inSeeds ? (save.seeds || 0) >= cost : save.coins >= cost;
-    const d = document.createElement('div'); d.className = 'item';
-    const ic = pumpkinIcon(t, true); ic.className = 'ic'; d.appendChild(ic);
-    const tx = document.createElement('div'); tx.className = 'tx';
-    const pips = Array.from({ length:5 }, (_, i) => `<i class="${i < L ? 'on' : ''}"></i>`).join('');
-    const a = lvStats(t, L), n = maxed ? null : lvStats(t, L + 1);
-    if (!unlocked){ ic.classList.add('mystery'); tx.innerHTML = `<b>??? pumpkin</b><p>${un === Infinity ? 'Unlocks in a later world.' : `Unlocks at level ${levelFor(un).label}.`}</p>`; }   // nothing is revealed before it unlocks (owner)
-    else tx.innerHTML = `<b>${P.name}, level ${L}${maxed ? ' (max)' : ` <span class="dim">\u2192 ${L + 1}</span>`}</b><div class="nx">${nxLine('Power', a.power, n && n.power)}${nxLine('Knockback', a.knockback, n && n.knockback)}${nxLine('Special', a.special, n && n.special)}</div><div class="pips" aria-label="Level ${L} of 5">${pips}</div>`;
-    d.appendChild(tx);
-    const b = document.createElement('button'); b.className = 'btn small';
-    if (!unlocked){ b.textContent = '\ud83d\udd12'; b.disabled = true; b.setAttribute('aria-label', 'Locked'); }
-    else if (maxed){ b.textContent = 'Maxed'; b.disabled = true; }
-    else { b.innerHTML = `<span class="${inSeeds ? 'seed' : 'coin'}"></span>${cost.toLocaleString()}`; b.disabled = !afford; b.setAttribute('aria-label', `Level up ${P.name} for ${cost} ${inSeeds ? 'seeds' : 'coins'}`); }
-    b.onclick = () => {
-      if (!unlocked || maxed || !afford) return;
-      if (inSeeds) save.seeds -= cost; else save.coins -= cost;
-      save.lv[P.key] = L + 1; persist(); ensureAudio(); SFX.coin(); renderShop();
-    };
-    d.appendChild(b); pbox.appendChild(d);
-  }
+  renderPumpkinShop();
   renderWardrobe();
   renderSeedsPane();
   const list = $('#shopList'); list.innerHTML = '';

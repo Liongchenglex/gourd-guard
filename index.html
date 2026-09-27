@@ -109,12 +109,17 @@
         <button class="tab" role="tab" data-tab="wardrobe" id="tabWardrobe">Wardrobe</button>
         <button class="tab" role="tab" data-tab="seeds" id="tabSeeds">Seeds<i class="dot" id="seedDot" hidden></i></button>
       </div>
-      <div class="tabPane" id="paneP"><div id="shopPumpkins"></div></div>
+      <div class="tabPane" id="paneP">
+        <div class="detail" id="pDetail" aria-live="polite"></div>
+        <div class="chips" id="pChips" role="group" aria-label="Filter pumpkins"></div>
+        <div class="tileGrid" id="shopPumpkins"></div>
+      </div>
       <div class="tabPane" id="paneT" hidden><div id="shopList"></div></div>
       <div class="tabPane" id="paneW" hidden>
-        <p class="seedIntro">Costumes are worn by every pumpkin at once and change the hit effect. Skins restyle one pumpkin colour, its lit face and its trail. Neither changes power.</p>
-        <h3 class="wHead">Costumes</h3><div class="wGrid" id="wCostumes"></div>
-        <h3 class="wHead">Skins</h3><div class="wGrid" id="wSkins"></div>
+        <div class="seg" id="wSeg" role="group" aria-label="Wardrobe section"><button data-w="costumes">Costumes</button><button data-w="skins">Skins</button></div>
+        <div class="detail wDetail" id="wDetail" aria-live="polite"><canvas id="wPreview" aria-hidden="true"></canvas><div class="dInfo" id="wInfo"></div></div>
+        <div class="chips" id="wChips" role="group" aria-label="Filter"></div>
+        <div class="tileGrid" id="wGrid"></div>
       </div>
       <div class="tabPane" id="paneS" hidden>
         <div class="adCard2" id="adSeedCard">

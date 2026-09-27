@@ -156,3 +156,26 @@ export function skinIcon(key, px = 72, lit = true){
   const c = document.createElement('canvas'); c.width = c.height = px * 2; const g = c.getContext('2d'); g.scale(2, 2);
   g.translate(px / 2, px * .56); skinnedPumpkin(g, key, px * .34, lit); return c;
 }
+
+/** Shop preview (owner, 2026-09-27): a costumed pumpkin flying up into its hit effect, or a skinned one streaking its wake.
+ *  Everything painted is baked once here; draw(g, t) only blits and runs the same per-frame effects the game uses. */
+export function previewScene(kind, key, w, h){
+  if (kind === 'costume'){
+    const ic = costumeIcon(key, 64), fx = HIT_FX[key], S = 64;
+    return { draw(g, t){
+      g.clearRect(0, 0, w, h);
+      for (const [x, ph] of [[w * .18, 0], [w * .82, 1.3]]){ const b = 1 + Math.sin(t * 2.4 + ph) * .025; g.drawImage(ic, x - S * b / 2, h - S * 1.02 * b, S * b, S * b); }   // the bunch waiting, breathing
+      const T = 1.8, u = t % T, tx = w / 2, ty = h * .34;
+      if (u < .45){ const f = u / .45, e = 1 - (1 - f) * (1 - f), y = h + 10 - (h + 10 - ty) * e; g.save(); g.translate(tx, y); g.rotate(f * 5); g.drawImage(ic, -S * .38, -S * .5, S * .76, S * .76); g.restore(); }
+      else if (u < 1.35 && fx){ g.save(); g.translate(tx, ty); g.scale(1.35, 1.35); fx(g, (u - .45) / .9); g.restore(); }
+    } };
+  }
+  const ic = skinIcon(key, 64, true), sk = SKIN_ART[key], S = 64;
+  return { draw(g, t){
+    g.clearRect(0, 0, w, h);
+    const b = 1 + Math.sin(t * 2.4) * .025; g.drawImage(ic, w * .18 - S * b / 2, h - S * 1.05 * b, S * b, S * b);
+    const T = 1.3, f = (t % T) / T, y = h + 40 - f * (h + 110), x = w * .6;
+    if (sk) wake(g, sk, x, y + 4, 22, 96, t);
+    g.save(); g.translate(x, y); g.rotate(t * 7); g.drawImage(ic, -S * .38, -S * .42, S * .76, S * .76); g.restore();
+  } };
+}

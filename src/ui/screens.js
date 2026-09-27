@@ -39,7 +39,9 @@ export function showResult(win){
   const wf = wallFrac();
   if (g.mode === 'story'){
     if (win){
+      const nf = g.def.levelNo === 10 ? firstNightOf(g.def.worldNo + 1) : null, bookWasLocked = nf != null && !isOpen(nf);   // read before this win is saved
       const qs = settleQuests(g.n, g.def);   // stars now come from quests (owner, 2026-09-27)
+      const celebrate = g.def.levelNo === 10 && (bookWasLocked || (nf == null && !qs.before));   // owner: the unlock card and book animation only when the next book was still locked (or the last boss's first defeat)
       const st = countBits(qs.total), gained = countBits(qs.total) - countBits(qs.before);
       const bonus = 10 + g.n * 3 + countBits(qs.now) * 5;
       save.coins += g.coins + bonus;
@@ -49,7 +51,7 @@ export function showResult(win){
       const rq = $('#rQuests'); rq.hidden = g.n < QUEST_START; if (g.n >= QUEST_START) questRows(rq, g.def, qs.total, { fresh:qs.now, before:qs.before });
       const nk = ALL_LEVELS[g.n] && (ALL_LEVELS[g.n].unlockPumpkins || [])[0], nextP = nk && PTYPES.find(p => p.key === nk);
       if (nextP && g.n < LEVELS) msg += ` Next night unlocks the ${nextP.name} pumpkin.`;
-      if (g.def.levelNo === 10){   // owner: beating the level-10 boss is a celebration: a world-unlock card, then back to the menu
+      if (celebrate){   // owner: beating the level-10 boss is a celebration: a world-unlock card, then back to the menu
         const nextName = WORLD_LEVELS[g.def.worldNo] && WORLD_LEVELS[g.def.worldNo].length ? WORLD_NAMES[g.def.worldNo] : null; title = nextName ? `${nextName} unlocked!` : 'Every boss beaten!';
         msg = `🎉 ${BOSS_NAMES[g.def.boss]} is beaten! The rest of ${WORLD_NAMES[g.def.worldNo - 1]} is open` + (nextName ? `, and ${nextName} awaits.` : '.'); SFX.perk();
       }
@@ -65,7 +67,7 @@ export function showResult(win){
       }
       stars = [0,1,2].map(i => `<span class="${i < st ? '' : 'off'}">★</span>`).join('');
       stats.push(['Monsters stopped', g.kills], ['Coins found', g.coins], ['Night bonus', bonus]);   // no wall health on the card: stars come from quests (owner, 2026-09-27)
-      if (g.def.levelNo === 10) addBtn(box, 'Continue', () => { pendingUnlock = g.def.worldNo; curBook = null; openLevels(); });   // worldNo is 1-based story order = the next book's shelf index (def.world is the visual theme, not the order)   // to the shelf, where the next storybook unlocks (owner)
+      if (celebrate) addBtn(box, 'Continue', () => { pendingUnlock = g.def.worldNo; curBook = null; openLevels(); });   // worldNo is 1-based story order = the next book's shelf index (def.world is the visual theme, not the order)   // to the shelf, where the next storybook unlocks (owner)
       else if (perk) addBtn(box, 'Continue', () => { pendingStamp = g.n; openBook(g.def.worldNo - 1, true); });   // back into the book: the level-20 tile is stamped with a flourish
       else {
         if (g.n < LEVELS) addBtn(box, 'Next level', () => openPreview(g.n + 1));

@@ -1,6 +1,7 @@
 import { BOSS_NAME, BOSS_NAMES, BOSS_INTRO } from '../data/monsters.js';
 import { WORLDS, levelFor, ALL_LEVELS } from '../data/worlds/index.js';
 import * as E from '../data/endless.js';
+import { PTYPES } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { spawnMonster, spawnSack } from './monsters.js';
 import { buildBg } from './render/sprites.js';
@@ -42,11 +43,12 @@ export function storySpawn(dt){
 
 /** Endless Night (owner, 2026-09-27): hours as milestones, monsters from every world, bosses and Loot Sacks on the hour,
  *  a frenzy from FRENZY_HOUR. All numbers live in src/data/endless.js. */
+const teamHas = key => G.loadout.some(t => PTYPES[t] && PTYPES[t].key === key);   // e.g. no Fire in the team: no mummies
 function endlessPool(h){
   const top = Math.min(h, E.TIERS.length - 1), pool = [];
   for (let k = 0; k <= top; k++){
     const f = Math.max(E.OLD_MIN, Math.pow(E.OLD_FADE, top - k));
-    for (const [key, w] of E.TIERS[k].monsters) pool.push([key, w * f]);
+    for (const [key, w] of E.TIERS[k].monsters) if (!E.NEEDS[key] || teamHas(E.NEEDS[key])) pool.push([key, w * f]);
   }
   return pool;
 }

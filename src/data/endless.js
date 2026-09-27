@@ -14,6 +14,8 @@ export const TIERS = [
   { name:'Drowned Marsh',   join:'The marsh floods: puddles open.', world:5, monsters:[['drownedGhoul', 6], ['tideImp', 4], ['crawler', 4], ['sailor', 3], ['bogTurtle', 3], ['slime', 3], ['diver', 2], ['soddenMummy', 3]], puddles:3 },
   { name:'The deep night',  join:'The fiercest monsters of every world arrive.', world:null, monsters:[['firemummy', 2], ['fogwalker', 2], ['bulwark', 2], ['turtle', 2]] },
 ];
+/** Monsters only one pumpkin can kill: they only come if that pumpkin is in your team (owner, 2026-09-28). */
+export const NEEDS = { mummy:'fire', soddenMummy:'fire', firemummy:'ice' };
 /** Said on hours that bring nothing new. */
 export const QUIET_HOUR = 'Faster and fiercer.';
 /** Older tiers fade as new ones arrive, so the newest world's monsters dominate: weight × OLD_FADE per tier back (never below OLD_MIN). */

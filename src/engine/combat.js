@@ -197,6 +197,12 @@ export function knockback(m){
 
 /** A launched pumpkin's hit power: Turquoise pairs half, Brown by size (small ×0.5, medium ×1, big ×2). Used for monsters and castle walls. */
 export function pumpkinPower(pr){ return POWER[pr.lv - 1] * (pr.type === TURQUOISE && pr.grp && pr.grp.small ? TURQ_FRAC : pr.type === BROWN ? BROWN_SIZE_MULT[pr.size == null ? 1 : pr.size] : 1); }
+/** Pink (owner, 2026-09-27): repairs the wall of its column once, as it flies over the fence, whether or not it hits anything. */
+export function pinkHeal(pr){
+  const i = pr.lv - 1, w = walls[pr.lane]; if (!w || w.hp >= w.max) return;
+  G.q.heal++; w.hp = Math.min(w.max, w.hp + HEAL_AMT[i]); addFloat(`Wall +${HEAL_AMT[i]}`, LANE(pr.lane), FENCE_Y - 40, '#ffb3e6', 16, 0.9); SFX.extra('heal');
+  for (let k = 0; k < 6; k++) spark(LANE(pr.lane), FENCE_Y - 10, '#ffb3e6', 100);
+}
 let hitBy = null;   // the pumpkin whose hit is being resolved (quest counters credit its kills)
 export function hitMonster(pr, m){ hitBy = pr; try { hitMonsterNow(pr, m); } finally { hitBy = null; } }
 function hitMonsterNow(pr, m){
@@ -222,9 +228,6 @@ function hitMonsterNow(pr, m){
   m.lastHit = pr.type; m.lastHitLv = pr.lv;
   const hitPower = pumpkinPower(pr);
   damage(m, hitPower, PTYPES[pr.type].spark);
-  if (pr.type === PINK){   // Pink: repairs the wall of the column it flew up
-    const w = walls[pr.lane]; if (w.hp < w.max){ G.q.heal++; w.hp = Math.min(w.max, w.hp + HEAL_AMT[i]); addFloat(`Wall +${HEAL_AMT[i]}`, LANE(pr.lane), FENCE_Y - 40, '#ffb3e6', 16, 0.9); SFX.extra('heal'); for (let k = 0; k < 6; k++) spark(LANE(pr.lane), FENCE_Y - 10, '#ffb3e6', 100); }
-  }
   if (pr.type === 5 && pr.grp && !pr.grp.spawned){   // Purple: every launched bunch spawns one pumpkin on its first hit
     pr.grp.spawned = true; purpleSpawn(m, y, i);
   }

@@ -2,13 +2,13 @@ import { perkOn, clearRentals } from '../data/perks.js';
 import { MINTRO, TYPES, BOSS_NAMES, VARIANTS } from '../data/monsters.js';
 import { GEAR } from '../data/shop.js';
 import { PATTERNS } from '../data/patterns.js';
-import { NTYPES, PTYPES, POWER } from '../data/pumpkins.js';
+import { NTYPES, PTYPES, POWER, PINK } from '../data/pumpkins.js';
 import { newQuestCounters } from '../data/quests.js';
 import { WORLDS, levelFor, typesForNight, highestOpen } from '../data/worlds/index.js';
 import { SFX, ensureAudio, musicStart, musicStop } from './audio.js';
 import { MUSIC } from '../data/music.js';
 import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, landingCell, landingNear, flyInto, DIRV } from './board.js';
-import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle, pumpkinPower } from './combat.js';
+import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle, pumpkinPower, pinkHeal } from './combat.js';
 import { mS, mY, updateMonster, TILE_P, applyBulwarks, spawnSack } from './monsters.js';
 import { SACK } from '../data/economy.js';
 import { takeSack, addChest } from './loot.js';
@@ -297,6 +297,7 @@ export function update(dt){
   for (const m of g.monsters) if (!m.dead && !g.over) updateMonster(m, dt);
   for (const pr of g.projs){
     pr.y += pr.vy * dt; pr.rot += dt * pr.spin;
+    if (pr.type === PINK && !pr.healed && pr.y < FENCE_Y){ pr.healed = true; pinkHeal(pr); }   // Pink heals as it crosses the fence (owner)
     pr.trail.push(pr.x, pr.y); if (pr.trail.length > 14) pr.trail.splice(0, 2);
     if (pr.y < FENCE_Y + 10){
       for (const w of g.castles){   // castle walls intercept pumpkins (Grey pierces, Black blasts)

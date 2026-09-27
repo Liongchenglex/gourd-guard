@@ -10,7 +10,7 @@ export const PTYPES = [
   { key:'white',  name:'White',  role:'flies back into your patch if it hits nothing', base:'#e9e4d8', light:'#ffffff', dark:'#9a948a', spark:'#ffffff' },
   { key:'black',  name:'Black',  role:'explodes on impact and splashes the columns beside it', base:'#3a3540', light:'#6e6878', dark:'#17141c', spark:'#ff9a3a' },
   { key:'blue',   name:'Deep Blue', role:'chains lightning along the row it hits', base:'#2a3a8a', light:'#6a8aff', dark:'#101a4a', spark:'#9ab0ff' },
-  { key:'pink',   name:'Pink',   role:'repairs the wall of its column on every hit and knocks monsters back often', base:'#e05aa8', light:'#ff9ad6', dark:'#8a2a66', spark:'#ffb3e6' },
+  { key:'pink',   name:'Pink',   role:'repairs the wall of its column as it flies over, and knocks monsters back often', base:'#e05aa8', light:'#ff9ad6', dark:'#8a2a66', spark:'#ffb3e6' },
   { key:'turquoise', name:'Turquoise', role:'launches in bunches of just 2, at half power', base:'#2ab0a8', light:'#8af0e8', dark:'#0f5a58', spark:'#a0fff8' },
   { key:'brown',  name:'Brown',  role:'grows while it sits on the patch: small, medium, then big and twice as strong', base:'#8a5a2a', light:'#c9945a', dark:'#4a2e12', spark:'#e0b070' },
   { key:'rainbow',name:'Rainbow',role:'joins any bunch as any color', rainbow:true, spark:'#fff3a0' },
@@ -28,7 +28,7 @@ export const CHAIN_N     = [3, 3, 4, 5, 5];          // Deep Blue: monsters in t
 export const CHAIN_FRAC  = [0.25, 0.5, 0.5, 0.75, 0.75];   // Deep Blue: chain damage as a fraction of power
 export const SPLASH_FRAC = [0.5, 0.5, 0.75, 0.75, 1];     // Black: splash damage fraction; level 5 splash also knocks back
 export const SPLASH_ROWS = [1, 1, 1, 3, 3];               // Black: splash zone is 3 lanes × this many tile heights
-export const HEAL_AMT    = [1, 1, 2, 2, 3];          // Pink: wall repair per hit
+export const HEAL_AMT    = [1, 1, 2, 2, 3];          // Pink: wall repair each time one flies over its column's fence
 export const KB_PINK     = [0.5, 0.5, 0.5, 0.75, 0.75];   // Pink: knockback chance
 
 export const POWER     = [1, 1, 1.5, 1.5, 2];
@@ -68,7 +68,7 @@ export function lvStats(t, L){
     case 6: special = i >= 2 ? 'a miss flies back beside a pumpkin of its colour' : 'a miss flies back to the top of its column'; break;
     case 7: special = `blast splashes 3×${SPLASH_ROWS[i]} tiles for ${pct(SPLASH_FRAC[i])}${i >= 4 ? ', and the splash knocks back' : ''}`; break;
     case 8: special = `lightning strikes ${CHAIN_N[i]} monsters in the row at ${pct(CHAIN_FRAC[i])}`; break;
-    case 9: knock = kb(KB_PINK[i]); special = `repairs the wall of its column by ${HEAL_AMT[i]} on every hit`; break;
+    case 9: knock = kb(KB_PINK[i]); special = `repairs the wall of its column by ${HEAL_AMT[i]} as it flies over`; break;
     case 10: special = 'a bunch of 2 is enough to launch'; break;
     case 11: power = `${POWER[i] * 0.5} / ${POWER[i]} / ${POWER[i] * 2}`; knock = kb(BROWN_KB[i]); special = `grows small, medium, big: full size in ${BROWN_GROW[i][0]} s`; break;
   }

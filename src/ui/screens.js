@@ -851,5 +851,6 @@ export function wireButtons(){
 
   $('#bRestart').onclick = () => { save.coins += G.coins; persist(); if (G.mode === 'story') beginNight(G.n); else startGame('endless', 1, G.loadout); };   // restart goes through the pumpkin picker (owner)
 
-  $('#bQuit').onclick = () => { musicStop(); save.coins += G.coins; if (G.mode === 'endless' && G.score > save.best) save.best = G.score; persist(); setState('title'); };
+  $('#bQuit').onclick = () => { musicStop(); save.coins += G.coins; if (G.mode === 'endless' && G.score > save.best) save.best = G.score; persist();
+    if (G.mode === 'story'){ curBook = G.def.worldNo - 1; openLevels(); } else setState('title'); };   // owner: quit goes back to the level select (the night's book), not the title menu
 }

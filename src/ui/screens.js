@@ -71,13 +71,12 @@ export function showResult(win){
     } else {
       save.coins += g.coins;
       title = 'A wall fell';
-      msg = 'The monsters broke through. Your coins are kept, and the shop can make your pumpkins and walls stronger.';
+      msg = 'The monsters broke through. Your coins are kept.';
       stats.push(['Monsters stopped', g.kills], ['Coins found', g.coins]);
       const cont = continueState();   // "reconvene lost nights" (owner): an ad continues this night with only the monsters left
       if (cont && (cont.remaining > 0 || (cont.bossSpawned && !cont.bossDead))){
-        const b = document.createElement('button'); b.className = 'btn small adBtn contBtn'; b.innerHTML = '<span class="play"></span>Watch ad to continue';
+        const b = document.createElement('button'); b.className = 'btn small adBtn contBtn'; b.innerHTML = `<b><span class="play"></span>Watch ad to continue</b><small>${cont.remaining} monster${cont.remaining === 1 ? '' : 's'} left${cont.bossSpawned && !cont.bossDead ? ', boss still hurt' : ''}</small>`;
         b.onclick = async () => { ensureAudio(); if (await showRewarded('revive')) continueNight(cont); }; box.appendChild(b);
-        msg += ` Watch an ad to continue this night with the ${cont.remaining} monster${cont.remaining === 1 ? '' : 's'} left${cont.bossSpawned && !cont.bossDead ? ' and the boss at its remaining health' : ''}.`;
       }
       addBtn(box, 'Try again', () => openPreview(g.n), cont ? 'alt' : '');
       addBtn(box, 'Shop', () => openShop('result'), 'alt');
@@ -111,7 +110,7 @@ function refreshResultLoot(){
   let ex = $('#rExtra'); if (!ex){ ex = document.createElement('div'); ex.id = 'rExtra'; ex.className = 'row rExtra'; $('#rBtns').after(ex); }
   ex.innerHTML = '';
   if (save.chests.length){ const b = document.createElement('button'); b.className = 'btn small chestBtn'; b.appendChild(dom(chestIcon(save.chests[0].kind, false, 34))); b.insertAdjacentHTML('beforeend', `Open chest${save.chests.length > 1 ? `s (${save.chests.length})` : ''}`); b.onclick = () => openChests('result'); ex.appendChild(b); }
-  if (seedAdsLeft() > 0){ const b = document.createElement('button'); b.className = 'adPill'; b.innerHTML = `<span class="play"></span>Free seed <small>${seedAdsLeft()} left</small>`; b.onclick = () => watchSeedAd(refreshResultLoot); ex.appendChild(b); }
+  if (seedAdsLeft() > 0){ const b = document.createElement('button'); b.className = 'adPill'; b.innerHTML = `<span class="play"></span>Watch ad: +1<span class="seed"></span><i>${seedAdsLeft()} left</i>`; b.setAttribute('aria-label', `Watch an ad for a free pumpkin seed, ${seedAdsLeft()} left today`); b.onclick = () => watchSeedAd(refreshResultLoot); ex.appendChild(b); }
 }
 export function fmtTime(s){ const m = Math.floor(s / 60), r = Math.floor(s % 60); return m ? `${m}m ${r}s` : `${r}s`; }
 
@@ -537,7 +536,7 @@ function renderSeedsPane(){
 /** Keep every "free seed" and "chest waiting" prompt in step (shop header, Seeds tab dot, book shelf). */
 export function syncSeedPrompts(){
   const left = seedAdsLeft(), nc = save.chests.length;
-  for (const id of ['#bShopAd', '#bLvAd']){ const b = $(id); if (!b) continue; b.hidden = !left; b.innerHTML = `<span class="play"></span>Free seed <small>${left} left</small>`; b.setAttribute('aria-label', `Watch an ad for a free pumpkin seed, ${left} left today`); }
+  for (const id of ['#bShopAd', '#bLvAd']){ const b = $(id); if (!b) continue; b.hidden = !left; b.innerHTML = `<span class="play"></span>+1<span class="seed"></span><i>${left} left</i>`; b.title = 'Watch an ad for a free pumpkin seed'; b.setAttribute('aria-label', `Watch an ad for a free pumpkin seed, ${left} left today`); }
   const lc = $('#bLvChest'); if (lc){ lc.hidden = !nc; lc.textContent = `Open chest${nc > 1 ? 's' : ''} (${nc})`; }
   const dot = $('#seedDot'); if (dot) dot.hidden = !(left || nc);
   const sv = $('#lvSeeds'); if (sv) sv.textContent = (save.seeds || 0).toLocaleString();

@@ -356,12 +356,24 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 
 /* ---------- monetization: ads, chests, boss items, Loot Sack (owner, 2026-09-27) ---------- */
 .play{ display:inline-block; width:0; height:0; border-style:solid; border-width:calc(var(--u)*5px) 0 calc(var(--u)*5px) calc(var(--u)*8px); border-color:transparent transparent transparent currentColor; margin-right:calc(var(--u)*6px); vertical-align:middle; }
-.adPill, .chestPill{ margin-left:calc(var(--u)*10px); min-height:44px; padding:0 calc(var(--u)*12px); border-radius:999px; border:0; font:inherit; font-weight:700; font-size:calc(var(--u)*14px); cursor:pointer; display:inline-flex; align-items:center; gap:calc(var(--u)*4px);
-  color:#20122c; background:linear-gradient(#b7f27a, #6cc43c); box-shadow:0 calc(var(--u)*3px) 0 #3f8a1c, 0 0 calc(var(--u)*14px) rgba(160,240,110,.45); animation:adPulse 2.4s ease-in-out infinite; }
-.adPill small{ font-weight:600; opacity:.75; font-size:calc(var(--u)*11px); }
-.chestPill{ color:#2b1706; background:linear-gradient(#ffe08a, #f0a32a); box-shadow:0 calc(var(--u)*3px) 0 #a8650f; animation:none; }
-@keyframes adPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.05); } }
+.adPill, .chestPill{ position:relative; margin-left:calc(var(--u)*8px); height:calc(var(--u)*32px); padding:0 calc(var(--u)*10px) 0 calc(var(--u)*4px); border-radius:999px; font:inherit; font-weight:700; font-size:calc(var(--u)*15px); cursor:pointer;
+  display:inline-flex; align-items:center; gap:calc(var(--u)*5px); color:var(--ink); background:rgba(120,210,80,.16); border:1.5px solid rgba(150,230,100,.75); animation:adGlow 2.6s ease-in-out infinite; }
+.adPill::before, .chestPill::before{ content:''; position:absolute; inset:-7px -3px; }   /* 44 px touch target around a slim chip */
+.adPill .play{ width:calc(var(--u)*24px); height:calc(var(--u)*24px); border:0; border-radius:50%; margin:0; background:#7ed64a; position:relative; flex:none; }
+.adPill .play::after{ content:''; position:absolute; left:52%; top:50%; transform:translate(-40%,-50%); border-style:solid; border-width:calc(var(--u)*5px) 0 calc(var(--u)*5px) calc(var(--u)*8px); border-color:transparent transparent transparent #1d2a10; }
+.adPill .seed{ margin-left:0; width:calc(var(--u)*11px); height:calc(var(--u)*14px); }
+.adPill i{ font-style:normal; font-weight:600; font-size:calc(var(--u)*11px); color:var(--muted); margin-left:calc(var(--u)*2px); }
+.chestPill{ padding:0 calc(var(--u)*12px); color:#2b1706; background:linear-gradient(#ffe08a, #f0a32a); border:0; animation:none; }
+@keyframes adGlow{ 0%,100%{ box-shadow:0 0 0 rgba(150,230,100,0); } 50%{ box-shadow:0 0 calc(var(--u)*12px) rgba(150,230,100,.55); } }
 @media (prefers-reduced-motion: reduce){ .adPill{ animation:none; } }
+/* result card (owner, 2026-09-27): one clear primary action, then equal secondary buttons, then the extras */
+#rBtns{ display:grid; grid-template-columns:repeat(3, 1fr); gap:calc(var(--u)*10px); }
+#rBtns .btn{ padding-inline:calc(var(--u)*8px); white-space:nowrap; }
+#rBtns .btn:only-child{ grid-column:2; }
+#rBtns .contBtn{ grid-column:1 / -1; display:flex; flex-direction:column; align-items:center; line-height:1.15; padding-block:calc(var(--u)*10px); }
+#rBtns .contBtn b{ display:inline-flex; align-items:center; font-weight:700; }
+#rBtns .contBtn small{ font-size:calc(var(--u)*13px); font-weight:600; opacity:.8; }
+#rBtns .contBtn .play{ border-color:transparent transparent transparent #2a1400; }
 .tab{ position:relative; }
 .tab .dot{ position:absolute; top:calc(var(--u)*4px); right:calc(var(--u)*4px); width:calc(var(--u)*9px); height:calc(var(--u)*9px); border-radius:50%; background:#8ee05a; box-shadow:0 0 calc(var(--u)*6px) #8ee05a; }
 .adCard2{ display:flex; align-items:center; gap:calc(var(--u)*10px); padding:calc(var(--u)*10px) calc(var(--u)*12px); margin-bottom:calc(var(--u)*10px); border-radius:calc(var(--u)*16px); border:1px solid rgba(160,240,110,.45); background:linear-gradient(135deg, rgba(120,200,80,.16), rgba(255,255,255,.03)); }
@@ -389,7 +401,7 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 @keyframes lootIn{ from{ opacity:0; transform:translateY(calc(var(--u)*8px)); } to{ opacity:1; transform:none; } }
 @media (prefers-reduced-motion: reduce){ .lootRow{ animation:none; opacity:1; } .chestArt canvas{ animation:none !important; } }
 .btn .play{ margin-right:calc(var(--u)*6px); }
-.rExtra{ margin-top:calc(var(--u)*8px); align-items:center; } .chestBtn{ display:inline-flex; align-items:center; gap:calc(var(--u)*6px); } .chestBtn canvas{ width:calc(var(--u)*30px); height:calc(var(--u)*30px); }
+.rExtra{ margin-top:calc(var(--u)*12px); align-items:center; gap:calc(var(--u)*8px); } .rExtra .adPill{ margin-left:0; } .chestBtn{ display:inline-flex; align-items:center; gap:calc(var(--u)*6px); font-size:calc(var(--u)*15px) !important; padding:calc(var(--u)*4px) calc(var(--u)*14px) calc(var(--u)*4px) calc(var(--u)*6px) !important; } .chestBtn canvas{ width:calc(var(--u)*30px); height:calc(var(--u)*30px); }
 .bossItems{ width:100%; display:grid; grid-template-columns:auto 1fr; align-items:center; gap:calc(var(--u)*2px) calc(var(--u)*6px); font-size:calc(var(--u)*12px); color:var(--muted); text-align:left; }
 .bossItems canvas{ width:calc(var(--u)*30px) !important; height:calc(var(--u)*30px) !important; grid-row:span 2; } .bossItems b{ color:var(--ink); }
 .bossItems i{ height:calc(var(--u)*6px); border-radius:999px; background:linear-gradient(90deg, var(--candle) calc(var(--f) * 100%), rgba(255,255,255,.12) 0); }

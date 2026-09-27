@@ -31,19 +31,49 @@ function brushStem(g, R, P){
   g.save(); g.translate(0, -R * .72); g.scale(1.35, 1.35);   // a big, readable brush
   g.fillStyle = '#7a4a26'; g.beginPath(); g.roundRect(-R * .09, -R * .22, R * .18, R * .3, R * .05); g.fill();
   g.fillStyle = '#c8ccd6'; g.beginPath(); g.roundRect(-R * .12, -R * .36, R * .24, R * .16, R * .04); g.fill(); g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(-R * .08, -R * .34, R * .05, R * .12);
-  g.fillStyle = '#e8d2a8'; g.beginPath(); g.moveTo(-R * .11, -R * .36); g.bezierCurveTo(-R * .12, -R * .6, R * .05, -R * .72, R * .36, -R * .74); g.bezierCurveTo(R * .2, -R * .6, R * .12, -R * .48, R * .11, -R * .36); g.closePath(); g.fill();
-  g.save(); g.clip(); g.fillStyle = P.paints[0]; g.beginPath(); g.moveTo(-R * .2, -R * .56); g.bezierCurveTo(R * .02, -R * .64, R * .2, -R * .66, R * .5, -R * .8); g.lineTo(R * .5, -R * .9); g.lineTo(-R * .2, -R * .9); g.closePath(); g.fill(); g.restore();   // dipped tip
+  g.fillStyle = P.tip ? '#2a2230' : '#e8d2a8'; g.beginPath(); g.moveTo(-R * .11, -R * .36); g.bezierCurveTo(-R * .12, -R * .6, R * .05, -R * .72, R * .36, -R * .74); g.bezierCurveTo(R * .2, -R * .6, R * .12, -R * .48, R * .11, -R * .36); g.closePath(); g.fill();   // the skin's bristles are black
+  if (P.tip){ g.strokeStyle = '#f4ecff'; g.lineWidth = Math.max(1, R * .045); g.stroke(); g.save(); g.clip(); g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = R * .05; g.beginPath(); g.moveTo(-R * .05, -R * .4); g.quadraticCurveTo(-R * .02, -R * .6, R * .22, -R * .68); g.stroke(); g.restore(); }   // a pale rim and gloss so the black tip shows against the night
+  g.save(); g.clip(); g.fillStyle = P.tip || P.paints[0]; g.beginPath(); g.moveTo(-R * .2, -R * .56); g.bezierCurveTo(R * .02, -R * .64, R * .2, -R * .66, R * .5, -R * .8); g.lineTo(R * .5, -R * .9); g.lineTo(-R * .2, -R * .9); g.closePath(); g.fill(); g.restore();   // dipped tip
+  if (P.tip){ g.fillStyle = P.tip; g.beginPath(); g.ellipse(R * .36, -R * .66, R * .035, R * .055, 0, 0, TAU); g.fill(); g.fillStyle = 'rgba(255,255,255,.6)'; g.fillRect(R * .05, -R * .66, R * .12, R * .025); }   // a drip hanging off the black tip
   g.strokeStyle = 'rgba(60,30,10,.35)'; g.lineWidth = 1; for (const k of [-.04, .03]){ g.beginPath(); g.moveTo(R * k, -R * .38); g.quadraticCurveTo(R * (k + .06), -R * .56, R * (.2 + k), -R * .66); g.stroke(); }
   g.restore();
 }
 const PALETTES = [
   { key:'pastel', name:'Paint pumpkin, pastel', rec:true, base:'#c9b6f0', paints:['#7fe0c3', '#ffb59a', '#fff0a0', '#8ec5ff'], face:'purple',
     why:'The chosen look (owner, 2026-09-27): a soft lilac rind with big mint, peach, butter and sky-blue paint patches, and a normal pumpkin stem. Its trail is pastel paint drops and its hit throws the patches out as splats.' },
-  { key:'brushskin', name:'Future skin: paintbrush stem', brush:true, base:'#c9b6f0', paints:['#7fe0c3', '#ffb59a', '#fff0a0', '#8ec5ff'], face:'purple',
-    why:'Kept for later as a skin: the same pumpkin with a paintbrush for a stem, its bristle tip dipped in paint.' },
+  { key:'masterpiece', name:'Skin: Masterpiece', skin:true, brush:true, tip:'#141018', base:'#c9b6f0', paints:['#7fe0c3', '#ffb59a', '#fff0a0', '#8ec5ff', '#d9a8ff'], face:'purple',
+    why:'A skin must change the whole pumpkin, like the others do. The body turns into thick swirling oil-paint dabs, the lit face is painted on in glowing brushstrokes with a peach smear, the stem is the paintbrush with a black tip and a drip, and it leaves a wide painted ribbon across the sky instead of drops.' },
 ];
+
+// ---------- Masterpiece skin: an oil-painted body, a painted glowing face, the brush stem and a ribbon trail ----------
+function impasto(g, R, P){
+  g.save(); rind(g, R); g.clip(); const Rr = rng(99), cols = P.paints; g.lineCap = 'round';
+  for (const [ox, rw, rh] of RIBS) for (let k = 0; k < 9; k++){   // short curved dabs that follow each rib, like thick oil paint
+    const f = (k + .5) / 9, y = R * (.04 - rh + f * rh * 2), x = ox * R * .95 + Math.sin(f * Math.PI + ox * 3) * rw * R * .35, c = cols[Math.floor(Rr() * cols.length)], w = R * (.09 + Rr() * .05);
+    g.strokeStyle = c; g.lineWidth = w; g.beginPath(); g.arc(x + R * .18, y, R * .2, Math.PI * (.75 + Rr() * .2), Math.PI * (1.3 + Rr() * .2)); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = w * .25; g.beginPath(); g.arc(x + R * .18, y - w * .2, R * .2, Math.PI * .85, Math.PI * 1.2); g.stroke();
+    g.strokeStyle = 'rgba(40,20,60,.18)'; g.lineWidth = w * .2; g.beginPath(); g.arc(x + R * .18, y + w * .3, R * .2, Math.PI * .9, Math.PI * 1.35); g.stroke(); }
+  g.restore();
+}
+/** Its own lit face: glowing brushstrokes, happy crescent eyes, a painted grin and a peach smear. Nothing when unlit (faceless in the patch). */
+function paintedFace(g, R, P, lit){
+  if (!lit) return;
+  g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
+  const glowStroke = (fn, w) => { g.strokeStyle = 'rgba(40,16,50,.9)'; g.lineWidth = w * 1.7; fn(); g.stroke(); g.strokeStyle = '#fff4b8'; g.lineWidth = w; fn(); g.stroke(); g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = w * .35; fn(); g.stroke(); };
+  for (const s of [-1, 1]) glowStroke(() => { g.beginPath(); g.arc(s * R * .3, -R * .02, R * .15, Math.PI * 1.1, Math.PI * 1.9); }, R * .1);
+  glowStroke(() => { g.beginPath(); g.moveTo(-R * .34, R * .26); g.quadraticCurveTo(0, R * .56, R * .36, R * .22); }, R * .11);
+  g.fillStyle = rgba(P.paints[1], .9); g.beginPath(); g.ellipse(R * .55, R * .16, R * .13, R * .06, -.4, 0, TAU); g.fill();
+  g.restore();
+}
+function ribbon(g, x, y, R, t, P){   // a wide painted brushstroke left in the air behind it
+  const L = 120, n = 22; g.save(); g.lineCap = 'round';
+  for (let band = 0; band < 3; band++){ g.strokeStyle = rgba(P.paints[(((band + Math.floor(t * 2)) % 4) + 4) % 4], .85 - band * .15); g.lineWidth = R * (.55 - band * .12);
+    g.beginPath(); for (let i = 0; i <= n; i++){ const f = i / n, yy = y + 6 + f * L, xx = x + Math.sin(f * 5 + t * 6) * R * .45 * f + (band - 1) * R * .3 * (1 - f); i ? g.lineTo(xx, yy) : g.moveTo(xx, yy); } g.stroke(); }
+  g.strokeStyle = 'rgba(40,20,60,.35)'; g.lineWidth = 1; for (let k = -2; k <= 2; k++){ g.beginPath(); for (let i = 0; i <= n; i++){ const f = i / n, yy = y + 6 + f * L * .9, xx = x + Math.sin(f * 5 + t * 6) * R * .45 * f + k * R * .12; i ? g.lineTo(xx, yy) : g.moveTo(xx, yy); } g.stroke(); }   // bristle marks
+  g.restore();
+}
 const bake = (w, h, fn) => { const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2; const g = c.getContext('2d'); g.scale(2, 2); fn(g); return c; };
-const faceOf = P => { const f = faceFor(P.face); return (g, R, c, lit) => { paintPatches(g, R, P); f(g, R, c, lit); }; };
+const faceOf = P => { const f = faceFor(P.face); return P.skin ? (g, R, c, lit) => { impasto(g, R, P); paintedFace(g, R, P, lit); } : (g, R, c, lit) => { paintPatches(g, R, P); f(g, R, c, lit); }; };
 const icon = (P, R, lit) => bake(R * 3.4, R * 3.6, g => { g.translate(R * 1.7, R * 2.0); pumpkin(g, pal(P.base), lit, R, faceOf(P)); if (P.brush) brushStem(g, R, P); });   // the pumpkin keeps its normal stem; the brush stem is saved for a skin
 function trail(g, x, y, R, t, P){ const Rr = rng(4); for (let i = 0; i < 16; i++){ const f = (Rr() + t * 2.4) % 1, px = x + (Rr() - .5) * R * 1.6 * (1 - f * .5), py = y + 8 + f * 90, s = (1 - f) * (3 + Rr() * 4); g.fillStyle = rgba(P.paints[i % 4], 1 - f); g.beginPath(); g.ellipse(px, py, s, s * 1.3, 0, 0, TAU); g.fill(); } }
 function hit(g, t, P){ const R = rng(21), st = Math.min(1, t * 4), fade = t < .6 ? 1 : 1 - (t - .6) / .4;
@@ -52,7 +82,7 @@ function hit(g, t, P){ const R = rng(21), st = Math.min(1, t * 4), fade = t < .6
 const W = 340, H = 300;
 function card(P){
   const el = document.createElement('article'); el.className = 'card' + (P.rec ? ' rec' : '');
-  el.innerHTML = `${P.rec ? '<div class="tag">Chosen</div>' : '<div class="tag dim">Skin idea</div>'}<h3>${P.name}</h3><div class="sw">${[P.base, ...P.paints].map((c, i) => `<i style="background:${c}" title="${c}"></i>${i === 0 ? '<b>+</b>' : ''}`).join('')}</div>`;
+  el.innerHTML = `${P.rec ? '<div class="tag">Chosen</div>' : '<div class="tag dim">Skin</div>'}<h3>${P.name}</h3><div class="sw">${[P.base, ...P.paints].map((c, i) => `<i style="background:${c}" title="${c}"></i>${i === 0 ? '<b>+</b>' : ''}`).join('')}</div>`;
   const cv = document.createElement('canvas'); cv.width = W * 2; cv.height = H * 2; cv.style.width = W + 'px'; cv.style.maxWidth = '100%'; el.appendChild(cv);
   el.insertAdjacentHTML('beforeend', `<p>${P.why}</p><div class="small"><span>In the patch</span><span>Lit</span><span>Shop icon</span></div><div class="mixLabel">In a mixed patch, unlit (can you spot it?)</div>`);
   const row = el.querySelector('.small'); [[icon(P, 22, false), 74], [icon(P, 22, true), 74], [icon(P, 16, true), 54]].forEach(([c, w], i) => { c.style.width = w + 'px'; row.children[i].prepend(c); });
@@ -64,7 +94,7 @@ function card(P){
     const t = (now - t0) / 1000; g.setTransform(2, 0, 0, 2, 0, 0); g.fillStyle = sky; g.fillRect(0, 0, W, H);
     const T = 2.2, u = t % T, hx = W / 2, hy = 80, HIT = .42; g.drawImage(ghoul, hx - 50, hy - 56, 100, 100);
     [[W * .2, 0], [W * .8, 1.3]].forEach(([x, ph]) => { const s = 1 + Math.sin(t * 2.4 + ph) * .03; g.save(); g.translate(x, H - 50); g.scale(s, 1 / s); g.drawImage(big, -26 * 1.7, -26 * 2.0, 26 * 3.4, 26 * 3.6); g.restore(); });
-    if (u < HIT){ const f = u / HIT, y = H - 30 - (H - 30 - hy) * ease(f); trail(g, hx, y, 20, t, P); g.save(); g.translate(hx, y); g.rotate(f * 6); g.drawImage(fly, -20 * 1.7, -20 * 2.0, 20 * 3.4, 20 * 3.6); g.restore(); }
+    if (u < HIT){ const f = u / HIT, y = H - 30 - (H - 30 - hy) * ease(f); (P.skin ? ribbon : trail)(g, hx, y, 20, t, P); g.save(); g.translate(hx, y); g.rotate(f * 6); g.drawImage(fly, -20 * 1.7, -20 * 2.0, 20 * 3.4, 20 * 3.6); g.restore(); }
     else if (u < HIT + 1.2){ g.save(); g.translate(hx, hy); g.scale(1.2, 1.2); hit(g, (u - HIT) / 1.2, P); g.restore(); }
     requestAnimationFrame(loop);
   })(t0);

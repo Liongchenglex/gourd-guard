@@ -45,3 +45,11 @@ Patches are smooth closed curves (`PATCHES` in R units) clipped to the rind, eac
 - **The Paint pumpkin uses the Pastel palette** (lilac `#c9b6f0` rind; mint `#7fe0c3`, peach `#ffb59a`, butter `#fff0a0`, sky `#8ec5ff` patches) with a **normal pumpkin stem**. `sketch/entry.js` now shows only this version plus the skin idea below.
 - **The paintbrush stem becomes a future skin** for this pumpkin (`brushStem()` in `sketch/entry.js`, drawn when a palette has `brush:true`).
 - Watch-out for the build: the butter and sky-blue patches are faint on the lilac rind. If they get lost at game size, deepen those two a step (for example butter `#ffe27a`, sky `#6aaeff`) rather than changing the base. The lilac base also sits nearest Purple and Pink, so give the unlit sprite its patches at full strength.
+
+### Masterpiece skin (2026-09-27)
+The paintbrush stem alone did not feel like a skin, because a stem is too small a change. The existing skins change **body, lit face and flight trail**, so **Masterpiece** does all three plus the stem:
+- **Body:** thick, swirling oil-paint dabs following each rib in mint, peach, butter, sky and lavender, each dab with a highlight and a shadow (`impasto()`).
+- **Lit face:** its own, painted on in glowing cream brushstrokes: happy crescent eyes, a wide painted grin and a peach smear (`paintedFace()`); no face when unlit, like every pumpkin.
+- **Stem:** the paintbrush with black bristles, a pale rim and gloss so it shows against the night, and a drip (`brushStem()` with `tip`).
+- **Trail:** a wide painted ribbon swaying behind it, with bristle marks, instead of drops (`ribbon()`).
+A matching launch accent would be a wet brush swish.

@@ -72,17 +72,18 @@ function fixed(d){
     4: [q('castlesAll', l), q('noTools', l)], 5: [q('noTools', l), q('wallAvg', l)],
   }[w];
   if (w === 1 && (l === 13 || l === 17)) return [['chill', 15], ['burn', 15]];
-  if (w === 3 && (l === 13 || l === 17)) return [['reflectMax', 10], q('bunch5', l)];
+  if (w === 3 && (l === 13 || l === 17)) return [['reflectMax', 50], q('bunch5', l)];
   if (w === 3 && l === 14) return [['wrongMax', 15], q('noTools', l)];
   if (w === 2 && l >= 17) return [['noTouch', 'fogwalker'], null];   // plus one random from the world-2 pool
   if (w === 4 && l >= 18) return [q('castlesAll', l), null];
   return null;
 }
-const N15 = k => k === 'iceOrFire' ? ['iceOrFire', 15] : null;
+// "freeze OR burn" (owner): each such slot is one or the other, never both; chosen by level so the other picks stay put
+const N15 = (k, d) => k === 'iceOrFire' ? [(d.world + d.level) % 2 ? 'chill' : 'burn', 15] : null;
 
 const fam = k => k.startsWith('wall') ? 'wall' : k.startsWith('noTouch') ? 'noTouch' : k;   // never two wall quests or two fence quests on one level
 const table = {};
-const types = x => (x || []).filter(Boolean).map(e => e[0] + (e[0] === 'noTouch' ? ':' + e[1] : ''));
+const types = x => (x || []).filter(Boolean).map(e => e[0] === 'chill' || e[0] === 'burn' ? 'iceOrFire' : e[0] + (e[0] === 'noTouch' ? ':' + e[1] : ''));
 // pass 1: fixed levels
 for (const d of ALL){ const f = fixed(d); if (f && !f.includes(null)) table[`${d.world}-${d.level}`] = f; }
 // pass 2: the rest, avoiding the neighbours' quest types
@@ -97,7 +98,7 @@ for (const d of ALL){
   for (let s = 0; s < 2; s++){
     if (out[s]) continue;
     const k = pick(cand); cand = cand.filter(x => x !== k && fam(x) !== fam(k));
-    out[s] = N15(k) || make(k, d);
+    out[s] = N15(k, d) || make(k, d);
   }
   table[key] = out;
 }

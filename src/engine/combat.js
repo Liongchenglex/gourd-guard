@@ -25,6 +25,7 @@ export function launchGroup(ref){
     grid[r][c] = null;
   }
   SFX.launch(cells.length);
+  const skin = save.wardrobe && save.wardrobe.skins[type]; if (skin) SFX.skinLaunch(skin);   // a skin's launch accent, once per flick (owner, 2026-09-27)
   G.throws += cells.length;
   G.idle = 0; G.hint = null;
   resolveMatches();

@@ -159,6 +159,16 @@ export const SFX = {
     if (!S('whoosh', 0.5 + Math.min(0.3, n * 0.05), { rate: 1.05 - n * 0.03 })) noise(0.3, 0.3 + Math.min(0.2, n * 0.04), 500, 1.4, 0, 2800 + n * 200);
     if (n >= 5){ S('whooshlong', 0.5, { delay: 0.04, rate: 0.9 }); tone(120, 0.2, 'sine', 0.12, 60); }
   },
+  // a worn skin's accent under the launch whoosh, once per bunch and quiet (owner, 2026-09-27)
+  skinLaunch(key){
+    if (!gate('skinlaunch', 120)) return;
+    switch (key){
+      case 'frost': S('glassping', 0.3, { rate: 1.25, jit: 0.06 }) || tone(2200, 0.18, 'sine', 0.04, 2800); S('ice', 0.22, { rate: 1.3, delay: 0.03 }); break;   // crystalline chime
+      case 'magma': S('fire', 0.35, { rate: 0.8 }) || noise(0.3, 0.16, 700, 0.9, 0, 200); tone(70, 0.25, 'sine', 0.08, 45); break;                             // low rumble and sizzle
+      case 'candycorn': S('pop', 0.3, { rate: 1.35 }) || tap(); S('sparkle', 0.22, { rate: 1.4, delay: 0.04 }) || sparkle(0.04, 0.03); break;                  // sugary sparkle pop
+      case 'galaxy': S('magic', 0.26, { rate: 1.15 }) || [0, 7, 12].forEach((k, i) => tone(880 * Math.pow(2, k / 12), 0.2, 'sine', 0.03, null, i * 0.05)); break;   // soft shimmer
+    }
+  },
   collect(){ S('pop', 0.5, { rate: 1.2 }) || (tone(880, 0.08, 'triangle', 0.07, 1320), tone(1320, 0.1, 'sine', 0.04, null, 0.06)); },
   smash(){ S('woodbreak', 0.6) || (noise(0.18, 0.3, 500, 0.8), tone(160, 0.12, 'square', 0.05, 90)); },
   hit(){ if (!gate('hit', 45)) return; S('thud', 0.6) || thump(); },

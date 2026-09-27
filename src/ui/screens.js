@@ -92,8 +92,9 @@ export function showResult(win){
     save.coins += g.coins;
     const isBest = g.score > save.best; if (isBest) save.best = g.score;
     title = isBest ? 'New best!' : 'Night over';
-    msg = `You held the walls for ${fmtTime(g.t)}.`;
-    stats.push(['Score', g.score.toLocaleString()], ['Best', save.best.toLocaleString()], ['Monsters stopped', g.kills], ['Coins found', g.coins]);
+    const hr = (g.hour || 0) + 1, bestHr = save.bestHour = Math.max(save.bestHour || 0, hr);
+    msg = `You held the walls for ${fmtTime(g.t)} and reached hour ${hr}${g.frenzy ? ', deep in the frenzy' : ''}.`;
+    stats.push(['Score', g.score.toLocaleString()], ['Best', save.best.toLocaleString()], ['Hour reached', `${hr} (best ${bestHr})`], ['Monsters stopped', g.kills], ['Coins found', g.coins]);
     addBtn(box, 'Play again', beginEndless);
     addBtn(box, 'Shop', () => openShop('result'), 'alt');
     addBtn(box, 'Menu', () => setState('title'), 'alt');

@@ -1,10 +1,11 @@
 import { BOSS_NAME, BOSS_NAMES, BOSS_INTRO } from '../data/monsters.js';
-import { WORLDS, levelFor } from '../data/worlds/index.js';
+import { WORLDS, levelFor, ALL_LEVELS } from '../data/worlds/index.js';
+import * as E from '../data/endless.js';
 import { SFX } from './audio.js';
-import { spawnMonster } from './monsters.js';
+import { spawnMonster, spawnSack } from './monsters.js';
 import { buildBg } from './render/sprites.js';
-import { G } from './state.js';
-import { rnd } from './util.js';
+import { G, COLS } from './state.js';
+import { rnd, shuffle } from './util.js';
 import { banner } from '../ui/hud.js';
 import { SPAWN_GAP, SPAWN_BURST, SPAWN_BURST_EARLY, SPAWN_LATE_FROM } from '../data/rules.js';
 import { musicStart } from './audio.js';
@@ -39,15 +40,55 @@ export function storySpawn(dt){
   }
 }
 
+/** Endless Night (owner, 2026-09-27): hours as milestones, monsters from every world, bosses and Loot Sacks on the hour,
+ *  a frenzy from FRENZY_HOUR. All numbers live in src/data/endless.js. */
+function endlessPool(h){
+  const top = Math.min(h, E.TIERS.length - 1), pool = [];
+  for (let k = 0; k <= top; k++){
+    const f = Math.max(E.OLD_MIN, Math.pow(E.OLD_FADE, top - k));
+    for (const [key, w] of E.TIERS[k].monsters) pool.push([key, w * f]);
+  }
+  return pool;
+}
+const themeOf = w => { const d = ALL_LEVELS.find(x => x.world === w); return d ? d.theme : 0; };   // raw level data: world = story order, theme = scenery
+function endlessPuddles(n){
+  const free = shuffle([...Array(COLS).keys()].filter(l => !G.puddles.some(p => p.lane === l)));
+  for (const lane of free.slice(0, n)) G.puddles.push({ lane, p:rnd(0.3, 0.62) });
+}
+function startHour(h){
+  G.hour = h; G.frenzy = h >= E.FRENZY_HOUR;
+  const tier = E.TIERS[h], notes = [];
+  if (tier){
+    if (tier.world){ const th = themeOf(tier.world); if (th !== G.world){ G.world = th; buildBg(th); } }
+    notes.push(tier.join);
+    if (tier.puddles) endlessPuddles(tier.puddles);
+  }
+  const pudTier = E.TIERS.findIndex(t => t.puddles);
+  if (!tier && pudTier >= 0 && h > pudTier && (h - pudTier) % 2 === 0 && G.puddles.length < E.PUDDLES_MAX) endlessPuddles(1);
+  if (h){ G.score += E.HOUR_BONUS * h; }
+  const boss = E.bossForHour(h), bossUp = G.monsters.some(m => m.type === 'boss' && !m.dead);
+  if (boss && !bossUp){
+    G.endBoss = boss; G.endForm = E.bossFormForHour(h);
+    if (boss === 'twintides') G.sea = true;   // the twins need their sea row
+    spawnMonster('boss'); G.bossAlive = true;
+    notes.push(`${G.endForm === 2 ? 'A stronger ' + BOSS_NAMES[boss].replace(/^The /, '') : BOSS_NAMES[boss]} ${boss === 'twintides' ? 'rise' : 'rises'}!`);
+    SFX.bossAlert(); setTimeout(() => SFX.bossSfx(boss, 'arrive'), 900); setTimeout(() => { if (G && !G.over && G.mode === 'endless') musicStart('boss'); }, 1600);
+  } else if (h && (E.SACK_HOURS(h) || boss)){ spawnSack(); }   // a boss hour with the last boss still up brings a sack instead
+  if (h === E.FRENZY_HOUR){ notes.unshift('The frenzy begins!'); musicStart('boss'); }
+  if (!notes.length) notes.push(E.QUIET_HOUR);
+  banner(h === E.FRENZY_HOUR ? 'Frenzy!' : `Hour ${h + 1}`, notes.join(' '), 3);
+}
 export function endlessSpawn(dt){
-  G.diff = 1 + G.t / 25;
+  if (G.hour == null) startHour(0);
+  const h = Math.floor(G.t / E.HOUR_SECONDS);
+  if (h > G.hour) startHour(h);
+  if (G.bossAlive && !G.monsters.some(m => m.type === 'boss' && !m.dead)){ G.bossAlive = false; if (!G.frenzy) musicStart('play'); }   // back to the night music once the boss falls
   G.spawnTimer -= dt;
   if (G.spawnTimer <= 0){
-    spawnMonster(pickFrom(levelFor(Math.min(12, Math.floor(G.diff) + 2)).pool));
-    G.spawnTimer = Math.max(0.9, 3.2 - G.diff * 0.15) * rnd(0.6, 1.4);
+    spawnMonster(pickFrom(endlessPool(G.hour)));
+    let gap = Math.max(E.GAP_MIN, E.GAP_START * Math.pow(E.GAP_DECAY, G.hour));
+    if (G.frenzy) gap *= E.FRENZY_GAP;
+    G.spawnTimer = gap * rnd(0.6, 1.4);
+    if (Math.random() < (G.frenzy ? E.FRENZY_BURST : E.BURST)) G.spawnTimer *= 0.3;
   }
-  G.bossTimer -= dt;
-  if (G.bossTimer <= 0){ spawnMonster('boss'); G.bossTimer = 100; banner(BOSS_NAME, 'It rises from the graves.', 2.4); SFX.bossSfx('gravekeeper', 'arrive'); }
-  const w = G.t > 240 ? 2 : G.t > 120 ? 1 : 0;
-  if (w !== G.world){ G.world = w; buildBg(w); banner(WORLDS[w].name, 'The night gets darker.', 2.2); }
 }

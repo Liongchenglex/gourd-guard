@@ -6,6 +6,7 @@ import { wallFrac } from '../engine/walls.js';
 import { save } from '../save.js';
 import { toolIcon } from '../engine/render/tools.js';
 import { QUEST_START, questsFor, questLive, questShort } from '../data/quests.js';
+import { HOUR_SECONDS as E_HOUR } from '../data/endless.js';
 let trayDrawn = false;
 let qNext = -1, qHtml = '', qFor = null;   // quest trackers, rebuilt 4 times a second rather than every frame
 
@@ -21,12 +22,12 @@ export function updateHud(force){
   if (!G || G.mode === 'demo') return;
   const coins = save.coins + G.coins;
   let prog;
-  if (G.mode !== 'story') prog = 1 - G.bossTimer / 100;
+  if (G.mode !== 'story') prog = (G.t % E_HOUR) / E_HOUR;   // endless: progress to the next hour
   else if (G.def.boss){   // boss level: the bar fills a little until the boss shows, then tracks its health
     const bs = G.monsters.filter(m => m.type === 'boss'), hp = bs.reduce((a, b) => a + Math.max(0, b.hp), 0), mx = bs.reduce((a, b) => a + b.maxHp, 0);
     prog = G.bossDead ? 1 : bs.length ? 0.1 + 0.9 * (1 - hp / mx) : 0.1 * Math.min(1, G.spawned / Math.max(1, Math.floor(G.total * 0.4)));
   } else prog = G.total ? G.resolved / G.total : 0;
-  const label = G.mode === 'story' ? `Night ${G.def.label}` : `Score ${G.score.toLocaleString()}`;
+  const label = G.mode === 'story' ? `Night ${G.def.label}` : `${G.frenzy ? 'Frenzy' : 'Hour'} ${(G.hour || 0) + 1} · ${G.score.toLocaleString()}`;
   const wf = Math.round(wallFrac() * 100);
   const tools = toolsForNight(G.mode === 'story' ? Math.max(G.n, highestOpen()) : highestOpen());
   if (!trayDrawn){ trayDrawn = true; for (const [btn, key] of [['#rpBtn', 'repair'], ['#fwBtn', 'fw'], ['#gbBtn', 'buster'], ['#lnBtn', 'lantern'], ['#lmBtn', 'mine'], ['#bmBtn', 'bomb'], ['#scBtn', 'scarecrow']]){ const cv = $(btn).querySelector('canvas.ti'); if (!cv) continue; const ic = toolIcon(key, 40); cv.width = ic.width; cv.height = ic.height; cv.getContext('2d').drawImage(ic, 0, 0); } }

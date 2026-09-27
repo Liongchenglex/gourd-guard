@@ -9,6 +9,7 @@ import { PTYPES } from '../data/pumpkins.js';
 import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, LANE, grid, ROWS, GY, W, walls } from './state.js';
 import { clamp, rnd, shuffle } from './util.js';
 import { damageWall } from './walls.js';
+import * as E from '../data/endless.js';
 
 // ---------- Monsters ----------
 
@@ -18,9 +19,9 @@ export function mS(m){ return 0.85 + 0.2 * clamp(m.p, 0, 1); }
 
 export const TILE_P = () => CS / (FIELD_BOT - FIELD_TOP);
 
-export function spMulNow(){ return G.mode === 'story' ? G.def.spMul : 0.85 + (G.diff - 1) * 0.015; }
+export function spMulNow(){ return G.mode === 'story' ? G.def.spMul : Math.min(E.SPEED_MAX, E.SPEED_START + E.SPEED_STEP * (G.hour || 0)) + (G.frenzy ? E.FRENZY_SPEED : 0); }   // endless: by the hour (data/endless.js)
 
-export function hpExtra(){ return G.mode === 'story' ? 0 : Math.min(2, Math.floor((G.diff - 1) / 10)); }
+export function hpExtra(){ return G.mode === 'story' ? 0 : E.hpExtraForHour(G.hour || 0); }
 
 export function lanesOf(m){ return m.type === 'sack' ? [m.lane, m.lane + 1] : [m.lane]; }   // the Loot Sack spans two lanes
 
@@ -38,7 +39,7 @@ export function pickLane(){
 /** Resolve a pool key (type, variant or 'boss') into { type, kind, T, variant }. */
 export function resolveMonster(key){
   if (key === 'boss'){
-    const kind = G.mode === 'story' && G.def.boss ? G.def.boss : 'gravekeeper';
+    const kind = G.mode === 'story' && G.def.boss ? G.def.boss : G.endBoss || 'gravekeeper';
     return { type:'boss', kind, T:TYPES[kind], variant:null };
   }
   const v = VARIANTS[key];
@@ -64,8 +65,8 @@ export function spawnMonster(key, lane, minion, p){
   }
   if (p == null && type !== 'boss' && G.def && G.def.shore) p = seaEdge - 0.02;   // shoreline levels: everything else surfaces at the water's edge
   let hp = T.hp + (type === 'imp' || type === 'brute' || type === 'wisp' ? hpExtra() : 0) + (mod && mod.hp ? mod.hp : 0);
-  const form = type === 'boss' ? (G.mode === 'story' ? (G.def.bossForm || 1) : (G.world >= 1 ? 2 : 1)) : 1;
-  if (type === 'boss') hp = form === 2 ? T.form2.hp : T.hp + (G.mode === 'endless' ? 4 * G.world : 0);
+  const form = type === 'boss' ? (G.mode === 'story' ? (G.def.bossForm || 1) : (G.endForm || 1)) : 1;
+  if (type === 'boss') hp = form === 2 ? T.form2.hp : T.hp;
   if (lane == null) lane = pickLane();
   const x = LANE(lane);
   const m = { type, kind, lane, x, tx:x, p:p != null ? p : -0.02, hp, maxHp:hp, r:T.r, hw:CS * 0.42, form,
@@ -93,7 +94,7 @@ export function spawnMonster(key, lane, minion, p){
     else { m.sp = 0.04 * spMulNow(); m.walker = true; }    // no puddles on this level: it just walks in
   }
   if (puddle){ for (let i = 0; i < 12; i++) spark(m.x, mY(m), '#7fd0e8', 120); if (type !== 'diver') SFX.monsterAct(type, 'rise'); }
-  else if (G.def && G.def.sea && m.p <= 0 && type !== 'boss') for (let i = 0; i < 10; i++) spark(m.x, FIELD_TOP + 8, '#9fe0f0', 100);
+  else if (((G.def && G.def.sea) || G.sea) && m.p <= 0 && type !== 'boss') for (let i = 0; i < 10; i++) spark(m.x, FIELD_TOP + 8, '#9fe0f0', 100);
   if (type === 'hauler'){   // its gargoyles walk ahead of it in the same lane
     m.gargs = [];
     for (let i = 0; i < T.push; i++) m.gargs.push(spawnMonster('gargoyle', lane, true, m.p + 0.07 * (i + 1)));
@@ -139,7 +140,7 @@ function updateSack(m, dt, sp){
 export function spawnSack(){
   const lane = Math.floor(Math.random() * (COLS - 1)), m = spawnMonster('sack', lane, true, -0.04);
   m.x = m.tx = (LANE(lane) + LANE(lane + 1)) / 2; m.hw = CS * 0.95;
-  m.hp = m.maxHp = SACK.hpBase + SACK.hpPerWorld * ((G.def ? G.def.worldNo : 1) - 1);
+  m.hp = m.maxHp = SACK.hpBase + SACK.hpPerWorld * ((G.def ? G.def.worldNo : Math.min(5, 1 + Math.floor((G.hour || 0) / 2))) - 1);   // endless: grows with the hour
   m.hold = SACK.hold; m.sp = SACK.sp; m.stay = SACK.stay; m.stayMax = SACK.stay; m.fleeing = false; m.noKnockback = true;
   addFloat('A Loot Sack! Knock it down before it runs!', W / 2, FIELD_TOP + 120, '#ffd35a', 18, 2);
   return m;

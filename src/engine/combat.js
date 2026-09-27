@@ -102,7 +102,7 @@ const CHEST_LIFE = 10;
 function dropChest(m, y){ G.drops.push({ kind:'chest', x:clamp(m.x, 30, W - 30), y:clamp(y, FIELD_TOP + 24, FIELD_BOT - 34), t:0, life:CHEST_LIFE, ph:Math.random() * TAU, dead:false }); }
 /** Monetization loot (owner's monetization.md): the rare chest, boss seeds and chests, and the Loot Sack's prize. */
 function lootOnKill(m, reward, y){
-  if (G.mode !== 'story') return;
+  if (G.mode !== 'story' && reward !== 'sack') return;   // endless: only its hourly Loot Sacks give loot
   const pop = (kind, text, col) => { addFloat(text, m.x, y - m.r - 44, col, 19, 1.5); if (G.vfx) G.vfx.push({ kind:'loot', item:kind, x:m.x, y:y - 10, t:0, dur:1.4 }); };
   if (reward === 'sack'){
     const r = Math.random(), D = SACK.drop;
@@ -184,7 +184,7 @@ export function kill(m){
   if (m.type === 'boss'){
     const twinAlive = m.kind === 'twintides' && m.twin && !m.twin.dead;
     if (!twinAlive && G.mode === 'story' && G.def && (G.def.levelNo === 10 || G.def.levelNo === 20)){ addChest(G.def.levelNo === 20 ? 'boss' : 'normal', m.kind); addFloat(G.def.levelNo === 20 ? 'Boss chest!' : 'Treasure chest!', m.x, mY(m) - m.r - 70, '#ffd35a', 22, 2); if (G.vfx) G.vfx.push({ kind:'loot', item:G.def.levelNo === 20 ? 'bossChest' : 'chest', x:m.x, y:mY(m) - 20, t:0, dur:1.8 }); }
-    if (!twinAlive){ G.bossDead = true; G.shake = 1.2; banner(`${BOSS_NAMES[m.kind]} ${m.kind === 'twintides' ? 'fall' : 'falls'}!`, 'Finish the stragglers and grab the pumpkins it dropped!', 2.4); SFX.bossSfx(m.kind, 'die'); }
+    if (!twinAlive){ G.bossDead = true; G.shake = 1.2; banner(`${BOSS_NAMES[m.kind]} ${m.kind === 'twintides' ? 'fall' : 'falls'}!`, G.mode === 'endless' ? 'The night goes on…' : 'Finish the stragglers and grab the pumpkins it dropped!', 2.4); SFX.bossSfx(m.kind, 'die'); }
   }
 }
 

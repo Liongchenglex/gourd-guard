@@ -154,7 +154,7 @@ export function bustGrave(r, c){
 }
 export function useLantern(){
   if (state !== 'play' || G.over || save.lantern <= 0) return;
-  if (!G.def || !G.def.fog.length){ addFloat('No fog here', W / 2, GY - 30, '#ffd35a', 18, 1); SFX.bad(); return; }
+  if (!((G.def && G.def.fog.length) || G.monsters.some(m => m.type === 'fogwalker' && !m.dead))){ addFloat('No fog here', W / 2, GY - 30, '#ffd35a', 18, 1); SFX.bad(); return; }
   save.lantern--; persist(); G.q.tools++;
   G.fogClear = 10; G.flash = 0.4;
   for (let i = 0; i < 20; i++) spark(rnd(40, W - 40), rnd(FIELD_TOP, FENCE_Y), '#ffe27a', 120);
@@ -189,7 +189,7 @@ export function placePuddles(n){
   for (const lane of lanes) G.puddles.push({ lane, p:rnd(top, Math.max(top + 0.05, 0.7)) });
 }
 /** Where the sea ends (fraction of the field): `shore` tile rows down, or the thin 10% band on plain sea levels. */
-export function shoreP(){ const d = G.def; if (!d) return 0; return d.shore ? Math.min(0.8, d.shore * TILE_P()) : d.sea ? 0.1 : 0; }
+export function shoreP(){ const d = G.def; if (!d) return G && G.sea ? 0.1 : 0; return d.shore ? Math.min(0.8, d.shore * TILE_P()) : d.sea ? 0.1 : 0; }
 /** Explicit grave cells: clears any pumpkin there and plants the grave. */
 export function applyGravesLayout(cells){
   for (const [r, c] of cells) if (r >= 0 && r < ROWS && c >= 0 && c < COLS){ grid[r][c] = null; graves[r][c] = true; }

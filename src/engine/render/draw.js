@@ -41,7 +41,7 @@ export function render(){
     ctx.globalAlpha = 1;
   }
   drawPreview(t);
-  if (g.def && g.def.sea) drawSea(t);
+  if ((g.def && g.def.sea) || g.sea) drawSea(t);
   drawPuddles(t);
   for (const m of g.monsters) if (m.type === 'doctor' && !m.dead && m.p > 0) drawHealZone(m, t);
   for (const m of g.monsters) if (m.type === 'bulwark' && !m.dead && m.p > 0) drawBulwarkZone(m, t);

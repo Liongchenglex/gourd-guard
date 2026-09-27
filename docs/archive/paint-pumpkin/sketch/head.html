@@ -1,0 +1,32 @@
+<title>Paint Pumpkin Sketch</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Creepster&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap">
+<style>
+:root{ color-scheme:dark; --bg:#120a1c; --panel:#221633; --ink:#fbefdc; --muted:#c3b1c9; --gold:#ffd36a; --line:rgba(255,211,106,.22); }
+html{ background:#120a1c; }
+body{ margin:0; min-height:100vh; background:radial-gradient(ellipse at 50% -10%, #2c1a4a, var(--bg) 60%) fixed; color:var(--ink); font-family:Nunito, system-ui, sans-serif; }
+.wrap{ max-width:1120px; margin:0 auto; padding-block:30px 60px; padding-inline:16px; }
+h1{ font-family:Creepster, fantasy; font-weight:400; color:var(--gold); font-size:clamp(40px,7vw,66px); margin:0; letter-spacing:1px; text-shadow:0 0 26px rgba(255,211,106,.45); }
+.lede{ color:var(--muted); max-width:66ch; margin:8px 0 22px; line-height:1.5; }
+#opts{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:12px 14px 16px; }
+.card canvas{ display:block; border-radius:12px; margin:8px auto; }
+.card h3{ font-family:Fredoka, sans-serif; font-weight:700; font-size:21px; margin:0; }
+.tag{ display:inline-block; font:700 12px Fredoka, sans-serif; color:#2a1400; background:var(--gold); border-radius:999px; padding:1px 9px; margin-bottom:4px; }
+.card p{ margin:6px 0 0; font-size:14px; line-height:1.45; }
+.card p.hit{ color:var(--muted); } .card p.hit b{ color:var(--gold); }
+.small{ display:flex; gap:18px; align-items:flex-end; margin-top:12px; font-size:12px; color:var(--muted); }
+.small span{ display:flex; flex-direction:column; align-items:center; gap:4px; } .small canvas{ margin:0; border-radius:8px; }
+.ideas{ max-width:70ch; color:#e8dcf0; line-height:1.5; padding-left:20px; } .ideas b{ color:#ffd36a; }
+.card.rec{ border-color:rgba(255,211,106,.7); box-shadow:0 0 24px rgba(255,211,106,.18); }
+.tag.dim{ background:#4b3a66; color:#e8dcf0; }
+.sw{ display:flex; align-items:center; gap:4px; margin-top:6px; } .sw i{ width:18px; height:18px; border-radius:50%; border:1px solid rgba(255,255,255,.3); } .sw b{ color:#c3b1c9; margin:0 4px; }
+.mixLabel{ margin-top:12px; font-size:12px; color:#c3b1c9; } canvas.mix{ margin:4px 0 0 !important; border-radius:8px; }
+</style>
+<div class="wrap">
+  <h1>Paint Pumpkin</h1>
+  <p class="lede">Built from your sketch: a few big, smooth paint patches (a large blob right of centre, one wrapping the lower-left edge, a band along the top-left and a small one top-right) and a paintbrush for a stem, its tip dipped in paint. Four palettes, each shown in the patch, lit, as a shop icon, flying into a ghoul with a paint trail and splat, and hidden in a mixed patch beside the real pumpkins. Archive only.</p>
+  <section id="opts"></section>
+  
+</div>
+<canvas id="cv" width="1" height="1" hidden></canvas><div id="wrap" hidden></div>
+<script>

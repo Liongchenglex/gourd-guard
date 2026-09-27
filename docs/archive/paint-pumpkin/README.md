@@ -27,3 +27,16 @@ npx esbuild docs/archive/paint-pumpkin/entry.js --bundle --format=iife --minify 
 ```
 
 The imports use absolute paths from the owner's machine; point them at `src/engine/render/` if the repo moves. To use Brushstrokes as a skin, add an entry to `SKINS` in `src/engine/render/wardrobe.js` (its `paint` is `LOOKS[2].paint` clipped with `faceHoles`, its wake the paint-drop `trail`) and to `SKINS` in `src/data/wardrobe.js` with `t:6` (White). To bring a Paint pumpkin into the game instead, bake the look into the pumpkin sprite through `paintPumpkin()` in `src/engine/render/sprites.js` (as the skins do) and add a lit face key in `src/engine/render/faces.js`. Published preview: https://claude.ai/artifact/44HYFdkCD7HV2fyYkJnKaK
+
+## The owner's sketch (2026-09-27): the Paint pumpkin proper
+
+In `sketch/`. The owner sketched the pumpkin they have in mind: a few **big, smooth paint patches** (a large blob right of centre, one wrapping the lower-left edge, a band along the top-left, a small one top-right) and a **paintbrush for a stem**, its bristle tip dipped in paint. Built in four palettes and tested in a mixed patch beside the real pumpkins:
+
+| Palette | Base + paints | Verdict |
+|---|---|---|
+| **Classic orange (recommended)** | `#ee8a26` + blue `#2f6fe0`, white, magenta `#e8418c`, green `#7ad04a` | No other pumpkin is orange, so it never reads as another type; a jack-o'-lantern that met a paint bucket |
+| Artist canvas | `#efe3c8` + red, blue, yellow, green | Most "painter", but close to White in a busy patch |
+| Glow paint | `#2d2638` + neon pink, lime, cyan, yellow | Striking lit, but reads as Black when unlit |
+| Pastel | `#c9b6f0` + mint, peach, butter, sky | Cute, but drifts toward Purple and Pink |
+
+Patches are smooth closed curves (`PATCHES` in R units) clipped to the rind, each with a wet gloss along its upper edge and a darker paint rim, plus one drip off the big blob. Its hit throws the patch shapes out as splats; its trail is paint drops in its own colours. Rebuild with the same esbuild command using `sketch/entry.js` and `sketch/head.html`. Published preview: https://claude.ai/artifact/Kae9RoqGsjCETqwg54bonB

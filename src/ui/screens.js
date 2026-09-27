@@ -8,13 +8,13 @@ import { monsterIcon } from '../engine/render/monsters.js';
 import { poolKey, prebakeAsync } from '../engine/render/anim.js';
 import { atlasKey } from '../engine/render/chars.js';
 import { SFX, ensureAudio, musicStop, musicSync, musicStart } from '../engine/audio.js';
-import { beginEndless, beginNight, endGame, makeDemo, makePreview, reviveNight, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
+import { beginEndless, beginNight, continueNight, continueState, makeDemo, makePreview, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
 import { bgWorld, buildBg, buildSprites, pumpkinIcon, worldScene } from '../engine/render/sprites.js';
 import { BOOKS } from '../data/lore.js';
 import { BESTIARY, COMPANIONS } from '../data/bestiary.js';
 import { toolIcon } from '../engine/render/tools.js';
 import { COSTUMES, SKINS } from '../data/wardrobe.js';
-import { upgradeCost, SEED_PACKS, BOSS_ITEMS_FOR_COSTUME, BOSS_ITEM_SEED_PACK, BOSS_ITEM_COINS, CHESTS, SEED_ADS_PER_DAY } from '../data/economy.js';
+import { upgradeCost, SEED_PACKS, BOSS_ITEMS_FOR_COSTUME, BOSS_ITEM_SEED_PACK, CHESTS, SEED_ADS_PER_DAY } from '../data/economy.js';
 import { showRewarded, seedAdsLeft, adsBusy } from '../engine/ads.js';
 import { storeReady, buyPack } from '../engine/store.js';
 import { rollChest, grant, bossItemsFor, foundThisNight, queueSack, sackIsQueued } from '../engine/loot.js';
@@ -73,7 +73,13 @@ export function showResult(win){
       title = 'A wall fell';
       msg = 'The monsters broke through. Your coins are kept, and the shop can make your pumpkins and walls stronger.';
       stats.push(['Monsters stopped', g.kills], ['Coins found', g.coins]);
-      addBtn(box, 'Try again', () => openPreview(g.n));
+      const cont = continueState();   // "reconvene lost nights" (owner): an ad continues this night with only the monsters left
+      if (cont && (cont.remaining > 0 || (cont.bossSpawned && !cont.bossDead))){
+        const b = document.createElement('button'); b.className = 'btn small adBtn contBtn'; b.innerHTML = '<span class="play"></span>Watch ad to continue';
+        b.onclick = async () => { ensureAudio(); if (await showRewarded('revive')) continueNight(cont); }; box.appendChild(b);
+        msg += ` Watch an ad to continue this night with the ${cont.remaining} monster${cont.remaining === 1 ? '' : 's'} left${cont.bossSpawned && !cont.bossDead ? ' and the boss at its remaining health' : ''}.`;
+      }
+      addBtn(box, 'Try again', () => openPreview(g.n), cont ? 'alt' : '');
       addBtn(box, 'Shop', () => openShop('result'), 'alt');
       addBtn(box, 'Levels', openLevels, 'alt');
     }
@@ -113,7 +119,7 @@ export function addBtn(box, label, fn, cls){ const b = document.createElement('b
 
 // ---------- UI ----------
 
-export const OVS = { title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult', revive:'#ovRevive', chest:'#ovChest', preview:'#ovPreview', intro:'#ovIntro' };
+export const OVS = { title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult', chest:'#ovChest', preview:'#ovPreview', intro:'#ovIntro' };
 
 export let shopReturn = 'levels', helpNext = null, loadoutNext = null, loadoutAvail = [], loadoutSel = new Set(), loadoutMust = [], loadoutWhy = [];
 
@@ -477,9 +483,7 @@ function renderWardrobe(){
         const row = document.createElement('div'); row.className = 'twoBtns';
         const bs = document.createElement('button'); bs.className = 'btn small'; bs.innerHTML = `+${BOSS_ITEM_SEED_PACK.items} <span class="seed"></span>${BOSS_ITEM_SEED_PACK.seeds}`; bs.disabled = (save.seeds || 0) < BOSS_ITEM_SEED_PACK.seeds; bs.setAttribute('aria-label', `Buy ${BOSS_ITEM_SEED_PACK.items} ${BOSS_ITEM_NAMES[c.boss]}s for ${BOSS_ITEM_SEED_PACK.seeds} seeds`);
         bs.onclick = () => { if ((save.seeds || 0) < BOSS_ITEM_SEED_PACK.seeds) return; save.seeds -= BOSS_ITEM_SEED_PACK.seeds; save.bossItems[c.boss] = have + BOSS_ITEM_SEED_PACK.items; persist(); SFX.coin(); renderShop(); };
-        const bc = document.createElement('button'); bc.className = 'btn small alt'; bc.innerHTML = `+1 <span class="coin"></span>${BOSS_ITEM_COINS}`; bc.disabled = save.coins < BOSS_ITEM_COINS; bc.setAttribute('aria-label', `Buy one ${BOSS_ITEM_NAMES[c.boss]} for ${BOSS_ITEM_COINS} coins`);
-        bc.onclick = () => { if (save.coins < BOSS_ITEM_COINS) return; save.coins -= BOSS_ITEM_COINS; save.bossItems[c.boss] = have + 1; persist(); SFX.coin(); renderShop(); };
-        row.appendChild(bs); row.appendChild(bc); d.appendChild(row);
+        row.appendChild(bs); d.appendChild(row);   // seeds only: boss items are never sold for coins (owner)
       }
     } else {
       if (c.boss){ const src = document.createElement('small'); src.className = 'src'; src.textContent = `${BOSS_NAMES[c.boss]}'s costume`; d.appendChild(src); }
@@ -590,10 +594,6 @@ function leaveChests(){
   else openLevels();
 }
 
-// ---------- Second chance (owner's monetization.md: "reconvene lost nights") ----------
-export function offerRevive(){ setState('revive'); }
-function acceptRevive(){ showRewarded('revive').then(ok => { if (ok){ setState('play'); reviveNight(); } }); }
-function declineRevive(){ setState('play'); endGame(false); }
 function seedIcon(px, n){
   const c = document.createElement('canvas'); c.width = c.height = px * 2; const g = c.getContext('2d'); g.scale(2, 2);
   const k = Math.min(5, 1 + Math.floor(Math.log2(n / 100 + 1) * 1.5));
@@ -710,8 +710,6 @@ export function wireButtons(){
   $('#bLvAd').onclick = () => watchSeedAd(() => { $('#lvCoins').textContent = save.coins.toLocaleString(); });
   $('#bLvChest').onclick = () => openChests('levels');
   $('#bOpenChest').onclick = () => openChests('shop');
-  $('#bReviveAd').onclick = acceptRevive;
-  $('#bReviveNo').onclick = declineRevive;
   $('#bPvSack').onclick = async () => { if (sackIsQueued()) return; if (await showRewarded('sack')){ queueSack(); SFX.perk(); syncSack(); } };
   $('#bSeedTest').onclick = () => { save.seeds = (save.seeds || 0) + 500; persist(); renderShop(); };   // TESTING ONLY until seed packs are sold: remove before release
   $('#bShopBack').onclick = () => { if (shopReturn === 'result') setState('result'); else openLevels(); };

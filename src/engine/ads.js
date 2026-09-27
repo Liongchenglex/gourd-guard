@@ -4,7 +4,7 @@
 // build with AdMob or similar) or, in the browser, a placeholder ad that runs a short countdown. Placements:
 //   'seed'      +1 pumpkin seed, capped per day (SEED_ADS_PER_DAY)
 //   'chest'     reroll a treasure chest once
-//   'revive'    carry on after a wall falls, once per night
+//   'revive'    continue a lost night from the lose card with only the monsters left, once per night
 //   'sack'      summon a Loot Sack at the start of a night
 import { SEED_ADS_PER_DAY } from '../data/economy.js';
 import { persist, save } from '../save.js';

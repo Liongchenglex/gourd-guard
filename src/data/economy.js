@@ -26,17 +26,16 @@ export const AD_SEEDS = 1;
 /** Treasure chests. `slots` rewards each; every slot rolls boss item, then seed, then tool set, else coins. */
 export const CHESTS = {
   normal: { name:'Treasure chest', slots:2, bossItem:0,    seed:0.02, tools:0.40, coins:[100, 200] },   // coins (default)
-  boss:   { name:'Boss chest',     slots:3, bossItem:0.05, seed:0.05, tools:0.60, coins:[250, 500] },   // level-20 bosses; coins (default)
+  boss:   { name:'Boss chest',     slots:3, bossItem:0.05, seed:0.05, tools:0.35, coins:[250, 500] },   // level-20 bosses only; coins stay the most common prize (owner, 2026-09-27)
 };
 export const TOOL_SET = 5;                // a tool set is 5 random introduced tools
 export const TOOL_OVERFLOW_COINS = 100;   // a tool past its carry limit pays this instead (default)
-export const CHEST_KILL_CHANCE = 0.01;    // a normal kill drops a treasure chest (at most one per night, default)
+export const CHEST_KILL_CHANCE = 0.01;    // a kill on a normal (non-boss) night drops a treasure chest (at most one per night, default)
 export const BOSS_SEED = { chance:0.05, min:1, max:3 };   // any boss kill
 
 /** Boss items: collect BOSS_ITEMS_FOR_COSTUME of one boss's item to trade for its costume. */
 export const BOSS_ITEMS_FOR_COSTUME = 30;
-export const BOSS_ITEM_SEED_PACK = { items:10, seeds:10 };   // buy boss items with seeds (default)
-export const BOSS_ITEM_COINS = 400;                          // or one at a time with coins (default)
+export const BOSS_ITEM_SEED_PACK = { items:10, seeds:10 };   // boss items are bought with seeds only, never coins (owner); price (default)
 
 /** The Loot Sack: summoned by watching an ad on the level card. Two lanes wide, never chews walls, flees when its time is up. */
 export const SACK = { hpBase:10, hpPerWorld:4, stay:25, hold:0.38, sp:0.05, spawnAt:4,

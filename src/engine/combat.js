@@ -111,7 +111,8 @@ function lootOnKill(m, reward, y){
     if (Math.random() < BOSS_SEED.chance){ const n = BOSS_SEED.min + Math.floor(Math.random() * (BOSS_SEED.max - BOSS_SEED.min + 1)); addSeeds(n); pop('seed', `+${n} seed${n > 1 ? 's' : ''}!`, '#fff3c8'); }
     return;   // the boss chest is given once the boss is truly down (see kill)
   }
-  if (!G.chestDropped && Math.random() < CHEST_KILL_CHANCE){ G.chestDropped = true; addChest('normal'); pop('chest', 'Treasure chest!', '#ffd35a'); }
+  // normal nights only: boss nights give their own chest (owner)
+  if (!G.chestDropped && !(G.def && G.def.boss) && Math.random() < CHEST_KILL_CHANCE){ G.chestDropped = true; addChest('normal'); pop('chest', 'Treasure chest!', '#ffd35a'); }
 }
 export function kill(m){
   if (m.dead) return;

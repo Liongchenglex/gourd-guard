@@ -32,8 +32,9 @@ export function storySpawn(dt){
     G.spawnTimer = d.interval * gap * rnd(0.6, 1.4);
     if (Math.random() < burst) G.spawnTimer *= 0.3;
   }
-  if (d.boss && !G.bossSpawned && G.spawned >= Math.floor(d.total * 0.4)){
-    spawnMonster('boss'); G.bossSpawned = true;
+  if (d.boss && !G.bossSpawned && (G.spawned >= Math.floor(d.total * 0.4) || (G.bossHp && G.bossHp.length))){   // a continued night brings its hurt boss straight back
+    const b = spawnMonster('boss'); G.bossSpawned = true;
+    if (G.bossHp && G.bossHp.length){ const bs = b.twin ? [b, b.twin] : [b]; bs.forEach((m, i) => { const hp = G.bossHp[Math.min(i, G.bossHp.length - 1)]; m.hp = Math.min(m.maxHp, hp); }); G.bossHp = null; }   // a continued night: the boss keeps the health it had left
     banner(BOSS_NAMES[d.boss] || 'Boss', (BOSS_INTRO[d.boss] || {})[d.bossForm] || 'Monsters keep coming until it falls.', 3); SFX.bossAlert(); setTimeout(() => SFX.bossSfx(d.boss, 'arrive'), 900); setTimeout(() => { if (G && !G.over && G.mode === 'story') musicStart('boss'); }, 1600);   // stakes rise: the boss track takes over (owner)
   }
 }

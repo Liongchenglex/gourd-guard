@@ -20,7 +20,7 @@ import { rnd, shuffle, clamp, TAU } from './util.js';
 import { initWalls, damageWall } from './walls.js';
 import { persist, save } from '../save.js';
 import { banner, updateHud } from '../ui/hud.js';
-import { openLoadout, setState, showResult, offerRevive } from '../ui/screens.js';
+import { openLoadout, setState, showResult } from '../ui/screens.js';
 
 // ---------- Flow ----------
 
@@ -79,7 +79,7 @@ export function startGame(mode, n, loadout){
     monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], groups:{},
     t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
-    loot:{ chests:0, seeds:0 }, chestDropped:false, revived:false, sackT:0,
+    loot:{ chests:0, seeds:0 }, chestDropped:false, continued:false, sackT:0,
   });
   if (mode === 'story' && takeSack()) G.sackT = SACK.spawnAt;
   if (def) prebake([...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), 'ghoul']);   // bake this level's sprite strips now, not on first sight
@@ -114,7 +114,6 @@ export function startGame(mode, n, loadout){
 
 export function endGame(win){
   if (G.over) return;
-  if (!win && G.mode === 'story' && !G.revived){ G.revived = true; offerRevive(); return; }   // one ad-paid second chance per night (owner's monetization.md)
   G.over = true; setGest(null); clearRentals();   // a rented power lasts one night
   musicStop(win ? 0.3 : 1.2);
   if (win) SFX.win(); else SFX.lose();
@@ -412,7 +411,7 @@ export function update(dt){
     if (g.hintT <= 0){ g.hintT = 1.5; g.hint = bestLitGroup() ? null : bestMove(); }
   }
   if (g.sackT > 0 && !g.over){ g.sackT -= dt; if (g.sackT <= 0) spawnSack(); }   // the ad-summoned Loot Sack
-  if (!g.over && g.mode === 'story' && (g.def.boss ? g.bossDead : g.spawned >= g.def.total) && g.monsters.every(m => m.type === 'sack')) endGame(true);   // a Loot Sack still waddling about does not hold up the win
+  if (!g.over && g.mode === 'story' && (g.def.boss ? g.bossDead && (!g.continued || g.spawned >= g.def.total) : g.spawned >= g.def.total) && g.monsters.every(m => m.type === 'sack')) endGame(true);   // a Loot Sack still waddling about does not hold up the win
   updateHud(false);
 }
 
@@ -439,11 +438,20 @@ export function demoUpdate(dt){
   commonFx(dt);
 }
 
-/** After a revive ad: every wall rebuilt, monsters pushed back up the field, the breach forgotten. */
-export function reviveNight(){
-  for (const w of walls){ w.hp = w.max; }
-  for (const m of G.monsters){ if (m.dead || m.type === 'boss' || m.type === 'sack') continue; m.eating = false; m.breach = 0; m.p = Math.min(m.p, 0.45) - 0.15; }
-  G.brokeAt = null; G.flash = 0.6; G.shake = 0.5;
-  addFloat('Walls rebuilt!', W / 2, FENCE_Y - 40, '#9fe0a0', 22, 1.4); SFX.tool('repair');
-  updateHud(true);
+/** What a lost story night still owes, so an ad can continue it (owner, 2026-09-27): the monsters not yet beaten
+ *  (alive on the field or never spawned) and each living boss's health. Null when it cannot be continued. */
+export function continueState(){
+  const g = G; if (!g || g.mode !== 'story' || g.continued) return null;
+  const alive = g.monsters.filter(m => !m.dead && !m.minion && m.type !== 'boss' && m.type !== 'sack').length;
+  const remaining = alive + Math.max(0, g.def.total - g.spawned);
+  const bosses = g.monsters.filter(m => !m.dead && m.type === 'boss').map(m => Math.max(1, Math.ceil(m.hp)));
+  return { n:g.n, loadout:g.loadout.slice(), remaining, bossSpawned:g.bossSpawned, bossDead:g.bossDead, bossHp:bosses };
+}
+/** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
+export function continueNight(c){
+  startGame('story', c.n, c.loadout);
+  G.continued = true;
+  G.spawned = Math.max(0, G.def.total - c.remaining);
+  if (c.bossSpawned){ G.bossDead = c.bossDead; G.bossHp = c.bossHp.slice(); if (c.bossDead) G.bossSpawned = true; }
+  banner('Night continues', `${c.remaining} monster${c.remaining === 1 ? '' : 's'} left${c.bossSpawned && !c.bossDead ? ', and the boss is still hurt' : ''}. Hold the walls!`, 3);
 }

@@ -335,8 +335,7 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 
 .item .ic.mystery{ filter:brightness(0) opacity(.45); }
 .pw .rentTag{ position:absolute; top:calc(var(--u)*-2px); left:50%; transform:translateX(-50%); background:linear-gradient(#ffb347,#ff8a1f); color:#2a1400; font-size:calc(var(--u)*9.5px); font-weight:800; letter-spacing:.5px; border-radius:99px; padding:1px 7px; box-shadow:0 1px 3px rgba(0,0,0,.5); animation:rentPulse 1.6s ease-in-out infinite; }
-.pw.locked::after{ display:none; }
-.pw.locked small{ color:var(--candle); font-weight:600; }
+.pw.locked small{ color:var(--muted); font-weight:500; }
 .pw.rented small{ color:#b6f07a; font-weight:700; }
 .pw.rented canvas{ filter:drop-shadow(0 0 calc(var(--u)*6px) rgba(182,240,122,.9)); }
 .rentBtn{ display:block; margin:calc(var(--u)*8px) auto 0; }

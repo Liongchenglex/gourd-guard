@@ -394,7 +394,7 @@ export function renderPowers(){
     const earned = perkEarned(p.key), isRented = rented.has(p.key), on = perkOn(p.key), wname = WORLD_NAMES[p.world - 1];
     const b = document.createElement('button'); b.className = 'pw ' + (earned ? (on ? 'on' : 'off') : isRented ? 'on rented' : 'locked') + (powerPick === p.key ? ' picked' : '');
     b.appendChild(trophyIcon(p.world - 1, 52, earned || isRented));
-    const sm = document.createElement('small'); sm.textContent = earned ? p.name : isRented ? 'Rented' : `Rent \u00b7 ${RENT_COST}`; b.appendChild(sm);
+    const sm = document.createElement('small'); sm.textContent = earned ? p.name : isRented ? 'Rented' : `Complete ${wname}`; b.appendChild(sm);
     if (!earned && !isRented){ const tag = document.createElement('span'); tag.className = 'rentTag'; tag.textContent = 'RENT'; b.appendChild(tag); }
     b.setAttribute('aria-label', earned ? `${p.name}, ${on ? 'on' : 'off'}: ${p.desc}` : isRented ? `${p.name}, rented for this night: ${p.desc}` : `${p.name}, not won yet: ${p.desc} Rent it for this night for ${RENT_COST} coins.`);
     b.onclick = () => {

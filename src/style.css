@@ -485,3 +485,23 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .qRow .qTag.miss{ color:var(--muted); background:rgba(255,255,255,.08); }
 @media (prefers-reduced-motion: reduce){ .pvTab.pulse{ animation:none; } }
 .pvTab:focus:not(:focus-visible){ outline:none; }
+
+/* ---------- Crown of Stars reveal (owner, 2026-09-27) ---------- */
+.crownReveal{ position:absolute; inset:0; z-index:150; display:flex; align-items:center; justify-content:center; padding:0 16px; background:radial-gradient(ellipse at 50% 40%, rgba(60,36,100,.92), rgba(8,4,14,.95)); animation:crIn .4s ease-out; }
+.crCard{ position:relative; width:100%; max-width:calc(var(--u)*420px); text-align:center; padding:calc(var(--u)*18px) calc(var(--u)*20px) calc(var(--u)*22px); border-radius:calc(var(--u)*22px); background:var(--panel); border:1.5px solid rgba(255,211,106,.6); box-shadow:0 0 calc(var(--u)*40px) rgba(255,211,106,.35); overflow:hidden; }
+.crRays{ position:absolute; left:50%; top:calc(var(--u)*110px); width:calc(var(--u)*520px); height:calc(var(--u)*520px); margin:calc(var(--u)*-260px) 0 0 calc(var(--u)*-260px); background:repeating-conic-gradient(rgba(255,220,120,.18) 0 8deg, transparent 8deg 22deg); border-radius:50%; -webkit-mask:radial-gradient(circle, #000 20%, transparent 65%); mask:radial-gradient(circle, #000 20%, transparent 65%); animation:crSpin 14s linear infinite; pointer-events:none; }
+.crArt{ position:relative; width:calc(var(--u)*150px); height:calc(var(--u)*150px); margin:0 auto calc(var(--u)*6px); animation:crPop .7s cubic-bezier(.3,1.6,.5,1) both .15s; }
+.crArt canvas{ width:100%; height:100%; display:block; filter:drop-shadow(0 0 calc(var(--u)*14px) rgba(255,220,120,.6)); }
+.crArt i{ position:absolute; left:50%; top:30%; width:calc(var(--u)*8px); height:calc(var(--u)*8px); margin:calc(var(--u)*-4px); background:#fff3c0; clip-path:polygon(50% 0,61% 38%,100% 50%,61% 62%,50% 100%,39% 62%,0 50%,39% 38%); transform:rotate(var(--a)) translateY(0); animation:crSpark var(--d) ease-out infinite; }
+.crCard h2{ position:relative; font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; color:#ffd36a; font-size:calc(var(--u)*38px); margin:calc(var(--u)*4px) 0 calc(var(--u)*6px); text-shadow:0 0 calc(var(--u)*18px) rgba(255,211,106,.55); }
+.crCard p{ position:relative; margin:0 auto; max-width:34ch; color:var(--ink); line-height:1.45; font-size:calc(var(--u)*15px); } .crCard p b{ color:#ffd36a; }
+.crCard .row{ position:relative; }
+@keyframes crIn{ from{ opacity:0; } to{ opacity:1; } }
+@keyframes crSpin{ to{ transform:rotate(360deg); } }
+@keyframes crPop{ from{ transform:scale(.3) rotate(-12deg); opacity:0; } to{ transform:none; opacity:1; } }
+@keyframes crSpark{ 0%{ transform:rotate(var(--a)) translateY(0) scale(.4); opacity:1; } 100%{ transform:rotate(var(--a)) translateY(calc(var(--u)*-90px)) scale(1); opacity:0; } }
+@media (prefers-reduced-motion: reduce){ .crRays, .crArt, .crArt i, .crownReveal{ animation:none; } .crArt i{ display:none; } }
+.tile.starsTile .tb{ background:rgba(255,211,106,.22); color:#ffe7a0; }
+.starProg .bigStar{ grid-row:span 2; font-size:calc(var(--u)*26px); color:#ffd36a; text-shadow:0 0 calc(var(--u)*8px) rgba(255,211,106,.6); line-height:1; }
+.starProg i{ background:linear-gradient(90deg, #ffd36a calc(var(--f) * 100%), rgba(255,255,255,.12) 0) !important; }
+.dInfo .dLore{ margin:calc(var(--u)*2px) 0 0; padding-left:calc(var(--u)*10px); border-left:2px solid rgba(255,193,74,.45); font-style:italic; font-size:calc(var(--u)*13px); line-height:1.4; color:var(--ink); opacity:.9; text-align:left; }

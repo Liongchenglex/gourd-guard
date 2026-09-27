@@ -13,7 +13,8 @@ import { bgWorld, buildBg, buildSprites, pumpkinIcon, worldScene } from '../engi
 import { BOOKS } from '../data/lore.js';
 import { BESTIARY, COMPANIONS } from '../data/bestiary.js';
 import { toolIcon } from '../engine/render/tools.js';
-import { COSTUMES, SKINS } from '../data/wardrobe.js';
+import { COSTUMES, SKINS, STAR_COSTUME, starsHave, starsMax, grantStarCrown } from '../data/wardrobe.js';
+import { showCrownReveal } from './reveal.js';
 import { upgradeCost, COINS_PER_SEED, SEED_TRADES, SEED_PACKS, BOSS_ITEMS_FOR_COSTUME, BOSS_ITEM_SEED_PACK, CHESTS, SEED_ADS_PER_DAY } from '../data/economy.js';
 import { showRewarded, seedAdsLeft, adsBusy } from '../engine/ads.js';
 import { storeReady, buyPack } from '../engine/store.js';
@@ -110,6 +111,7 @@ export function showResult(win){
 
 /** The chest and free-seed prompts under the result card's buttons. */
 function refreshResultLoot(){
+  if (grantStarCrown()) setTimeout(() => showCrownReveal(() => refreshResultLoot()), 900);   // the last star just landed: the Crown of Stars reveal (owner)
   let ex = $('#rExtra'); if (!ex){ ex = document.createElement('div'); ex.id = 'rExtra'; ex.className = 'row rExtra'; $('#rBtns').after(ex); }
   ex.innerHTML = '';
   if (save.chests.length){ const b = document.createElement('button'); b.className = 'btn small chestBtn'; b.appendChild(dom(chestIcon(save.chests[0].kind, false, 34))); b.insertAdjacentHTML('beforeend', `Open chest${save.chests.length > 1 ? `s (${save.chests.length})` : ''}`); b.onclick = () => openChests('result'); ex.appendChild(b); }
@@ -529,8 +531,8 @@ function renderWardrobe(){
   for (const b of document.querySelectorAll('#wSeg button')){ const on = b.dataset.w === wTab; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); b.onclick = () => { if (wTab !== b.dataset.w){ wTab = b.dataset.w; SFX.ui('tap'); renderWardrobe(); } }; }
   const f = wFilt[wTab];
   let opts, pass;
-  if (isC){ opts = [{ key:'all', label:'All' }, { key:'owned', label:'Owned' }, { key:'boss', label:'Boss' }, { key:'shop', label:'Shop' }];
-    pass = c => f === 'all' || (f === 'owned' && owned(c.key)) || (f === 'boss' && c.boss) || (f === 'shop' && !c.boss); }
+  if (isC){ opts = [{ key:'all', label:'All' }, { key:'owned', label:'Owned' }, { key:'special', label:'Special' }, { key:'boss', label:'Boss' }, { key:'shop', label:'Shop' }];
+    pass = c => f === 'all' || (f === 'owned' && owned(c.key)) || (f === 'special' && c.unlock) || (f === 'boss' && c.boss) || (f === 'shop' && !c.boss && !c.unlock); }
   else { const cols = [...new Set(SKINS.map(k => k.t))];
     opts = [{ key:'all', label:'All' }, { key:'owned', label:'Owned' }, ...cols.map(t => ({ key:'t' + t, label:PTYPES[t].name, icon:pumpkinIcon(t, false, 40) }))];
     pass = k => f === 'all' || (f === 'owned' && owned(k.key)) || f === 't' + k.t; }
@@ -544,6 +546,7 @@ function renderWardrobe(){
     let badge, cls = '';
     if (worn(it)){ badge = 'Wearing'; cls = 'worn'; }
     else if (owned(it.key)){ badge = 'Owned'; cls = 'owned'; }
+    else if (isC && it.unlock){ badge = `★ ${Math.min(starsHave(), starsMax())}/${starsMax()}`; cls = 'starsTile'; }   // the Crown of Stars: earned with every star, never sold
     else if (isC && it.boss){ const have = Math.min(bossItemsFor(it.boss), BOSS_ITEMS_FOR_COSTUME); badge = `${have}/${BOSS_ITEMS_FOR_COSTUME}`; cls = 'prog'; }
     else { badge = `<span class="seed"></span>${it.price}`; cls = seeds >= it.price ? 'afford' : ''; }
     grid.appendChild(tileBtn(wIcon(isC ? 'c' : 's', it.key), it.name, badge, cls, it.key === sel.key, () => { wSel[wTab] = it.key; renderWardrobe(); $('#wDetail').scrollIntoView({ block:'nearest', behavior:reduceMotion() ? 'auto' : 'smooth' }); }, `${it.name}, ${badge.replace(/<[^>]+>/g, '')}${isC || owned(it.key) || worn(it) ? '' : ' seeds'}`));
@@ -552,14 +555,19 @@ function renderWardrobe(){
   const info = $('#wInfo'); info.innerHTML = '';
   const add = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; e.textContent = txt; info.appendChild(e); return e; };
   add('b', 'dn', sel.name);
-  add('small', 'src', isC ? (sel.boss ? `${BOSS_NAMES[sel.boss]}'s costume` : 'Shop costume · worn by every pumpkin') : `Skin for ${PTYPES[sel.t].name}`);
+  add('small', 'src', isC ? (sel.unlock ? 'Reward for collecting every star' : sel.boss ? `${BOSS_NAMES[sel.boss]}'s costume` : 'Shop costume · worn by every pumpkin') : `Skin for ${PTYPES[sel.t].name}`);
   add('p', 'dd', isC ? sel.hit : sel.desc);
+  if (sel.lore) add('p', 'dLore', sel.lore);   // each skin's little story (owner)
   const actions = document.createElement('div'); actions.className = 'dAct'; info.appendChild(actions);
   const buyBtn = (price, onBuy) => { const b = document.createElement('button'); b.className = 'btn small'; b.innerHTML = `Buy <span class="seed"></span>${price}`; b.disabled = seeds < price; b.onclick = () => { if ((save.seeds || 0) < price) return; save.seeds -= price; onBuy(); persist(); SFX.coin(); renderShop(); }; return b; };
   const wearBtn = (on, fn) => { const b = document.createElement('button'); b.className = 'btn small' + (on ? ' alt' : ''); b.textContent = on ? 'Take off' : 'Wear'; b.onclick = () => { fn(); persist(); SFX.ui(on ? 'unpick' : 'pick'); renderShop(); }; return b; };
   if (isC){
     const c = sel;
-    if (c.boss && !owned(c.key)){   // traded for 30 of the boss's items (owner's monetization.md); boss items cost seeds only
+    if (c.unlock && !owned(c.key)){   // the Crown of Stars: progress only, it cannot be bought
+      const have = Math.min(starsHave(), starsMax()), need = starsMax();
+      const pr = document.createElement('div'); pr.className = 'bossItems starProg';
+      pr.innerHTML = `<span class="bigStar" aria-hidden="true">★</span><span><b>${have} / ${need}</b> stars · 3 on every level of worlds 1 to 5</span><i style="--f:${have / need}"></i>`; info.insertBefore(pr, actions);
+    } else if (c.boss && !owned(c.key)){   // traded for 30 of the boss's items (owner's monetization.md); boss items cost seeds only
       const have = bossItemsFor(c.boss), need = BOSS_ITEMS_FOR_COSTUME;
       const pr = document.createElement('div'); pr.className = 'bossItems'; pr.appendChild(dom(bossItemIcon(c.boss, 30)));
       pr.insertAdjacentHTML('beforeend', `<span><b>${Math.min(have, need)} / ${need}</b> ${BOSS_ITEM_NAMES[c.boss]}s · from ${BOSS_NAMES[c.boss]}'s level-20 chest</span><i style="--f:${Math.min(1, have / need)}"></i>`); info.insertBefore(pr, actions);
@@ -715,6 +723,7 @@ function seedIcon(px, n){
   return c;
 }
 export function renderShop(){
+  if (grantStarCrown()){ showCrownReveal(() => renderShop()); }   // saves that already hold every star get the crown here
   $('#shopCoins').textContent = save.coins.toLocaleString(); $('#shopSeeds').textContent = (save.seeds || 0).toLocaleString();
   setShopTab(shopTab);
   renderPumpkinShop();

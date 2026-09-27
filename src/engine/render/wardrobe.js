@@ -42,12 +42,47 @@ const COSTUME_ART = [
     draw(g, R){ S.part(g, RR(-R * .75, -R * .9, R * 1.5, R * .2, 4), GOLD, { x:0, y:-R * .8, r:R * .75 }, { flat:true, mat:'metal' });
       const horn = (s, c) => { S.part(g, SM([[s * R * .1, -R * .88], [s * R * .35, -R * 1.45], [s * R * 1.0, -R * 1.55], [s * R * .55, -R * 1.2], [s * R * .7, -R * .88]], .8), c, { x:s * R * .5, y:-R * 1.2, r:R * .5 }, { mat:'cloth', flat:true }); S.part(g, E(s * R * 1.0, -R * 1.55, R * .12, R * .12), GOLD, { x:s * R, y:-R * 1.55, r:R * .12 }, { flat:true, mat:'metal' }); };
       horn(-1, JEST1); horn(1, JEST2); S.part(g, SM([[-R * .1, -R * .88], [0, -R * 1.7], [R * .1, -R * .88]], .8), JEST1, { x:0, y:-R * 1.3, r:R * .3 }, { flat:true, mat:'cloth' }); S.part(g, E(0, -R * 1.72, R * .12, R * .12), GOLD, { x:0, y:-R * 1.72, r:R * .12 }, { flat:true, mat:'metal' }); } },
+  { key:'starcrown', name:'Crown of Stars', from:'Collect every star', hit:'Supernova: a white-gold flash, a shockwave ring, eight shooting stars and a shower of twinkling stars.',
+    top:3.4, wide:1.9, icon:{ r:.2, y:.8 }, board:.62,   // board: drawn at 62% on the patch and in flight so it doesn't swamp the row above   // taller and wider than the other costumes: its sprite and shop icon make room (see costumeSprite / costumeIcon)
+    draw(g, R){ grow(g, R, 1.35, () => crownOfStars(g, R)); } },
 ];
 
 // ---------- hit effects: t 0..1 at (0,0) ----------
 function bird(g, x, y, s, flap, col){ g.save(); g.translate(x, y); g.scale(s, s); g.fillStyle = col; g.beginPath(); g.moveTo(-10, 0); g.quadraticCurveTo(-5, -6 * flap - 2, 0, 0); g.quadraticCurveTo(5, -6 * flap - 2, 10, 0); g.quadraticCurveTo(5, -1, 0, 2); g.quadraticCurveTo(-5, -1, -10, 0); g.fill(); g.restore(); }
 function batShape(g, x, y, s, flap){ g.save(); g.translate(x, y); g.scale(s, s); g.fillStyle = '#8a6ad8'; g.beginPath(); g.moveTo(0, -3); g.quadraticCurveTo(-6, -8 - flap * 4, -14, -4 - flap * 6); g.lineTo(-10, 0); g.lineTo(-12, 3); g.lineTo(-6, 1); g.lineTo(0, 4); g.lineTo(6, 1); g.lineTo(12, 3); g.lineTo(10, 0); g.lineTo(14, -4 - flap * 6); g.quadraticCurveTo(6, -8 - flap * 4, 0, -3); g.fill(); g.fillStyle = '#ff4d6d'; ell(g, -2, -2, 1, 1); g.fill(); ell(g, 2, -2, 1, 1); g.fill(); g.restore(); }
+
+// ---------- Crown of Stars (owner, 2026-09-27: the reward for all 300 stars; design A "Regal" from the star preview) ----------
+const SGOLD = pal('#f2c24a'), SWGOLD = pal('#ffe7a0'), SVEL = pal('#5a2a8a'), SERM = pal('#f4f0ea');
+const starP = (x, y, r, rot = -Math.PI / 2, k = .45, n = 5) => g => { g.beginPath(); for (let i = 0; i < n * 2; i++){ const a = rot + i * Math.PI / n, rr = i % 2 ? r * k : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); };
+const fstar = (g, x, y, r, rot, col, k = .45) => { starP(x, y, r, rot, k)(g); g.fillStyle = col; g.fill(); };
+const grow = (g, R, k, fn) => { g.save(); g.translate(0, -R * .85); g.scale(k, k); g.translate(0, R * .85); fn(); g.restore(); };
+const glowStar = (g, x, y, r) => { g.save(); g.shadowColor = 'rgba(255,220,120,.9)'; g.shadowBlur = r * 1.6; fstar(g, x, y, r, -Math.PI / 2, SGOLD.light); g.restore(); S.part(g, starP(x, y, r), SGOLD, { x, y, r }, { mat:'metal', flat:true }); S.dot(g, E(x - r * .18, y - r * .2, r * .16, r * .12), 'rgba(255,255,255,.85)'); };   // baked once in the costume sprite, never per frame
+function crownOfStars(g, R){
+  g.save(); g.translate(0, -R * 1.35); for (let i = 0; i < 14; i++){ const a = i / 14 * TAU, w = i % 2 ? .07 : .12, L = i % 2 ? R * .95 : R * 1.3; const lg = g.createLinearGradient(0, 0, Math.cos(a) * L, Math.sin(a) * L); lg.addColorStop(0, 'rgba(255,228,140,.55)'); lg.addColorStop(1, 'rgba(255,228,140,0)'); g.fillStyle = lg; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a - w) * L, Math.sin(a - w) * L); g.lineTo(Math.cos(a + w) * L, Math.sin(a + w) * L); g.closePath(); g.fill(); } g.restore();   // sunburst
+  g.save(); const gl = g.createRadialGradient(0, -R * 1.2, 0, 0, -R * 1.2, R * 1.1); gl.addColorStop(0, 'rgba(255,225,130,.45)'); gl.addColorStop(1, 'rgba(255,225,130,0)'); g.fillStyle = gl; g.fillRect(-R * 1.3, -R * 2.4, R * 2.6, R * 2.2); g.restore();
+  S.part(g, E(0, -R * 1.08, R * .62, R * .36), SVEL, { x:0, y:-R * 1.1, r:R * .6 }, { mat:'cloth', hx:-R * .2, hy:-R * 1.3 });   // velvet cap
+  const tips = [[-R * .68, -R * 1.28, R * .12], [-R * .36, -R * 1.52, R * .15], [0, -R * 1.78, R * .24], [R * .36, -R * 1.52, R * .15], [R * .68, -R * 1.28, R * .12]];
+  const pts = [[-R * .78, -R * .96]]; tips.forEach(([x, y], i) => { pts.push([x - R * .08, y + R * .28]); pts.push([x, y + R * .08]); pts.push([x + R * .08, y + R * .28]); if (i < 4) pts.push([(x + tips[i + 1][0]) / 2, -R * 1.04]); }); pts.push([R * .78, -R * .96]);
+  S.part(g, PL(pts), SGOLD, { x:0, y:-R * 1.2, r:R * .8 }, { mat:'metal', hx:-R * .3, hy:-R * 1.4 });   // spires
+  S.part(g, RR(-R * .8, -R * 1.0, R * 1.6, R * .26, R * .08), SGOLD, { x:0, y:-R * .88, r:R * .8 }, { mat:'metal', flat:true });   // band
+  [[-R * .5, '#3a7aff'], [0, '#e0304a'], [R * .5, '#2ac07a']].forEach(([x, c]) => { S.dot(g, E(x, -R * .87, R * .085, R * .07), c); S.dot(g, E(x - R * .025, -R * .9, R * .03, R * .02), 'rgba(255,255,255,.9)'); });   // sapphire, ruby, emerald
+  S.part(g, RR(-R * .84, -R * .78, R * 1.68, R * .16, R * .08), SERM, { x:0, y:-R * .7, r:R * .84 }, { mat:'cloth', flat:true });   // ermine trim
+  for (let i = -3; i <= 3; i++) S.dot(g, E(i * R * .23, -R * .7, R * .025, R * .045), '#1a1420');
+  tips.forEach(([x, y, r]) => glowStar(g, x, y, r));
+  S.dot(g, E(0, -R * 1.78, R * .08, R * .08), '#e0304a');
+}
+
 const HITS = {
+  starcrown(g, t){ const R = rng(7), fl = Math.max(0, 1 - t * 3);   // Supernova: plain fills and strokes only (runs per frame)
+    if (fl > 0){ const gr = g.createRadialGradient(0, 0, 0, 0, 0, 46); gr.addColorStop(0, `rgba(255,255,240,${fl})`); gr.addColorStop(.4, `rgba(255,220,120,${fl * .8})`); gr.addColorStop(1, 'rgba(255,200,80,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 46, 0, TAU); g.fill(); }
+    g.strokeStyle = `rgba(255,226,140,${1 - t})`; g.lineWidth = 5 * (1 - t) + .5; g.beginPath(); g.arc(0, 0, 10 + 72 * ease(t), 0, TAU); g.stroke();
+    g.lineCap = 'round';
+    for (let i = 0; i < 8; i++){ const a = i / 8 * TAU + .2, d = 12 + 86 * ease(t), x = Math.cos(a) * d, y = Math.sin(a) * d, al = 1 - t;
+      g.strokeStyle = `rgba(255,236,170,${al * .7})`; g.lineWidth = 3; g.beginPath(); g.moveTo(x * .4, y * .4); g.lineTo(x, y); g.stroke();
+      fstar(g, x, y, 6 * (1 - t * .5), t * 6 + i, `rgba(255,243,192,${al})`); }
+    const cs = t < .25 ? t / .25 : 1 - (t - .25) / .75; if (cs > 0) fstar(g, 0, 0, 22 * cs, t * 3, `rgba(255,246,208,${cs})`, .42);
+    for (let i = 0; i < 14; i++){ const st = .25 + R() * .3, x0 = (R() - .5) * 110, y0 = -40 + R() * 30, r = 2.5 + R() * 3, gold = R() > .5; if (t < st) continue; const f = (t - st) / (1 - st); fstar(g, x0, y0 + f * f * 80, r, f * 8, gold ? `rgba(255,231,160,${1 - f})` : `rgba(255,255,255,${1 - f})`); }
+  },
   gravekeeper(g, t){ const R = rng(3), up = ease(Math.min(1, t * 3)), fade = t < .7 ? 1 : (1 - t) / .3;
     // dirt kicked up
     for (let i = 0; i < 10; i++){ const a = -Math.PI * (.1 + R() * .8), d = ease(t) * (18 + R() * 26); g.fillStyle = rgba('#6a4a2a', 1 - t); ell(g, Math.cos(a) * d, 10 + Math.sin(a) * d + t * t * 30, 2.6, 2); g.fill(); }
@@ -137,12 +172,14 @@ export function skinnedPumpkin(g, key, R, lit){
 const cache = new Map();
 export function costumeSprite(key, px){
   const ck = key + ':' + px; if (cache.has(ck)) return cache.get(ck);
-  const R = px * .4, w = R * 3, h = R * 3.3, c = document.createElement('canvas'); c.width = Math.ceil(w); c.height = Math.ceil(h);
-  const g = c.getContext('2d'); g.translate(w / 2, R * 2.2); COSTUME_DRAW[key](g, R);
-  const sp = { c, ox:w / 2, oy:R * 2.2, R }; cache.set(ck, sp); return sp;
+  const art = COSTUME_ART.find(x => x.key === key) || {}, top = art.top || 2.2, half = art.wide || 1.5;   // tall costumes (the Crown of Stars) get a taller sprite
+  const R = px * .4, w = R * half * 2, h = R * (top + 1.1), c = document.createElement('canvas'); c.width = Math.ceil(w); c.height = Math.ceil(h);
+  const g = c.getContext('2d'); g.translate(w / 2, R * top); COSTUME_DRAW[key](g, R);
+  const sp = { c, ox:w / 2, oy:R * top, R }; cache.set(ck, sp); return sp;
 }
 /** Draw the worn costume over a pumpkin whose centre is (x, y) and radius r (drawing units). */
 export function drawCostume(ctx, key, x, y, r, px){
+  const b = (COSTUME_ART.find(c => c.key === key) || {}).board || 1; if (b !== 1){ y -= .85 * r * (1 - b); r *= b; }   // shrink about the top of the head
   const sp = costumeSprite(key, px), k = r / sp.R;
   ctx.drawImage(sp.c, x - sp.ox * k, y - sp.oy * k, sp.c.width * k, sp.c.height * k);
 }
@@ -150,7 +187,8 @@ export function drawCostume(ctx, key, x, y, r, px){
 /** Shop icons: a lit Green pumpkin wearing the costume, or the skin lit with its own face. */
 export function costumeIcon(key, px = 72){
   const c = document.createElement('canvas'); c.width = c.height = px * 2; const g = c.getContext('2d'); g.scale(2, 2);
-  const R = px * .3; g.translate(px / 2, px * .64); pumpkin(g, pal('#6db33f'), true, R, faceFor('green')); if (key) COSTUME_DRAW[key](g, R); return c;
+  const ic = (COSTUME_ART.find(x => x.key === key) || {}).icon || { r:.3, y:.64 };   // a tall costume shrinks the pumpkin so the whole crown fits the icon
+  const R = px * ic.r; g.translate(px / 2, px * ic.y); pumpkin(g, pal('#6db33f'), true, R, faceFor('green')); if (key) COSTUME_DRAW[key](g, R); return c;
 }
 export function skinIcon(key, px = 72, lit = true){
   const c = document.createElement('canvas'); c.width = c.height = px * 2; const g = c.getContext('2d'); g.scale(2, 2);

@@ -407,6 +407,7 @@ export const SFX = {
       case 'twintides': S('slime', 0.25, { rate: 1.3 }) || noise(0.12, 0.12, 1800, 1.5); break;
       case 'hexwitch': S('glassping', 0.18, { rate: 1.3 }); break;
       case 'pirate': S('coin', 0.2, { rate: 1.1 }); break;
+      case 'starcrown': S('sparkle', 0.3, { rate: 1.15 }) || sparkle(0, 0.03); [0, 4, 7].forEach((k, i) => tone(1046 * Math.pow(2, k / 12), 0.18, 'sine', 0.025, null, 0.03 + i * 0.04)); break;   // a bright chime
     }
   },
 

@@ -105,11 +105,19 @@ export function spawnMonster(key, lane, minion, p){
   return m;
 }
 
+/** Monsters that deliberately stay put for good: others walk past them instead of queueing behind. */
+function standsStill(o){
+  if (o.type === 'boss') return o.p >= (o.hold || 1) - 0.001;
+  if (o.type === 'archer') return o.p >= TYPES.archer.hold;
+  if (o.type === 'diver') return !o.walker;
+  return false;
+}
 export function aheadLimit(m){
   let limit = 1;
   const myLanes = lanesOf(m);
   for (const o of G.monsters){
     if (o === m || o.dead || o.p <= m.p || o.eating) continue;   // a monster already at the wall does not block the queue: everyone gets to chew
+    if (standsStill(o)) continue;   // a firing archer, a diver in its puddle or a holding boss never moves on, so it must not hold up the column behind it (owner bug 2026-09-27)
     if (!lanesOf(o).some(l => myLanes.includes(l))) continue;
     limit = Math.min(limit, o.p - (m.r + o.r) * 0.75 / (FIELD_BOT - FIELD_TOP));
   }

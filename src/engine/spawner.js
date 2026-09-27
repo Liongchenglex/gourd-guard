@@ -6,6 +6,7 @@ import { buildBg } from './render/sprites.js';
 import { G } from './state.js';
 import { rnd } from './util.js';
 import { banner } from '../ui/hud.js';
+import { SPAWN_GAP, SPAWN_BURST, SPAWN_BURST_EARLY, SPAWN_LATE_FROM } from '../data/rules.js';
 
 export function pickFrom(pool){
   let tot = 0; for (const [, w] of pool) tot += w;
@@ -25,8 +26,9 @@ export function storySpawn(dt){
     const t = G.spawned >= 1 && G.introQueue.length ? G.introQueue.shift() : pickFrom(pool.length ? pool : d.pool);
     counts[t] = (counts[t] || 0) + 1; spawnMonster(t);
     G.spawned++;
-    G.spawnTimer = d.interval * rnd(0.6, 1.4);
-    if (Math.random() < 0.18) G.spawnTimer *= 0.3;
+    const late = d.levelNo >= SPAWN_LATE_FROM;   // the harder half of each world is spaced out (owner)
+    G.spawnTimer = d.interval * (late ? SPAWN_GAP : 1) * rnd(0.6, 1.4);
+    if (Math.random() < (late ? SPAWN_BURST : SPAWN_BURST_EARLY)) G.spawnTimer *= 0.3;
   }
   if (d.boss && !G.bossSpawned && G.spawned >= Math.floor(d.total * 0.4)){
     spawnMonster('boss'); G.bossSpawned = true;

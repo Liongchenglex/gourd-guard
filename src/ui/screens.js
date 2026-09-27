@@ -1,4 +1,4 @@
-import { PERKS, perkEarned, perkOn, perkNight } from '../data/perks.js';
+import { PERKS, perkEarned, perkOn, perkNight, rented, RENT_COST } from '../data/perks.js';
 import { SPAWN_STEPS } from '../data/patterns.js';
 import { LV_COST, NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
@@ -386,19 +386,29 @@ function renderDetail(){
 
 /** Powers (the level-20 trophies) on the level preview card (owner, 2026-09-27): gold when on, dim when off, locked until that world is complete. Tap one to read its power and switch it. */
 let powerPick = null;
+/** Powers on the level card: won ones switch on and off; ones not won yet can be rented for this night with coins (owner, 2026-09-27). */
 export function renderPowers(){
   const box = $('#pvPowers'), info = $('#pvPowerInfo'); if (!box) return;
   box.innerHTML = '';
   for (const p of PERKS){
-    const earned = perkEarned(p.key), on = perkOn(p.key), wname = WORLD_NAMES[p.world - 1];
-    const b = document.createElement('button'); b.className = 'pw ' + (earned ? (on ? 'on' : 'off') : 'locked') + (powerPick === p.key ? ' picked' : '');
-    b.appendChild(trophyIcon(p.world - 1, 52, earned));
-    const sm = document.createElement('small'); sm.textContent = earned ? p.name : `Complete ${wname}`; b.appendChild(sm);
-    b.setAttribute('aria-label', earned ? `${p.name}, ${on ? 'on' : 'off'}: ${p.desc}` : `${p.name}, locked: complete ${wname}. ${p.desc}`);
+    const earned = perkEarned(p.key), isRented = rented.has(p.key), on = perkOn(p.key), wname = WORLD_NAMES[p.world - 1];
+    const b = document.createElement('button'); b.className = 'pw ' + (earned ? (on ? 'on' : 'off') : isRented ? 'on rented' : 'locked') + (powerPick === p.key ? ' picked' : '');
+    b.appendChild(trophyIcon(p.world - 1, 52, earned || isRented));
+    const sm = document.createElement('small'); sm.textContent = earned ? p.name : isRented ? 'Rented' : `Rent \u00b7 ${RENT_COST}`; b.appendChild(sm);
+    if (!earned && !isRented){ const tag = document.createElement('span'); tag.className = 'rentTag'; tag.textContent = 'RENT'; b.appendChild(tag); }
+    b.setAttribute('aria-label', earned ? `${p.name}, ${on ? 'on' : 'off'}: ${p.desc}` : isRented ? `${p.name}, rented for this night: ${p.desc}` : `${p.name}, not won yet: ${p.desc} Rent it for this night for ${RENT_COST} coins.`);
     b.onclick = () => {
-      powerPick = p.key;
+      powerPick = p.key; info.innerHTML = '';
       if (earned){ save.perksOff = save.perksOff || {}; save.perksOff[p.key] = on; persist(); SFX.ui(on ? 'unpick' : 'pick'); info.textContent = `${p.name} is ${on ? 'off' : 'on'}: ${p.desc}`; }
-      else { SFX.ui('locked'); info.textContent = `${p.name}: ${p.desc} Complete ${wname} to win it.`; }
+      else if (isRented){ SFX.ui('tap'); info.textContent = `${p.name} is rented for this night: ${p.desc}`; }
+      else {
+        SFX.ui('tap');
+        const t = document.createElement('span'); t.textContent = `${p.name}: ${p.desc} Complete ${wname} to keep it, or rent it for this night only.`; info.appendChild(t);
+        const rb = document.createElement('button'); rb.className = 'btn small rentBtn'; rb.innerHTML = `Rent for this night <span class="coin"></span>${RENT_COST}`; rb.disabled = save.coins < RENT_COST;
+        if (save.coins < RENT_COST){ const nt = document.createElement('small'); nt.textContent = ` You need ${RENT_COST - save.coins} more coins.`; t.appendChild(nt); }
+        rb.onclick = () => { if (save.coins < RENT_COST) return; save.coins -= RENT_COST; persist(); rented.add(p.key); SFX.coin(); info.textContent = `${p.name} is rented for this night: ${p.desc}`; renderPowers(); };
+        info.appendChild(rb);
+      }
       info.hidden = false; renderPowers();
     };
     box.appendChild(b);
@@ -453,10 +463,11 @@ export function renderShop(){
     const tx = document.createElement('div'); tx.className = 'tx';
     const pips = Array.from({ length:5 }, (_, i) => `<i class="${i < L ? 'on' : ''}"></i>`).join('');
     const a = lvStats(t, L), n = maxed ? null : lvStats(t, L + 1);
-    tx.innerHTML = `<b>${P.name}, level ${L}${maxed ? ' (max)' : ` <span class="dim">\u2192 ${L + 1}</span>`}</b><div class="nx">${nxLine('Power', a.power, n && n.power)}${nxLine('Knockback', a.knockback, n && n.knockback)}${nxLine('Special', a.special, n && n.special)}</div><div class="pips" aria-label="Level ${L} of 5">${pips}</div>`;
+    if (!unlocked){ ic.classList.add('mystery'); tx.innerHTML = `<b>??? pumpkin</b><p>${un === Infinity ? 'Unlocks in a later world.' : `Unlocks at level ${levelFor(un).label}.`}</p>`; }   // nothing is revealed before it unlocks (owner)
+    else tx.innerHTML = `<b>${P.name}, level ${L}${maxed ? ' (max)' : ` <span class="dim">\u2192 ${L + 1}</span>`}</b><div class="nx">${nxLine('Power', a.power, n && n.power)}${nxLine('Knockback', a.knockback, n && n.knockback)}${nxLine('Special', a.special, n && n.special)}</div><div class="pips" aria-label="Level ${L} of 5">${pips}</div>`;
     d.appendChild(tx);
     const b = document.createElement('button'); b.className = 'btn small';
-    if (!unlocked){ b.textContent = un === Infinity ? 'Later world' : `Level ${levelFor(un).label}`; b.disabled = true; }
+    if (!unlocked){ b.textContent = '\ud83d\udd12'; b.disabled = true; b.setAttribute('aria-label', 'Locked'); }
     else if (maxed){ b.textContent = 'Maxed'; b.disabled = true; }
     else { b.innerHTML = `<span class="coin"></span>${cost}`; b.disabled = save.coins < cost; b.setAttribute('aria-label', `Level up ${P.name} for ${cost} coins`); }
     b.onclick = () => {

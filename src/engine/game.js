@@ -1,4 +1,4 @@
-import { perkOn } from '../data/perks.js';
+import { perkOn, clearRentals } from '../data/perks.js';
 import { MINTRO, TYPES, BOSS_NAMES, VARIANTS } from '../data/monsters.js';
 import { GEAR } from '../data/shop.js';
 import { PATTERNS } from '../data/patterns.js';
@@ -110,7 +110,7 @@ export function startGame(mode, n, loadout){
 
 export function endGame(win){
   if (G.over) return;
-  G.over = true; setGest(null);
+  G.over = true; setGest(null); clearRentals();   // a rented power lasts one night
   musicStop(win ? 0.3 : 1.2);
   if (win) SFX.win(); else SFX.lose();
   setTimeout(() => showResult(win), win ? 1100 : 1000);

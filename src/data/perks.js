@@ -19,7 +19,12 @@ export function perkEarned(key){
   return !!(p && (save.stars[perkNight(p)] || (save.testUnlock && false)));
 }
 
-/** Active = earned and not switched off. */
+/** Powers rented for the next night only (owner, 2026-09-27): coins buy one night of a power you have not won yet. Cleared when a night ends. */
+export const RENT_COST = 60;
+export const rented = new Set();
+export const clearRentals = () => rented.clear();
+
+/** Active = earned and not switched off, or rented for this night. */
 export function perkOn(key){
-  return perkEarned(key) && !(save.perksOff && save.perksOff[key]);
+  return rented.has(key) || (perkEarned(key) && !(save.perksOff && save.perksOff[key]));
 }

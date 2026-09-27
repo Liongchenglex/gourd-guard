@@ -1,86 +1,51 @@
-each world can have 15 - 20 levels, the 200 levels is just my ballpark thing with no proper thinking initially.
+players can click a tab in each of the storybook at the top to switch to nightmare mode.
+Nightmare mode, will share similar map as their original counterpart, but the map will look grimmer and darker.
+introduce new pumpkin gourds family (new playstyle: destroy to help the pumpkin patc and has 3x 3 aura), player will be able to choose 2 gourds to go into levels with them, at all moment there should always be gourd on the patch. If destroyed, the next spawn will prioritise spawning a gourd
+Total of 12 nightmare levels
 
-ground rule: 
--pumpkins should spawn in 2
--each monster killed should either give weapons (10%), pumpkin (30%) or coins (60%)
--easier levels, should have less pumpkin variety. e.g. just green and yellow. More difficult levels can have up to 5 pumpkins, and user can choose the pumpkins they want
+Nightmare pumpkin patch (12 levels)
+New map mechanic: Coffins rising. Acts like castle wall, and will rise from random places. Once destroyed, release mummies
+New monsters:
+-Grave riser summons graves/tombstones on the players pumpkin patch
+-COffin man, summon coffins on random intervals
+-scarecrows summons crows, if crows arent kiled they will fly into pumpkin patch and destroy a pumpkin
+-hay monster, a long monster that takes up 3-4 tiles. have to find the head and kill the head, if not the body in other tiles will keep comin back
+-crows
+New pumpkin:
+Grave gourd, has 3 x 3 protection area. Any pumpkin in the area cannot be destroyed (by crows or other things), pumpkin damage x2 if launched from area, no grave can grow inside it. If destroyed, will destroy all graves in the 3 x3 zone.
 
-weapons:
--gravestone buster
--landmines
--bomb (3x3)
--
+Nightmare foggy hollow
+New map mechanics: black fogs. black fogs will ocassionally occur like the narrow winds in witchwoods. Black fogs turn pumpkins into rotten pumpkins.Rotten pumpkins will heal monsters when hitting monsters
+New monsters: 
+-Plague Doctor 2 : summons a 3 x3 black fog that goes doen the column
+-reaper : can only be damaged by rotten pumpkins
+-fog walker 2 : 3 hp, fog takes up more space instead of just one row. cculd be 3 rows 
+-mini poultegeist: disappears and move pumpkin around
+-rotten imp : rides a mossback and launches rotten apple that gradually turns pumpkins into rotten pumpkin
+New pumpkin:
+protector gourd: has 3 x 3 protection area. Any pumpkin in the area cannot be destroyed (by crows or other things) and will not turn rotten, pumpkin can be launched on two bunch from the area. If destroyed, will un-rotten surrounding pumpkins
 
+Nightmare witchwood
+New map mechanics: the wind now extend beyond pumpkin patch and blows on monster too, if monsters are blown they could skip 2 tiles. (lleft, right, top, down), there will also be a crow franzy where crows will keep arrving
+New monsters:
+- enhanced mirror sprite, will have 3 tiles of mirror, protecting other monsters
+- rotten apple witch, cast hex to turn pumpkins, into rotten pumpkins
+- undead witch, walk with 3 x3 hex space. any monster that die in there will be rvive. Only witch can be killed in there
+- Witch on a broom, stays at the end of the map but moves side to side. Will summon chameleons, reverser chameleons, crows, bats and shell turtle
+- Unpredictable witch, will turn crows into either chameleon, reverse chameleon or shell turtle
+New pumpkin:
+enchanter gourd: has 3 x 3 protection area. Any pumpkin in the area cannot be destroyed (by crows or other things), will heal wall if the top part is adjacent to wall. Pumpkins launch from it has guaranteed knockback. when destroyed, it will turn all pumpkins around it into rainbow pumpkin and if its gap, it will spawn rainbow pumpkin
 
-Future:
-Each level will have medium and hard level. 
-Vairabels for level difficulty:
--pumpkin spawn rate reduction
--pumpkin spawned reduction
--no wall
--more gravestone
--more monster spawn
--quests
+nightmare Crumbling keep
+New map mechanics: Castle wall with gates. Knights will keep coming out from here. High Castle walls where the skeleton archer will reside and keep rainign arrow down.
+New monsters:
+- honoured knight: turns ghouls and imps around it into knights 
+- spiders: spawn on castle walls which will projectile web onto pumpkin patch to web pumpkin, so it gets locked. will keep spawning until castle wall destroyed 
+- Lobber cart: lobs balls of net to the pumpkin patch which nets them and locks them. lock in bulk unlike spiders
+- vampire 2: can only be killed if hit by pumpkins launched according to the fixed number
+- vampire 3: will cast a red net on a bunch of pumpkins, if those pumpkins remain alive, this vampire cannot be killed 
+New pumpkin:
+enchanter gourd: has 3 x 3 protection area. Any pumpkin in the area cannot be destroyed (by crows or other things), and canoot be net/webbed. Pumpkins launch from it has 3 x3 100% splash damage. When destroyed, it will destroy all nets around it
 
-If you could give each world a halloween theme, that would be awesome!
-
-1st world map:
--graves will be the unique aspect in swipe board
-
-2nd world map:
--fog, where certain monster rows will be hidden in fog
--can occasionally have graves
-
-3rd world map:
--castle walls. random castle walls will spawn. Each castle wall will have high hp. These castle walls will prevent monster behind it to be hit.
--can occasionally have graves
-
-4th world map:
--puddles gird. There will be random grid that are puddles monster can spawn from puddles. and there could be levels where the whole first row is the sea, and monsters can come up from there
--can occasionally have graves
-
-5th world map:
--do you have any gimmick suggestion? something forest themed maybe?
-
-6th world map:
--similar to 1st world just that monster will be from all worlds!
-
-Pumpkin types:
--Everything now
--pink (plasma) = Chain: lightning jumps from the monster it hits to the nearest monster in a neighboring column, at half power.
--gold (make it a bit distinct from normal yellow with some accesories) = killing zombies gives guarantee coins or xN amount of coins
--black = Blast: explodes on hit and splashes monsters in the columns to the left and right.
--white =if it hits nothing, it flies back into your patch instead of being wasted. This fixes the problem that about half of all throws currently fly off empty columns.
-
-
-Please help me organise monster based on map theme if possible
-
-Monster:
-current monsters
-(just change wraith to something else as i want wraith to ahve the gimmick of being invisible and coming back)
--shield monster, shield up when moving, shield down when stopping. the monster will stop and move, stop and move
--chameleon monster, depending on its colour, it can only be killed by that colour pumpkin. The colour should only be one of those colours picked by the player
--reverse chameleon, depending on its colour, it cannot be killed by that colour (should have visual difference froma above)
--terrac cota, monster that pushes a row of terra cotta warriors that have high hp. its slower when pushing, faster when all terracota warrior is destroyed (would be great to intoduce piercing pumpkin after this monster)
--drunk monster, moves freely across all rows and columns
--monster that starts from random tile not necessarily at the end
--mummy monster,can only be killed by fire pumpkin, if killed by other pumpkins, it will respawn in smae tile after certain duration
--vampire monster, comes with a swarm of bats. Can recover HP
--enhanced version of current monsters, e.g. faster, no knockback
--monster that rflects pumpkin
--monster that fires projectiles to the wall from the back of the map
--monster that moves really fast when flying, once the thing carrying gets destroyed he will move at normal pace.
--monster that goes up and down the puddle in the 4th world and stays there to throw projectile
--other monster suggestions?
-
-Boss (rule, they are not meant to go all the way to the wall, their role is to be tough and keep monsters coming to destroy the wall, or use projectiles etc.)
-1st world: summon monssters, teleports around the map, teleport monster around the map
-N world (whiever world you think its most suitable to host these boses): 
--Twin boss, both boss have to be killed together. if one boss dead, the boss will remain dead for awhile before being reborn. both launches projectiles to destroy walls
--boss that turn other monsters into chameleon monsters, and spawn chameleon monsters. 
--boss that can destroy pumpkins or make pumpkin rows/columns unusable temporarily. boss will occaionally destroy all pumpkin of certain colours (again only amongst the pumpkins that the user picked). Or change pumpkin colours, or change pumpkin position. Basically, pumpkin manipulation
--Other suggestions?
--The final boss shall be a mix of everything in 5 stages.
-
-
-
+nightmare drowned marsh
+New map mechanics: xxxxx

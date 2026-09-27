@@ -7,9 +7,9 @@ SRC, ENC = ROOT / 'assets/music', ROOT / 'assets/music/enc'
 # orchestrations of one staccato "sneaky" piece) and the "upright bass" drafts. Rendered with ffmpeg from assets/music/drafts:
 #   w1 clarinet as is; w2 harp + light echo haze (+6 dB); w3 clarinet and bassoon layered (each ×0.62); w4 bassoon a semitone down,
 #   low shelf +2 dB, highs -3 dB; w5 harp underwater: low-pass 1.7 kHz, chorus, short echo (+7 dB);
-#   boss: the upright's rising section from 0:36 ("the relay" 0:36-0:56 crossfaded into "theme on upright bass" 0:36-0:56), ~39 s loop;
-#   menu: the first draft at 85% tempo, low-passed; play (endless): the clarinet world-1 track.
-TRACKS = { 'play': 'w1_patch_clarinet.mp3', 'w1': 'w1_patch_clarinet.mp3', 'w2': 'w2_hollow_harp.mp3', 'w3': 'w3_witchwood_duet.mp3', 'w4': 'w4_keep_bassoon.mp3', 'w5': 'w5_marsh_underwater_harp.mp3', 'boss': 'boss_upright_rising.mp3', 'menu': 'menu_lobby.mp3' }
+#   boss: "theme on upright bass" 0:33-0:54.5 (the breath before the rise, through the last phrase, before the closing note dies away), 21.5 s loop;
+#   menu: the same theme's calm opening 0:00-0:33, cut at the breath so it loops cleanly (the boss fight is where it rises); play (endless): the clarinet world-1 track.
+TRACKS = { 'play': 'w1_patch_clarinet.mp3', 'w1': 'w1_patch_clarinet.mp3', 'w2': 'w2_hollow_harp.mp3', 'w3': 'w3_witchwood_duet.mp3', 'w4': 'w4_keep_bassoon.mp3', 'w5': 'w5_marsh_underwater_harp.mp3', 'boss': 'boss_upright_rising.mp3', 'menu': 'menu_upright_calm.mp3' }
 def main():
     ENC.mkdir(exist_ok=True); uris, keys = {}, {}
     for key, name in TRACKS.items():

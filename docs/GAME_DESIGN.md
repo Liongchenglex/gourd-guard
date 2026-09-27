@@ -415,6 +415,18 @@ Second follow-up (2026-09-26): the owner reverted the ×1.35 spawn slowdown afte
 
 **Owner playtest batch (2026-09-26).** Level 10 of worlds 1, 2 and 4: spawn gap ×1.2 and 20% fewer monsters (1-10: 16 at 3.96 s; 2-10: 17 at 3.72 s; 4-10: 18 at 3.6 s), owner playing at pumpkin level 2. Also: Turquoise pairs half power, bunches of 3+ full; landmines on any tile with a 3×3 blast for 6; wall repair fixes one tapped wall; Keep Imp 2 HP; 4-2/4-3 knights weight 2, 4-3 capped at 2 haulers; chameleons from 3-9 capped at 3; no rainbow sprouts or Purple rainbow spawns before 1-9; level-10 wins show a world-unlocked card and return to the menu; the full help no longer auto-opens (1-1 teaches bunches of 3 and 5 in two cards). Bot to re-run on the level 10s later.
 
+### Coin income measurement for the monetization draft (2026-09-27, `--repeats 1`, expected profile, one pass per level)
+
+Coins picked up during the night plus the win bonus (10 + 3 × night + 5 × stars; losses keep only the night's coins). The bot won 22 of 44 nights.
+
+| Stretch | Coins earned (bot, one pass) | Scaled ×15 |
+|---|---|---|
+| World 1, levels 1–10 | 1,042 | about 15,600 |
+| World 1, all 20 levels | 1,931 | about 29,000 |
+| Worlds 2–5, per level (6 sampled levels each) | 110–250 average | 1,650–3,750 |
+
+Reading: the owner's draft price list (`monetization.md`) assumes about 15,000 coins by level 10, fifteen times today's income. Multiplying every coin source by 15 matches that assumption almost exactly while keeping the drafted prices. At that scale later worlds earn roughly 35,000–65,000 coins each, more than the draft's total coin prices (about 40,600 for all pumpkin levels plus 3,000 for walls), so the late game needs extra coin sinks, and the scarce currency becomes seeds. Real players replay lost nights and earn more than one pass; treat these as lower bounds. Not applied to the game yet: the owner is deciding the compromise.
+
 ---
 
 ## 12. Art, audio, tech

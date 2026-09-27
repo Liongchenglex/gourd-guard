@@ -8,10 +8,12 @@ SRC, ENC = ROOT / 'assets/music', ROOT / 'assets/music/enc'
 #   w1 clarinet as is; w2 harp + light echo haze (+6 dB); w3 clarinet and bassoon layered (each ×0.62); w4 bassoon a semitone down,
 #   low shelf +2 dB, highs -3 dB; w5 harp underwater: low-pass 1.7 kHz, chorus, short echo (+7 dB);
 #   boss: "theme on upright bass" 0:33-0:54.5 (the breath before the rise, through the last phrase, before the closing note dies away), 21.5 s loop;
+#         boss_upright_rising_loud (owner, 2026-09-28: "a bit soft" on the phone): high-pass 45 Hz, +3 dB at 220 Hz, +2 dB at 900 Hz,
+#         treble +3 dB at 3 kHz so the bass reads on phone speakers, +4 dB, limiter at -1 dBFS: -14.4 LUFS vs -19.4 for the world tracks;
 #   menu: the previous lobby track (first draft at 85% tempo, low-passed, 96 bpm, B minor) up to its phrase end at 0:50.5, then a
 #         0.3 s crossfade into the journey-3 clarinet slowed to the same 96 bpm (atempo 0.857, pitch kept, same key), low-passed
 #         3.8 kHz, -3 dB; about 131 s, looping with a 1.5 s fade. The first cut crossfaded 4 s at 0:44 between 96 and 112 bpm: a stumbling beat.; play (endless): the clarinet world-1 track.
-TRACKS = { 'play': 'w1_patch_clarinet.mp3', 'w1': 'w1_patch_clarinet.mp3', 'w2': 'w2_hollow_harp.mp3', 'w3': 'w3_witchwood_duet.mp3', 'w4': 'w4_keep_bassoon.mp3', 'w5': 'w5_marsh_underwater_harp.mp3', 'boss': 'boss_upright_rising.mp3', 'menu': 'menu_lobby.mp3' }   # back on the original lobby until the owner's new lobby piece arrives (menu_to_staccato.mp3 kept as a record)
+TRACKS = { 'play': 'w1_patch_clarinet.mp3', 'w1': 'w1_patch_clarinet.mp3', 'w2': 'w2_hollow_harp.mp3', 'w3': 'w3_witchwood_duet.mp3', 'w4': 'w4_keep_bassoon.mp3', 'w5': 'w5_marsh_underwater_harp.mp3', 'boss': 'boss_upright_rising_loud.mp3', 'menu': 'menu_lobby.mp3' }   # back on the original lobby until the owner's new lobby piece arrives (menu_to_staccato.mp3 kept as a record)
 def main():
     ENC.mkdir(exist_ok=True); uris, keys = {}, {}
     for key, name in TRACKS.items():

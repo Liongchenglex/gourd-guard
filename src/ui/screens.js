@@ -39,8 +39,8 @@ export function showResult(win){
       const nk = ALL_LEVELS[g.n] && (ALL_LEVELS[g.n].unlockPumpkins || [])[0], nextP = nk && PTYPES.find(p => p.key === nk);
       if (nextP && g.n < LEVELS) msg += ` Next night unlocks the ${nextP.name} pumpkin.`;
       if (g.def.levelNo === 10){   // owner: beating the level-10 boss is a celebration: a world-unlock card, then back to the menu
-        const nextW = WORLDS[g.def.world + 1]; title = nextW ? `${nextW.name} unlocked!` : 'Every boss beaten!';
-        msg = `🎉 ${BOSS_NAMES[g.def.boss]} is beaten! The rest of ${WORLDS[g.def.world].name} is open` + (nextW ? `, and ${nextW.name} awaits.` : '.'); SFX.perk();
+        const nextName = WORLD_LEVELS[g.def.worldNo] && WORLD_LEVELS[g.def.worldNo].length ? WORLD_NAMES[g.def.worldNo] : null; title = nextName ? `${nextName} unlocked!` : 'Every boss beaten!';
+        msg = `🎉 ${BOSS_NAMES[g.def.boss]} is beaten! The rest of ${WORLD_NAMES[g.def.worldNo - 1]} is open` + (nextName ? `, and ${nextName} awaits.` : '.'); SFX.perk();
       }
       const perk = PERKS.find(p => perkNight(p) === g.n);
       const tw = $('#rTrophy'); tw.hidden = true; tw.innerHTML = ''; tw.classList.remove('show');
@@ -54,8 +54,8 @@ export function showResult(win){
       }
       stars = [0,1,2].map(i => `<span class="${i < st ? '' : 'off'}">★</span>`).join('');
       stats.push(['Monsters stopped', g.kills], ['Walls left', pct(wf)], ['Coins found', g.coins], ['Night bonus', bonus]);
-      if (g.def.levelNo === 10) addBtn(box, 'Continue', () => { pendingUnlock = g.def.world + 1; curBook = null; openLevels(); });   // to the shelf, where the next storybook unlocks (owner)
-      else if (perk) addBtn(box, 'Continue', () => { pendingStamp = g.n; openBook(g.def.world, true); });   // back into the book: the level-20 tile is stamped with a flourish
+      if (g.def.levelNo === 10) addBtn(box, 'Continue', () => { pendingUnlock = g.def.worldNo; curBook = null; openLevels(); });   // worldNo is 1-based story order = the next book's shelf index (def.world is the visual theme, not the order)   // to the shelf, where the next storybook unlocks (owner)
+      else if (perk) addBtn(box, 'Continue', () => { pendingStamp = g.n; openBook(g.def.worldNo - 1, true); });   // back into the book: the level-20 tile is stamped with a flourish
       else {
         if (g.n < LEVELS) addBtn(box, 'Next level', () => openPreview(g.n + 1));
         addBtn(box, 'Shop', () => openShop('result'), 'alt');

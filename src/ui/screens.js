@@ -369,7 +369,7 @@ function applyNightmare(wi){
 }
 function toggleNightmare(){
   bookNightmare = !bookNightmare;
-  SFX.ui(bookNightmare ? 'nightmare' : 'wake');
+  SFX.ui('tap');   // the same page-turn sound as the bestiary flip (owner, 2026-09-28)
   const spread = $('#spread'); spread.classList.remove('morph'); void spread.offsetWidth; spread.classList.add('morph');
   setTimeout(() => { openBook(curBook, false); }, 180);   // swap the pages mid-shudder
 }

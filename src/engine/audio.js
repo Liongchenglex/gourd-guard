@@ -380,8 +380,6 @@ export const SFX = {
       case 'level': S('uilevel', 0.55, { rate: 1.05, jit: 0.08 }) || (tone(1046, 0.1, 'triangle', 0.07, 1300), noise(0.04, 0.08, 3000, 2)); break;          // level tile
       case 'pick': S('uipick', 0.5, { rate: 1.2 }) || tone(700, 0.08, 'sine', 0.06, 1000); break;                                            // pumpkin picked
       case 'unpick': S('uiunpick', 0.45, { rate: 0.85 }) || tone(1000, 0.08, 'sine', 0.05, 700); break;                                       // pumpkin dropped from the loadout
-      case 'nightmare': S('darkcast', 0.55, { rate: 0.75 }) || tone(110, 0.5, 'sawtooth', 0.05, 70); S('creak', 0.35, { rate: 0.7 }); S('heartbeat', 0.5, { rate: 0.9 }); break;   // the demon bookmark: the book turns (owner, 2026-09-28)
-      case 'wake': S('reverse', 0.35, { rate: 1.1 }) || tone(520, 0.12, 'sine', 0.05, 780); S('sparkle', 0.2, { rate: 0.9 }); break;   // back to the storybook
       case 'locked': S('uibad', 0.5, { rate: 0.6 }) || tone(190, 0.1, 'square', 0.05, 150); break;                                          // tapping a locked pick
     }
   },

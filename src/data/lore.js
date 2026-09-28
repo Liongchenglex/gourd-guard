@@ -39,3 +39,12 @@ export const PUMPKIN_LORE = {
   brown:'A slow grower with a temper. Leave it in the patch and it comes back twice the size.',
   rainbow:'Nobody plants these. They simply appear when a patch has been looked after well.',
 };
+
+// Nightmare books (owner, 2026-09-28): told as a story, like the normal lore, not as a description of the map. Index = world number − 1.
+export const NIGHTMARE_LORE = [
+  'The eclipse came, and the Gravekeeper came back with it. He set the barn alight with his own lantern. Now coffins push up through the soil, the crows are counting pumpkins, and the harvest moon has gone black.',
+  'The mist turned green the night the Poltergeist fell, and it never turned back. Whatever it touches begins to rot. Pale hands reach up from the bog, and a tall figure waits in the fog for your lantern to go out.',
+  'As she fell, the Hexwitch cast one last spell, and it drank every colour out of the wood. The trees scream now. Only her window still burns red, and the crows say she is brewing something worse.',
+  'The Count was never really beaten. He was only waiting for the storm. Now lightning lights his tower, the gates open by themselves, and every knight who ever fell at the keep is marching again.',
+  'Under a blood moon the sea turned red, and the Twin Tides rose from it changed. Something with too many arms stirs beneath the wreck. On the horizon a ghost ship waits for a crew, and it is not particular who.',
+];

@@ -10,7 +10,7 @@ import { atlasKey } from '../engine/render/chars.js';
 import { SFX, ensureAudio, musicStop, musicSync, musicStart, applyVolumes } from '../engine/audio.js';
 import { beginEndless, beginNight, continueNight, continueState, makeDemo, makePreview, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
 import { bgWorld, buildBg, buildSprites, pumpkinIcon, worldScene, setBg } from '../engine/render/sprites.js';
-import { BOOKS } from '../data/lore.js';
+import { BOOKS, NIGHTMARE_LORE } from '../data/lore.js';
 import { BESTIARY, COMPANIONS } from '../data/bestiary.js';
 import { toolIcon } from '../engine/render/tools.js';
 import { COSTUMES, SKINS, STAR_COSTUME, starsHave, starsMax, grantStarCrown } from '../data/wardrobe.js';
@@ -30,7 +30,7 @@ import { wallFrac } from '../engine/walls.js';
 import { lvOf, persist, save } from '../save.js';
 import { setHudSig, updateHud } from './hud.js';
 import { QUEST_START, questsFor, questText, questBits, countBits, settleQuests, questLive, isPair } from '../data/quests.js';
-import { sceneCrop, sceneFull, nightmareKey, nightmareDesc } from '../engine/render/nightmare/scenes.js';
+import { sceneCrop, sceneFull, nightmareKey } from '../engine/render/nightmare/scenes.js';
 
 export function showResult(win){
   const g = G, box = $('#rBtns'); box.innerHTML = '';
@@ -366,7 +366,7 @@ function applyNightmare(wi){
   nightmareBg(on ? nightmareKey(theme) : null);
   if (!on) return;
   $('#bkWorld').textContent = `Nightmare · World ${wi + 1} of 5`;
-  $('#bkLore').textContent = nightmareDesc(theme);
+  $('#bkLore').textContent = NIGHTMARE_LORE[wi];
   const sc = sceneCrop(nightmareKey(theme), 456, 120), cv = $('#bkScene'); cv.width = sc.width; cv.height = sc.height; cv.getContext('2d').drawImage(sc, 0, 0);
   const cap = $('#bkBoss span'); if (cap) cap.textContent = 'The Fallen ' + cap.textContent.replace(/^The /, '');   // the nightmare bosses (owner's dump.md)
 }

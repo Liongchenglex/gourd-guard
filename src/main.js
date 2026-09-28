@@ -11,6 +11,7 @@ import { G, LANE, bannerTimer, graves, grid, setBannerTimer, state, walls } from
 import { $ } from './engine/util.js';
 import { persist, save } from './save.js';
 import { buildLegend, setState, syncSound, wireButtons, openPreview, openBook } from './ui/screens.js';
+import { SplashScreen } from '@capacitor/splash-screen';
 
 // ---------- Loop ----------
 
@@ -43,6 +44,10 @@ buildLegend();
 syncSound();
 
 setState('title');
+if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()){   // the iPhone app: keep the launch image up until the title screen has drawn
+  document.documentElement.classList.add('native');
+  requestAnimationFrame(() => requestAnimationFrame(() => SplashScreen.hide().catch(() => {})));
+}
 
 persist();
 

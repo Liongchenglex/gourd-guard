@@ -49,6 +49,13 @@ Build `docs/WORLDS.md` one world at a time, each with its own bot runs. Next: **
 - `.venv/bin/python tools/balance_bot.py --nights 1,5,10,15 --repeats 3 --url …`: human-paced bot plays full nights and prints one JSON line per run plus a per-night summary (win rate, mean wall %). Single runs are noise; **3 repeats per night is the minimum** for any balance claim. Run it after any rule or number change and record results in the design doc's balance section.
 - `node tools/check_levels.mjs`: proves `world1.js` still reproduces the prototype's level formulas. Delete it once world 1 is redesigned for Release 1.
 
+## iPhone app (Capacitor, 2026-09-28)
+- The game ships as an iOS app with Capacitor 8 (`capacitor.config.json`, app ID `com.liongchenglex.gourdguard`, project in `ios/`, Swift Package Manager, no CocoaPods). Android comes later (the owner is buying the Google Play account).
+- After any game change: `npm run build`, then `npx cap sync ios`, then open `ios/App/App.xcodeproj` in Xcode (or `npx cap open ios`) and press Run with the iPhone selected. Signing uses the owner's Apple ID (Signing & Capabilities → Team).
+- Portrait only, status bar hidden, full screen (`ios/App/App/Info.plist`). Leaving the app pauses the night and silences audio (`audioSleep` in `src/engine/audio.js`).
+- Fonts are bundled (`src/fonts/`, SIL OFL), so the game needs no network. The icon and launch screen are drawn with the game's pumpkin by `.venv/bin/python tools/app_art.py`.
+- Still to do before the store: saves in native storage (not only localStorage), real ads and in-app purchases through the `window.GGAds` / `window.GGStore` bridges, removing the two testing links, store listing.
+
 ## Phone playtests
 After each milestone the owner plays it on their phone. `npm run build`, then `.venv/bin/python tools/bundle_single.py` writes `dist/gourd-guard.html` (CSS and JS inlined, no document wrapper). Publish that file as a private artifact, **updating the existing artifact URL** (see memory) so the owner's save data carries over.
 
@@ -59,7 +66,7 @@ After each milestone the owner plays it on their phone. `npm run build`, then `.
 - Mobile first: touch targets ≥44 px, works one-handed, respects safe areas, no hover-only UI.
 - Performance: keep 60 fps on mid-range phones; pre-render sprites; avoid per-frame allocations in hot loops. **Never call the Toy Plastic painter (`S.part`, materials) or set `shadowBlur` in per-frame code**: bake into a cached sprite (see `sprite()` in `render/tools.js`, `bake()` in `render/fx.js`, `render/anim.js`) and blit with transforms. The scarecrow and the hex sigil once lagged the owner's phone for exactly this reason (2026-09-26).
 - Original IP only: don't use the names, art or text of "Pumpkins vs. Monsters" or Plants vs. Zombies; don't describe the game as a remake. Art stays original (drawn in code unless the owner provides assets). Sounds must be CC0 or owner-licensed and listed in `assets/sfx/SOURCES.md`.
-- Keep the game fully playable offline with no network requests other than Google Fonts (and plan to self-host fonts for the mobile build).
+- Keep the game fully playable offline with no network requests at all (fonts are bundled in `src/fonts/`).
 
 ## Longer-term plan (see design doc §15)
 New ground rules → more pumpkin types and a 120-level power-scaling model → monster variety and bosses → map variety → 120 levels in 6 worlds → art/music polish → installable web app → Capacitor builds for App Store and Google Play.

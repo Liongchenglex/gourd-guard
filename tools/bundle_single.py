@@ -9,8 +9,16 @@ import pathlib, re, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DIST = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / 'dist'
 html = (DIST / 'index.html').read_text()
+import base64
+def data_uri(m):   # fonts and other files the CSS points at become data URIs, so the single file needs nothing else
+    rel = m.group(2); f = DIST / 'assets' / pathlib.Path(rel).name
+    if not f.exists(): return m.group(0)
+    kind = {'.woff2':'font/woff2', '.woff':'font/woff', '.png':'image/png', '.svg':'image/svg+xml'}.get(f.suffix, 'application/octet-stream')
+    return 'url(' + m.group(1) + 'data:' + kind + ';base64,' + base64.b64encode(f.read_bytes()).decode() + m.group(1) + ')'
 def inline_css(m):
-    return '<style>\n' + (DIST / m.group(1).lstrip('./')).read_text() + '\n</style>'
+    css = (DIST / m.group(1).lstrip('./')).read_text()
+    css = re.sub(r'url\((["\']?)((?!data:)[^)"\']+)\1\)', data_uri, css)
+    return '<style>\n' + css + '\n</style>'
 def inline_js(m):
     return '<script type="module">\n' + (DIST / m.group(1).lstrip('./')).read_text() + '\n</script>'
 html = re.sub(r'<link rel="stylesheet" crossorigin href="([^"]+)">', inline_css, html)

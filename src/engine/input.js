@@ -1,5 +1,5 @@
 import { updateHud } from '../ui/hud.js';
-import { ensureAudio } from './audio.js';
+import { ensureAudio, audioSleep } from './audio.js';
 import { bestLitGroup, collectDrop, findCell, slideOne } from './board.js';
 import { dropHop, launchGroup } from './combat.js';
 import { useFirework, useRepair, useBuster, bustGrave, useLantern, useMine, placeMine, repairWall, useBomb, dropBomb, useScarecrow, placeScarecrow } from './game.js';
@@ -93,7 +93,7 @@ export function attachInput(){
 
   cv.addEventListener('contextmenu', e => e.preventDefault());
 
-  document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play' && G && !G.over) setState('pause'); });
+  document.addEventListener('visibilitychange', () => { audioSleep(document.hidden); if (document.hidden && state === 'play' && G && !G.over) setState('pause'); });   // app to background: pause the night and silence the sound
 
   window.addEventListener('keydown', e => {
     if (e.key === 'Escape' || e.key === 'p'){ if (state === 'play' && !G.over) setState('pause'); else if (state === 'pause') setState('play'); return; }

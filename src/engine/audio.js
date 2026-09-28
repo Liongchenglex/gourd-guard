@@ -73,6 +73,8 @@ export function musicStop(fade = 0.8){
   try { g.gain.cancelScheduledValues(AC.currentTime); g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), AC.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + fade); src.stop(AC.currentTime + fade + 0.05); } catch (e) {}
 }
 /** Mute toggle: duck or restore the running track without restarting it. */
+/** Leaving the app (or hiding the tab) silences everything; coming back resumes (the phone app, 2026-09-28). */
+export function audioSleep(hidden){ try { if (!AC) return; if (hidden) AC.suspend(); else if (AC.state === 'suspended') AC.resume(); } catch (e) {} }
 export function musicSync(){ if (musicGain && AC) musicGain.gain.setTargetAtTime(save.muted ? 0.0001 : MUSIC_GAIN, AC.currentTime, 0.1); }
 /** Duck the music to `level` of its gain for `seconds`, then ease back (boss warnings). */
 export function musicDuck(level = 0.35, seconds = 3){

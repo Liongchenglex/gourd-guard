@@ -1,0 +1,24 @@
+{
+  "appId": "com.liongchenglex.gourdguard",
+  "appName": "Gourd Guard",
+  "webDir": "dist",
+  "backgroundColor": "#1a0f22",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "backgroundColor": "#1a0f22",
+    "allowsLinkPreview": false
+  },
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": true,
+      "style": "DARK"
+    },
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "backgroundColor": "#1a0f22",
+      "showSpinner": false,
+      "launchFadeOutDuration": 250
+    }
+  }
+}

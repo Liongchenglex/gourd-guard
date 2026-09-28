@@ -1,3 +1,6 @@
+/* Fonts bundled with the game (SIL Open Font License; src/fonts/OFL.md) so it works offline and in the app */
+@font-face{ font-family:'Creepster'; font-style:normal; font-weight:400; font-display:swap; src:url('./fonts/creepster-latin.woff2') format('woff2'); }
+@font-face{ font-family:'Fredoka'; font-style:normal; font-weight:300 700; font-display:swap; src:url('./fonts/fredoka-latin.woff2') format('woff2'); }
 :root{
   --page:#e9e0d2; --page-ink:#2b1d12;
   --ink:#fbefdc; --muted:#cdb9a4; --pumpkin:#ff8a1f; --candle:#ffc14a; --heart:#ff5a4d;
@@ -8,6 +11,7 @@
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --page:#0d0913; --page-ink:#efe4d6; } }
 :root[data-theme="dark"]{ --page:#0d0913; --page-ink:#efe4d6; }
+:root.native{ --page:#140c1c; }   /* the iPhone app: the strips above and below the game match its night background */
 *,*::before,*::after{ box-sizing:border-box; }
 html{ height:100%; scroll-padding-top:env(safe-area-inset-top,0px); }
 body{

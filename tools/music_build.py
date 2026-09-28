@@ -13,12 +13,15 @@ SRC, ENC = ROOT / 'assets/music', ROOT / 'assets/music/enc'
 #   menu: the previous lobby track (first draft at 85% tempo, low-passed, 96 bpm, B minor) up to its phrase end at 0:50.5, then a
 #         0.3 s crossfade into the journey-3 clarinet slowed to the same 96 bpm (atempo 0.857, pitch kept, same key), low-passed
 #         3.8 kHz, -3 dB; about 131 s, looping with a 1.5 s fade. The first cut crossfaded 4 s at 0:44 between 96 and 112 bpm: a stumbling beat.; play (endless): the clarinet world-1 track.
-#   nightmare (owner, 2026-09-28): the owner's drafts/nightmare2.mp3 (replaced drafts/nightmare.mp3). The draft ends mid-phrase at its loudest, so it
+#   nightmare (owner, 2026-09-28, final): the owner's drafts/nightmare3.mp3, same treatment as below: it starts at 9.62 s, the silent
+#         breath after the opening bridge; the music runs to its natural end (58.36 s, trailing silence cut, 30 ms fade), then the bridge
+#         plays and leads back into the start; the wrap falls in the breath; -19.7 LUFS.
+#   (earlier) the owner's drafts/nightmare2.mp3 (replaced drafts/nightmare.mp3). The draft ends mid-phrase at its loudest, so it
 #         loops at 58.26 s, where the music best matches the opening (spectral match over 3 s), and the 0.35 s past that point is
 #         crossfaded under the opening so the seam neither clicks nor jumps; -19.6 LUFS like the world tracks. Plays on a nightmare storybook.
 #         Then rotated (owner: "the weird start"): the file starts at 9.63 s, the silent breath after the opening bridge, so the bridge plays
 #         last and leads back into the start; the wrap falls in that breath.
-TRACKS = { 'play': 'w1_patch_clarinet.mp3', 'w1': 'w1_patch_clarinet.mp3', 'w2': 'w2_hollow_harp.mp3', 'w3': 'w3_witchwood_duet.mp3', 'w4': 'w4_keep_bassoon.mp3', 'w5': 'w5_marsh_underwater_harp.mp3', 'boss': 'boss_upright_rising_loud.mp3', 'menu': 'menu_lobby.mp3', 'nightmare': 'nightmare2_book.mp3' }   # back on the original lobby until the owner's new lobby piece arrives (menu_to_staccato.mp3 kept as a record)
+TRACKS = { 'play': 'w1_patch_clarinet.mp3', 'w1': 'w1_patch_clarinet.mp3', 'w2': 'w2_hollow_harp.mp3', 'w3': 'w3_witchwood_duet.mp3', 'w4': 'w4_keep_bassoon.mp3', 'w5': 'w5_marsh_underwater_harp.mp3', 'boss': 'boss_upright_rising_loud.mp3', 'menu': 'menu_lobby.mp3', 'nightmare': 'nightmare3_book.mp3' }   # back on the original lobby until the owner's new lobby piece arrives (menu_to_staccato.mp3 kept as a record)
 def main():
     ENC.mkdir(exist_ok=True); uris, keys = {}, {}
     for key, name in TRACKS.items():

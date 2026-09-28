@@ -13,9 +13,8 @@ SRC, ENC = ROOT / 'assets/music', ROOT / 'assets/music/enc'
 #   menu: the previous lobby track (first draft at 85% tempo, low-passed, 96 bpm, B minor) up to its phrase end at 0:50.5, then a
 #         0.3 s crossfade into the journey-3 clarinet slowed to the same 96 bpm (atempo 0.857, pitch kept, same key), low-passed
 #         3.8 kHz, -3 dB; about 131 s, looping with a 1.5 s fade. The first cut crossfaded 4 s at 0:44 between 96 and 112 bpm: a stumbling beat.; play (endless): the clarinet world-1 track.
-#   nightmare (owner, 2026-09-28, final): the owner's drafts/nightmare3.mp3, same treatment as below: it starts at 9.62 s, the silent
-#         breath after the opening bridge; the music runs to its natural end (58.36 s, trailing silence cut, 30 ms fade), then the bridge
-#         plays and leads back into the start; the wrap falls in the breath; -19.7 LUFS.
+#   nightmare (owner, 2026-09-28, final): the owner's drafts/nightmare3.mp3 played as it starts, from 0:00 (owner: no rotation);
+#         only the trailing silence is cut (music ends at 58.36 s, 30 ms fade out, 5 ms fade in) so the loop has no gap; -19.7 LUFS.
 #   (earlier) the owner's drafts/nightmare2.mp3 (replaced drafts/nightmare.mp3). The draft ends mid-phrase at its loudest, so it
 #         loops at 58.26 s, where the music best matches the opening (spectral match over 3 s), and the 0.35 s past that point is
 #         crossfaded under the opening so the seam neither clicks nor jumps; -19.6 LUFS like the world tracks. Plays on a nightmare storybook.

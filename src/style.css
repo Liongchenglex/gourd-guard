@@ -517,3 +517,61 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .qPair{ display:grid; gap:calc(var(--u)*6px); padding:calc(var(--u)*6px); border:2px dashed rgba(255,193,74,.7); border-radius:calc(var(--u)*16px); background:rgba(255,193,74,.06); }
 .qPairHd{ font-size:calc(var(--u)*12px); font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--candle); text-align:center; }
 #pQuests{ width:100%; margin:0 0 calc(var(--u)*4px); }
+
+/* ---------- Nightmare storybooks (owner, 2026-09-28) ---------- */
+/* The demon bookmark hangs from the bottom edge of every open book; tapping it turns the book to nightmare mode. */
+.bookmark{ position:absolute; right:14%; bottom:calc(var(--u)*-50px); width:calc(var(--u)*46px); height:calc(var(--u)*80px); padding:0; border:0; background:none; cursor:pointer; z-index:3;
+  filter:drop-shadow(0 calc(var(--u)*4px) calc(var(--u)*4px) rgba(0,0,0,.55)); transform-origin:50% 0; transition:transform .2s; }
+.bookmark:active{ transform:rotate(-4deg) translateY(calc(var(--u)*3px)); }
+.bookmark:focus-visible{ outline:2px solid var(--candle); outline-offset:3px; }
+.bookmark svg{ width:100%; height:100%; display:block; }
+.bookmark .rib{ fill:#5e0c16; } .bookmark .stitch{ stroke:#c89a4a; stroke-width:1; stroke-dasharray:3 3; fill:none; opacity:.7; }
+.bookmark .horn{ fill:#2a0a0e; stroke:#d8b070; stroke-width:.8; } .bookmark .head{ fill:#1c0609; stroke:#d8b070; stroke-width:.9; }
+.bookmark .brow{ stroke:#d8b070; stroke-width:1.6; stroke-linecap:round; fill:none; }
+.bookmark .eye{ fill:#ff8a2a; } .bookmark .grin{ fill:#f0e0c0; stroke:#1c0609; stroke-width:.5; }
+.spread.nightmare .bookmark .rib{ fill:#2a0406; } .spread.nightmare .bookmark .eye{ fill:#ff2a1a; animation:nmEyes 1.6s ease-in-out infinite; }
+@keyframes nmEyes{ 0%,100%{ filter:none; } 50%{ filter:drop-shadow(0 0 3px #ff2a1a) drop-shadow(0 0 6px #ff2a1a); } }
+#bookView .bkRow{ margin-top:calc(var(--u)*44px); }   /* room for the hanging bookmark */
+
+/* Nightmare mode: ash-grey pages (a faded, greenish bone grey), stains, scorch, torn edges; blood-red titles; a scorched cover. */
+.spread.nightmare{ background:radial-gradient(ellipse at 30% 20%, rgba(60,50,48,.35), transparent 60%), linear-gradient(rgba(12,6,8,.72), rgba(8,3,5,.84)), var(--cover, #5a3a22);
+  box-shadow:inset 0 0 0 calc(var(--u)*2px) rgba(140,30,30,.35), inset 0 0 calc(var(--u)*40px) rgba(0,0,0,.8), 0 calc(var(--u)*14px) calc(var(--u)*28px) rgba(0,0,0,.7); }
+.spread.nightmare .page{ color:#231c1a;
+  background:
+    radial-gradient(ellipse 30% 18% at 22% 78%, rgba(70,50,40,.28), transparent 70%),
+    radial-gradient(ellipse 22% 14% at 78% 30%, rgba(90,20,20,.18), transparent 70%),
+    radial-gradient(circle at 60% 92%, rgba(40,30,25,.22), transparent 30%),
+    linear-gradient(#b8b4a8, #93907f);
+  box-shadow:inset 0 0 calc(var(--u)*30px) rgba(30,20,15,.55), inset 0 0 calc(var(--u)*6px) rgba(0,0,0,.4); }
+.spread.nightmare .page:first-child{ clip-path:polygon(0 0,100% 0,100% 100%,62% 100%,58% 97%,53% 100%,0 100%,0 64%,2% 61%,0 58%); }
+.spread.nightmare .page:last-child{ clip-path:polygon(0 0,34% 0,38% 2.5%,42% 0,100% 0,100% 40%,97.5% 43%,100% 46%,100% 100%,0 100%); }
+.spread.nightmare .page h3{ color:#7a0c10 !important; text-shadow:0 1px 0 rgba(255,255,255,.15); }
+.spread.nightmare .page .bkWorld{ color:#4a1a1a; font-weight:700; letter-spacing:.5px; }
+.spread.nightmare .page .lore{ color:#231c1a; font-style:italic; }
+.spread.nightmare .bkBoss{ color:#5a1414; font-weight:700; }
+.spread.nightmare .bkBoss canvas{ filter:grayscale(1) contrast(1.3) brightness(.7) drop-shadow(0 0 calc(var(--u)*6px) rgba(160,0,0,.8)); }
+.spread.nightmare .popup canvas{ border-color:#8e897c; }
+.nmSoon{ margin-top:calc(var(--u)*40px); text-align:center; }
+.nmSoon[hidden], #bkLevels[hidden], #bkStars[hidden]{ display:none; }
+.nmSoon b{ display:block; font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-size:calc(var(--u)*34px); color:#7a0c10; line-height:1; transform:rotate(-4deg); }
+.nmSoon p{ margin:calc(var(--u)*14px) 0 0; font-size:calc(var(--u)*13px); line-height:1.45; color:#2e2420; font-style:italic; }
+.spread.morph{ animation:nmMorph .45s ease both; }
+@keyframes nmMorph{ 0%{ transform:none; filter:none; } 35%{ transform:rotate(-1.2deg) scale(.985); filter:brightness(.35) saturate(0); } 60%{ transform:rotate(.8deg); } 100%{ transform:none; } }
+
+/* "More content coming soon" with the Hallow's End sneak peek */
+.soonCard{ text-align:center; overflow:hidden; }
+.soonArt{ position:relative; margin:calc(var(--u)*-6px) calc(var(--u)*-6px) calc(var(--u)*6px); border-radius:calc(var(--u)*14px); overflow:hidden; box-shadow:0 0 calc(var(--u)*24px) rgba(255,122,26,.45); animation:soonIn 1.1s ease both; }
+.soonArt canvas{ width:100%; height:auto; display:block; }
+.soonTag{ margin:0 !important; font-size:calc(var(--u)*12px) !important; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--candle) !important; }
+.soonCard h2{ margin-top:calc(var(--u)*2px); }
+@keyframes soonIn{ from{ opacity:0; filter:blur(6px) brightness(2); transform:scale(1.06); } to{ opacity:1; filter:none; transform:none; } }
+@media (prefers-reduced-motion: reduce){ .spread.morph, .soonArt, .spread.nightmare .bookmark .eye{ animation:none; } }
+/* In nightmare mode the bookmark turns into a friendly jack-o'-lantern: tap it to go back to the normal book (owner) */
+.bookmark .pface{ display:none; }
+.spread.nightmare .bookmark .face{ display:none; } .spread.nightmare .bookmark .pface{ display:inline; }
+.bookmark .pbody{ fill:#f08a24; stroke:#7a3a08; stroke-width:.9; } .bookmark .prib{ stroke:#b85a10; stroke-width:.9; fill:none; }
+.bookmark .pstem{ fill:#4f7a2a; } .bookmark .peye{ fill:#ffe27a; }
+.spread.nightmare .bookmark .rib{ fill:#3a2a12; } .spread.nightmare .bookmark .stitch{ stroke:#f0a040; }
+.spread.nightmare .bookmark .peye{ animation:pmGlow 1.8s ease-in-out infinite; }
+@keyframes pmGlow{ 0%,100%{ filter:none; } 50%{ filter:drop-shadow(0 0 3px #ffb030); } }
+@media (prefers-reduced-motion: reduce){ .spread.nightmare .bookmark .peye{ animation:none; } }

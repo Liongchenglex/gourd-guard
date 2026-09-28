@@ -429,6 +429,9 @@ function patch(g, w, R){
   }
 }
 
+/** Use a ready-made full scene as the background (nightmare storybooks); `key` is anything but a world index, so the next buildBg() rebuilds. */
+export function setBg(c, key){ bg = c; bgWorld = key; }
+
 export function buildBg(world){
   bgWorld = world;
   const w = WORLDS[world] || WORLDS[0], t = WORLDS.indexOf(w);

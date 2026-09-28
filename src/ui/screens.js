@@ -9,7 +9,7 @@ import { poolKey, prebakeAsync } from '../engine/render/anim.js';
 import { atlasKey } from '../engine/render/chars.js';
 import { SFX, ensureAudio, musicStop, musicSync, musicStart, applyVolumes } from '../engine/audio.js';
 import { beginEndless, beginNight, continueNight, continueState, makeDemo, makePreview, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
-import { bgWorld, buildBg, buildSprites, pumpkinIcon, worldScene } from '../engine/render/sprites.js';
+import { bgWorld, buildBg, buildSprites, pumpkinIcon, worldScene, setBg } from '../engine/render/sprites.js';
 import { BOOKS } from '../data/lore.js';
 import { BESTIARY, COMPANIONS } from '../data/bestiary.js';
 import { toolIcon } from '../engine/render/tools.js';
@@ -30,6 +30,7 @@ import { wallFrac } from '../engine/walls.js';
 import { lvOf, persist, save } from '../save.js';
 import { setHudSig, updateHud } from './hud.js';
 import { QUEST_START, questsFor, questText, questBits, countBits, settleQuests, questLive, isPair } from '../data/quests.js';
+import { sceneCrop, sceneFull, nightmareKey, nightmareDesc } from '../engine/render/nightmare/scenes.js';
 
 export function showResult(win){
   const g = G, box = $('#rBtns'); box.innerHTML = '';
@@ -68,7 +69,7 @@ export function showResult(win){
       stars = [0,1,2].map(i => `<span class="${i < st ? '' : 'off'}">★</span>`).join('');
       stats.push(['Monsters stopped', g.kills], ['Coins found', g.coins], ['Night bonus', bonus]);   // no wall health on the card: stars come from quests (owner, 2026-09-27)
       if (celebrate) addBtn(box, 'Continue', () => { pendingUnlock = g.def.worldNo; curBook = null; openLevels(); });   // worldNo is 1-based story order = the next book's shelf index (def.world is the visual theme, not the order)   // to the shelf, where the next storybook unlocks (owner)
-      else if (perk) addBtn(box, 'Continue', () => { pendingStamp = g.n; openBook(g.def.worldNo - 1, true); });   // back into the book: the level-20 tile is stamped with a flourish
+      else if (perk) addBtn(box, 'Continue', () => { const go = () => { pendingStamp = g.n; openBook(g.def.worldNo - 1, true); }; if (g.n === LEVELS) openSoon(go); else go(); });   // after the last boss: the Hallow's End sneak peek first (owner)   // back into the book: the level-20 tile is stamped with a flourish
       else {
         if (g.n < LEVELS) addBtn(box, 'Next level', () => openPreview(g.n + 1));
         addBtn(box, 'Shop', () => openShop('result'), 'alt');
@@ -126,12 +127,12 @@ export function addBtn(box, label, fn, cls){ const b = document.createElement('b
 
 // ---------- UI ----------
 
-export const OVS = { settings:'#ovSettings', title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult', chest:'#ovChest', preview:'#ovPreview', intro:'#ovIntro' };
+export const OVS = { soon:'#ovSoon', settings:'#ovSettings', title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult', chest:'#ovChest', preview:'#ovPreview', intro:'#ovIntro' };
 
 export let shopReturn = 'levels', helpNext = null, loadoutNext = null, loadoutAvail = [], loadoutSel = new Set(), loadoutMust = [], loadoutWhy = [];
 
 export function setState(s){
-  if (s === 'title' || s === 'levels' || s === 'loadout' || s === 'shop' || s === 'help') musicStart('menu');   // lobby track behind every menu (owner); startGame swaps in the world track
+  if (s === 'title' || s === 'levels' || s === 'loadout' || s === 'shop' || s === 'help') musicStart(s === 'levels' && bookNightmare && curBook != null ? 'nightmare' : 'menu');   // a nightmare book plays the nightmare track (owner)   // lobby track behind every menu (owner); startGame swaps in the world track
   setStateRaw(s);
   for (const [k, sel] of Object.entries(OVS)) $(sel).classList.toggle('show', k === s);
   $('#hud').classList.toggle('on', s === 'play' || s === 'pause');
@@ -347,7 +348,40 @@ export function openLevels(){
   setState('levels');
 }
 /** Open world wi's storybook: lore and boss on the left page, the level grid on the right; animate = play the pop-up. */
+/** Nightmare mode on an open storybook (owner, 2026-09-28): the demon bookmark turns the book grim; levels are coming soon. */
+let bookNightmare = false, bgBeforeNm = null;
+/** Swap the full-screen background to the nightmare map (key) or back to the world it replaced (null). */
+function nightmareBg(key){
+  if (key){ if (bgBeforeNm == null) bgBeforeNm = typeof bgWorld === 'number' ? bgWorld : 0; setBg(sceneFull(key), 'nm:' + key); }
+  else if (bgBeforeNm != null){ buildBg(bgBeforeNm); bgBeforeNm = null; }
+}
+function applyNightmare(wi){
+  const spread = $('#spread'), on = bookNightmare, levels = WORLD_LEVELS[wi], bm = $('#bBookmark');
+  spread.classList.toggle('nightmare', on); bm.setAttribute('aria-pressed', on ? 'true' : 'false'); bm.setAttribute('aria-label', on ? 'Leave nightmare mode' : 'Nightmare mode');
+  $('#bkLevels').hidden = on; $('#bkStars').hidden = on; $('#bkSoon').hidden = !on; $('#bBkFlip').hidden = on;
+  const theme = levels[0].theme;
+  nightmareBg(on ? nightmareKey(theme) : null);
+  if (!on) return;
+  $('#bkWorld').textContent = `Nightmare · World ${wi + 1} of 5`;
+  $('#bkLore').textContent = nightmareDesc(theme);
+  const sc = sceneCrop(nightmareKey(theme), 456, 120), cv = $('#bkScene'); cv.width = sc.width; cv.height = sc.height; cv.getContext('2d').drawImage(sc, 0, 0);
+  const cap = $('#bkBoss span'); if (cap) cap.textContent = 'The Fallen ' + cap.textContent.replace(/^The /, '');   // the nightmare bosses (owner's dump.md)
+}
+function toggleNightmare(){
+  bookNightmare = !bookNightmare;
+  SFX.ui(bookNightmare ? 'nightmare' : 'wake');
+  const spread = $('#spread'); spread.classList.remove('morph'); void spread.offsetWidth; spread.classList.add('morph');
+  setTimeout(() => { openBook(curBook, false); }, 180);   // swap the pages mid-shudder
+}
+/** "More content coming soon" with a sneak peek of the Hallow's End map (owner, 2026-09-28), shown after 5-20's trophy. */
+let soonNext = null;
+function openSoon(next){
+  soonNext = next;
+  const sc = sceneCrop('hallow', 456, 150), cv = $('#soonScene'); cv.width = sc.width; cv.height = sc.height; cv.getContext('2d').drawImage(sc, 0, 0);
+  setState('soon'); SFX.perk();
+}
 export function openBook(wi, animate){
+  if (curBook !== wi) bookNightmare = false;
   curBook = wi;
   const name = WORLD_NAMES[wi], levels = WORLD_LEVELS[wi], bk = BOOKS[wi], start = firstNightOf(wi + 1);
   const view = $('#bookView'), spread = $('#spread');
@@ -377,6 +411,7 @@ export function openBook(wi, animate){
   $('#bestiary').hidden = true; $('#spread .pages:not(#bestiary)').hidden = false;
   $('#shelfView').hidden = true; view.hidden = false;
   view.classList.remove('opening'); if (animate){ void view.offsetWidth; view.classList.add('opening'); }
+  applyNightmare(wi);
   setState('levels');
 }
 /** The book's collection page: every monster of world wi in order of first appearance, met or not yet met. */
@@ -413,7 +448,7 @@ function flipBook(toBestiary){
   spread.classList.remove('turning'); void spread.offsetWidth; spread.classList.add('turning');
   setTimeout(swap, 250); setTimeout(() => spread.classList.remove('turning'), 520);
 }
-function closeBook(){ curBook = null; SFX.ui('back'); openLevels(); }
+function closeBook(){ curBook = null; bookNightmare = false; nightmareBg(null); SFX.ui('back'); openLevels(); }
 
 let loadoutFocus = null;
 /** Pumpkin picking (owner, 2026-09-27): pumpkins in unlock order, a detail card for the focused one (level, ability, lore), then the trophies. */
@@ -813,6 +848,8 @@ export function wireButtons(){
 
   $('#bLvBack').onclick = () => { setState('title'); makeDemo(); };   // the title gets its own scene back after a level map was shown
   $('#bBkClose').onclick = closeBook;
+  $('#bBookmark').onclick = toggleNightmare;
+  $('#bSoonOk').onclick = () => { SFX.ui('go'); const f = soonNext; soonNext = null; if (f) f(); };
   $('#bBkFlip').onclick = () => flipBook(true);
   $('#bBkUnflip').onclick = () => flipBook(false);
   $('#bBkShop').onclick = () => openShop('levels');

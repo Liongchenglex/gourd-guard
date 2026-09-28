@@ -357,7 +357,7 @@ function nightmareBg(key){
 }
 function applyNightmare(wi){
   const spread = $('#spread'), levels = WORLD_LEVELS[wi], bm = $('#bBookmark');
-  const start = firstNightOf(wi + 1), cleared = levels.every((d, i) => (save.stars[start + i] || 0) > 0);   // the bookmark appears once all 20 levels are won (owner)
+  const cleared = (save.stars[firstNightOf(wi + 1) + levels.length - 1] || 0) > 0;   // the bookmark appears once the world's level 20 is beaten (owner)
   bm.hidden = !cleared; $('#bookView').classList.toggle('hasMark', cleared); if (!cleared) bookNightmare = false;
   const on = bookNightmare;
   spread.classList.toggle('nightmare', on); bm.setAttribute('aria-pressed', on ? 'true' : 'false'); bm.setAttribute('aria-label', on ? 'Leave nightmare mode' : 'Nightmare mode');

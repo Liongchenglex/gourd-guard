@@ -16,6 +16,8 @@ SRC, ENC = ROOT / 'assets/music', ROOT / 'assets/music/enc'
 #   nightmare (owner, 2026-09-28): the owner's drafts/nightmare2.mp3 (replaced drafts/nightmare.mp3). The draft ends mid-phrase at its loudest, so it
 #         loops at 58.26 s, where the music best matches the opening (spectral match over 3 s), and the 0.35 s past that point is
 #         crossfaded under the opening so the seam neither clicks nor jumps; -19.6 LUFS like the world tracks. Plays on a nightmare storybook.
+#         Then rotated (owner: "the weird start"): the file starts at 9.63 s, the silent breath after the opening bridge, so the bridge plays
+#         last and leads back into the start; the wrap falls in that breath.
 TRACKS = { 'play': 'w1_patch_clarinet.mp3', 'w1': 'w1_patch_clarinet.mp3', 'w2': 'w2_hollow_harp.mp3', 'w3': 'w3_witchwood_duet.mp3', 'w4': 'w4_keep_bassoon.mp3', 'w5': 'w5_marsh_underwater_harp.mp3', 'boss': 'boss_upright_rising_loud.mp3', 'menu': 'menu_lobby.mp3', 'nightmare': 'nightmare2_book.mp3' }   # back on the original lobby until the owner's new lobby piece arrives (menu_to_staccato.mp3 kept as a record)
 def main():
     ENC.mkdir(exist_ok=True); uris, keys = {}, {}

@@ -400,6 +400,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-10-06 | Owner tuning pass: books 1 and 3, every level-10 boss, the mummy levels, and 5-15/17/18/19 made easier (fewer, slower monsters; new level fields `bossGap` and `bossHpMul`). Before/after bot table in GAME_DESIGN §11. 1-1 gets a hand-drawn coach that shows the slide and the flick on the board. |
 | 2026-09-28 | Owner: 5-20's team quest is Deep Blue, Brown, Turquoise and Fire (Fire replaces Pink, for the mummies). Storybooks get a demon bookmark that switches to nightmare mode (coming soon, nightmare maps and music; a pumpkin bookmark switches back). Beating 5-20 shows a Hallow's End sneak peek. |
 | 2026-09-27 | Owner: 5-20's paired quest is 14 big-Brown kills (was 5 kills in one launch, too easy). |
 | 2026-09-27 | Owner: a "freeze OR burn" quest is one or the other on a level (Ice 15 or Fire 15), never both; the 3-13 and 3-17 reflection limit is 50, not 10. |

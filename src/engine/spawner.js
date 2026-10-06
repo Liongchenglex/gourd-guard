@@ -10,6 +10,7 @@ import { rnd, shuffle } from './util.js';
 import { banner } from '../ui/hud.js';
 import { SPAWN_GAP, SPAWN_BURST, SPAWN_BURST_EARLY, SPAWN_LATE_FROM } from '../data/rules.js';
 import { musicStart } from './audio.js';
+import { coachHolds } from './coach.js';
 
 export function pickFrom(pool){
   let tot = 0; for (const [, w] of pool) tot += w;
@@ -19,6 +20,7 @@ export function pickFrom(pool){
 }
 
 export function storySpawn(dt){
+  if (coachHolds()) return;   // the 1-1 coach sends its own ghoul
   const d = G.def;
   G.spawnTimer -= dt;
   const keepComing = d.boss && G.bossSpawned && !G.bossDead;   // boss levels: monsters keep coming until the boss dies
@@ -31,11 +33,12 @@ export function storySpawn(dt){
     G.spawned++;
     const late = d.levelNo >= SPAWN_LATE_FROM;   // the harder half of each world is spaced out (owner)
     const gap = d.spawnGap != null ? d.spawnGap : late ? SPAWN_GAP : 1, burst = d.spawnBurst != null ? d.spawnBurst : late ? SPAWN_BURST : SPAWN_BURST_EARLY;   // per-level overrides win
-    G.spawnTimer = d.interval * gap * rnd(0.6, 1.4);
-    if (Math.random() < burst) G.spawnTimer *= 0.3;
+    G.spawnTimer = d.interval * gap * (keepComing && d.bossGap ? d.bossGap : 1) * rnd(0.6, 1.4);   // bossGap: slower spawns while the boss is up (tuning, 2026-10-01)
+    if (Math.random() < (keepComing && d.bossGap ? burst / 2 : burst)) G.spawnTimer *= 0.3;
   }
   if (d.boss && !G.bossSpawned && (G.spawned >= Math.floor(d.total * 0.4) || (G.bossHp && G.bossHp.length))){   // a continued night brings its hurt boss straight back
     const b = spawnMonster('boss'); G.bossSpawned = true;
+    if (d.bossHpMul) for (const m of b.twin ? [b, b.twin] : [b]){ m.maxHp = Math.max(1, Math.round(m.maxHp * d.bossHpMul)); m.hp = m.maxHp; }   // per-level boss health (tuning, 2026-10-01)
     if (G.bossHp && G.bossHp.length){ const bs = b.twin ? [b, b.twin] : [b]; bs.forEach((m, i) => { const hp = G.bossHp[Math.min(i, G.bossHp.length - 1)]; m.hp = Math.min(m.maxHp, hp); }); G.bossHp = null; }   // a continued night: the boss keeps the health it had left
     banner(BOSS_NAMES[d.boss] || 'Boss', (BOSS_INTRO[d.boss] || {})[d.bossForm] || 'Monsters keep coming until it falls.', 3); SFX.bossAlert(); setTimeout(() => SFX.bossSfx(d.boss, 'arrive'), 900); setTimeout(() => { if (G && !G.over && G.mode === 'story') musicStart('boss'); }, 1600);   // stakes rise: the boss track takes over (owner)
   }

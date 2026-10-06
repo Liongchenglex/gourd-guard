@@ -126,6 +126,7 @@ def main():
                 while time.time() - t0 < args.timeout and page.evaluate("window.__gg.state") != 'result':
                     time.sleep(0.5)
                 r = page.evaluate(RESULT_JS)
+                r['won'] = r['state'] == 'result' and r['title'] != 'A wall fell'   # win titles vary: Night saved, <world> unlocked!, Trophy earned!, Dawn at last
                 r['pumpkin_level'] = lv; r['fence'] = fence; r['offset'] = args.offset
                 r['errors'] = errors[:3]
                 if r['state'] != 'result':
@@ -139,7 +140,7 @@ def main():
         if r['night'] not in nights: nights.append(r['night'])
     for n in nights:
         rs = [r for r in results if r['night'] == n]
-        wins = sum(1 for r in rs if r['title'] == 'Night saved')
+        wins = sum(1 for r in rs if r.get('won'))
         print(json.dumps({ 'night': n, 'runs': len(rs), 'wins': wins, 'win_rate': round(wins / len(rs), 2),
                            'mean_walls_pct': round(sum(r['walls_pct'] for r in rs) / len(rs), 1),
                            'mean_missed_frac': round(sum(r['missed'] / max(1, r['throws']) for r in rs) / len(rs), 2),

@@ -211,6 +211,7 @@ Per level the data gives: starting pattern, graves, wave size, spawn gap, speed 
 - **Level 16** of every world introduces one more monster (see §7): Flaming Mummy, Fogwalker, Witch, Bulwark Knight, Shell Turtle. The preview on levels 10 and 20 also states the reward (next world, or the perk).
 - **Loadout lock**: on a level that introduces a pumpkin, that pumpkin is pre-selected in the pick-5 screen with a NEW tag and cannot be deselected. On any level whose pool contains Mummies (or a Mummy variant), Fire is pre-selected and locked with an ⓘ badge and the line "Fire is locked in: mummies only die to Fire"; Flaming Mummies lock Ice the same way, so both can be locked at once (owner, 2026-09-25).
 - **Intro cards**: the first time a pumpkin, tool, graves, monster or boss form appears, a card with its icon and one paragraph must be confirmed before the level starts (`save.seenIntro`). The bot's `startGame` path bypasses both screens.
+- **First-night coach** (owner, 2026-10-06; `src/engine/coach.js`): the first time 1-1 is played, a hand shows the moves on the board instead of a card. (1) The patch starts with a few loose greens set up so one slide makes a bunch of 3; monsters and sprouts wait while a hand drags that pumpkin into place, its cell outlined and the target dashed, under a tip above the fence. (2) When a bunch lights up, one ghoul walks down that column and the hand swipes the bunch upward with a dashed arrow to the ghoul. (3) After the launch a "Nice!" tip shows for a few seconds, then the night carries on as normal (`save.seenCoach`; the one-off "Flick it!" banner is skipped). The coach's ghoul counts toward the night's monsters.
 - Level banners still summarise the same things at the start of the level.
 
 World 1 starting numbers (2026-09-25, to be tuned by the bot): wave 9 → 20 over levels 1–10 and 22 → 36 over 11–20; spawn gap 3.84 s → 2.7 s; speed ×0.76 → ×0.868 by level 10, then +0.02 per level to ×1.068; pool adds Bat at 1-2, Imp at 1-4, Mossback at 1-6 (weight 3 + 0.2 × level), Mummy at 1-9.
@@ -367,6 +368,45 @@ Wins unchanged within noise; wall health up on the hard nights because two pumpk
 | 1-20 | 40% | 0/3, 51%, 205 coins | 0/3, 45% |
 
 Reading: levels 1–8 sit at or above target. The curve breaks at 1-9 (Mummy arrives) and 1-10 (Gravekeeper: 0/3, walls 51%), then levels 11–20 hover at 1/3 against targets of 65% → 40%, with 1-20 at 0/3. The owner also reported 1-10 as too hard by hand. A player one upgrade tier behind loses 10, 15 and 20 every time, so upgrades already matter. First tuning candidates when the owner revisits: the Gravekeeper's summon rate and health at level 10, the Mummy's rise time, and the wave sizes from 1-9 on; the same profile should then be run on worlds 2–5.
+
+### Owner tuning pass: books 1 and 3, the level-10 bosses, mummy levels, and 5-15/17/18/19 (2026-10-01 to 10-06)
+
+Owner: tune books 1 and 3, book 5 moderately at 5-15, 5-17, 5-18 and 5-19, make every level-10 boss easier, and especially the levels that are all mummies. All changes are level data (`src/data/worlds/*.js`): fewer monsters (`total`), longer spawn gaps (`interval`), slower walking (`spMul`), and two new boss-level fields: **`bossGap`**, how many times longer the spawn gaps are while the boss is up (bursts half as likely), and **`bossHpMul`**, that level's boss health (the boss type's own health is unchanged for its other appearances and endless).
+
+Bot runs, `--repeats 3`, expected profile. The bot fixed in this pass: it counted only "Night saved" as a win, so first level-10 wins ("<world> unlocked!") and level-20 wins ("Trophy earned!") read as losses. Cells are wins out of 3.
+
+| Level | Target | Before | After | What changed |
+|---|---|---|---|---|
+| 1-8 | 85% | 2/3 | 3/3 | 18 → 16 monsters |
+| 1-9 | 85% | 2/3 | 3/3 | 19 → 17, gap 3.36 → 3.56 s |
+| 1-10 boss | 75% | 0/3 | 1/3 | 16 → 14, speed ×0.868 → ×0.83, bossGap 2.2 |
+| 1-12 | 65% | 0/3 | 1/3 | 23 → 17, gap 3.18 → 3.7 s, speed ×0.908 → ×0.86 |
+| 1-13 (all mummies) | 65% | 0/3 | 1/3 | 25 → 16, gap 3.12 → 3.6 s, speed ×0.928 → ×0.86 |
+| 1-15 | 65% | 0/3 | 1/3 | 28 → 23, gap 3.0 → 3.3 s, speed ×0.968 → ×0.92 |
+| 1-16 | 50% | 1/3 | 1/3 | 30 → 26, gap 2.94 → 3.2 s, speed ×0.988 → ×0.95 |
+| 1-17 (mummies + Flaming Mummies) | 50% | 0/3 | 1/3 | 31 → 11, gap 2.88 → 4.2 s, speed ×1.008 → ×0.84 |
+| 1-18 | 50% | 0/3 | 2/3 | 33 → 22, gap 2.82 → 3.4 s, speed ×1.028 → ×0.94 |
+| 1-19 | 50% | 0/3 | 1/3 | 24 → 21, gap 3.17 → 3.35 s, speed ×1.048 → ×0.98 |
+| 1-20 boss | 40% | 0/3 | 0/3 | 36 → 24, gap 2.7 → 3.0 s, speed ×1.068 → ×0.97, bossGap 2.4, boss health ×0.75 |
+| 2-10 boss | 75% | 0/3 | 2/3 | 17 → 15, bossGap 1.6 |
+| 3-9 | 85% | 0/3 | 2/3 | 23 → 20, gap 2.86 → 3.1 s |
+| 3-10 boss | 75% | 0/3 | 2/3 | 24 → 20, gap 2.8 → 3.0 s, bossGap 2.0 |
+| 3-12 | 65% | 0/3 | 2/3 | 27 → 20, gap 2.68 → 3.2 s, speed ×1.008 → ×0.94 |
+| 3-15 (chameleons only) | 65% | 0/3 | 0/3 | 32 → 14, gap 2.5 → 3.4 s, speed ×1.068 → ×0.9 |
+| 3-16 | 50% | 1/3 | 1/3 | 33 → 28, gap 2.44 → 2.75 s, speed ×1.088 → ×1.04 |
+| 3-17 (mirrors only) | 50% | 0/3 | 2/3 | 34 → 27, gap 2.4 → 2.75 s, speed ×1.108 → ×1.05 |
+| 3-19 | 50% | 0/3 | 0/3 | 27 → 14, gap 2.76 → 3.5 s, speed ×1.148 → ×0.95 |
+| 3-20 boss | 40% | 0/3 | 1/3 | 39 → 28, gap 2.4 → 2.65 s, speed ×1.168 → ×1.12, bossGap 2.0 |
+| 4-10 boss | 75% | 0/3 | 0/3 | 18 → 15, speed ×0.928 → ×0.89, bossGap 2.2, boss health ×0.7 |
+| 5-10 boss | 75% | 0/3 | 1/3 | 23 → 15, speed ×0.948 → ×0.91, bossGap 2.2, boss health ×0.6 |
+| 5-15 (all Sodden Mummies) | 65% | 0/3 | 1/3 | 22 → 12, gap 3.4 → 4.2 s, speed ×1.048 → ×0.92 |
+| 5-17 | 50% | 0/3 | 1/3 | 34 → 28, gap 2.48 → 2.8 s, speed ×1.088 → ×1.03 |
+| 5-18 | 50% | 0/3 | 1/3 | 35 → 16, gap 2.42 → 3.7 s, speed ×1.108 → ×0.9 |
+| 5-19 | 50% | 0/3 | 1/3 | 25 → 18, gap 2.76 → 3.3 s, speed ×1.128 → ×1.0 |
+
+Unchanged and already near target: 1-1 to 1-7, 1-11 (3/3), 1-14 (2/3), 3-1 to 3-8, 3-11 (2/3), 3-13 (2/3), 3-14 (3/3), 3-18 (2/3).
+
+Reading: every level that was 0/3 except four now wins at least some runs. The four left are bot blind spots rather than settings: 3-15 and 3-19 are chameleon levels and the bot cannot choose colours (it loses within a minute with few kills); on 4-10 it survives four to five minutes and kills 50 to 80 monsters but never focuses the Vampire Count to break his trance (boss health was taken to ×0.6 there and set back to ×0.7, untested, so the fight stays a fight for people); 1-20 is the world's final boss with a 40% target. These four need a hand playtest before cutting further.
 
 ### Release 1 baseline sweep, all five worlds (2026-09-25, `--repeats 2`, expected profile with level ≤3 in the first half of each world, earlier worlds' perks on)
 

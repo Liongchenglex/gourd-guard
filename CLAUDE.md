@@ -47,7 +47,6 @@ Build `docs/WORLDS.md` one world at a time, each with its own bot runs. Next: **
 - Always test the **build**: `npm run build`, start `tools/serve_dist.py`, then pass `--url http://127.0.0.1:4173/` to the tools below.
 - `.venv/bin/python tools/smoke_test.py --url …`: plays with real mouse input on phone and desktop sizes; fails on any page error.
 - `.venv/bin/python tools/balance_bot.py --nights 1,5,10,15 --repeats 3 --url …`: human-paced bot plays full nights and prints one JSON line per run plus a per-night summary (win rate, mean wall %). Single runs are noise; **3 repeats per night is the minimum** for any balance claim. Run it after any rule or number change and record results in the design doc's balance section.
-- `node tools/check_levels.mjs`: proves `world1.js` still reproduces the prototype's level formulas. Delete it once world 1 is redesigned for Release 1.
 
 ## iPhone app (Capacitor, 2026-09-28)
 - The game ships as an iOS app with Capacitor 8 (`capacitor.config.json`, app ID `com.liongchenglex.gourdguard`, project in `ios/`, Swift Package Manager, no CocoaPods). Android comes later (the owner is buying the Google Play account).

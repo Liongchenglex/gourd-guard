@@ -19,6 +19,7 @@ import { rng } from './paint.js';
 import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, GX, GY, H, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, state, walls, HOLD_TIME_QUICK } from '../state.js';
 import { TAU, clamp, mulberry } from '../util.js';
 import { save } from '../../save.js';
+import { drawCoach } from '../coach.js';
 
 // ---------- Render ----------
 
@@ -77,6 +78,7 @@ export function render(){
   drawGrid(t);
   drawSproutBar();
   drawHintArrow(t);
+  drawCoach(ctx);
   drawHoldRing();
   for (const pr of g.projs){
     const skinKey = save.wardrobe && save.wardrobe.skins[pr.vis];

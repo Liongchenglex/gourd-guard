@@ -23,6 +23,7 @@ import { persist, save } from '../save.js';
 import { banner, updateHud } from '../ui/hud.js';
 import { openLoadout, setState, showResult } from '../ui/screens.js';
 import { SPROUT_EVERY } from '../data/rules.js';
+import { startCoach, coachHolds, coachUpdate } from './coach.js';
 
 // ---------- Flow ----------
 
@@ -93,6 +94,7 @@ export function startGame(mode, n, loadout){
   if (def && def.gravesLayout) applyGravesLayout(def.gravesLayout);   // after the board exists: explicit graves replace pumpkins
   initWalls();
   resolveMatches();
+  startCoach();   // first 1-1 only: a hand shows the slide and the flick (owner)
   setGest(null);
   setState('play'); musicStart(def && MUSIC['w' + def.worldNo] ? 'w' + def.worldNo : 'play');   // one track per world in story order (worldNo; def.world is the visual theme); endless plays the world-1 track
 
@@ -292,7 +294,7 @@ export function update(dt){
   if (!g.over){
     const low = ROWS * COLS - emptyCells().length < 10;
     g.sproutT += dt * (low ? 2 : 1);
-    if (g.sproutT >= sproutEvery()){ if (spawnSprouts()) g.sproutT = 0; else g.sproutT = sproutEvery(); }
+    if (!coachHolds() && g.sproutT >= sproutEvery()){ if (spawnSprouts()) g.sproutT = 0; else g.sproutT = sproutEvery(); }
   }
   for (const m of g.monsters) if (!m.dead && !g.over) updateMonster(m, dt);
   for (const pr of g.projs){
@@ -410,7 +412,8 @@ export function update(dt){
     gest.held += dt;
     if (gest.held >= (perkOn('smash') ? HOLD_TIME_QUICK : HOLD_TIME)){ gest.done = true; smash(gest.ref); if (navigator.vibrate) try { navigator.vibrate(30); } catch (e) {} }
   }
-  if (g.idle > 6 && !g.over){
+  coachUpdate(dt);
+  if (g.idle > 6 && !g.over && !g.coach){
     g.hintT -= dt;
     if (g.hintT <= 0){ g.hintT = 1.5; g.hint = bestLitGroup() ? null : bestMove(); }
   }

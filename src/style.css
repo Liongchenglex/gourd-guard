@@ -580,3 +580,12 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .spread.nightmare .bookmark .peye{ animation:pmGlow 1.8s ease-in-out infinite; }
 @keyframes pmGlow{ 0%,100%{ filter:none; } 50%{ filter:drop-shadow(0 0 3px #ffb030); } }
 @media (prefers-reduced-motion: reduce){ .spread.nightmare .bookmark .peye{ animation:none; } }
+
+/* First-night coach tip (owner, 2026-10-06): a speech bubble just above the fence while the hand shows the move */
+#coachTip{ position:absolute; left:calc(var(--u)*28px); right:calc(var(--u)*28px); z-index:4; pointer-events:none; text-align:center;
+  font-size:calc(var(--u)*17px); font-weight:500; line-height:1.35; color:var(--ink); background:rgba(24,14,34,.88); border:1px solid rgba(255,193,74,.55);
+  border-radius:calc(var(--u)*16px); padding:calc(var(--u)*10px) calc(var(--u)*14px); box-shadow:0 calc(var(--u)*6px) calc(var(--u)*18px) rgba(0,0,0,.45); animation:coachIn .35s ease both; }
+#coachTip[hidden]{ display:none; }
+#coachTip b{ color:var(--candle); font-weight:700; }
+@keyframes coachIn{ from{ opacity:0; transform:translateY(calc(var(--u)*8px)); } to{ opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce){ #coachTip{ animation:none; } }

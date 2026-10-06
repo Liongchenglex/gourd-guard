@@ -31,6 +31,7 @@ import { lvOf, persist, save } from '../save.js';
 import { setHudSig, updateHud } from './hud.js';
 import { QUEST_START, questsFor, questText, questBits, countBits, settleQuests, questLive, isPair } from '../data/quests.js';
 import { sceneCrop, sceneFull, nightmareKey } from '../engine/render/nightmare/scenes.js';
+import { coachEnd } from '../engine/coach.js';
 
 export function showResult(win){
   const g = G, box = $('#rBtns'); box.innerHTML = '';
@@ -143,6 +144,7 @@ export function setState(s){
     $('#bestTxt').textContent = save.best ? `Best endless score: ${save.best.toLocaleString()}` : '';
     const art = titleArt(H); for (const [id, c] of [['#artBack', art.back], ['#artFront', art.front]]){ const cv = $(id); if (cv.width !== c.width || cv.height !== c.height){ cv.width = c.width; cv.height = c.height; } cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); cv.getContext('2d').drawImage(c, 0, 0); }   // key art (owner, 2026-09-27)
   }
+  if (s !== 'play' && s !== 'pause') coachEnd();
   if (s !== 'play'){ setGest(null); $('#banner').classList.remove('show'); setBannerTimer(0); }
   if (s === 'settings') syncVolumes();
   if (s === 'pause'){ const on = G && G.mode === 'story' && G.n >= QUEST_START, pq = $('#pQuests'); pq.hidden = !on; if (on) questRows(pq, G.def, questBits(G.n), { live:true }); }   // tonight's quests with live progress (owner)

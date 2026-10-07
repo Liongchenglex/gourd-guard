@@ -133,7 +133,7 @@ The balance bot's expected upgrade profile has not been re-checked against these
 
 ## 6. Pumpkin supply
 
-- **Sprouts**: **two pumpkins** every *N* seconds, each in its own random empty cell with an independent colour (one if only one cell is free, none if the patch is full). *N* is fixed at 5 s (`SPROUT_EVERY` in `src/data/rules.js`), 4 s with the Eager sprouts power; it is no longer adjustable in the pause menu (owner, 2026-09-27). When fewer than 10 pumpkins are on the patch, sprouting runs **2× faster** (catch-up rule, added because 5 s alone starved later nights).
+- **Sprouts**: **two pumpkins** every *N* seconds, each in its own random empty cell with an independent colour (one if only one cell is free, none if the patch is full). *N* is fixed at 4 s (owner, 2026-10-07; was 5 s) (`SPROUT_EVERY` in `src/data/rules.js`), 3 s with the Eager sprouts power; it is no longer adjustable in the pause menu (owner, 2026-09-27). When fewer than 10 pumpkins are on the patch, sprouting runs **2× faster** (catch-up rule, added because 5 s alone starved later nights).
 - **Kill rewards**: every non-boss kill rolls exactly **one** reward: **weapon 10%**, **pumpkin 30%**, **coins 60%** (`src/data/rules.js`). A pumpkin roll drops `max(1, round(drop))` pumpkins in the field; a weapon roll drops one consumable (Wall repair or Firework, chosen among those below their carry limit; if all are full the roll pays coins instead); a coin roll pays the monster's coins. Bosses skip the roll and always pay coins plus their pumpkin drop. Drops fade after 7 s (blinking in the last 2 s). Tap to collect.
 - **Purple spawns**: see above.
 - **Smashing** (hold) removes a pumpkin to make space.
@@ -408,6 +408,21 @@ Bot runs, `--repeats 3`, expected profile. The bot fixed in this pass: it counte
 Unchanged and already near target: 1-1 to 1-7, 1-11 (3/3), 1-14 (2/3), 3-1 to 3-8, 3-11 (2/3), 3-13 (2/3), 3-14 (3/3), 3-18 (2/3).
 
 Reading: every level that was 0/3 except four now wins at least some runs. The four left are bot blind spots rather than settings: 3-15 and 3-19 are chameleon levels and the bot cannot choose colours (it loses within a minute with few kills); on 4-10 it survives four to five minutes and kills 50 to 80 monsters but never focuses the Vampire Count to break his trance (boss health was taken to ×0.6 there and set back to ×0.7, untested, so the fight stays a fight for people); 1-20 is the world's final boss with a 40% target. These four need a hand playtest before cutting further.
+
+### Sprouts every 4 s instead of 5 (owner, 2026-10-07; Eager sprouts 3 s instead of 4)
+
+Same bot, `--repeats 3`, on top of the tuning pass above. Faster sprouts are a large boost:
+
+| Level | Target | Sprouts 5 s | Sprouts 4 s |
+|---|---|---|---|
+| 1-10 boss | 75% | 1/3 | 3/3, walls 92% |
+| 1-15 | 65% | 1/3 | 3/3, walls 94% |
+| 3-10 boss | 75% | 2/3 | 3/3, walls 88% |
+| 3-15 (chameleons) | 65% | 0/3 | 2/3, walls 80% |
+| 4-10 boss | 75% | 0/3 | 1/3, walls 84% |
+| 5-15 (Sodden Mummies) | 65% | 1/3 | 0/3, walls 68% |
+
+Reading: with both changes, the tuned levels of books 1 and 3 now sit at or above target for the bot; 5-15 (only Fire kills its monsters, so more sprouts of other colours do not help) and 4-10 (the bot never breaks the Count's trance) are unchanged. If the owner finds books 1 and 3 too easy now, the first lever to give back is the tuning pass's monster counts, not the sprout time.
 
 ### Release 1 baseline sweep, all five worlds (2026-09-25, `--repeats 2`, expected profile with level ≤3 in the first half of each world, earlier worlds' perks on)
 

@@ -1,7 +1,7 @@
 // Release 1 ground rules (docs/WORLDS.md §2). Numbers here are the only place these rules live.
 
 /** Seconds between sprouts. Fixed (owner, 2026-09-27): no longer adjustable in the pause menu; the Eager sprouts power shortens it. */
-export const SPROUT_EVERY = 5;
+export const SPROUT_EVERY = 4;   // owner, 2026-10-07: was 5 s (Eager sprouts: 3 s, was 4)
 
 /** Pumpkins placed per sprout tick, each in its own random empty cell. */
 export const SPROUT_COUNT = 2;

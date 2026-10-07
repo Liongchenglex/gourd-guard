@@ -270,7 +270,7 @@ Levels 11–19 of every world are hand-authored (`docs/WORLDS.md` §8a) with the
   - **Sturdy walls**: +5 wall health per level, 3 levels, 500 / 1,000 / 1,500.
   - **Every consumable tool costs 300 coins and every tool carries up to 5** (owner, 2026-09-27; the per-tool prices below are superseded). Renting a level-20 power costs 100 coins.
   - **Wall repair** (consumable): fully repairs every wall. 40 coins, carry up to 5, player starts with 1.
-  - **Firework** (consumable): 3 damage to the 6 monsters nearest the walls (8 until 2026-10-08) (`FIREWORK_TARGETS`, `FIREWORK_DAMAGE` in `src/data/rules.js`); bosses are immune and show "Immune" (owner, 2026-10-07; it used to hit every monster on the field, bosses included). 30 coins, carry up to 5, player starts with 1.
+  - **Firework** (consumable, carry up to **3**, owner 2026-10-08; every other tool carries 5): 3 damage to the 6 monsters nearest the walls (8 until 2026-10-08) (`FIREWORK_TARGETS`, `FIREWORK_DAMAGE` in `src/data/rules.js`); bosses are immune and show "Immune" (owner, 2026-10-07; it used to hit every monster on the field, bosses included). 30 coins, carry up to 5, player starts with 1.
   - **Grave buster** (consumable, 🧨 icon): tap the button, then tap a grave to dig it out. 30 coins, carry up to 5, one free at level 1-6. Tapping anywhere else cancels.
   - **Lantern** (consumable, 🏮): clears every fog bank for 10 s. 25 coins, carry up to 5, one free at 2-2. Disabled while a lantern is already burning; refuses on levels without fog.
   - **Landmine** (consumable, 💣): tap the button, then tap any column. The mine waits at that column's wall line and blasts the first non-boss monster to reach it for 6 damage. One mine per column. 35 coins, carry up to 5, one free at 2-5.

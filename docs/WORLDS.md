@@ -400,7 +400,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
-| 2026-10-08 | Owner: Firework hits the 6 monsters nearest the walls (was 8). |
+| 2026-10-08 | Owner: Firework hits the 6 monsters nearest the walls (was 8), and you can carry at most 3 (was 5); saves holding more are trimmed to 3 and paid 100 coins for each extra. |
 | 2026-10-07 | Owner: chest odds. Treasure chest prizes: set of 2 tools 20%, set of 3 tools 20%, 1 seed 15%, coins 45% (no more sets of 5). Boss chest prizes: boss item, 1–3 seeds, set of 5 tools, coins, 25% each. Reference: `docs/LOOT.md`. |
 | 2026-10-07 | Owner: Firework hits only the 8 monsters nearest the walls for 3, and bosses are immune (it used to hit every monster, bosses included). Sprouts every 4 s, 3 s with Eager sprouts (was 5 s and 4 s). Shop button on the pick-pumpkin screen (tester feedback). The 1-1 coach also shows press-and-hold to crush a pumpkin. Reset progress in Settings (from the shelf, two taps, keeps volumes). |
 | 2026-10-06 | Owner tuning pass: books 1 and 3, every level-10 boss, the mummy levels, and 5-15/17/18/19 made easier (fewer, slower monsters; new level fields `bossGap` and `bossHpMul`). Before/after bot table in GAME_DESIGN §11. 1-1 gets a hand-drawn coach that shows the slide and the flick on the board. |

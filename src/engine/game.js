@@ -130,7 +130,10 @@ export function useFirework(){
   save.fw--; persist(); G.q.tools++;
   SFX.tool('fw'); G.shake = 1; G.flash = 1;
   for (let i = 0; i < 5; i++){ const x = rnd(60, W - 60), y = rnd(FIELD_TOP, FIELD_TOP + 160); const col = ['#ffd35a', '#ff6a3a', '#d09bff', '#aee8ff', '#a6f06a'][i]; for (let k = 0; k < 12; k++) spark(x, y, col, 260); if (G.vfx) G.vfx.push({ kind:'firework', x, y, i, col, t:-i * 0.12, dur:1.1 }); }   // rockets climb from the fence and burst (render/tools.js)
-  for (const m of G.monsters.slice()) if (!m.dead && !(m.rise > 0)){ m.lastHit = -1; damage(m, 3, '#ffd35a'); }
+  for (const m of G.monsters.slice()) if (!m.dead && !(m.rise > 0)){
+    if (m.type === 'boss'){ addFloat('Immune', m.x, mY(m) - m.r - 30, '#ffd35a', 18, 0.9); continue; }   // bosses shrug off fireworks (owner, 2026-10-07)
+    m.lastHit = -1; damage(m, 3, '#ffd35a');
+  }
   updateHud(true);
 }
 

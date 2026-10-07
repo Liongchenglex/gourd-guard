@@ -316,7 +316,7 @@ Weapons drop from kills (10% roll) and can also be bought in the shop. The HUD a
 | Weapon | Effect | Introduced |
 |---|---|---|
 | Wall repair | Tap it, then tap one wall to repair it fully (owner, 2026-09-26: no longer all walls) | 1-3 |
-| Firework | 3 damage to every monster | 1-7 |
+| Firework | 3 damage to the 8 monsters nearest the walls; bosses are immune | 1-7 |
 | Gravestone buster | Removes one grave (tap it) | 1-6 |
 | Lantern | Clears all fog for 10 s | 2-2 |
 | Landmine | Tap it, then tap any tile of the field: the mine lies buried for 6 s, then surfaces armed; the first monster to step on it sets off a 3×3 blast (3 lanes × 3 tile heights) for 6 (owner, 2026-09-26; was: waits at the wall line of one lane) | Tap it, then tap any tile of the field: the mine hides there and the first monster to step on it sets off a 3×3 blast for 6 (owner, 2026-09-26) |
@@ -400,6 +400,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-10-07 | Owner: Firework hits only the 8 monsters nearest the walls for 3, and bosses are immune (it used to hit every monster, bosses included). Sprouts every 4 s, 3 s with Eager sprouts (was 5 s and 4 s). Shop button on the pick-pumpkin screen (tester feedback). The 1-1 coach also shows press-and-hold to crush a pumpkin. Reset progress in Settings (from the shelf, two taps, keeps volumes). |
 | 2026-10-06 | Owner tuning pass: books 1 and 3, every level-10 boss, the mummy levels, and 5-15/17/18/19 made easier (fewer, slower monsters; new level fields `bossGap` and `bossHpMul`). Before/after bot table in GAME_DESIGN §11. 1-1 gets a hand-drawn coach that shows the slide and the flick on the board. |
 | 2026-09-28 | Owner: 5-20's team quest is Deep Blue, Brown, Turquoise and Fire (Fire replaces Pink, for the mummies). Storybooks get a demon bookmark that switches to nightmare mode (coming soon, nightmare maps and music; a pumpkin bookmark switches back). Beating 5-20 shows a Hallow's End sneak peek. |
 | 2026-09-27 | Owner: 5-20's paired quest is 14 big-Brown kills (was 5 kills in one launch, too easy). |

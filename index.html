@@ -210,6 +210,13 @@
       <label class="setting vol" for="volMusic"><span>Music</span><input type="range" id="volMusic" min="0" max="100" step="5"><b id="volMusicVal">100%</b></label>
       <label class="setting vol" for="volSfx"><span>Sound effects</span><input type="range" id="volSfx" min="0" max="100" step="5"><b id="volSfxVal">100%</b></label>
       <button class="btn" id="bSettingsDone">Done</button>
+      <div class="resetBox" id="resetBox">
+        <button class="link danger" id="bReset">Reset progress</button>
+        <div class="resetAsk" id="resetAsk" hidden>
+          <p>Erase every level, star, coin, seed, pumpkin upgrade and item, and start again from 1-1? This cannot be undone. Your volume settings are kept.</p>
+          <div class="row"><button class="btn small alt" id="bResetNo">Keep my save</button><button class="btn small danger" id="bResetYes">Erase everything</button></div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="ov" id="ovPause">

@@ -27,7 +27,7 @@ import { PUMPKIN_LORE } from '../data/lore.js';
 import { G, H, setBannerTimer, setGest, setStateRaw, state } from '../engine/state.js';
 import { $, clamp } from '../engine/util.js';
 import { wallFrac } from '../engine/walls.js';
-import { lvOf, persist, save } from '../save.js';
+import { lvOf, persist, save, SAVE_KEY } from '../save.js';
 import { setHudSig, updateHud } from './hud.js';
 import { QUEST_START, questsFor, questText, questBits, countBits, settleQuests, questLive, isPair } from '../data/quests.js';
 import { sceneCrop, sceneFull, nightmareKey } from '../engine/render/nightmare/scenes.js';
@@ -146,7 +146,7 @@ export function setState(s){
   }
   if (s !== 'play' && s !== 'pause') coachEnd();
   if (s !== 'play'){ setGest(null); $('#banner').classList.remove('show'); setBannerTimer(0); }
-  if (s === 'settings') syncVolumes();
+  if (s === 'settings'){ syncVolumes(); $('#resetBox').hidden = settingsFrom === 'pause'; $('#resetAsk').hidden = true; $('#bReset').hidden = false; }   // no reset in the middle of a night
   if (s === 'pause'){ const on = G && G.mode === 'story' && G.n >= QUEST_START, pq = $('#pQuests'); pq.hidden = !on; if (on) questRows(pq, G.def, questBits(G.n), { live:true }); }   // tonight's quests with live progress (owner)
   syncSound();
   setHudSig('');
@@ -851,6 +851,14 @@ export function wireButtons(){
 
   $('#bLvSettings').onclick = () => { settingsFrom = 'levels'; setState('settings'); };   // gear on the storybook shelf (owner)
   $('#bPauseSettings').onclick = () => { settingsFrom = 'pause'; setState('settings'); };   // and from the pause menu (owner)
+  // Reset progress (owner, 2026-10-07): only from the shelf's settings, two taps, keeps the volume settings
+  $('#bReset').onclick = () => { SFX.ui('tap'); $('#resetAsk').hidden = false; $('#bReset').hidden = true; };
+  $('#bResetNo').onclick = () => { SFX.ui('back'); $('#resetAsk').hidden = true; $('#bReset').hidden = false; };
+  $('#bResetYes').onclick = () => {
+    const keep = { musicVol:save.musicVol, sfxVol:save.sfxVol, muted:save.muted };
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(keep)); } catch (e) {}
+    location.reload();
+  };
   $('#bSettingsDone').onclick = () => { ensureAudio(); if (settingsFrom === 'pause') setState('pause'); else openLevels(); };
   for (const [id, key] of [['#volMusic', 'musicVol'], ['#volSfx', 'sfxVol']]){
     $(id).oninput = e => { save[key] = Math.round(+e.target.value) / 100; persist(); ensureAudio(); applyVolumes(); syncVolumes(); if (key === 'sfxVol') SFX.ui('tap'); };

@@ -268,7 +268,7 @@ export function collectDrop(d){
 
 export function smash(ref){
   const pos = findCell(ref); if (!pos) return;
-  grid[pos.r][pos.c] = null;
+  grid[pos.r][pos.c] = null; G.smashes = (G.smashes || 0) + 1;   // counted for the 1-1 coach
   const x = LANE(pos.c), y = GY + pos.r * CS + CS / 2;
   for (let i = 0; i < 14; i++) chunk(x, y, ref.c === RAINBOW ? '#f0a020' : PTYPES[ref.c].base, 200);
   SFX.smash();

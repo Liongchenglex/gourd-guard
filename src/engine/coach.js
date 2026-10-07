@@ -2,7 +2,8 @@
 // The first time 1-1 is played, a hand shows the two moves on the board instead of a card:
 //   1. slide: the patch is set up so one slide makes a bunch of 3; monsters and sprouts wait while a hand drags it
 //   2. flick: once the bunch lights up, one ghoul walks down its column and the hand swipes the bunch upward
-//   3. praise: after the launch a short "Nice!" tip, then the night carries on as normal
+//   3. smash: the hand presses and holds a spare pumpkin until it crushes, to free up space (owner, 2026-10-07)
+//   4. praise: a short "Nice!" tip, then the night carries on as normal
 // The hand is one baked sprite blitted with transforms (no painter calls or shadowBlur per frame).
 import { G, grid, graves, setGrid, ROWS, COLS, CS, GX, GY, LANE, FIELD_TOP, FENCE_Y } from './state.js';
 import { newCell, planMove, applyMove, revertMove, sameColorSize, findCell, bestLitGroup, resolveMatches } from './board.js';
@@ -14,6 +15,7 @@ import { $ } from './util.js';
 const TIPS = {
   slide: 'Drag a pumpkin to slide it. Line up <b>3 of the same colour</b> to make a bunch.',
   flick: 'The bunch is lit! <b>Swipe it up</b> to launch it at the ghoul.',
+  smash: 'Got a pumpkin in the way? <b>Press and hold</b> it to crush it and make room.',
   praise: '<b>Nice!</b> Keep bunching and launching to guard your walls.',
 };
 
@@ -44,6 +46,13 @@ function findMove(){
   }
 }
 
+/** The pumpkin the hand crushes: an unlit one, as low and central as possible. */
+function spare(){
+  let best = null, bs = -1e9;
+  for (let r = 0; r < ROWS; r++) for (let k = 0; k < COLS; k++){ const x = grid[r][k]; if (!x || x.lit || x.fly) continue; const s = r * 10 - Math.abs(k - 3); if (s > bs){ bs = s; best = x; } }
+  return best;
+}
+
 function tip(step){
   const el = $('#coachTip'); if (!el) return;
   if (!step){ el.hidden = true; return; }
@@ -65,8 +74,11 @@ export function coachUpdate(dt){
       c.step = 'flick'; c.stepT = 0; c.ref = lit; tip('flick');
     } else if (!c.move || !findCell(c.move.ref)) findMove();
   } else if (c.step === 'flick'){
-    if (!lit && G.projs.length === 0 && c.stepT > 0.2){ c.step = 'praise'; c.stepT = 0; tip('praise'); }
+    if (!lit && G.projs.length === 0 && c.stepT > 0.2){ c.ref = spare(); c.smash0 = G.smashes || 0; c.stepT = 0; if (c.ref){ c.step = 'smash'; tip('smash'); } else { c.step = 'praise'; tip('praise'); } }
     else if (lit) c.ref = lit;
+  } else if (c.step === 'smash'){
+    if ((G.smashes || 0) > c.smash0){ c.step = 'praise'; c.stepT = 0; tip('praise'); }
+    else if (!c.ref || !findCell(c.ref) || c.ref.lit){ c.ref = spare(); if (!c.ref){ c.step = 'praise'; c.stepT = 0; tip('praise'); } }
   } else if (c.step === 'praise' && c.stepT > 3.5){
     tip(null); G.coach = null; save.seenCoach = true; persist(); resolveMatches();
   }
@@ -109,6 +121,16 @@ export function drawCoach(ctx){
     ctx.strokeRect(GX + pos.c * CS + 5, GY + pos.r * CS + 5, CS - 10, CS - 10);
     ctx.setLineDash([6, 6]); ctx.strokeRect(GX + c.move.tc * CS + 5, GY + c.move.tr * CS + 5, CS - 10, CS - 10); ctx.restore();
     blit(x + 6, y + 4, press, u > .85 ? (1 - u) / .15 : 1);
+  } else if (c.step === 'smash'){
+    const pos = c.ref && findCell(c.ref); if (!pos) return;
+    const [x0, y0] = cellXY(pos.r, pos.c), P = 2.2, u = (c.t % P) / P;   // press .0-.1, hold and fill .1-.7, crush flash .7-.85, rest
+    const f = u < .1 ? 0 : u < .7 ? (u - .1) / .6 : 1;
+    ctx.save(); ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.arc(x0, y0, CS * .44, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = f > .85 ? '#ff5a4d' : '#ffb04a'; ctx.beginPath(); ctx.arc(x0, y0, CS * .44, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * f); ctx.stroke();
+    if (u >= .7 && u < .85){ const k = (u - .7) / .15; ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#ffd35a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x0, y0, CS * (.45 + k * .35), 0, Math.PI * 2); ctx.stroke(); }
+    ctx.restore();
+    blit(x0 + 6, y0 + 4, u < .7 ? .88 : 1, u > .85 ? Math.max(0, (1 - u) / .15) : 1);
   } else if (c.step === 'flick'){
     const pos = c.ref && findCell(c.ref); if (!pos) return;
     const [x0, y0] = cellXY(pos.r, pos.c), P = 1.4, u = (c.t % P) / P;

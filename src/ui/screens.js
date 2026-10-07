@@ -489,6 +489,11 @@ export function openLoadout(avail, next, required){
   syncLoadout();
   setState('loadout');
 }
+/** Back from the shop to the pick-pumpkin screen: same picks, levels refreshed after any upgrade. */
+function backToLoadout(){
+  for (const b of $('#picks').querySelectorAll('.pick')){ const t = +b.dataset.t, lv = b.querySelector('.lv'); if (lv) lv.textContent = `Lv ${lvOf(t)}`; b.setAttribute('aria-label', `${PTYPES[t].name}, level ${lvOf(t)}`); }
+  syncLoadout(); setState('loadout');
+}
 function renderDetail(){
   const t = loadoutFocus, d = $('#loDetail'); if (t == null){ d.innerHTML = ''; return; }
   const P = PTYPES[t], L = lvOf(t), un = t < 2 ? 1 : unlockNightOf(P.key), where = un === 1 ? 'from the start' : un === Infinity ? '' : `unlocked at ${levelFor(un).label}`;
@@ -874,7 +879,8 @@ export function wireButtons(){
   $('#bOpenChest').onclick = () => openChests('shop');
   $('#bPvSack').onclick = async () => { if (sackIsQueued()) return; if (await showRewarded('sack')){ queueSack(); SFX.perk(); syncSack(); } };
   $('#bSeedTest').onclick = () => { save.seeds = (save.seeds || 0) + 500; persist(); renderShop(); };   // TESTING ONLY until seed packs are sold: remove before release
-  $('#bShopBack').onclick = () => { if (shopReturn === 'result') setState('result'); else openLevels(); };
+  $('#bShopBack').onclick = () => { if (shopReturn === 'result') setState('result'); else if (shopReturn === 'loadout') backToLoadout(); else openLevels(); };
+  $('#bLoShop').onclick = () => { SFX.ui('tap'); openShop('loadout'); };   // tester: upgrades from the pick-pumpkin screen (owner, 2026-10-07)
 
   $('#pauseBtn').onclick = () => { if (state === 'play' && !G.over) setState('pause'); };
 

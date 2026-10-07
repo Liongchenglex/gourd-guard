@@ -3,7 +3,7 @@ import { FENCE_COST, TOOL_COST } from './economy.js';
 export const GEAR = [
   { key:'fence',   icon:'🧱', name:'Sturdy walls', desc:'Every column wall gets 5 more health per level.', max:3, cost:FENCE_COST },
   { key:'repair',  icon:'🔨', name:'Wall repair',  desc:'Tap it, then tap a wall to repair that wall to full. Carry up to 5.', max:5, cost:[TOOL_COST], consumable:true },
-  { key:'fw',      icon:'🎆', name:'Firework',     desc:'Use it mid-battle to hit every monster for 3. Bosses are immune. Carry up to 5.', max:5, cost:[TOOL_COST], consumable:true },
+  { key:'fw',      icon:'🎆', name:'Firework',     desc:'Use it mid-battle to hit the 8 monsters nearest your walls for 3. Bosses are immune. Carry up to 5.', max:5, cost:[TOOL_COST], consumable:true },
   { key:'buster',  icon:'🧨', name:'Grave buster', desc:'Tap it, then tap a grave to dig it out of your patch. Carry up to 5.', max:5, cost:[TOOL_COST], consumable:true },
   { key:'lantern', icon:'🏮', name:'Lantern',      desc:'Clears every fog bank for 10 seconds. Carry up to 5.', max:5, cost:[TOOL_COST], consumable:true },
   { key:'bomb',    icon:'💥', name:'Bomb',         desc:'Tap it, then tap the field. Blasts 3 columns by 3 rows around that spot for 4, castle walls included. Carry up to 5.', max:5, cost:[TOOL_COST], consumable:true },

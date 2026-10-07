@@ -729,12 +729,12 @@ export async function watchSeedAd(after){
 // ---------- Treasure chests (owner's monetization.md) ----------
 let chestReturn = null, chestRoll = null, chestRerolled = false;
 export function openChests(ret){ chestReturn = ret; showChest(); }
-function lootRow(r){
+function lootRow(r, already = 0){   // already: boss items of this boss earlier in the same chest
   const d = document.createElement('div'); d.className = 'lootRow';
   if (r.type === 'coins'){ d.innerHTML = `<span class="coin big"></span><b>${r.n.toLocaleString()} coins</b>`; }
   else if (r.type === 'seeds'){ d.appendChild(dom(seedArt(36))); d.insertAdjacentHTML('beforeend', `<b>${r.n} pumpkin seed${r.n > 1 ? 's' : ''}</b>`); }
-  else if (r.type === 'bossItem'){ d.appendChild(dom(bossItemIcon(r.boss, 40))); d.insertAdjacentHTML('beforeend', `<b>${BOSS_ITEM_NAMES[r.boss]}</b><small>${bossItemsFor(r.boss) + 1} of ${BOSS_ITEMS_FOR_COSTUME} for the ${BOSS_NAMES[r.boss].replace('The ', '')} costume</small>`); }
-  else if (r.type === 'tools'){ d.classList.add('tools'); const b = document.createElement('b'); b.textContent = 'A set of 5 tools'; d.appendChild(b); const w = document.createElement('div'); w.className = 'toolSet'; for (const [k, n] of Object.entries(r.items)){ const t = document.createElement('span'); t.appendChild(dom(toolIcon(k, 34))); t.insertAdjacentHTML('beforeend', `<i>×${n}</i>`); w.appendChild(t); } d.appendChild(w); }
+  else if (r.type === 'bossItem'){ d.appendChild(dom(bossItemIcon(r.boss, 40))); d.insertAdjacentHTML('beforeend', `<b>${BOSS_ITEM_NAMES[r.boss]}</b><small>${bossItemsFor(r.boss) + already + 1} of ${BOSS_ITEMS_FOR_COSTUME} for the ${BOSS_NAMES[r.boss].replace('The ', '')} costume</small>`); }
+  else if (r.type === 'tools'){ d.classList.add('tools'); const b = document.createElement('b'); b.textContent = `A set of ${Object.values(r.items).reduce((a, n) => a + n, 0)} tools`; d.appendChild(b); const w = document.createElement('div'); w.className = 'toolSet'; for (const [k, n] of Object.entries(r.items)){ const t = document.createElement('span'); t.appendChild(dom(toolIcon(k, 34))); t.insertAdjacentHTML('beforeend', `<i>×${n}</i>`); w.appendChild(t); } d.appendChild(w); }
   return d;
 }
 function showChest(){
@@ -753,7 +753,7 @@ function showChest(){
 function showChestLoot(){
   const ch = save.chests[0];
   const art = $('#chArt'); art.innerHTML = ''; art.appendChild(dom(chestIcon(ch.kind, true, 132))); art.className = 'chestArt pop';
-  const L = $('#chLoot'); L.innerHTML = ''; chestRoll.forEach((r, i) => { const row = lootRow(r); row.style.animationDelay = (0.15 + i * 0.18) + 's'; L.appendChild(row); });
+  const L = $('#chLoot'); L.innerHTML = ''; chestRoll.forEach((r, i) => { const row = lootRow(r, chestRoll.slice(0, i).filter(x => x.type === 'bossItem' && x.boss === r.boss).length); row.style.animationDelay = (0.15 + i * 0.18) + 's'; L.appendChild(row); });
   $('#chNote').textContent = chestRerolled ? 'Rerolled.' : 'Not what you hoped for? Watch an ad to roll this chest again, once.';
   const box = $('#chBtns'); box.innerHTML = '';
   addBtn(box, 'Collect', () => {

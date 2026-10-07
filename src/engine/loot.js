@@ -19,21 +19,24 @@ export const foundThisNight = () => night() || { chests:0, seeds:0 };
 /** Tools the player may receive: every tool introduced so far. */
 const openTools = () => { const open = toolsForNight(highestOpen()); return GEAR.filter(g => g.consumable && open.includes(g.key)); };
 
-/** Roll a chest's rewards (not yet granted). */
+/** Roll a chest's rewards (not yet granted): each slot is one roll on the chest's table. */
 export function rollChest(chest){
-  const C = CHESTS[chest.kind] || CHESTS.normal, out = [];
+  const C = CHESTS[chest.kind] || CHESTS.normal, out = [], coinsOf = C.table.find(([, p]) => p.coins)[1].coins;
   for (let i = 0; i < C.slots; i++){
-    const r = Math.random();
-    if (chest.boss && r < C.bossItem) out.push({ type:'bossItem', boss:chest.boss, n:1 });
-    else if (r < C.bossItem + C.seed) out.push({ type:'seeds', n:1 });
-    else if (r < C.bossItem + C.seed + C.tools && openTools().length) out.push(toolSet());
-    else out.push({ type:'coins', n:ri(C.coins[0], C.coins[1]) });
+    let r = Math.random(), prize = C.table[C.table.length - 1][1];
+    for (const [p, z] of C.table){ if (r < p){ prize = z; break; } r -= p; }
+    if (prize.bossItem && !chest.boss) prize = { coins:coinsOf };            // no boss to take an item from: coins instead
+    if (prize.tools && !openTools().length) prize = { coins:coinsOf };       // no tools introduced yet: coins instead
+    if (prize.bossItem) out.push({ type:'bossItem', boss:chest.boss, n:1 });
+    else if (prize.seeds) out.push({ type:'seeds', n:ri(prize.seeds[0], prize.seeds[1]) });
+    else if (prize.tools) out.push(toolSet(prize.tools));
+    else out.push({ type:'coins', n:ri(prize.coins[0], prize.coins[1]) });
   }
   return out;
 }
-export function toolSet(){
+export function toolSet(n = TOOL_SET){
   const pool = openTools(), items = {};
-  for (let i = 0; i < TOOL_SET; i++){ const g = pool[Math.floor(Math.random() * pool.length)]; items[g.key] = (items[g.key] || 0) + 1; }
+  for (let i = 0; i < n; i++){ const g = pool[Math.floor(Math.random() * pool.length)]; items[g.key] = (items[g.key] || 0) + 1; }
   return { type:'tools', items };
 }
 /** Grant rolled rewards; returns the coins paid for tools past their carry limit. */

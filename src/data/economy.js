@@ -25,10 +25,16 @@ export const SEED_PACKS = [
 export const SEED_ADS_PER_DAY = 15;
 export const AD_SEEDS = 1;
 
-/** Treasure chests. `slots` rewards each; every slot rolls boss item, then seed, then tool set, else coins. */
+/** Treasure chests (owner, 2026-10-07; full reference in docs/LOOT.md). Each chest holds `slots` prizes; every prize is one
+ *  roll on the chest's table: [chance, prize]. Chances add up to 1. Prizes: tools n (a set of n random introduced tools),
+ *  seeds [min, max], coins [min, max], bossItem (one item of the boss that dropped the chest). */
 export const CHESTS = {
-  normal: { name:'Treasure chest', slots:2, bossItem:0,    seed:0.02, tools:0.40, coins:[100, 200] },   // coins (default)
-  boss:   { name:'Boss chest',     slots:3, bossItem:0.05, seed:0.05, tools:0.35, coins:[250, 500] },   // level-20 bosses only; coins stay the most common prize (owner, 2026-09-27)
+  normal: { name:'Treasure chest', slots:2, table:[   // the 1% kill drop, the level-10 boss, half of Loot Sacks
+    [0.20, { tools:2 }], [0.20, { tools:3 }], [0.15, { seeds:[1, 1] }], [0.45, { coins:[100, 200] }],
+  ] },
+  boss:   { name:'Boss chest',     slots:3, table:[   // level-20 bosses
+    [0.25, { bossItem:true }], [0.25, { seeds:[1, 3] }], [0.25, { tools:5 }], [0.25, { coins:[250, 500] }],
+  ] },
 };
 export const TOOL_SET = 5;                // a tool set is 5 random introduced tools
 export const TOOL_OVERFLOW_COINS = 100;   // a tool past its carry limit pays this instead (default)

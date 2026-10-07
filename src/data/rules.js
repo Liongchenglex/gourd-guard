@@ -19,4 +19,4 @@ export const SPAWN_BURST = 0.14;
 export const SPAWN_BURST_EARLY = 0.18;
 
 /** Firework (owner, 2026-10-07): hits only the FIREWORK_TARGETS monsters nearest the walls, for FIREWORK_DAMAGE each; bosses are immune. */
-export const FIREWORK_TARGETS = 8, FIREWORK_DAMAGE = 3;
+export const FIREWORK_TARGETS = 6, FIREWORK_DAMAGE = 3;   // owner, 2026-10-08: 6 targets (was 8)

@@ -414,6 +414,10 @@ Unchanged and already near target: 1-1 to 1-7, 1-11 (3/3), 1-14 (2/3), 3-1 to 3-
 
 Reading: every level that was 0/3 except four now wins at least some runs. The four left are bot blind spots rather than settings: 3-15 and 3-19 are chameleon levels and the bot cannot choose colours (it loses within a minute with few kills); on 4-10 it survives four to five minutes and kills 50 to 80 monsters but never focuses the Vampire Count to break his trance (boss health was taken to ×0.6 there and set back to ×0.7, untested, so the fight stays a fight for people); 1-20 is the world's final boss with a 40% target. These four need a hand playtest before cutting further.
 
+### 5-20 slightly easier (owner, 2026-10-09)
+
+38 → 35 monsters, average spawn gap 2.4 → 2.55 s, burst chance 18% → 15%; speed, mix and the Twin Tides unchanged. Bot, 3 runs each on the old and new numbers side by side: 0/3 and 0/3 (walls 41% and 41% on average). The bot cannot finish the Twin Tides, so this was judged by the owner's play, not the bot.
+
 ### Sprouts every 4 s instead of 5 (owner, 2026-10-07; Eager sprouts 3 s instead of 4)
 
 Same bot, `--repeats 3`, on top of the tuning pass above. Faster sprouts are a large boost:

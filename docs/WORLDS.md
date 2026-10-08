@@ -400,6 +400,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-10-09 | Owner: 5-20 very slightly easier: 35 monsters (was 38), spawn gap 2.55 s (was 2.4), bursts 15% (was 18%). |
 | 2026-10-09 | Owner: the Endless Night tome opens after 5-10 (was 5-20). |
 | 2026-10-09 | Owner: Paint borrows touching pumpkins even from their own bunches, borrowed pumpkins light up, and the Paint bunch inherits the power of the colour it borrows most (tie: most threatened column) at Paint's level. Fixed: Paint and Rainbow glowed in the wrong colours after Paint was added. |
 | 2026-10-08 | Owner: Endless Night moved from the title screen onto the storybook shelf as a tome that opens once 5-20 is beaten; endless bosses drop 1–3 seeds half the time. |

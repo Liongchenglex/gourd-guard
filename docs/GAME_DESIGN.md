@@ -118,8 +118,8 @@ Details:
 | Group | 1→2 | 2→3 | 3→4 | 4→5 |
 |---|---|---|---|---|
 | Green, Yellow | 100 coins | 300 coins | 600 coins | 1,500 coins |
-| Fire, Ice, White, Pink, Purple, Turquoise | 100 coins | 500 coins | 3,000 coins | 50 seeds |
-| Grey, Black, Deep Blue, Brown | 1,000 coins | 2,500 coins | 50 seeds | 100 seeds |
+| Fire, Ice, White, Pink, Purple, Turquoise | 100 coins | 500 coins | 3,000 coins | 5,000 coins (owner, 2026-10-08; was 50 seeds) |
+| Grey, Black, Deep Blue, Brown | 1,000 coins | 2,500 coins | 5,000 coins (was 50 seeds) | 50 seeds (was 100; owner, 2026-10-08) |
 
 The balance bot's expected upgrade profile has not been re-checked against these prices yet.
 

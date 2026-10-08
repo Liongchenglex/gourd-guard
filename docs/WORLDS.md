@@ -400,6 +400,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-10-08 | Owner: upgrade prices. Fire, Ice, White, Pink, Purple and Turquoise reach level 5 for 5,000 coins (was 50 seeds). Grey, Black, Deep Blue and Brown: level 4 for 5,000 coins (was 50 seeds), level 5 for 50 seeds (was 100). |
 | 2026-10-08 | Owner: 3-20 back to its numbers before the tuning pass (it felt easy with 4 s sprouts). Firework carry limit stays at 5. |
 | 2026-10-08 | Owner: Firework hits the 6 monsters nearest the walls (was 8). |
 | 2026-10-07 | Owner: chest odds. Treasure chest prizes: set of 2 tools 20%, set of 3 tools 20%, 1 seed 15%, coins 45% (no more sets of 5). Boss chest prizes: boss item, 1–3 seeds, set of 5 tools, coins, 25% each. Reference: `docs/LOOT.md`. |

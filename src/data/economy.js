@@ -3,8 +3,8 @@
 
 /** Pumpkin level-up cost by type key, one entry per step (1→2, 2→3, 3→4, 4→5): { coins } or { seeds }. */
 const A = [{ coins:100 }, { coins:300 }, { coins:600 }, { coins:1500 }];          // Green, Yellow
-const B = [{ coins:100 }, { coins:500 }, { coins:3000 }, { seeds:50 }];           // Fire, Ice, White, Pink, Purple, Turquoise
-const C = [{ coins:1000 }, { coins:2500 }, { seeds:50 }, { seeds:100 }];          // Grey, Black, Deep Blue, Brown
+const B = [{ coins:100 }, { coins:500 }, { coins:3000 }, { coins:5000 }];         // Fire, Ice, White, Pink, Purple, Turquoise (owner, 2026-10-08: level 5 for 5,000 coins, was 50 seeds)
+const C = [{ coins:1000 }, { coins:2500 }, { coins:5000 }, { seeds:50 }];          // Grey, Black, Deep Blue, Brown (owner, 2026-10-08: level 4 for 5,000 coins and level 5 for 50 seeds, were 50 and 100 seeds)
 export const UPGRADE_COST = { green:A, yellow:A, fire:B, ice:B, white:B, pink:B, purple:B, turquoise:B, grey:C, black:C, blue:C, brown:C };
 export const upgradeCost = (key, lv) => (UPGRADE_COST[key] || A)[lv - 1] || null;
 

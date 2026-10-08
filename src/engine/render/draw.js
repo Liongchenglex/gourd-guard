@@ -3,7 +3,7 @@ import { sproutEvery, shoreP, MINE_ARM } from '../game.js';
 import { perkOn } from '../../data/perks.js';
 import { GEAR } from '../../data/shop.js';
 import { PTYPES, RAINBOW, BROWN, PAINT } from '../../data/pumpkins.js';
-import { emptyCells, findCell, groupCells, heldGid, brownSize, paintPull } from '../board.js';
+import { emptyCells, findCell, groupCells, heldGid, brownSize, paintPull, paintInherit } from '../board.js';
 import { dropHop, castleY } from '../combat.js';
 import { mS, mY, TILE_P } from '../monsters.js';
 import { K, coinTarget, ctx } from './canvas.js';
@@ -75,6 +75,7 @@ export function render(){
   drawGraves();
   if (G.aim === 'buster') drawAimGraves(t);
   if (G.aim === 'repair') drawAimWalls(t);
+  updatePaintPull(t);   // marks borrowed pumpkins so drawGrid lights them
   drawGrid(t);
   drawPaintPull(t);
   drawSproutBar();
@@ -383,7 +384,7 @@ export function drawGrid(t){
   for (const [r, c, cell] of flying) drawCell(r, c, cell, t, hg);
 }
 
-const LIT_HALO = [[140, 255, 90], [255, 214, 70], [140, 220, 255], [255, 110, 50], [225, 230, 245], [200, 120, 255], [235, 242, 255], [255, 140, 50], [120, 160, 255], [255, 130, 200], [90, 240, 225], [240, 170, 80], [255, 230, 140]];
+const LIT_HALO = [[140, 255, 90], [255, 214, 70], [140, 220, 255], [255, 110, 50], [225, 230, 245], [200, 120, 255], [235, 242, 255], [255, 140, 50], [120, 160, 255], [255, 130, 200], [90, 240, 225], [240, 170, 80], [205, 170, 255], [255, 230, 140]];   // ... Brown, Paint (lilac), Rainbow
 export function drawCell(r, c, cell, t, hg){
   const held = hg != null && cell.lit && cell.gids.includes(hg);
   let x = LANE(c) + cell.ox, y = GY + r * CS + CS / 2 + cell.oy;
@@ -392,7 +393,8 @@ export function drawCell(r, c, cell, t, hg){
   if (bsz >= 0) s *= [0.55, 0.8, 1.18][bsz];   // small, medium, big: clearly different sizes
   if (cell.fly > 0){ s *= 0.85; y -= Math.sin((1 - cell.fly / 0.55) * Math.PI) * 50; }
   if (cell.wig > 0) x += Math.sin(cell.wig * 30) * 3 * cell.wig;
-  if (cell.lit){
+  const lit = cell.lit || cell.borrowed;   // a pumpkin a Paint bunch will borrow lights up too (owner, 2026-10-09)
+  if (lit){
     y += Math.sin(t * 3 + cell.t) * 1.5;
     const fl = 0.75 + 0.25 * Math.sin(t * 9 + cell.t * 3) * Math.sin(t * 5.3 + cell.t);
     const rad = CS * (cell.bsize >= 5 ? 0.78 : 0.62) * (held ? 1.2 : 1);
@@ -412,12 +414,12 @@ export function drawCell(r, c, cell, t, hg){
     ctx.globalCompositeOperation = 'source-over';
   }
   // idle life (owner, 2026-09-27): every pumpkin breathes and sways on its own rhythm; lit ones bounce a little livelier
-  const ph = (r * 7 + c * 13) * .37, br = Math.sin(t * (cell.lit ? 3.4 : 2.1) + ph), hop = Math.max(0, Math.sin(t * .7 + ph * 2.3)) ** 24;
-  const sx = 1 + br * .025, sy = 1 - br * .03 - hop * .06, rot = Math.sin(t * 1.3 + ph * 1.7) * (cell.lit ? .05 : .035);
+  const ph = (r * 7 + c * 13) * .37, br = Math.sin(t * (lit ? 3.4 : 2.1) + ph), hop = Math.max(0, Math.sin(t * .7 + ph * 2.3)) ** 24;
+  const sx = 1 + br * .025, sy = 1 - br * .03 - hop * .06, rot = Math.sin(t * 1.3 + ph * 1.7) * (lit ? .05 : .035);
   const sz = CS * s;
   if (bsz === 2){ const gg = ctx.createRadialGradient(x, y, CS * 0.2, x, y, CS * 0.7); gg.addColorStop(0, 'rgba(255,190,90,.55)'); gg.addColorStop(1, 'rgba(255,190,90,0)'); ctx.fillStyle = gg; ctx.fillRect(x - CS * 0.7, y - CS * 0.7, CS * 1.4, CS * 1.4); }   // big brown: ripe glow
   ctx.save(); ctx.translate(x, y + sz * .38 - hop * 7); ctx.rotate(rot); ctx.scale(sx, sy);   // pivot at the base so the squash sits on the ground
-  ctx.drawImage(sprites[cell.c][cell.lit ? 1 : 0], -sz / 2, -sz * .88, sz, sz);
+  ctx.drawImage(sprites[cell.c][lit ? 1 : 0], -sz / 2, -sz * .88, sz, sz);
   const wc = save.wardrobe && save.wardrobe.costume; if (wc) drawCostume(ctx, wc, 0, -sz * .88 + sz * (0.5 + 3 / CS), sz * .4, Math.round(CS * K));   // the worn costume, on every pumpkin
   ctx.restore();
   if (bsz === 0){ ctx.fillStyle = '#7fd05a'; ell(ctx, x + CS * 0.12, y - CS * 0.3, 6, 3, -0.6); ell(ctx, x + CS * 0.2, y - CS * 0.36, 5, 2.5, 0.5); }   // small brown: a sprout
@@ -448,20 +450,33 @@ export function drawHoldRing(){
 
 /** Paint (owner, 2026-10-08): a pulsing lilac outline on every pumpkin a lit Paint bunch will pull along. The set is
  *  recomputed four times a second, not every frame. */
-let pullT = -1, pullCells = [];
+let pullT = -1, pullCells = [], inherit = [];
+function updatePaintPull(t){
+  if (!G || !G.groups || G.mode === 'demo'){ for (const { cell } of pullCells) cell.borrowed = false; pullCells = []; inherit = []; return; }
+  if (!(t - pullT > 0.25 || t < pullT)) return;
+  pullT = t;
+  for (const { cell } of pullCells) cell.borrowed = false;
+  pullCells = []; inherit = [];
+  for (const gid of Object.keys(G.groups)) if (G.groups[gid].color === PAINT){
+    const p = paintPull(+gid); pullCells.push(...p);
+    const col = paintInherit(p); if (col != null) inherit.push([+gid, col]);
+  }
+  for (const { cell } of pullCells) cell.borrowed = true;
+}
 function drawPaintPull(t){
   if (!G || !G.groups || G.mode === 'demo') return;
-  if (t - pullT > 0.25 || t < pullT){
-    pullT = t; pullCells = [];
-    for (const gid of Object.keys(G.groups)) if (G.groups[gid].color === PAINT) pullCells.push(...paintPull(+gid));
-  }
-  if (!pullCells.length) return;
+  if (!pullCells.length && !inherit.length) return;
   ctx.save(); ctx.globalAlpha = .75 + .25 * Math.sin(t * 7);
   for (const { cell } of pullCells){ const pos = findCell(cell); if (!pos) continue;
     rrect(ctx, GX + pos.c * CS + 5, GY + pos.r * CS + 5, CS - 10, CS - 10, 14);
     ctx.setLineDash([]); ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(40,16,60,.75)'; ctx.stroke();   // a dark edge so the dash reads on the patch
     ctx.setLineDash([9, 6]); ctx.lineDashOffset = -t * 30; ctx.lineWidth = 4; ctx.strokeStyle = '#e8d8ff'; ctx.stroke(); }
   ctx.restore();
+  for (const [gid, col] of inherit){   // a dot of the inherited colour on each Paint pumpkin of the bunch
+    for (const { r, c } of groupCells(gid)){ const x = GX + c * CS + CS - 14, y = GY + r * CS + 14;
+      ctx.fillStyle = 'rgba(242,234,255,.95)'; ctx.beginPath(); ctx.arc(x, y, 12, 0, TAU); ctx.fill();   // a light badge with a tiny lit pumpkin of the inherited colour
+      ctx.strokeStyle = '#8a6ad0'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.drawImage(sprites[col][1], x - 11, y - 12, 22, 22); } }
 }
 
 export function drawHintArrow(t){

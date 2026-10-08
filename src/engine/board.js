@@ -329,18 +329,28 @@ export function groupCells(gid){
   return out;
 }
 
-/** Paint (owner, 2026-10-08): the touching pumpkins a lit Paint bunch pulls along when it launches. Any colour, never one
- *  that is part of its own lit bunch; most threatened columns first, up to PAINT_PULL[level] of them. */
+/** Paint (owner, 2026-10-08/09): the touching pumpkins a lit Paint bunch borrows when it launches. Any colour, even one that
+ *  is lit in its own bunch (only the touching ones come; owner 2026-10-09); most threatened columns first, up to PAINT_PULL[level]. */
 export function paintPull(gid){
   const grp = G.groups && G.groups[gid]; if (!grp || grp.color !== PAINT) return [];
   const own = groupCells(gid), mine = new Set(own.map(o => o.cell)), seen = new Set(), out = [];
   for (const { r, c } of own) for (const [dr, dc] of [[1,0],[-1,0],[0,1],[0,-1]]){
     const a = r + dr, b = c + dc; if (a < 0 || a >= ROWS || b < 0 || b >= COLS) continue;
-    const n = grid[a][b]; if (!n || n.fly || n.lit || mine.has(n) || seen.has(n)) continue;
+    const n = grid[a][b]; if (!n || n.fly || mine.has(n) || seen.has(n)) continue;
     seen.add(n); out.push({ r:a, c:b, cell:n });
   }
   const threat = laneThreat(), cap = PAINT_PULL[lvOf(PAINT) - 1];
   return out.sort((x, y) => threat[y.c] - threat[x.c] || y.r - x.r).slice(0, cap);
+}
+
+/** Paint (owner, 2026-10-09): the colour a Paint bunch inherits from the pumpkins it borrows: the most common one; on a tie,
+ *  the colour sitting in the most threatened column. Rainbows and other Paint do not count. Null = it stays plain Paint. */
+export function paintInherit(pulled){
+  const threat = laneThreat(), tally = new Map();
+  for (const { c, cell } of pulled){ if (cell.c === RAINBOW || cell.c === PAINT) continue; const t = tally.get(cell.c) || { n:0, th:-1 }; t.n++; t.th = Math.max(t.th, threat[c]); tally.set(cell.c, t); }
+  let best = null, bn = 0, bt = -1;
+  for (const [col, t] of tally) if (t.n > bn || (t.n === bn && t.th > bt)){ best = col; bn = t.n; bt = t.th; }
+  return best;
 }
 
 export function bestLitGroup(){

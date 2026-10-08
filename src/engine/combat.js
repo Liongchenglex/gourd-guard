@@ -1,7 +1,7 @@
 import { TYPES, BOSS_NAMES } from '../data/monsters.js';
-import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW, TURQUOISE, BROWN, TURQ_FRAC, BROWN_KB, BROWN_SIZE_MULT } from '../data/pumpkins.js';
+import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW, TURQUOISE, BROWN, TURQ_FRAC, BROWN_KB, BROWN_SIZE_MULT, PAINT } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
-import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches, brownSize, paintPull } from './board.js';
+import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches, brownSize, paintPull, paintInherit } from './board.js';
 import { TILE_P, mS, mY, spMulNow, spawnMonster, inHexZone } from './monsters.js';
 import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS, walls, FENCE_Y } from './state.js';
 import { TAU, clamp, fmt, rnd } from './util.js';
@@ -22,9 +22,10 @@ export function launchGroup(ref){
   if (!cells.length) return;
   const pulled = paintPull(gid);   // Paint: touching pumpkins of any colour launch with the bunch, each as itself (owner, 2026-10-08)
   const type = grp.color, lv = lvOf(type), guar = grp.size + pulled.length >= 5;   // pulled pumpkins count toward the 5+ knockback (owner)
+  const inh = type === PAINT ? paintInherit(pulled) : null;   // Paint takes the power of the colour it borrows most, at Paint's own level (owner, 2026-10-09)
   for (const { r, c, cell } of cells){
     const x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;
-    G.projs.push({ x, y, vy:-900, type, vis:cell.c, lv, guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false });
+    G.projs.push({ x, y, vy:-900, type:inh != null ? inh : type, vis:cell.c, lv, guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false });
     grid[r][c] = null;
   }
   for (const { r, c, cell } of pulled){

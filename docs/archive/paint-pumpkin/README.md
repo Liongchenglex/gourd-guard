@@ -78,3 +78,8 @@ Rules:
 **Unlock and prices (confirmed by the owner, 2026-10-08):** available after beating 5-20; unlock 100 seeds; level 1→2 30 seeds, 2→3 50, 3→4 80, 4→5 120 (380 seeds in all).
 
 **Decided 2026-10-08:** usable in every level once unlocked; its lit face is a cheeky wink with a sideways glance and a lopsided grin, glowing warm cream so it reads on the lilac rind (`paint` in `src/engine/render/faces.js`). Built in `src/data/pumpkins.js` (`PAINT`, `PAINT_PULL`), `paintPull()` in `src/engine/board.js`, the launch in `launchGroup()` (`src/engine/combat.js`), the outline in `drawPaintPull()` (`src/engine/render/draw.js`), the art in `src/engine/render/paintpumpkin.js`, prices and `PAINT_UNLOCK` in `src/data/economy.js`. The Masterpiece skin is still to build.
+
+### Changes after the first build (owner, 2026-10-09)
+- **Borrowing from bunches:** Paint may borrow a pumpkin that is lit in its own bunch; only the touching ones come. (Replaced the "no stealing" default.)
+- **Borrowed pumpkins light up** with their carved faces; the dashed lilac rim stays (owner liked it).
+- **Inherited power:** the Paint pumpkins fly with the ability of the colour they borrow most, at Paint's own level; a tie goes to the colour in the most threatened column (so the preview can show it); nothing borrowed, or only Rainbows, means plain Paint. A small lit pumpkin of the inherited colour sits on each Paint pumpkin while the bunch is lit. Code: `paintInherit()` in `src/engine/board.js`.

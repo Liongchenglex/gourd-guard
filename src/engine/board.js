@@ -2,7 +2,7 @@ import { perkOn } from '../data/perks.js';
 import { PATTERNS } from '../data/patterns.js';
 import { SPROUT_COUNT } from '../data/rules.js';
 import { GEAR } from '../data/shop.js';
-import { PTYPES, RAINBOW, WILD_CHANCE, WILD_CHANCE_PERK, TURQUOISE, BROWN, BROWN_GROW } from '../data/pumpkins.js';
+import { PTYPES, RAINBOW, WILD_CHANCE, WILD_CHANCE_PERK, TURQUOISE, BROWN, BROWN_GROW, PAINT, PAINT_PULL } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { addFloat, chunk, dropHop, spark } from './combat.js';
 import { COLS, CS, G, GX, GY, LANE, ROWS, gest, graves, grid, nextGid, setGraves, setGrid } from './state.js';
@@ -327,6 +327,20 @@ export function groupCells(gid){
   const out = [];
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){ const cell = grid[r][c]; if (cell && cell.lit && cell.gids.includes(gid)) out.push({ r, c, cell }); }
   return out;
+}
+
+/** Paint (owner, 2026-10-08): the touching pumpkins a lit Paint bunch pulls along when it launches. Any colour, never one
+ *  that is part of its own lit bunch; most threatened columns first, up to PAINT_PULL[level] of them. */
+export function paintPull(gid){
+  const grp = G.groups && G.groups[gid]; if (!grp || grp.color !== PAINT) return [];
+  const own = groupCells(gid), mine = new Set(own.map(o => o.cell)), seen = new Set(), out = [];
+  for (const { r, c } of own) for (const [dr, dc] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    const a = r + dr, b = c + dc; if (a < 0 || a >= ROWS || b < 0 || b >= COLS) continue;
+    const n = grid[a][b]; if (!n || n.fly || n.lit || mine.has(n) || seen.has(n)) continue;
+    seen.add(n); out.push({ r:a, c:b, cell:n });
+  }
+  const threat = laneThreat(), cap = PAINT_PULL[lvOf(PAINT) - 1];
+  return out.sort((x, y) => threat[y.c] - threat[x.c] || y.r - x.r).slice(0, cap);
 }
 
 export function bestLitGroup(){

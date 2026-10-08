@@ -5,7 +5,10 @@
 const A = [{ coins:100 }, { coins:300 }, { coins:600 }, { coins:1500 }];          // Green, Yellow
 const B = [{ coins:100 }, { coins:500 }, { coins:3000 }, { coins:5000 }];         // Fire, Ice, White, Pink, Purple, Turquoise (owner, 2026-10-08: level 5 for 5,000 coins, was 50 seeds)
 const C = [{ coins:1000 }, { coins:2500 }, { coins:5000 }, { seeds:50 }];          // Grey, Black, Deep Blue, Brown (owner, 2026-10-08: level 4 for 5,000 coins and level 5 for 50 seeds, were 50 and 100 seeds)
-export const UPGRADE_COST = { green:A, yellow:A, fire:B, ice:B, white:B, pink:B, purple:B, turquoise:B, grey:C, black:C, blue:C, brown:C };
+const P = [{ seeds:30 }, { seeds:50 }, { seeds:80 }, { seeds:120 }];              // Paint (owner, 2026-10-08)
+/** The Paint pumpkin is bought with seeds once 5-20 (night 100) has been beaten (owner, 2026-10-08). */
+export const PAINT_UNLOCK = { seeds:100, night:100 };
+export const UPGRADE_COST = { green:A, yellow:A, fire:B, ice:B, white:B, pink:B, purple:B, turquoise:B, grey:C, black:C, blue:C, brown:C, paint:P };
 export const upgradeCost = (key, lv) => (UPGRADE_COST[key] || A)[lv - 1] || null;
 
 export const TOOL_COST = 300;

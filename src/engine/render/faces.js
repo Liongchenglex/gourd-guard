@@ -67,6 +67,14 @@ export const LIT_FACES = {
     for (const s of [-1, 1]){ g.beginPath(); g.moveTo(s * R * .52, ey - R * .08); g.lineTo(s * R * .14, ey - R * .02); g.lineTo(s * R * .18, ey + R * .1); g.lineTo(s * R * .5, ey + R * .08); g.closePath(); g.fill(); }
     g.beginPath(); g.moveTo(-R * .34, R * .42); g.quadraticCurveTo(0, R * .18, R * .34, R * .42); g.quadraticCurveTo(0, R * .3, -R * .34, R * .42); g.fill(); },
   // Rainbow: dazzled, huge eyes with star pupils, delighted brows, a beaming grin
+  // Paint (owner, 2026-10-08): a cheeky artist: one eye winking, the other bright and glancing sideways, a lopsided grin. Warm cream glow so it reads on the lilac rind.
+  paint(g, R){ glow(g, R, '#fffdf4', '#ffc98a', '#ffe2b0'); const ey = -R * .1;
+    almond(g, -R * .3, ey, R * .2, R * .16);
+    g.beginPath(); g.arc(R * .3, ey + R * .06, R * .17, Math.PI * 1.08, Math.PI * 1.92); g.arc(R * .3, ey + R * .14, R * .15, Math.PI * 1.86, Math.PI * 1.14, true); g.closePath(); g.fill();   // the wink
+    nose(g, R);
+    g.beginPath(); g.moveTo(-R * .3, R * .22); g.quadraticCurveTo(R * .02, R * .56, R * .26, R * .17); g.quadraticCurveTo(-R * .02, R * .33, -R * .3, R * .22); g.fill();
+    dark(g, () => { pup(g, -R * .25, ey - R * .01, R * .085); g.fillStyle = '#fff'; g.beginPath(); g.arc(-R * .28, ey - R * .05, R * .026, 0, TAU); g.fill(); g.fillStyle = '#2a0e06';
+      brow(g, R, -R * .48, ey - R * .3, -R * .14, ey - R * .36); brow(g, R, R * .14, ey - R * .3, R * .46, ey - R * .22); }); },
   rainbow(g, R){ glow(g, R, '#ffffff', '#ffd35a', '#fff3a0'); const ey = -R * .1; for (const s of [-1, 1]) almond(g, s * R * .3, ey, R * .21, R * .17); nose(g, R);
     g.beginPath(); g.moveTo(-R * .36, R * .22); g.quadraticCurveTo(0, R * .62, R * .36, R * .22); g.quadraticCurveTo(0, R * .34, -R * .36, R * .22); g.fill();
     dark(g, () => { for (const s of [-1, 1]){ const x = s * R * .3; g.fillStyle = '#7a2ad0'; star(g, x, ey - R * .02, R * .1); g.fillStyle = '#2a0e06'; brow(g, R, x - R * .16, ey - R * .32, x + R * .16, ey - R * .34); } }); },

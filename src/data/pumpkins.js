@@ -13,11 +13,13 @@ export const PTYPES = [
   { key:'pink',   name:'Pink',   role:'repairs the wall of its column as it flies over, and knocks monsters back often', base:'#e05aa8', light:'#ff9ad6', dark:'#8a2a66', spark:'#ffb3e6' },
   { key:'turquoise', name:'Turquoise', role:'launches in bunches of just 2, at half power', base:'#2ab0a8', light:'#8af0e8', dark:'#0f5a58', spark:'#a0fff8' },
   { key:'brown',  name:'Brown',  role:'grows while it sits on the patch: small, medium, then big and twice as strong', base:'#8a5a2a', light:'#c9945a', dark:'#4a2e12', spark:'#e0b070' },
+  { key:'paint',  name:'Paint',  role:'pulls touching pumpkins of any colour into its bunch, and they launch together', base:'#c9b6f0', light:'#ece2ff', dark:'#7a62b0', spark:'#ffb59a', patches:['#7fe0c3', '#ffb59a', '#ffe27a', '#6aaeff'] },   // post-game, bought with seeds (owner, 2026-10-08)
   { key:'rainbow',name:'Rainbow',role:'joins any bunch as any color', rainbow:true, spark:'#fff3a0' },
 ];
 
-export const RAINBOW = 12, NTYPES = 12;   // type indices: 0 Green, 1 Yellow, 2 Ice, 3 Fire, 4 Grey, 5 Purple, 6 White, 7 Black, 8 Deep Blue, 9 Pink, 10 Turquoise, 11 Brown, 12 Rainbow
-export const YELLOW = 1, BLUE = 8, PINK = 9, WHITE = 6, BLACK = 7, TURQUOISE = 10, BROWN = 11;
+export const RAINBOW = 13, NTYPES = 13;   // type indices: 0 Green, 1 Yellow, 2 Ice, 3 Fire, 4 Grey, 5 Purple, 6 White, 7 Black, 8 Deep Blue, 9 Pink, 10 Turquoise, 11 Brown, 12 Paint, 13 Rainbow
+export const YELLOW = 1, BLUE = 8, PINK = 9, WHITE = 6, BLACK = 7, TURQUOISE = 10, BROWN = 11, PAINT = 12;
+export const PAINT_PULL = [2, 3, 4, 5, Infinity];   // Paint (owner, 2026-10-08): touching pumpkins pulled into a lit Paint bunch, by level (5 = every one)
 export const TURQ_FRAC = 0.5;                          // Turquoise: power as a fraction of Green's; bunches of 2 launch
 export const BROWN_GROW = [[8, 4], [8, 4], [6, 3], [6, 3], [4, 2]];   // Brown: [seconds to full growth, seconds per stage] by level
 export const BROWN_KB   = [0, 0.5, 0.5, 1, 1];         // Brown: knockback chance by level; the doubling at levels 2 and 4 sticks
@@ -70,6 +72,7 @@ export function lvStats(t, L){
     case 8: special = `lightning strikes ${CHAIN_N[i]} monsters in the row at ${pct(CHAIN_FRAC[i])}`; break;
     case 9: knock = kb(KB_PINK[i]); special = `repairs the wall of its column by ${HEAL_AMT[i]} as it flies over`; break;
     case 10: special = 'a bunch of 2 is enough to launch'; break;
+    case 12: special = `pulls ${PAINT_PULL[i] === Infinity ? 'every' : `up to ${PAINT_PULL[i]}`} touching pumpkin${PAINT_PULL[i] === 1 ? '' : 's'} of any colour into its bunch`; break;
     case 11: power = `${POWER[i] * 0.5} / ${POWER[i]} / ${POWER[i] * 2}`; knock = kb(BROWN_KB[i]); special = `grows small, medium, big: full size in ${BROWN_GROW[i][0]} s`; break;
   }
   return { power, knockback:knock, special };
@@ -90,6 +93,7 @@ export function lvDesc(t, L){
     if (t === 7) parts.push(`splashes 3×${SPLASH_ROWS[i]} for ${pct(SPLASH_FRAC[i])}${i >= 4 ? ' with knockback' : ''}`);
     if (t === 8) parts.push(`lightning hits ${CHAIN_N[i]} in the row at ${pct(CHAIN_FRAC[i])}`);
     if (t === 10) parts.push('bunches of 2 launch', 'half power');
+    if (t === 12) parts.push(PAINT_PULL[i] === Infinity ? 'pulls every touching pumpkin' : `pulls up to ${PAINT_PULL[i]} touching pumpkins`);
   }
   return parts.join(', ');
 }

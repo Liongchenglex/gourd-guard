@@ -15,7 +15,7 @@ import { BESTIARY, COMPANIONS } from '../data/bestiary.js';
 import { toolIcon } from '../engine/render/tools.js';
 import { COSTUMES, SKINS, STAR_COSTUME, starsHave, starsMax, grantStarCrown } from '../data/wardrobe.js';
 import { showCrownReveal } from './reveal.js';
-import { upgradeCost, COINS_PER_SEED, SEED_TRADES, SEED_PACKS, BOSS_ITEMS_FOR_COSTUME, BOSS_ITEM_SEED_PACK, CHESTS, SEED_ADS_PER_DAY } from '../data/economy.js';
+import { upgradeCost, PAINT_UNLOCK, COINS_PER_SEED, SEED_TRADES, SEED_PACKS, BOSS_ITEMS_FOR_COSTUME, BOSS_ITEM_SEED_PACK, CHESTS, SEED_ADS_PER_DAY } from '../data/economy.js';
 import { showRewarded, seedAdsLeft, adsBusy } from '../engine/ads.js';
 import { storeReady, buyPack } from '../engine/store.js';
 import { rollChest, grant, bossItemsFor, foundThisNight, queueSack, sackIsQueued } from '../engine/loot.js';
@@ -644,8 +644,9 @@ function renderWardrobe(){
 /** Pumpkins tab: the selected pumpkin's now → next stats and level-up button on top, filters, then a tile per pumpkin. */
 function renderPumpkinShop(){
   const order = [...Array(NTYPES).keys()].sort((x, y) => (x < 2 ? 0 : unlockNightOf(PTYPES[x].key)) - (y < 2 ? 0 : unlockNightOf(PTYPES[y].key)) || x - y);   // first unlocked first (owner)
-  const info = t => { const P = PTYPES[t], L = lvOf(t), un = t < 2 ? 1 : unlockNightOf(P.key), unlocked = t < 2 || un <= highestOpen(), maxed = L >= 5, uc = maxed ? null : upgradeCost(P.key, L), inSeeds = !!(uc && uc.seeds), cost = uc ? (uc.seeds || uc.coins) : 0;
-    return { t, P, L, un, unlocked, maxed, inSeeds, cost, afford:unlocked && !maxed && (inSeeds ? (save.seeds || 0) >= cost : save.coins >= cost) }; };
+  const info = t => { const P = PTYPES[t], L = lvOf(t), un = t < 2 ? 1 : unlockNightOf(P.key), isPaint = P.key === 'paint', unlocked = isPaint ? !!save.paintOwned : t < 2 || un <= highestOpen(), maxed = L >= 5, uc = maxed ? null : upgradeCost(P.key, L), inSeeds = !!(uc && uc.seeds), cost = uc ? (uc.seeds || uc.coins) : 0;
+    const canBuy = isPaint && !unlocked && (save.stars[PAINT_UNLOCK.night] || 0) > 0;   // Paint: bought with seeds after 5-20 (owner)
+    return { t, P, L, un, unlocked, isPaint, canBuy, maxed, inSeeds, cost, afford:unlocked && !maxed && (inSeeds ? (save.seeds || 0) >= cost : save.coins >= cost) }; };
   const all = order.map(info);
   chipRow($('#pChips'), [{ key:'all', label:'All' }, { key:'unlocked', label:'Unlocked' }, { key:'up', label:'Can level up' }], pFilt, k => { pFilt = k; renderPumpkinShop(); });
   const list = all.filter(p => pFilt === 'all' || (pFilt === 'unlocked' && p.unlocked) || (pFilt === 'up' && p.afford));
@@ -653,23 +654,26 @@ function renderPumpkinShop(){
   const grid = $('#shopPumpkins'); grid.innerHTML = '';
   if (!list.length) grid.innerHTML = `<p class="empty">Nothing to level up right now. Earn more coins or seeds.</p>`;
   for (const p of list){
-    const ic = pumpkinIcon(p.t, true, 64); if (!p.unlocked) ic.classList.add('mystery');
-    const badge = !p.unlocked ? '🔒' : p.maxed ? 'MAX' : `<span class="${p.inSeeds ? 'seed' : 'coin'}"></span>${shortN(p.cost)}`;
-    grid.appendChild(tileBtn(ic, p.unlocked ? p.P.name : '???', badge, !p.unlocked ? 'locked' : p.maxed ? 'maxed' : p.afford ? 'afford' : '', p.t === sel.t, () => { pSel = p.t; renderPumpkinShop(); $('#pDetail').scrollIntoView({ block:'nearest', behavior:reduceMotion() ? 'auto' : 'smooth' }); },
+    const ic = pumpkinIcon(p.t, true, 64); if (!p.unlocked && !p.isPaint) ic.classList.add('mystery');   // the Paint pumpkin is shown, to tempt
+    const badge = !p.unlocked ? (p.canBuy ? `<span class="seed"></span>${PAINT_UNLOCK.seeds}` : '🔒') : p.maxed ? 'MAX' : `<span class="${p.inSeeds ? 'seed' : 'coin'}"></span>${shortN(p.cost)}`;
+    grid.appendChild(tileBtn(ic, p.unlocked || p.isPaint ? p.P.name : '???', badge, !p.unlocked ? 'locked' : p.maxed ? 'maxed' : p.afford ? 'afford' : '', p.t === sel.t, () => { pSel = p.t; renderPumpkinShop(); $('#pDetail').scrollIntoView({ block:'nearest', behavior:reduceMotion() ? 'auto' : 'smooth' }); },
       p.unlocked ? `${p.P.name}, level ${p.L}${p.maxed ? ', maxed' : `, level up for ${p.cost} ${p.inSeeds ? 'seeds' : 'coins'}`}` : 'Locked pumpkin', p.unlocked ? `Lv ${p.L}` : ''));
   }
   const d = $('#pDetail'); d.innerHTML = '';
-  const ic = pumpkinIcon(sel.t, true, 96); ic.className = 'dIc'; if (!sel.unlocked) ic.classList.add('mystery'); d.appendChild(ic);
+  const ic = pumpkinIcon(sel.t, true, 96); ic.className = 'dIc'; if (!sel.unlocked && !sel.isPaint) ic.classList.add('mystery'); d.appendChild(ic);
   const tx = document.createElement('div'); tx.className = 'dInfo';
-  if (!sel.unlocked) tx.innerHTML = `<b class="dn">??? pumpkin</b><p class="dd">${sel.un === Infinity ? 'Unlocks in a later world.' : `Unlocks at level ${levelFor(sel.un).label}.`}</p>`;   // nothing is revealed before it unlocks (owner)
+  if (!sel.unlocked && sel.isPaint) tx.innerHTML = `<b class="dn">Paint pumpkin</b><p class="dd">${PUMPKIN_LORE.paint} When 3 light up, the pumpkins touching the bunch launch with it, each with its own colour and power.</p><p class="dd">${sel.canBuy ? `Unlock it for ${PAINT_UNLOCK.seeds} seeds, then take it into any level.` : 'Beat 5-20, the Twin Tides\u2019 last stand, to unlock it with seeds.'}</p>`;
+  else if (!sel.unlocked) tx.innerHTML = `<b class="dn">??? pumpkin</b><p class="dd">${sel.un === Infinity ? 'Unlocks in a later world.' : `Unlocks at level ${levelFor(sel.un).label}.`}</p>`;   // nothing is revealed before it unlocks (owner)
   else { const a = lvStats(sel.t, sel.L), n = sel.maxed ? null : lvStats(sel.t, sel.L + 1);
     const pips = Array.from({ length:5 }, (_, i) => `<i class="${i < sel.L ? 'on' : ''}"></i>`).join('');
     tx.innerHTML = `<b class="dn">${sel.P.name}, level ${sel.L}${sel.maxed ? ' (max)' : ` <span class="dim">→ ${sel.L + 1}</span>`}</b><div class="pips">${pips}</div><div class="nx">${nxLine('Power', a.power, n && n.power)}${nxLine('Knockback', a.knockback, n && n.knockback)}${nxLine('Special', a.special, n && n.special)}</div>`; }
   const b = document.createElement('button'); b.className = 'btn small';
-  if (!sel.unlocked){ b.textContent = 'Locked'; b.disabled = true; }
+  if (!sel.unlocked && sel.canBuy){ b.innerHTML = `Unlock <span class="seed"></span>${PAINT_UNLOCK.seeds}`; b.disabled = (save.seeds || 0) < PAINT_UNLOCK.seeds; b.setAttribute('aria-label', `Unlock the Paint pumpkin for ${PAINT_UNLOCK.seeds} seeds`); }
+  else if (!sel.unlocked){ b.textContent = 'Locked'; b.disabled = true; }
   else if (sel.maxed){ b.textContent = 'Maxed'; b.disabled = true; }
   else { b.innerHTML = `Level up <span class="${sel.inSeeds ? 'seed' : 'coin'}"></span>${sel.cost.toLocaleString()}`; b.disabled = !sel.afford; b.setAttribute('aria-label', `Level up ${sel.P.name} for ${sel.cost} ${sel.inSeeds ? 'seeds' : 'coins'}`); }
-  b.onclick = () => { if (!sel.afford) return; if (sel.inSeeds) save.seeds -= sel.cost; else save.coins -= sel.cost; save.lv[sel.P.key] = sel.L + 1; persist(); ensureAudio(); SFX.coin(); renderShop(); };
+  if (!sel.unlocked && sel.canBuy) b.onclick = () => { if ((save.seeds || 0) < PAINT_UNLOCK.seeds) return; save.seeds -= PAINT_UNLOCK.seeds; save.paintOwned = true; save.lv.paint = 1; persist(); ensureAudio(); SFX.perk(); renderShop(); };
+  else b.onclick = () => { if (!sel.afford) return; if (sel.inSeeds) save.seeds -= sel.cost; else save.coins -= sel.cost; save.lv[sel.P.key] = sel.L + 1; persist(); ensureAudio(); SFX.coin(); renderShop(); };
   const act = document.createElement('div'); act.className = 'dAct'; act.appendChild(b); tx.appendChild(act); d.appendChild(tx);
 }
 function setShopTab(tab){

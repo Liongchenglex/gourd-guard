@@ -37,6 +37,7 @@ export const PUMPKIN_LORE = {
   pink:'Sweet enough to mend a broken fence with a single thump. Monsters hate the smell.',
   turquoise:'Small, quick and impatient. Two is enough for a throw, half as hard.',
   brown:'A slow grower with a temper. Leave it in the patch and it comes back twice the size.',
+  paint:'Grown in the old painter\u2019s garden, where every bucket was spilled at least once. It never goes anywhere alone.',
   rainbow:'Nobody plants these. They simply appear when a patch has been looked after well.',
 };
 

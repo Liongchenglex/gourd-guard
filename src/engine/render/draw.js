@@ -2,8 +2,8 @@ import { TYPES } from '../../data/monsters.js';
 import { sproutEvery, shoreP, MINE_ARM } from '../game.js';
 import { perkOn } from '../../data/perks.js';
 import { GEAR } from '../../data/shop.js';
-import { PTYPES, RAINBOW, BROWN } from '../../data/pumpkins.js';
-import { emptyCells, findCell, groupCells, heldGid, brownSize } from '../board.js';
+import { PTYPES, RAINBOW, BROWN, PAINT } from '../../data/pumpkins.js';
+import { emptyCells, findCell, groupCells, heldGid, brownSize, paintPull } from '../board.js';
 import { dropHop, castleY } from '../combat.js';
 import { mS, mY, TILE_P } from '../monsters.js';
 import { K, coinTarget, ctx } from './canvas.js';
@@ -76,6 +76,7 @@ export function render(){
   if (G.aim === 'buster') drawAimGraves(t);
   if (G.aim === 'repair') drawAimWalls(t);
   drawGrid(t);
+  drawPaintPull(t);
   drawSproutBar();
   drawHintArrow(t);
   drawCoach(ctx);
@@ -443,6 +444,24 @@ export function drawHoldRing(){
   ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.arc(x, y, CS * 0.44, 0, TAU); ctx.stroke();
   ctx.strokeStyle = f > 0.85 ? '#ff5a4d' : '#ffb04a';
   ctx.beginPath(); ctx.arc(x, y, CS * 0.44, -Math.PI / 2, -Math.PI / 2 + TAU * f); ctx.stroke();
+}
+
+/** Paint (owner, 2026-10-08): a pulsing lilac outline on every pumpkin a lit Paint bunch will pull along. The set is
+ *  recomputed four times a second, not every frame. */
+let pullT = -1, pullCells = [];
+function drawPaintPull(t){
+  if (!G || !G.groups || G.mode === 'demo') return;
+  if (t - pullT > 0.25 || t < pullT){
+    pullT = t; pullCells = [];
+    for (const gid of Object.keys(G.groups)) if (G.groups[gid].color === PAINT) pullCells.push(...paintPull(+gid));
+  }
+  if (!pullCells.length) return;
+  ctx.save(); ctx.globalAlpha = .75 + .25 * Math.sin(t * 7);
+  for (const { cell } of pullCells){ const pos = findCell(cell); if (!pos) continue;
+    rrect(ctx, GX + pos.c * CS + 5, GY + pos.r * CS + 5, CS - 10, CS - 10, 14);
+    ctx.setLineDash([]); ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(40,16,60,.75)'; ctx.stroke();   // a dark edge so the dash reads on the patch
+    ctx.setLineDash([9, 6]); ctx.lineDashOffset = -t * 30; ctx.lineWidth = 4; ctx.strokeStyle = '#e8d8ff'; ctx.stroke(); }
+  ctx.restore();
 }
 
 export function drawHintArrow(t){

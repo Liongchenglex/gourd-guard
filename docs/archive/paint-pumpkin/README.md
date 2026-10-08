@@ -1,4 +1,4 @@
-# Paint pumpkin (archive, 2026-09-27)
+# Paint pumpkin (archive, 2026-09-27; **in the game since 2026-10-08**)
 
 A design for a possible future pumpkin, kept for later use. Nothing here is in the game. It comes from the "echo and paint pumpkin" idea in `monetization.md`.
 
@@ -75,6 +75,6 @@ Rules:
 - **No stealing:** a pumpkin that is part of its own lit bunch is never pulled; it launches with its own bunch (proposed default).
 - Pulled pumpkins fly up their own columns like any launched pumpkin.
 
-**Unlock and prices (proposed, waiting for the owner's confirmation):** available after beating 5-20; unlock 100 seeds; level 1→2 30 seeds, 2→3 50, 3→4 80, 4→5 120 (380 seeds in all).
+**Unlock and prices (confirmed by the owner, 2026-10-08):** available after beating 5-20; unlock 100 seeds; level 1→2 30 seeds, 2→3 50, 3→4 80, 4→5 120 (380 seeds in all).
 
-**Still to decide:** whether it can be taken into every level once unlocked (story replays included) or only endless and nightmare; and its lit face (the archive's Pastel look has no lit face yet beyond the Masterpiece skin's painted one).
+**Decided 2026-10-08:** usable in every level once unlocked; its lit face is a cheeky wink with a sideways glance and a lopsided grin, glowing warm cream so it reads on the lilac rind (`paint` in `src/engine/render/faces.js`). Built in `src/data/pumpkins.js` (`PAINT`, `PAINT_PULL`), `paintPull()` in `src/engine/board.js`, the launch in `launchGroup()` (`src/engine/combat.js`), the outline in `drawPaintPull()` (`src/engine/render/draw.js`), the art in `src/engine/render/paintpumpkin.js`, prices and `PAINT_UNLOCK` in `src/data/economy.js`. The Masterpiece skin is still to build.

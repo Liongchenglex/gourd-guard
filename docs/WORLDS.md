@@ -373,7 +373,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Item | Notes |
 |---|---|
-| Paint pumpkin 💡 (owner, designed 2026-10-08) | Post-game, bought with seeds. **Palette pull**: a lit bunch of 3+ Paint pumpkins also launches pumpkins of any colour touching it, each keeping its own colour and ability (up to 2 / 3 / 4 / 5 / all by level; Paint hit power 1 / 1 / 1.5 / 1.5 / 2). Pulled pumpkins count toward 5+ knockback. Full design: `docs/archive/paint-pumpkin/README.md`. (Replaced the first idea of repainting neighbours.) |
+| Paint pumpkin ✅ (owner, built 2026-10-08) | Post-game, bought with seeds. **Palette pull**: a lit bunch of 3+ Paint pumpkins also launches pumpkins of any colour touching it, each keeping its own colour and ability (up to 2 / 3 / 4 / 5 / all by level; Paint hit power 1 / 1 / 1.5 / 1.5 / 2). Pulled pumpkins count toward 5+ knockback. Full design: `docs/archive/paint-pumpkin/README.md`. (Replaced the first idea of repainting neighbours.) |
 | Echo pumpkin (owner) | A bunch you can launch twice. |
 | Twin pumpkin (owner, confirmed 2026-09-26) | Two colours on one pumpkin, e.g. half red, half blue: a **combination of two pumpkins** that acts as a Rainbow for exactly those two colours. It counts as either colour, so it can bridge two bunches of different colours into one launch. |
 | Gourds (owner, 2026-09-26) | A new family of taller pumpkins on the swipe board. Play style: **break the gourd** to stop enemy-made obstacles on the patch. To define: how a gourd is broken (hold to smash, or a bunch beside it), what enemy obstacles it clears (graves, webs, hex zones, planted blockers), whether it occupies one tall cell or two, and whether it can be launched at all. |
@@ -400,6 +400,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-10-08 | Owner: the Paint pumpkin is in. Post-game: bought for 100 seeds once 5-20 is beaten, usable in every level; levels 2–5 cost 30 / 50 / 80 / 120 seeds. Palette pull ability, lilac look from the archive, and a winking lit face. |
 | 2026-10-08 | Owner: upgrade prices. Fire, Ice, White, Pink, Purple and Turquoise reach level 5 for 5,000 coins (was 50 seeds). Grey, Black, Deep Blue and Brown: level 4 for 5,000 coins (was 50 seeds), level 5 for 50 seeds (was 100). |
 | 2026-10-08 | Owner: 3-20 back to its numbers before the tuning pass (it felt easy with 4 s sprouts). Firework carry limit stays at 5. |
 | 2026-10-08 | Owner: Firework hits the 6 monsters nearest the walls (was 8). |

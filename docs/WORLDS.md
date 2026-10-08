@@ -373,7 +373,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Item | Notes |
 |---|---|
-| Paint pumpkin 💡 (owner) | When it lights up, it converts the pumpkins touching it to its colour, turning messy boards into big bunches. |
+| Paint pumpkin 💡 (owner, designed 2026-10-08) | Post-game, bought with seeds. **Palette pull**: a lit bunch of 3+ Paint pumpkins also launches pumpkins of any colour touching it, each keeping its own colour and ability (up to 2 / 3 / 4 / 5 / all by level; Paint hit power 1 / 1 / 1.5 / 1.5 / 2). Pulled pumpkins count toward 5+ knockback. Full design: `docs/archive/paint-pumpkin/README.md`. (Replaced the first idea of repainting neighbours.) |
 | Echo pumpkin (owner) | A bunch you can launch twice. |
 | Twin pumpkin (owner, confirmed 2026-09-26) | Two colours on one pumpkin, e.g. half red, half blue: a **combination of two pumpkins** that acts as a Rainbow for exactly those two colours. It counts as either colour, so it can bridge two bunches of different colours into one launch. |
 | Gourds (owner, 2026-09-26) | A new family of taller pumpkins on the swipe board. Play style: **break the gourd** to stop enemy-made obstacles on the patch. To define: how a gourd is broken (hold to smash, or a bunch beside it), what enemy obstacles it clears (graves, webs, hex zones, planted blockers), whether it occupies one tall cell or two, and whether it can be launched at all. |

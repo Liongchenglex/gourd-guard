@@ -53,3 +53,28 @@ The paintbrush stem alone did not feel like a skin, because a stem is too small 
 - **Stem:** the paintbrush with black bristles, a pale rim and gloss so it shows against the night, and a drip (`brushStem()` with `tip`).
 - **Trail:** a wide painted ribbon swaying behind it, with bristle marks, instead of drops (`ribbon()`).
 A matching launch accent would be a wet brush swish.
+
+## Ability, levels and unlock (owner, 2026-10-08)
+
+The Paint pumpkin is a **post-game pumpkin bought with seeds**, meant to give seed purchases and grinding a goal after the story. It is not needed for the story.
+
+**Ability: Palette pull.** When 3 or more Paint pumpkins light up as a bunch, pumpkins of **any colour** touching the bunch are pulled in and launch with it in one flick. Each pulled pumpkin keeps its own colour, level and ability, so a bunch of 3 Paint plus a Deep Blue and a Black hits with lilac, chains lightning and explodes. (The owner chose this over repainting neighbours, which would destroy pumpkins the player wanted to keep.)
+
+| Level | Pumpkins pulled | Paint pumpkin's hit power |
+|---|---|---|
+| 1 | up to 2 | 1 |
+| 2 | up to 3 | 1 |
+| 3 | up to 4 | 1.5 |
+| 4 | up to 5 | 1.5 |
+| 5 | every touching pumpkin | 2 |
+
+Rules:
+- **Pulled pumpkins count toward the bunch size**, so a mixed bunch of 5 or more gets the usual guaranteed knockback (owner: it is a seed unlock, so it can be strong).
+- **Which neighbours, when there are more than the cap:** the ones in the columns under the most threat first, the same scoring the game's hint uses (proposed default).
+- **Preview:** while the bunch is lit, the pumpkins it will pull get a lilac outline, so the player can slide one away first (proposed default).
+- **No stealing:** a pumpkin that is part of its own lit bunch is never pulled; it launches with its own bunch (proposed default).
+- Pulled pumpkins fly up their own columns like any launched pumpkin.
+
+**Unlock and prices (proposed, waiting for the owner's confirmation):** available after beating 5-20; unlock 100 seeds; level 1→2 30 seeds, 2→3 50, 3→4 80, 4→5 120 (380 seeds in all).
+
+**Still to decide:** whether it can be taken into every level once unlocked (story replays included) or only endless and nightmare; and its lit face (the archive's Pastel look has no lit face yet beyond the Masterpiece skin's painted one).

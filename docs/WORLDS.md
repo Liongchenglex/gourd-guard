@@ -400,6 +400,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-10-08 | Owner: 3-20 back to its numbers before the tuning pass (it felt easy with 4 s sprouts). Firework carry limit stays at 5. |
 | 2026-10-08 | Owner: Firework hits the 6 monsters nearest the walls (was 8). |
 | 2026-10-07 | Owner: chest odds. Treasure chest prizes: set of 2 tools 20%, set of 3 tools 20%, 1 seed 15%, coins 45% (no more sets of 5). Boss chest prizes: boss item, 1–3 seeds, set of 5 tools, coins, 25% each. Reference: `docs/LOOT.md`. |
 | 2026-10-07 | Owner: Firework hits only the 8 monsters nearest the walls for 3, and bosses are immune (it used to hit every monster, bosses included). Sprouts every 4 s, 3 s with Eager sprouts (was 5 s and 4 s). Shop button on the pick-pumpkin screen (tester feedback). The 1-1 coach also shows press-and-hold to crush a pumpkin. Reset progress in Settings (from the shelf, two taps, keeps volumes). |

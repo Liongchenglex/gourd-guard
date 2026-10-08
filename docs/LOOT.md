@@ -50,4 +50,16 @@ Where it comes from: every level-20 boss.
 
 ## Ordinary kill rewards (not loot boxes)
 
-Every non-boss kill rolls exactly one: a dropped tool (weapon) **10%**, dropped pumpkins **30%**, coins **60%** (`src/data/rules.js`).
+Every non-boss kill rolls exactly one reward (`KILL_REWARD` in `src/data/rules.js`, tools in `src/engine/combat.js`):
+
+| Reward | Chance |
+|---|---|
+| A tool | 10% |
+| Dropped pumpkins | 30% |
+| Coins | 60% |
+
+How the tool drop works:
+- The tool is picked at random, each with an equal chance, from the tools **introduced so far that you are not already carrying the maximum of** (5). With 4 tools available, each is 2.5% per kill.
+- If every introduced tool is already full, the tool roll pays coins instead.
+- The tool lands on the field and must be tapped (or swept with a drag) within **7 seconds**, or it fades.
+- Bosses and the Loot Sack do not roll kill rewards; they have their own drops above.

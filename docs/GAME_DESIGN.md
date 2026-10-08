@@ -398,7 +398,7 @@ Bot runs, `--repeats 3`, expected profile. The bot fixed in this pass: it counte
 | 3-16 | 50% | 1/3 | 1/3 | 33 → 28, gap 2.44 → 2.75 s, speed ×1.088 → ×1.04 |
 | 3-17 (mirrors only) | 50% | 0/3 | 2/3 | 34 → 27, gap 2.4 → 2.75 s, speed ×1.108 → ×1.05 |
 | 3-19 | 50% | 0/3 | 0/3 | 27 → 14, gap 2.76 → 3.5 s, speed ×1.148 → ×0.95 |
-| 3-20 boss | 40% | 0/3 | 1/3 | 39 → 28, gap 2.4 → 2.65 s, speed ×1.168 → ×1.12, bossGap 2.0 |
+| 3-20 boss | 40% | 0/3 | 1/3 | 39 → 28, gap 2.4 → 2.65 s, speed ×1.168 → ×1.12, bossGap 2.0 — **reverted 2026-10-08** (owner: it felt quite easy once sprouts went to 4 s; back to 39, 2.4 s, ×1.168, no bossGap) |
 | 4-10 boss | 75% | 0/3 | 0/3 | 18 → 15, speed ×0.928 → ×0.89, bossGap 2.2, boss health ×0.7 |
 | 5-10 boss | 75% | 0/3 | 1/3 | 23 → 15, speed ×0.948 → ×0.91, bossGap 2.2, boss health ×0.6 |
 | 5-15 (all Sodden Mummies) | 65% | 0/3 | 1/3 | 22 → 12, gap 3.4 → 4.2 s, speed ×1.048 → ×0.92 |

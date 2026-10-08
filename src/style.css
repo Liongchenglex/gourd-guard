@@ -631,3 +631,31 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .enRules{ margin:0; padding-left:calc(var(--u)*16px); display:grid; gap:calc(var(--u)*6px); font-size:calc(var(--u)*12.5px); line-height:1.4; color:#2a1d40; text-align:left; }
 .enRules b{ color:#3a1f78; }
 .tPage #bEnGo{ margin-top:auto; width:100%; }
+
+/* ---------- Pick-pumpkin screen, scalable layout (owner, 2026-10-09) ----------
+   Pinned header (detail + your team), a scrolling middle split into sections (Pumpkins now; Gourds later), pinned buttons. */
+#ovLoadout .loCard{ display:flex; flex-direction:column; overflow:hidden; padding:calc(var(--u)*16px) calc(var(--u)*16px) calc(var(--u)*14px); gap:calc(var(--u)*8px); }
+#ovLoadout .loHead{ flex:none; display:flex; flex-direction:column; gap:calc(var(--u)*8px); }
+#ovLoadout .loHead h2{ margin:0; font-size:calc(var(--u)*34px); }
+#ovLoadout #loCount{ margin:0; font-size:calc(var(--u)*13.5px); color:var(--muted); }
+#ovLoadout .detail{ padding:calc(var(--u)*10px); }
+#ovLoadout .detail canvas{ width:calc(var(--u)*60px); height:calc(var(--u)*60px); }
+#ovLoadout .detail p{ font-size:calc(var(--u)*12.5px); }
+#ovLoadout .why{ margin:0; }
+#ovLoadout .loTeam{ display:flex; justify-content:center; gap:calc(var(--u)*8px); }
+#ovLoadout .slot{ position:relative; width:calc(var(--u)*54px); height:calc(var(--u)*54px); min-width:44px; min-height:44px; padding:0; border-radius:calc(var(--u)*14px);
+  border:2px solid var(--candle); background:rgba(255,193,74,.14); cursor:pointer; display:grid; place-items:center; }
+#ovLoadout .slot canvas{ width:86%; height:86%; }
+#ovLoadout .slot.empty{ border:2px dashed rgba(255,193,74,.35); background:rgba(255,255,255,.03); cursor:default; }
+#ovLoadout .slot.must{ border-style:dashed; }
+#ovLoadout .slot.must::after{ content:'🔒'; position:absolute; right:calc(var(--u)*-6px); top:calc(var(--u)*-8px); font-size:calc(var(--u)*13px); filter:drop-shadow(0 1px 2px #000); }
+#ovLoadout .loScroll{ flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; margin:0 calc(var(--u)*-6px); padding:0 calc(var(--u)*6px) calc(var(--u)*4px);
+  border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+#ovLoadout .loSec h3{ margin:calc(var(--u)*10px) 0 calc(var(--u)*6px); text-align:left; font-size:calc(var(--u)*12px); font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--candle); }
+#ovLoadout .picks{ grid-template-columns:repeat(4, 1fr); gap:calc(var(--u)*8px); margin:0; }
+#ovLoadout .pick{ padding:calc(var(--u)*8px) calc(var(--u)*2px) calc(var(--u)*6px); border-radius:calc(var(--u)*14px); display:flex; flex-direction:column; align-items:center; gap:calc(var(--u)*2px); min-height:44px; }
+#ovLoadout .pick canvas{ width:calc(var(--u)*44px); height:calc(var(--u)*44px); }
+#ovLoadout .pick b{ font-size:calc(var(--u)*12.5px); line-height:1.1; }
+#ovLoadout .pick small{ display:none; }   /* the detail card above explains the pumpkin you tap */
+#ovLoadout .pick .lv{ left:calc(var(--u)*4px); top:calc(var(--u)*4px); font-size:calc(var(--u)*9.5px); padding:0 calc(var(--u)*5px); }
+#ovLoadout .loFoot{ flex:none; margin:0; }

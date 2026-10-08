@@ -94,14 +94,19 @@
   </div>
 
   <div class="ov" id="ovLoadout">
-    <div class="card">
-      <h2 id="loTitle">Pick 5 pumpkins</h2>
-      <p id="loCount"></p>
-      <div class="detail" id="loDetail"></div>
-      <div class="picks" id="picks"></div>
-      <p id="loWhy" class="why" hidden></p>
-      <!-- Future release (owner): a "Gourds" section goes here, a second pick row for playstyle gourds. Powers (the level-20 trophies) live on the level preview card. -->
-      <div class="row">
+    <div class="card loCard">
+      <div class="loHead">
+        <h2 id="loTitle">Pick 5 pumpkins</h2>
+        <p id="loCount"></p>
+        <div class="detail" id="loDetail"></div>
+        <div class="loTeam" id="loTeam" aria-label="Your team"></div>
+        <p id="loWhy" class="why" hidden></p>
+      </div>
+      <div class="loScroll" id="loScroll">
+        <section class="loSec"><h3>Pumpkins</h3><div class="picks" id="picks"></div></section>
+        <!-- Future release (owner): a "Gourds" section goes here, as a second <section class="loSec"> with its own pick grid. Powers (the level-20 trophies) live on the level preview card. -->
+      </div>
+      <div class="row loFoot">
         <button class="btn small alt" id="bLoBack">Back</button>
         <button class="btn small alt" id="bLoShop">Shop</button>
         <button class="btn small" id="bLoGo">Start night</button>

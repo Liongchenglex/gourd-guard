@@ -593,7 +593,23 @@ export function syncLoadout(){
   $('#bLoGo').disabled = n < min;
   const why = loadoutWhy.filter(w => w.why !== 'New this level').map(w => `${PTYPES[w.t].name} is locked in: ${w.why.toLowerCase()}.`).join(' ');
   $('#loWhy').textContent = why; $('#loWhy').hidden = !why;
+  renderTeam(min);
   renderDetail();
+}
+/** "Your team" (owner, 2026-10-09): one slot per pick, in the order picked. Tap a slot to drop that pumpkin; pumpkins this
+ *  night requires show a lock and stay. Empty slots are dashed. */
+function renderTeam(min){
+  const box = $('#loTeam'); box.innerHTML = '';
+  const picks = [...loadoutSel];
+  for (let i = 0; i < min; i++){
+    const t = picks[i], b = document.createElement('button'); b.className = 'slot' + (t == null ? ' empty' : '');
+    if (t == null){ b.setAttribute('aria-label', 'Empty slot'); b.disabled = true; box.appendChild(b); continue; }
+    const must = loadoutMust.includes(t); if (must) b.classList.add('must');
+    b.appendChild(pumpkinIcon(t, true, 64));
+    b.setAttribute('aria-label', must ? `${PTYPES[t].name}, required tonight` : `${PTYPES[t].name}, tap to remove`);
+    b.onclick = () => { loadoutFocus = t; if (must){ SFX.ui('locked'); renderDetail(); return; } loadoutSel.delete(t); SFX.ui('unpick'); syncLoadout(); };
+    box.appendChild(b);
+  }
 }
 
 export function openShop(ret){ shopReturn = ret || 'levels'; renderShop(); setState('shop'); }

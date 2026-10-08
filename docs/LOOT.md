@@ -63,3 +63,4 @@ How the tool drop works:
 - If every introduced tool is already full, the tool roll pays coins instead.
 - The tool lands on the field and must be tapped (or swept with a drag) within **7 seconds**, or it fades.
 - Bosses and the Loot Sack do not roll kill rewards; they have their own drops above.
+- A kill made by a **Yellow** pumpkin skips the roll: it always pays coins, multiplied by Yellow's level bonus (×2 to ×4), so Yellow kills never drop tools or pumpkins.

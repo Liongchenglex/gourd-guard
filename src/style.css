@@ -659,3 +659,8 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 #ovLoadout .pick small{ display:none; }   /* the detail card above explains the pumpkin you tap */
 #ovLoadout .pick .lv{ left:calc(var(--u)*4px); top:calc(var(--u)*4px); font-size:calc(var(--u)*9.5px); padding:0 calc(var(--u)*5px); }
 #ovLoadout .loFoot{ flex:none; margin:0; }
+
+/* Powers in the Endless Night book (owner, 2026-10-09): the level card's powers row, on the dark ground under the spread */
+.enPowers{ width:100%; background:var(--panel); border:1px solid var(--line); border-radius:calc(var(--u)*16px); padding:calc(var(--u)*8px) calc(var(--u)*10px); }
+.enPowers h4{ margin:0 0 calc(var(--u)*4px); font-size:calc(var(--u)*12px); font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--candle); }
+.enPowers .why{ margin:calc(var(--u)*4px) 0 0; }

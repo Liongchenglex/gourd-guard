@@ -394,6 +394,7 @@ function endlessTome(){
 /** The open Endless Night book: lore and records on the left, how it works and the start button on the right. */
 export function openEndless(){
   const art = tomeArt(), cv = $('#enArt'); cv.width = art.width; cv.height = art.height; cv.getContext('2d').drawImage(art, 0, 0);
+  powerPick = null; $('#enPowerInfo').hidden = true; renderPowers('#enPowers', '#enPowerInfo');   // pick powers for the endless night too (owner)
   $('#enRec').innerHTML = save.bestHour ? `<div><span>Best hour</span><b>${save.bestHour}</b></div><div><span>Best score</span><b>${(save.best || 0).toLocaleString()}</b></div>` : '<p class="dim">No nights yet. Your best hour and score will be kept here.</p>';
   setState('endless');
 }
@@ -556,8 +557,10 @@ function renderDetail(){
 /** Powers (the level-20 trophies) on the level preview card (owner, 2026-09-27): gold when on, dim when off, locked until that world is complete. Tap one to read its power and switch it. */
 let powerPick = null;
 /** Powers on the level card: won ones switch on and off; ones not won yet can be rented for this night with coins (owner, 2026-09-27). */
-export function renderPowers(){
-  const box = $('#pvPowers'), info = $('#pvPowerInfo'); if (!box) return;
+/** The level-20 powers row: on the level card, and in the Endless Night book (owner, 2026-10-09). */
+export function renderPowers(boxSel = '#pvPowers', infoSel = '#pvPowerInfo'){
+  const box = $(boxSel), info = $(infoSel); if (!box) return;
+  const again = () => renderPowers(boxSel, infoSel);
   box.innerHTML = '';
   for (const p of PERKS){
     const earned = perkEarned(p.key), isRented = rented.has(p.key), on = perkOn(p.key), wname = WORLD_NAMES[p.world - 1];
@@ -575,10 +578,10 @@ export function renderPowers(){
         const t = document.createElement('span'); t.textContent = `${p.name}: ${p.desc} Complete ${wname} to keep it, or rent it for this night only.`; info.appendChild(t);
         const rb = document.createElement('button'); rb.className = 'btn small rentBtn'; rb.innerHTML = `Rent for this night <span class="coin"></span>${RENT_COST}`; rb.disabled = save.coins < RENT_COST;
         if (save.coins < RENT_COST){ const nt = document.createElement('small'); nt.textContent = ` You need ${RENT_COST - save.coins} more coins.`; t.appendChild(nt); }
-        rb.onclick = () => { if (save.coins < RENT_COST) return; save.coins -= RENT_COST; persist(); rented.add(p.key); SFX.coin(); info.textContent = `${p.name} is rented for this night: ${p.desc}`; renderPowers(); };
+        rb.onclick = () => { if (save.coins < RENT_COST) return; save.coins -= RENT_COST; persist(); rented.add(p.key); SFX.coin(); info.textContent = `${p.name} is rented for this night: ${p.desc}`; again(); };
         info.appendChild(rb);
       }
-      info.hidden = false; renderPowers();
+      info.hidden = false; again();
     };
     box.appendChild(b);
   }
@@ -987,7 +990,7 @@ export function wireButtons(){
 
   $('#bResume').onclick = () => setState('play');
 
-  $('#bRestart').onclick = () => { save.coins += G.coins; persist(); if (G.mode === 'story') beginNight(G.n); else startGame('endless', 1, G.loadout); };   // restart goes through the pumpkin picker (owner)
+  $('#bRestart').onclick = () => { save.coins += G.coins; persist(); if (G.mode === 'story') beginNight(G.n); else { if (G.score > save.best) save.best = G.score; persist(); musicStop(); G.over = true; openEndless(); } };   // endless: back to its book to re-pick powers and team (owner, 2026-10-09)   // restart goes through the pumpkin picker (owner)
 
   $('#bQuit').onclick = () => { musicStop(); save.coins += G.coins; if (G.mode === 'endless' && G.score > save.best) save.best = G.score; persist();
     if (G.mode === 'story'){ curBook = G.def.worldNo - 1; openLevels(); } else setState('title'); };   // owner: quit goes back to the level select (the night's book), not the title menu

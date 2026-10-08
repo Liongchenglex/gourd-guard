@@ -3,6 +3,8 @@
 // FRENZY_HOUR the spawn rate goes crazy. Every number here is a first guess for the owner to try and tune.
 
 export const HOUR_SECONDS = 45;   // one milestone
+/** The Endless Night tome opens once this story night is beaten: 5-10, the Twin Tides' first fight (owner, 2026-10-09; was 5-20). */
+export const UNLOCK_NIGHT = 90, UNLOCK_LABEL = '5-10';
 
 /** What joins at each hour. `theme` is the world whose scenery the field switches to (story order 1-5). */
 export const TIERS = [

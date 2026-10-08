@@ -32,6 +32,7 @@ import { setHudSig, updateHud } from './hud.js';
 import { QUEST_START, questsFor, questText, questBits, countBits, settleQuests, questLive, isPair } from '../data/quests.js';
 import { sceneCrop, sceneFull, nightmareKey } from '../engine/render/nightmare/scenes.js';
 import { coachEnd } from '../engine/coach.js';
+import * as EN from '../data/endless.js';
 
 export function showResult(win){
   const g = G, box = $('#rBtns'); box.innerHTML = '';
@@ -350,8 +351,8 @@ export function openLevels(){
   $('#shelfView').hidden = false; $('#bookView').hidden = true;
   setState('levels');
 }
-/** Endless Night as a storybook (owner, 2026-10-08): a wide tome on its own shelf, chained until 5-20 is beaten. */
-export const endlessOpen = () => (save.stars[LEVELS] || 0) > 0 || !!save.testUnlock;
+/** Endless Night as a storybook (owner, 2026-10-08): a wide tome on its own shelf, chained until 5-10 is beaten (owner, 2026-10-09; was 5-20). */
+export const endlessOpen = () => (save.stars[EN.UNLOCK_NIGHT] || 0) > 0 || !!save.testUnlock;
 let tomeCache = null;
 /** The tome's cover art: a night sky and a moon that is a clock stopped at midnight. Drawn once and cached. */
 function tomeArt(){
@@ -380,8 +381,8 @@ function endlessTome(){
   const b = document.createElement('button'); b.className = 'tome' + (open && !fresh ? '' : ' locked');
   const cv = document.createElement('canvas'), art = tomeArt(); cv.width = art.width; cv.height = art.height; cv.getContext('2d').drawImage(art, 0, 0); b.appendChild(cv);
   const nm = document.createElement('span'); nm.className = 'bkName'; nm.textContent = 'Endless Night'; b.appendChild(nm);
-  const pr = document.createElement('span'); pr.className = 'bkProg'; pr.textContent = !open ? 'Beat 5-20 to open' : save.bestHour ? `Best: hour ${save.bestHour} · ${(save.best || 0).toLocaleString()} points` : 'The night that never ends'; b.appendChild(pr);
-  b.setAttribute('aria-label', open ? 'Endless Night' : 'Endless Night, locked: beat 5-20 to open');
+  const pr = document.createElement('span'); pr.className = 'bkProg'; pr.textContent = !open ? `Beat ${EN.UNLOCK_LABEL} to open` : save.bestHour ? `Best: hour ${save.bestHour} · ${(save.best || 0).toLocaleString()} points` : 'The night that never ends'; b.appendChild(pr);
+  b.setAttribute('aria-label', open ? 'Endless Night' : `Endless Night, locked: beat ${EN.UNLOCK_LABEL} to open`);
   if (fresh){
     save.seenEndlessBook = true; persist();
     setTimeout(() => { b.classList.add('unlocking'); b.scrollIntoView({ block:'center', behavior:'smooth' }); SFX.perk(); }, 450);

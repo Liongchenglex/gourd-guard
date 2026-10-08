@@ -48,12 +48,13 @@ export function damage(m, amt, color, small){
     m.flash = 0.1; addFloat('Blocked', m.x, mY(m) - m.r * mS(m) - 14, '#d8d8e0', 15, 0.6); SFX.monsterHit('knight', true);
     return;
   }
-  if (m.colourLock != null && m.lastHit >= 0 && m.lastHit !== m.colourLock){   // chameleon: wrong colour
+  const alt = m.lastHitAlt != null ? m.lastHitAlt : -1; m.lastHitAlt = -1;   // a Paint pumpkin that inherited a power counts as both colours (owner, 2026-10-09)
+  if (m.colourLock != null && m.lastHit >= 0 && m.lastHit !== m.colourLock && alt !== m.colourLock){   // chameleon: wrong colour
     G.q.wrong++;
     m.flash = 0.1; addFloat('Wrong colour', m.x, mY(m) - m.r * mS(m) - 14, PTYPES[m.colourLock].light, 15, 0.7); SFX.monsterHit(m.type, true);
     return;
   }
-  if (m.colourImmune != null && m.lastHit === m.colourImmune){   // reverse chameleon: its own colour
+  if (m.colourImmune != null && (m.lastHit === m.colourImmune || alt === m.colourImmune)){   // reverse chameleon: its own colour (either of Paint's two)
     G.q.wrong++;
     m.flash = 0.1; addFloat('Immune', m.x, mY(m) - m.r * mS(m) - 14, PTYPES[m.colourImmune].light, 15, 0.7); SFX.monsterHit(m.type, true);
     return;
@@ -234,7 +235,7 @@ function hitMonsterNow(pr, m){
     addFloat('Reflected!', m.x, y - m.r - 24, '#e8f4ff', 16, 0.9); ring(m.x, y, 34, 'rgba(232,244,255,.9)'); SFX.monsterAct('mirror', 'reflect');
     return;
   }
-  m.lastHit = pr.type; m.lastHitLv = pr.lv;
+  m.lastHit = pr.type; m.lastHitLv = pr.lv; m.lastHitAlt = pr.vis === PAINT && pr.type !== PAINT ? PAINT : -1;
   const hitPower = pumpkinPower(pr);
   damage(m, hitPower, PTYPES[pr.type].spark);
   if (pr.type === 5 && pr.grp && !pr.grp.spawned){   // Purple: every launched bunch spawns one pumpkin on its first hit

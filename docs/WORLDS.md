@@ -400,6 +400,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-10-09 | Owner: an inheriting Paint pumpkin counts as both Paint and the inherited colour for chameleon colour locks and immunities. |
 | 2026-10-09 | Owner: powers can be picked or rented for Endless Night in its book; Restart in endless returns to the book. |
 | 2026-10-09 | Owner: 5-20 very slightly easier: 35 monsters (was 38), spawn gap 2.55 s (was 2.4), bursts 15% (was 18%). |
 | 2026-10-09 | Owner: the Endless Night tome opens after 5-10 (was 5-20). |

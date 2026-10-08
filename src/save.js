@@ -1,8 +1,6 @@
 import { SPAWN_STEPS } from './data/patterns.js';
 import { NTYPES, PTYPES } from './data/pumpkins.js';
 import { clamp } from './engine/util.js';
-import { GEAR } from './data/shop.js';
-import { TOOL_OVERFLOW_COINS } from './data/economy.js';
 
 export const lvOf = t => clamp(save.lv[PTYPES[t].key] || 1, 1, 5);
 
@@ -34,8 +32,6 @@ if (!save.perksOff || typeof save.perksOff !== 'object') save.perksOff = {};
 if (typeof save.buster !== 'number') save.buster = 0;
 
 for (const k of ['lantern', 'mine', 'bomb', 'scarecrow']) if (typeof save[k] !== 'number') save[k] = 0;
-// a tool over its carry limit (the Firework went from 5 to 3, owner 2026-10-08) is trimmed and paid out like a chest overflow
-for (const g of GEAR) if (g.consumable && g.max && save[g.key] > g.max){ save.coins = (save.coins || 0) + (save[g.key] - g.max) * TOOL_OVERFLOW_COINS; save[g.key] = g.max; }
 
 // Wardrobe (owner, 2026-09-27): owned costume and skin keys, the worn costume, and the skin worn per pumpkin type index
 if (!save.wardrobe || typeof save.wardrobe !== 'object') save.wardrobe = { owned:[], costume:null, skins:{} };

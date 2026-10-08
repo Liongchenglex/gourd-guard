@@ -32,7 +32,7 @@ Where it comes from: every level-20 boss.
 
 ## What the prizes mean
 
-- **Tool set**: that many tools, each picked at random from the tools introduced so far. A tool already at its carry limit (5 for most tools, 3 for the Firework) pays **100 coins** instead.
+- **Tool set**: that many tools, each picked at random from the tools introduced so far. A tool already at its carry limit (5) pays **100 coins** instead.
 - **Boss item**: collect **30** of one boss's item to trade for that boss's costume. Boss items are never sold for coins; one costs 10 seeds in the shop.
 - **Fallbacks**: if no tools have been introduced yet, a tool prize becomes coins. If a chest has no boss to take an item from, a boss-item prize becomes coins.
 - Chests are saved the moment they are picked up and opened from the result card, the shelf or the Seeds tab. One ad rerolls a chest once.

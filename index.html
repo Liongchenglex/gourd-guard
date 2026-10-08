@@ -33,7 +33,6 @@
     <p class="tag">Slide the pumpkins. Bunch them up. Hold the walls.</p>
     <div class="stack titleStack">
       <button class="btn" id="bStory">Play story</button>
-      <button class="btn alt" id="bEndless">Endless night</button>
       <div class="best" id="bestTxt"></div>
       <div class="row" style="margin-top:0">
         <button class="link" id="bHelpT">How to play</button>
@@ -238,6 +237,36 @@
       <div class="chestLoot" id="chLoot"></div>
       <p class="dim" id="chNote"></p>
       <div class="row" id="chBtns"></div>
+    </div>
+  </div>
+
+  <div class="ov" id="ovEndless">
+    <div class="library">
+      <div class="spread tomeSpread">
+        <div class="pages">
+          <div class="page tPage">
+            <canvas class="enArt" id="enArt" aria-hidden="true"></canvas>
+            <h3>Endless Night</h3>
+            <p class="lore">You saved every world, but some nights refuse to end. The clock stops at midnight and the monsters of all five books come at once, hour after hour, faster every time. How long can your walls hold?</p>
+            <div class="enRec" id="enRec"></div>
+          </div>
+          <div class="page tPage">
+            <h4>How the night works</h4>
+            <ul class="enRules">
+              <li><b>Every 45 seconds is an hour.</b> Each hour brings the next world's monsters.</li>
+              <li><b>Bosses</b> rise every second hour, and each has a 50% chance to drop 1–3 seeds.</li>
+              <li><b>Loot Sacks</b> come on the other hours. Knock them down for chests, tools and seeds.</li>
+              <li><b>From hour 9 the frenzy begins:</b> monsters come more than twice as fast.</li>
+              <li>The night ends when a wall falls. Score points for every monster and every hour.</li>
+            </ul>
+            <button class="btn" id="bEnGo">Begin the night</button>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn small alt" id="bEnBack">Back to shelf</button>
+        <button class="btn small" id="bEnShop">Shop</button>
+      </div>
     </div>
   </div>
 

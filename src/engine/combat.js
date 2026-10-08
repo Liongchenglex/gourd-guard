@@ -7,7 +7,7 @@ import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS, walls, FENCE_Y } 
 import { TAU, clamp, fmt, rnd } from './util.js';
 import { lvOf, save, persist } from '../save.js';
 import { KILL_REWARD } from '../data/rules.js';
-import { SACK, BOSS_SEED, CHEST_KILL_CHANCE } from '../data/economy.js';
+import { SACK, BOSS_SEED, ENDLESS_BOSS_SEED, CHEST_KILL_CHANCE } from '../data/economy.js';
 import { addChest, addSeeds, grant, toolSet } from './loot.js';
 import { GEAR } from '../data/shop.js';
 import { toolsForNight, highestOpen } from '../data/worlds/index.js';
@@ -109,7 +109,7 @@ const CHEST_LIFE = 10;
 function dropChest(m, y){ G.drops.push({ kind:'chest', x:clamp(m.x, 30, W - 30), y:clamp(y, FIELD_TOP + 24, FIELD_BOT - 34), t:0, life:CHEST_LIFE, ph:Math.random() * TAU, dead:false }); }
 /** Monetization loot (owner's monetization.md): the rare chest, boss seeds and chests, and the Loot Sack's prize. */
 function lootOnKill(m, reward, y){
-  if (G.mode !== 'story' && reward !== 'sack') return;   // endless: only its hourly Loot Sacks give loot
+  if (G.mode !== 'story' && reward !== 'sack' && reward !== 'boss') return;   // endless: only its Loot Sacks and bosses give loot
   const pop = (kind, text, col) => { addFloat(text, m.x, y - m.r - 44, col, 19, 1.5); if (G.vfx) G.vfx.push({ kind:'loot', item:kind, x:m.x, y:y - 10, t:0, dur:1.4 }); };
   if (reward === 'sack'){
     const r = Math.random(), D = SACK.drop;
@@ -121,7 +121,8 @@ function lootOnKill(m, reward, y){
     return;
   }
   if (reward === 'boss'){
-    if (Math.random() < BOSS_SEED.chance){ const n = BOSS_SEED.min + Math.floor(Math.random() * (BOSS_SEED.max - BOSS_SEED.min + 1)); addSeeds(n); pop('seed', `+${n} seed${n > 1 ? 's' : ''}!`, '#fff3c8'); }
+    const BS = G.mode === 'endless' ? ENDLESS_BOSS_SEED : BOSS_SEED;   // endless bosses: 50% (owner)
+    if (Math.random() < BS.chance){ const n = BS.min + Math.floor(Math.random() * (BS.max - BS.min + 1)); addSeeds(n); pop('seed', `+${n} seed${n > 1 ? 's' : ''}!`, '#fff3c8'); }
     return;   // the boss chest is given once the boss is truly down (see kill)
   }
   // normal nights only: boss nights give their own chest (owner)

@@ -43,6 +43,7 @@ export const TOOL_SET = 5;                // a tool set is 5 random introduced t
 export const TOOL_OVERFLOW_COINS = 100;   // a tool past its carry limit pays this instead (default)
 export const CHEST_KILL_CHANCE = 0.01;    // a kill on a normal (non-boss) night drops a treasure chest (at most one per night, default)
 export const BOSS_SEED = { chance:0.05, min:1, max:3 };   // any boss kill
+export const ENDLESS_BOSS_SEED = { chance:0.5, min:1, max:3 };   // a boss beaten in Endless Night (owner, 2026-10-08)
 
 /** Boss items: collect BOSS_ITEMS_FOR_COSTUME of one boss's item to trade for its costume. */
 export const BOSS_ITEMS_FOR_COSTUME = 30;

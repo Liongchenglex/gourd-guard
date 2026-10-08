@@ -596,3 +596,38 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .link.danger{ color:#ff8a7a; min-height:calc(var(--u)*44px); }
 .resetAsk p{ margin:0 0 calc(var(--u)*10px); font-size:calc(var(--u)*14px); color:var(--ink); line-height:1.4; }
 .btn.danger{ background:linear-gradient(#e0533f, #b8321f); color:#fff; box-shadow:0 calc(var(--u)*4px) 0 #6e1a10; }
+
+/* ---------- Endless Night tome (owner, 2026-10-08): a wide book on its own shelf, and its open spread ---------- */
+.tomeRow{ grid-template-columns:1fr; padding-top:calc(var(--u)*4px); }
+.tome{ position:relative; z-index:1; border:none; padding:calc(var(--u)*8px) calc(var(--u)*10px) calc(var(--u)*10px); cursor:pointer; font:inherit; color:var(--ink); text-align:center;
+  display:flex; flex-direction:column; align-items:center; gap:calc(var(--u)*3px); border-radius:calc(var(--u)*6px) calc(var(--u)*12px) calc(var(--u)*12px) calc(var(--u)*6px);
+  background:linear-gradient(90deg, #120a2a 0 calc(var(--u)*14px), #2a1a52 calc(var(--u)*14px) calc(var(--u)*17px), #1b1238 calc(var(--u)*17px));
+  box-shadow:inset 0 0 0 calc(var(--u)*2px) rgba(200,180,255,.35), inset calc(var(--u)*-8px) 0 calc(var(--u)*14px) rgba(0,0,0,.45), 0 calc(var(--u)*6px) calc(var(--u)*10px) rgba(0,0,0,.55); min-height:44px; }
+.tome:active{ transform:translateY(calc(var(--u)*2px)); }
+.tome canvas{ width:100%; aspect-ratio:13/5; display:block; border-radius:calc(var(--u)*6px); border:calc(var(--u)*3px) solid rgba(214,196,255,.55); box-shadow:0 calc(var(--u)*2px) calc(var(--u)*6px) rgba(0,0,0,.5); }
+.tome .bkName{ font-family:'Creepster','Chiller',fantasy,cursive; font-size:calc(var(--u)*22px); line-height:1; color:#e6dcff; text-shadow:0 0 calc(var(--u)*10px) rgba(170,140,255,.6), 0 1px 2px rgba(0,0,0,.7); letter-spacing:1px; margin-top:calc(var(--u)*3px); }
+.tome .bkProg{ font-size:calc(var(--u)*12px); color:#cbb8ff; font-weight:600; text-shadow:0 1px 2px #000; }
+.tome.locked{ filter:saturate(.35) brightness(.7); cursor:default; }
+.tome.locked::before{ content:''; position:absolute; inset:0; border-radius:inherit; background:repeating-linear-gradient(-32deg, transparent 0 calc(var(--u)*22px), rgba(30,30,36,.85) calc(var(--u)*22px) calc(var(--u)*30px)); pointer-events:none; }
+.tome.locked::after{ content:'🔒'; position:absolute; left:50%; top:42%; transform:translate(-50%,-50%); font-size:calc(var(--u)*30px); filter:drop-shadow(0 2px 3px #000); }
+.tome.unlocking{ animation:bookUnlock 1.6s .55s cubic-bezier(.2,.9,.3,1.3) forwards; z-index:2; }
+.tome.unlocking::before{ animation:stripesOff 1s .6s ease forwards; }
+.tome.unlocking::after{ animation:lockPop 1.1s ease forwards; }
+.tome.unlocked{ box-shadow:0 0 0 calc(var(--u)*3px) #b9a0ff, 0 0 calc(var(--u)*16px) rgba(170,140,255,.6); }
+
+#ovEndless .library{ max-height:100%; }
+.tomeSpread{ --cover:#1b1238; background:linear-gradient(rgba(10,6,24,.35), rgba(10,6,24,.5)), #1b1238; }
+.tomeSpread .page.tPage{ padding:calc(var(--u)*12px) calc(var(--u)*12px) calc(var(--u)*14px); min-height:calc(var(--u)*430px); display:flex; flex-direction:column; gap:calc(var(--u)*8px);
+  background:linear-gradient(#efe8fb, #ddd2f2); color:#2a1d40; }
+.tPage .enArt{ width:100%; aspect-ratio:13/5; display:block; border-radius:calc(var(--u)*6px); border:calc(var(--u)*2px) solid #b9a8e0; }
+.tPage h3{ color:#3a1f78 !important; margin:0; }
+.tPage h4{ margin:0; font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-size:calc(var(--u)*22px); color:#3a1f78; line-height:1.05; }
+.tPage .lore{ color:#2a1d40 !important; font-size:calc(var(--u)*13px) !important; }
+.enRec{ display:grid; grid-template-columns:1fr 1fr; gap:calc(var(--u)*6px); margin-top:auto; }
+.enRec div{ background:rgba(90,60,160,.12); border:1px solid rgba(90,60,160,.3); border-radius:calc(var(--u)*10px); padding:calc(var(--u)*6px); text-align:center; }
+.enRec span{ display:block; font-size:calc(var(--u)*11px); color:#5a4a80; }
+.enRec b{ display:block; font-size:calc(var(--u)*20px); color:#3a1f78; font-variant-numeric:tabular-nums; }
+.enRec p{ grid-column:1 / -1; margin:0; font-size:calc(var(--u)*12px); color:#5a4a80; text-align:left; }
+.enRules{ margin:0; padding-left:calc(var(--u)*16px); display:grid; gap:calc(var(--u)*6px); font-size:calc(var(--u)*12.5px); line-height:1.4; color:#2a1d40; text-align:left; }
+.enRules b{ color:#3a1f78; }
+.tPage #bEnGo{ margin-top:auto; width:100%; }

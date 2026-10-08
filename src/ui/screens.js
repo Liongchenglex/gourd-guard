@@ -99,7 +99,7 @@ export function showResult(win){
     stats.push(['Score', g.score.toLocaleString()], ['Best', save.best.toLocaleString()], ['Hour reached', `${hr} (best ${bestHr})`], ['Monsters stopped', g.kills], ['Coins found', g.coins]);
     addBtn(box, 'Play again', beginEndless);
     addBtn(box, 'Shop', () => openShop('result'), 'alt');
-    addBtn(box, 'Menu', () => setState('title'), 'alt');
+    addBtn(box, 'Storybooks', () => { curBook = null; openLevels(); }, 'alt');   // endless lives on the shelf now (owner, 2026-10-08)
   }
   if (g.mode === 'story'){
     const f = foundThisNight();
@@ -128,12 +128,12 @@ export function addBtn(box, label, fn, cls){ const b = document.createElement('b
 
 // ---------- UI ----------
 
-export const OVS = { soon:'#ovSoon', settings:'#ovSettings', title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult', chest:'#ovChest', preview:'#ovPreview', intro:'#ovIntro' };
+export const OVS = { endless:'#ovEndless', soon:'#ovSoon', settings:'#ovSettings', title:'#ovTitle', levels:'#ovLevels', loadout:'#ovLoadout', shop:'#ovShop', help:'#ovHelp', pause:'#ovPause', result:'#ovResult', chest:'#ovChest', preview:'#ovPreview', intro:'#ovIntro' };
 
 export let shopReturn = 'levels', helpNext = null, loadoutNext = null, loadoutAvail = [], loadoutSel = new Set(), loadoutMust = [], loadoutWhy = [];
 
 export function setState(s){
-  if (s === 'title' || s === 'levels' || s === 'loadout' || s === 'shop' || s === 'help') musicStart(s === 'levels' && bookNightmare && curBook != null ? 'nightmare' : 'menu');   // a nightmare book plays the nightmare track (owner)   // lobby track behind every menu (owner); startGame swaps in the world track
+  if (s === 'title' || s === 'levels' || s === 'loadout' || s === 'shop' || s === 'help' || s === 'endless') musicStart(s === 'levels' && bookNightmare && curBook != null ? 'nightmare' : 'menu');   // a nightmare book plays the nightmare track (owner)   // lobby track behind every menu (owner); startGame swaps in the world track
   setStateRaw(s);
   for (const [k, sel] of Object.entries(OVS)) $(sel).classList.toggle('show', k === s);
   $('#hud').classList.toggle('on', s === 'play' || s === 'pause');
@@ -263,9 +263,9 @@ export function openPreview(n){
 }
 
 /** Intro cards for anything the player has not met yet on night n, then start the night. */
-let loadoutFromPreview = false;
+let loadoutFromPreview = false, loadoutFromEndless = false;
 function startPreviewedNight(){
-  loadoutFromPreview = true;
+  loadoutFromPreview = true; loadoutFromEndless = false;
   const n = previewNight, def = levelFor(n), prevGraves = n > 1 ? levelFor(n - 1).graves : 0;
   const cards = [];
   if (n === 1){   // 1-1 (owner): the Green pumpkin, and the whole lesson: bunch three to throw, bunch five to knock back
@@ -346,8 +346,55 @@ export function openLevels(){
     b.onclick = () => { if (soon || !open){ SFX.ui('locked'); return; } SFX.ui('go'); openBook(wi, true); };
     row.appendChild(b);
   });
+  shelf.appendChild(endlessTome());
   $('#shelfView').hidden = false; $('#bookView').hidden = true;
   setState('levels');
+}
+/** Endless Night as a storybook (owner, 2026-10-08): a wide tome on its own shelf, chained until 5-20 is beaten. */
+export const endlessOpen = () => (save.stars[LEVELS] || 0) > 0 || !!save.testUnlock;
+let tomeCache = null;
+/** The tome's cover art: a night sky and a moon that is a clock stopped at midnight. Drawn once and cached. */
+function tomeArt(){
+  if (tomeCache) return tomeCache;
+  const W2 = 520, H2 = 200, c = document.createElement('canvas'); c.width = W2; c.height = H2; const g = c.getContext('2d');
+  const sky = g.createLinearGradient(0, 0, 0, H2); sky.addColorStop(0, '#07051a'); sky.addColorStop(.7, '#1d1440'); sky.addColorStop(1, '#3a1d4a'); g.fillStyle = sky; g.fillRect(0, 0, W2, H2);
+  let sd = 9; const R = () => ((sd = sd * 16807 % 2147483647) / 2147483647);
+  for (let i = 0; i < 90; i++){ g.fillStyle = `rgba(255,245,220,${.3 + R() * .6})`; g.beginPath(); g.arc(R() * W2, R() * H2 * .8, .6 + R() * 1.3, 0, Math.PI * 2); g.fill(); }
+  const mx = W2 / 2, my = H2 * .5, mr = H2 * .34;
+  const halo = g.createRadialGradient(mx, my, mr * .7, mx, my, mr * 2.4); halo.addColorStop(0, 'rgba(190,170,255,.45)'); halo.addColorStop(1, 'rgba(120,90,200,0)'); g.fillStyle = halo; g.fillRect(0, 0, W2, H2);
+  const face = g.createRadialGradient(mx - mr * .3, my - mr * .3, mr * .1, mx, my, mr); face.addColorStop(0, '#fffaf0'); face.addColorStop(1, '#d8ccf8'); g.fillStyle = face; g.beginPath(); g.arc(mx, my, mr, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#6a58a8'; g.lineWidth = 3; g.stroke();
+  g.strokeStyle = '#3a2a6a'; g.lineCap = 'round';
+  for (let i = 0; i < 12; i++){ const a = i / 12 * Math.PI * 2, r1 = mr * (i % 3 ? .82 : .74); g.lineWidth = i % 3 ? 2 : 4; g.beginPath(); g.moveTo(mx + Math.sin(a) * r1, my - Math.cos(a) * r1); g.lineTo(mx + Math.sin(a) * mr * .9, my - Math.cos(a) * mr * .9); g.stroke(); }
+  g.lineWidth = 5; g.beginPath(); g.moveTo(mx, my); g.lineTo(mx, my - mr * .62); g.stroke();   // both hands on twelve: stopped at midnight
+  g.lineWidth = 3; g.beginPath(); g.moveTo(mx, my); g.lineTo(mx + 1, my - mr * .8); g.stroke();
+  g.fillStyle = '#3a2a6a'; g.beginPath(); g.arc(mx, my, 5, 0, Math.PI * 2); g.fill();
+  const bat = (x, y, s) => { g.fillStyle = '#0a0612'; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x - s * .5, y - s * .55, x - s * 1.2, y - s * .2); g.quadraticCurveTo(x - s * .85, y - s * .05, x - s * .7, y + s * .2); g.quadraticCurveTo(x - s * .4, y, x, y + s * .25); g.quadraticCurveTo(x + s * .4, y, x + s * .7, y + s * .2); g.quadraticCurveTo(x + s * .85, y - s * .05, x + s * 1.2, y - s * .2); g.quadraticCurveTo(x + s * .5, y - s * .55, x, y); g.fill(); };
+  bat(90, 60, 16); bat(140, 38, 10); bat(410, 52, 14); bat(450, 92, 9);
+  g.fillStyle = '#0c0718'; g.beginPath(); g.moveTo(0, H2); for (let x = 0; x <= W2; x += 26) g.lineTo(x, H2 - 22 - Math.sin(x * .05) * 8 - (x % 78 === 0 ? 14 : 0)); g.lineTo(W2, H2); g.closePath(); g.fill();   // a ragged treeline
+  return tomeCache = c;
+}
+function endlessTome(){
+  const row = document.createElement('div'); row.className = 'shelfRow tomeRow';
+  const open = endlessOpen(), fresh = open && !save.seenEndlessBook;   // first sight after unlocking: show it chained, then break the chains
+  const b = document.createElement('button'); b.className = 'tome' + (open && !fresh ? '' : ' locked');
+  const cv = document.createElement('canvas'), art = tomeArt(); cv.width = art.width; cv.height = art.height; cv.getContext('2d').drawImage(art, 0, 0); b.appendChild(cv);
+  const nm = document.createElement('span'); nm.className = 'bkName'; nm.textContent = 'Endless Night'; b.appendChild(nm);
+  const pr = document.createElement('span'); pr.className = 'bkProg'; pr.textContent = !open ? 'Beat 5-20 to open' : save.bestHour ? `Best: hour ${save.bestHour} · ${(save.best || 0).toLocaleString()} points` : 'The night that never ends'; b.appendChild(pr);
+  b.setAttribute('aria-label', open ? 'Endless Night' : 'Endless Night, locked: beat 5-20 to open');
+  if (fresh){
+    save.seenEndlessBook = true; persist();
+    setTimeout(() => { b.classList.add('unlocking'); b.scrollIntoView({ block:'center', behavior:'smooth' }); SFX.perk(); }, 450);
+    setTimeout(() => { b.classList.remove('locked', 'unlocking'); b.classList.add('unlocked'); }, 2700);
+  }
+  b.onclick = () => { if (!open){ SFX.ui('locked'); return; } SFX.ui('go'); openEndless(); };
+  row.appendChild(b); return row;
+}
+/** The open Endless Night book: lore and records on the left, how it works and the start button on the right. */
+export function openEndless(){
+  const art = tomeArt(), cv = $('#enArt'); cv.width = art.width; cv.height = art.height; cv.getContext('2d').drawImage(art, 0, 0);
+  $('#enRec').innerHTML = save.bestHour ? `<div><span>Best hour</span><b>${save.bestHour}</b></div><div><span>Best score</span><b>${(save.best || 0).toLocaleString()}</b></div>` : '<p class="dim">No nights yet. Your best hour and score will be kept here.</p>';
+  setState('endless');
 }
 /** Open world wi's storybook: lore and boss on the left page, the level grid on the right; animate = play the pop-up. */
 /** Nightmare mode on an open storybook (owner, 2026-09-28): the demon bookmark turns the book grim; levels are coming soon. */
@@ -845,7 +892,9 @@ export function stepSpawn(d){
 export function wireButtons(){
   $('#bStory').onclick = () => { ensureAudio(); curBook = null; openLevels(); };
 
-  $('#bEndless').onclick = () => { ensureAudio(); loadoutFromPreview = false; withHelp(beginEndless); };
+  $('#bEnGo').onclick = () => { ensureAudio(); SFX.ui('go'); loadoutFromPreview = false; loadoutFromEndless = true; beginEndless(); };
+  $('#bEnBack').onclick = () => { SFX.ui('back'); curBook = null; openLevels(); };
+  $('#bEnShop').onclick = () => { SFX.ui('tap'); openShop('endless'); };
 
   $('#bHelpT').onclick = () => { helpNext = () => setState('title'); setState('help'); };
 
@@ -879,7 +928,7 @@ export function wireButtons(){
   $('#bLvShop').onclick = () => openShop('levels');
   $('#bUnlockAll').onclick = () => { save.testUnlock = !save.testUnlock; persist(); openLevels(); };   // TESTING ONLY: remove before release
 
-  $('#bLoBack').onclick = () => { if (loadoutFromPreview) openPreview(previewNight); else setState('title'); };   // back to the level card the night was started from (owner)
+  $('#bLoBack').onclick = () => { if (loadoutFromEndless) openEndless(); else if (loadoutFromPreview) openPreview(previewNight); else setState('title'); };   // back to the level card the night was started from (owner)
 
   $('#bLoGo').onclick = () => { if (loadoutSel.size < (perkOn('pick4') ? 4 : 5)) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo); };
 
@@ -891,7 +940,7 @@ export function wireButtons(){
   $('#bOpenChest').onclick = () => openChests('shop');
   $('#bPvSack').onclick = async () => { if (sackIsQueued()) return; if (await showRewarded('sack')){ queueSack(); SFX.perk(); syncSack(); } };
   $('#bSeedTest').onclick = () => { save.seeds = (save.seeds || 0) + 500; persist(); renderShop(); };   // TESTING ONLY until seed packs are sold: remove before release
-  $('#bShopBack').onclick = () => { if (shopReturn === 'result') setState('result'); else if (shopReturn === 'loadout') backToLoadout(); else openLevels(); };
+  $('#bShopBack').onclick = () => { if (shopReturn === 'result') setState('result'); else if (shopReturn === 'loadout') backToLoadout(); else if (shopReturn === 'endless') openEndless(); else openLevels(); };
   $('#bLoShop').onclick = () => { SFX.ui('tap'); openShop('loadout'); };   // tester: upgrades from the pick-pumpkin screen (owner, 2026-10-07)
 
   $('#pauseBtn').onclick = () => { if (state === 'play' && !G.over) setState('pause'); };

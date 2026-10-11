@@ -54,9 +54,9 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
   2. Create an **IDFA explainer** message for the iOS app and publish it.
 
 ### RevenueCat
-- [ ] **2.9 Create the project**. Make a new project called "Gourd Guard".
-- [ ] **2.10 Add the App Store app**. Use bundle ID com.chenglex.gourdguard. Copy its **public API key** (starts with `appl_`).
-- [ ] **2.11 Add the Play Store app**. Use package com.chenglex.gourdguard. Copy its **public API key** (starts with `goog_`).
+- [x] **2.9 Create the project**. Make a new project called "Gourd Guard".
+- [x] **2.10 Add the App Store app**. Use bundle ID com.chenglex.gourdguard. Copy its **public API key** (starts with `appl_`).
+- [x] **2.11 Add the Play Store app**. Use package com.chenglex.gourdguard. Copy its **public API key** (starts with `goog_`).
 
 ---
 

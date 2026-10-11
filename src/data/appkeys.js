@@ -15,4 +15,4 @@ export const ADMOB = {
   },
 };
 // RevenueCat public SDK keys (Project settings → API keys). Empty = in-app purchases off.
-export const REVENUECAT = { ios:'', android:'' };
+export const REVENUECAT = { ios:'appl_UzKtocTYerztpmTbIAXDGUqBnVZ', android:'goog_saWUEUGejDPTzbXPvCpJxtcNLde' };

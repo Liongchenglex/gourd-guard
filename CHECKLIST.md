@@ -6,6 +6,10 @@ When a step says **→ Claude**, send me what it asks for and I do that part.
 Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or two to approve accounts, and Google needs 14 days of testing before the game can go public.
 
 **Your info, used everywhere:**
+- Privacy policy URL: **https://liongchenglex.github.io/gourd-guard-support/privacy-policy.html**
+- Support URL: **https://liongchenglex.github.io/gourd-guard-support/**
+- Website (for app-ads.txt): **https://liongchenglex.github.io**
+- Contact email: **chenglex1@gmail.com**
 - App name: **Gourd Guard**
 - App ID / bundle ID / package name: **com.chenglex.gourdguard**
 - Version: **1.0**, build **1**
@@ -160,7 +164,7 @@ I'll have drafted the text and screenshots in step 3.2; copy them in.
 
 ### App Store Connect (your app → the 1.0 version page and the App Information page)
 - [ ] **7.1 Screenshots**. Upload the iPhone 6.9" screenshots.
-- [ ] **7.2 Text**. Fill in the subtitle, description, keywords and **support URL** (you can use the privacy policy link). Paste in the **privacy policy URL**.
+- [ ] **7.2 Text**. Fill in the subtitle, description, keywords and **support URL** (`https://liongchenglex.github.io/gourd-guard-support/`) and **marketing URL** (`https://liongchenglex.github.io`). Paste in the **privacy policy URL** (`https://liongchenglex.github.io/gourd-guard-support/privacy-policy.html`).
 - [ ] **7.3 App Privacy**. Answer "Yes, we collect data":
   - **Identifiers** (Device ID): used for **Third-party advertising**, linked to user: No, used for tracking: **Yes**
   - **Usage data** (Advertising data): **Third-party advertising**
@@ -174,9 +178,9 @@ I'll have drafted the text and screenshots in step 3.2; copy them in.
 
 ### Play Console (left menu → Grow → Store presence, and Policy → App content)
 - [ ] **7.9 Main store listing**. Fill in the short description, full description, app icon (`store/play-icon-512.png`), feature graphic (`store/play-feature-1024x500.png`) and phone screenshots.
-- [ ] **7.10 Category and contact**. Store settings: category **Puzzle**, plus your contact email.
+- [ ] **7.10 Category and contact**. Store settings: category **Puzzle**, contact email `chenglex1@gmail.com`, and **website `https://liongchenglex.github.io`** (AdMob reads app-ads.txt from there).
 - [ ] **7.11 App content**. Fill in every item:
-  - Privacy policy: paste the URL.
+  - Privacy policy: `https://liongchenglex.github.io/gourd-guard-support/privacy-policy.html`.
   - Ads: **Yes, contains ads**.
   - App access: **All functionality available without special access**.
   - Content rating: fill in the questionnaire (fantasy violence, in-app purchases). Expect Everyone 10+ / PEGI 7.
@@ -206,6 +210,6 @@ I'll have drafted the text and screenshots in step 3.2; copy them in.
 ## Part 9: After launch
 
 - [ ] **9.1 Link the apps in AdMob**. AdMob → each app → App settings → **Link to store** (search "Gourd Guard"). Ads earn more once linked.
-- [ ] **9.2 app-ads.txt (optional but recommended)**. AdMob asks for an `app-ads.txt` file on your developer website. If you want this, tell Claude and I'll explain the simplest way to host one.
+- [x] **9.2 app-ads.txt**: already live at https://liongchenglex.github.io/app-ads.txt (your publisher ID from Wacky Mole covers Gourd Guard too). It works once the website `https://liongchenglex.github.io` is on both store listings (7.2 and 7.10); AdMob checks it within a few days of launch.
 - [ ] **9.3 Check the money**. Look at AdMob and RevenueCat after a few days to see that ads and purchases come in.
 - [ ] **9.4 Updating the game later**. Claude changes the game and bumps the version, then you repeat 4.1–4.4 (iPhone) and 4.6–4.8 (Android, with the **same keystore**). Upload to production and submit.

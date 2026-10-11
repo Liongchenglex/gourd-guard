@@ -33,7 +33,7 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
   - Platform: iOS
   - Name: Gourd Guard
   - Language: English
-  - Bundle ID: com.chenglex.gourdguard. If it isn't in the list, open the project in Xcode once (`npx cap open ios`) → Signing & Capabilities → pick your Team, and it appears.
+  - Bundle ID: com.chenglex.gourdguard. If it isn't in the list: go to developer.apple.com/account → **Certificates, IDs & Profiles → Identifiers → +** → App IDs → App → Description "Gourd Guard", **Explicit** Bundle ID `com.chenglex.gourdguard` → Continue → Register. Then refresh App Store Connect. (Your team is already set in the project.)
   - SKU: `gourdguard`
 
 ### Google
@@ -66,7 +66,7 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
 
 ## Part 3: Send me the keys → Claude
 
-- [ ] **3.1 Paste these 9 things to me in chat** (they are all safe to share):
+- [x] **3.1 Paste these 9 things to me in chat** (they are all safe to share):
   1. AdMob iOS **App ID**
   2. AdMob iOS **Rewarded** unit ID
   3. AdMob iOS **Interstitial** unit ID
@@ -79,23 +79,21 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
 
   Never send passwords, `.p8` key files or Google's `.json` key file. Those go only into RevenueCat's website.
 
-- [ ] **3.2 Claude does:**
-  - puts the keys in and turns off test ads
-  - adds Apple's full ad-network list
-  - writes and publishes the **privacy policy** page and gives you its link
-  - drafts the **store descriptions and keywords**
-  - makes the **screenshots**
-  - rebuilds both apps
+- [x] **3.2 Claude does:** ✅ all done (2026-10-11)
+  - keys in, test ads off
+  - Apple's full ad-network list added (50 networks)
+  - **privacy policy** and support page live (links at the top of this file)
+  - **store text** for both stores: `store/LISTING.md` (copy and paste from there)
+  - **screenshots**: `store/screenshots/ios/` (1320 × 2868), `store/screenshots/android/` (1242 × 2208), and the purchase review shot `store/screenshots/iap-review-seed-shop.png`
+  - both apps rebuilt; the iPhone app is now iPhone-only (no iPad screenshots needed)
 
 ---
 
 ## Part 4: First builds
 
 ### iPhone → TestFlight
-- [ ] **4.1 Open the project**. In Terminal, in the project folder, run: `npx cap open ios`.
-- [ ] **4.2 Pick the build target**. In Xcode, pick **Any iOS Device (arm64)** at the top.
-- [ ] **4.3 Archive**. Menu: **Product → Archive** and wait.
-- [ ] **4.4 Upload**. In the window that opens: **Distribute App → App Store Connect → Upload**, then click through the defaults.
+- [x] **4.1–4.3 Archive**. ✅ Claude built the release archive "Gourd Guard 1.0 (1)". (For later updates: `npx cap open ios`, pick **Any iOS Device (arm64)**, then **Product → Archive**.)
+- [ ] **4.4 Upload** (after 2.2, so App Store Connect has the app). Open Xcode → menu **Window → Organizer** → **Archives** → select **Gourd Guard 1.0 (1)** → **Distribute App → App Store Connect → Upload**, then click through the defaults. (Claude wasn't allowed to upload on your behalf.)
 - [ ] **4.5 Wait for processing**. In App Store Connect → your app → **TestFlight**, wait about 15–30 min. Then add yourself as an internal tester and install the **TestFlight** app on your iPhone.
 
 ### Android → closed test (starts the 14-day clock, so do it soon)
@@ -119,7 +117,7 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
 ## Part 5: Seed packs (in-app purchases)
 
 ### Apple
-- [ ] **5.1 Create the three products**. App Store Connect → your app → **Monetization → In-App Purchases** → **+** → **Consumable**. Make three:
+- [ ] **5.1 Create the three products**. App Store Connect → your app → **Monetization → In-App Purchases** → **+** → **Consumable**. Make three (names, descriptions and review notes are ready to paste in `store/LISTING.md`):
 
   | Product ID | Display name | Price |
   |---|---|---|
@@ -163,8 +161,8 @@ On your iPhone (TestFlight) and an Android phone (closed test), check:
 I'll have drafted the text and screenshots in step 3.2; copy them in.
 
 ### App Store Connect (your app → the 1.0 version page and the App Information page)
-- [ ] **7.1 Screenshots**. Upload the iPhone 6.9" screenshots.
-- [ ] **7.2 Text**. Fill in the subtitle, description, keywords and **support URL** (`https://liongchenglex.github.io/gourd-guard-support/`) and **marketing URL** (`https://liongchenglex.github.io`). Paste in the **privacy policy URL** (`https://liongchenglex.github.io/gourd-guard-support/privacy-policy.html`).
+- [ ] **7.1 Screenshots**. Upload the six images in `store/screenshots/ios/` in order (1 to 6) into the 6.9" iPhone slot.
+- [ ] **7.2 Text**. Copy the subtitle, promotional text, description and keywords from `store/LISTING.md`, plus the and **support URL** (`https://liongchenglex.github.io/gourd-guard-support/`) and **marketing URL** (`https://liongchenglex.github.io`). Paste in the **privacy policy URL** (`https://liongchenglex.github.io/gourd-guard-support/privacy-policy.html`).
 - [ ] **7.3 App Privacy**. Answer "Yes, we collect data":
   - **Identifiers** (Device ID): used for **Third-party advertising**, linked to user: No, used for tracking: **Yes**
   - **Usage data** (Advertising data): **Third-party advertising**
@@ -177,7 +175,7 @@ I'll have drafted the text and screenshots in step 3.2; copy them in.
 - [ ] **7.8 Pick the build**. Select the TestFlight build you tested.
 
 ### Play Console (left menu → Grow → Store presence, and Policy → App content)
-- [ ] **7.9 Main store listing**. Fill in the short description, full description, app icon (`store/play-icon-512.png`), feature graphic (`store/play-feature-1024x500.png`) and phone screenshots.
+- [ ] **7.9 Main store listing**. Fill in the short description, full description, app icon (`store/play-icon-512.png`), feature graphic (`store/play-feature-1024x500.png`) and the six phone screenshots in `store/screenshots/android/`. Text is in `store/LISTING.md`.
 - [ ] **7.10 Category and contact**. Store settings: category **Puzzle**, contact email `chenglex1@gmail.com`, and **website `https://liongchenglex.github.io`** (AdMob reads app-ads.txt from there).
 - [ ] **7.11 App content**. Fill in every item:
   - Privacy policy: `https://liongchenglex.github.io/gourd-guard-support/privacy-policy.html`.
@@ -197,7 +195,7 @@ I'll have drafted the text and screenshots in step 3.2; copy them in.
 ## Part 8: Go live
 
 ### iPhone
-- [ ] **8.1 Submit**. App Store Connect → the 1.0 version page → **Add for Review → Submit**. In "Notes for review" write: *"Seed packs are in the Shop → Seeds tab. Rewarded ads are the 'Watch ad' buttons."* Review usually takes 1–3 days.
+- [ ] **8.1 Submit**. App Store Connect → the 1.0 version page → **Add for Review → Submit**. In "Notes for review" paste the **App Review notes** from `store/LISTING.md`. Review usually takes 1–3 days.
 - [ ] **8.2 If rejected**. Send me Apple's message → Claude fixes it, and you resubmit.
 - [ ] **8.3 Release**. When approved, press **Release** (or set it to release automatically). 🎉
 

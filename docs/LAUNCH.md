@@ -49,8 +49,8 @@ Then add the same three products in RevenueCat for both apps. RevenueCat's setup
 - **Privacy policy page**: live at https://liongchenglex.github.io/gourd-guard-support/privacy-policy.html, with a support page at https://liongchenglex.github.io/gourd-guard-support/ (GitHub repo `Liongchenglex/gourd-guard-support`; source in `store/support-site/`). app-ads.txt is at https://liongchenglex.github.io/app-ads.txt.
 - **App Store privacy labels** and **Google Play Data safety form**: ads mean "Identifiers" and "Usage data" used for "Third-party advertising"; purchases mean "Purchase history". No account, name, email or location is collected by the game itself.
 - **Age rating**: fill in the questionnaire in each store (cartoon fantasy violence, in-app purchases, ads). Expect 9+ on the App Store and Everyone 10+ / PEGI 7 on Google Play. Do **not** mark the game as made for children: that would stop personalised ads and needs a different ad setup.
-- **Screenshots**: iPhone 6.9" (1320×2868) and Android phone shots. I can capture these from the game.
-- **Description and keywords**: I can draft them.
+- **Screenshots**: done, in `store/screenshots/ios/` (1320×2868) and `store/screenshots/android/` (1242×2208), plus `iap-review-seed-shop.png` for the purchase review. The iPhone app is iPhone-only, so no iPad shots are needed.
+- **Description and keywords**: done, in `store/LISTING.md` (both stores, all fields within their length limits, plus purchase names and App Review notes).
 
 ### 5. Before submitting (together)
 - [x] Eight keys in, `ADMOB.test = false` (2026-10-11).

@@ -6,6 +6,7 @@
 //   'chest'     reroll a treasure chest once
 //   'revive'    continue a lost night from the lose card with only the monsters left, once per night
 //   'sack'      summon a Loot Sack at the start of a night
+// Plus one non-rewarded, full-screen ad: `showInterstitial()` after an Endless Night run (GGAds.showInterstitial in the app).
 import { SEED_ADS_PER_DAY } from '../data/economy.js';
 import { persist, save } from '../save.js';
 import { musicDuck } from './audio.js';
@@ -47,5 +48,30 @@ function mockAd(placement){
     const done = ok => { clearInterval(tick); ov.remove(); resolve(ok); };
     claim.onclick = () => done(true);
     ov.querySelector('.adClose').onclick = () => done(false);
+  });
+}
+
+/** The full-screen ad after an Endless Night run. Resolves when it closes (or at once if none could be shown); never rewards. */
+export async function showInterstitial(){
+  if (busy) return;
+  busy = true;
+  try {
+    const native = window.GGAds && typeof window.GGAds.showInterstitial === 'function';
+    if (native) await window.GGAds.showInterstitial(); else await mockInterstitial();
+  } catch (e) {}
+  finally { busy = false; }
+}
+const SKIP_SECONDS = 5;
+/** Browser stand-in: shows where the ad plays; Continue unlocks after a few seconds. */
+function mockInterstitial(){
+  return new Promise(resolve => {
+    try { musicDuck(0, SKIP_SECONDS + 1.5); } catch (e) {}
+    const ov = document.createElement('div'); ov.className = 'adMock'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Advertisement');
+    ov.innerHTML = `<div class="adCard"><small>Advertisement</small><b>Your ad plays here</b><p>In the app, a short ad plays after each Endless Night run.</p><div class="adBar"><i></i></div><div class="adBtns"><button class="btn small adClaim" disabled>Continue in ${SKIP_SECONDS}</button></div></div>`;
+    (document.getElementById('wrap') || document.body).appendChild(ov);
+    const go = ov.querySelector('.adClaim'), bar = ov.querySelector('.adBar i');
+    let left = SKIP_SECONDS; bar.style.animationDuration = SKIP_SECONDS + 's';
+    const tick = setInterval(() => { left--; if (left > 0) go.textContent = `Continue in ${left}`; else { clearInterval(tick); go.disabled = false; go.textContent = 'Continue'; } }, 1000);
+    go.onclick = () => { clearInterval(tick); ov.remove(); resolve(); };
   });
 }

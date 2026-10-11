@@ -10,7 +10,8 @@ import { MUSIC } from '../data/music.js';
 import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, landingCell, landingNear, flyInto, DIRV } from './board.js';
 import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle, pumpkinPower, pinkHeal } from './combat.js';
 import { mS, mY, updateMonster, TILE_P, applyBulwarks, spawnSack } from './monsters.js';
-import { SACK } from '../data/economy.js';
+import { SACK, ENDLESS_AD_MIN_SECONDS } from '../data/economy.js';
+import { showInterstitial } from './ads.js';
 import { takeSack, addChest } from './loot.js';
 import { bgWorld, buildBg } from './render/sprites.js';
 import { poolKey, prebake } from './render/anim.js';
@@ -122,7 +123,8 @@ export function endGame(win){
   if (win) for (const d of G.drops) if (d.kind === 'chest' && !d.dead){ d.dead = true; addChest('normal'); }   // a chest still lying there when the night is won is kept
   musicStop(win ? 0.3 : 1.2);
   if (win) SFX.win(); else SFX.lose();
-  setTimeout(() => showResult(win), win ? 1100 : 1000);
+  const ad = G.mode === 'endless' && G.t >= ENDLESS_AD_MIN_SECONDS;   // a full-screen ad after an Endless Night run (owner, 2026-10-11)
+  setTimeout(async () => { if (ad) await showInterstitial(); showResult(win); }, win ? 1100 : 1000);
 }
 
 export function useFirework(){

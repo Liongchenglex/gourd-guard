@@ -7,7 +7,7 @@ What is built, what the owner has to supply, and the order to do it in. Last upd
 - **Testing links removed**: "unlock all levels" and "add 500 seeds" are gone.
 - **Saves are safe in the app**: every save is also copied into the phone's own app storage (`src/engine/native.js`, `@capacitor/preferences`). If iOS or Android clears the web storage, the game restores the save from that copy on the next launch. Existing saves carry over automatically. Nothing changes in a browser.
 - **Chest odds**: every chest has a "What's inside?" link listing each prize and its chance, read straight from `CHESTS` in `src/data/economy.js` (Apple and Google require odds for random rewards connected to purchases).
-- **Rewarded ads**: real Google AdMob ads in the app (`@capacitor-community/admob`). Before the first ad the game asks for consent where the law requires it (Google's EU/UK form) and, on iPhone, shows Apple's "allow tracking" prompt. A reward is given only when AdMob reports the video was watched. The next ad loads in the background so the button plays straight away. If no ad loads within 8 seconds, nothing is charged and nothing is given. **Currently on Google's test ads** ("Test Ad" label, no money) until your IDs are in.
+- **Rewarded ads**: real Google AdMob ads in the app (`@capacitor-community/admob`). Before the first ad the game asks for consent where the law requires it (Google's EU/UK form) and, on iPhone, shows Apple's "allow tracking" prompt. A reward is given only when AdMob reports the video was watched. The next ad loads in the background so the button plays straight away. If no ad loads within 8 seconds, nothing is charged and nothing is given. Plus one **full-screen ad after every Endless Night run** of a minute or longer, before the result card (skippable after a few seconds; story nights never show one; `ENDLESS_AD_MIN_SECONDS` in `src/data/economy.js`). **Currently on Google's test ads** ("Test Ad" label, no money) until your IDs are in.
 - **Seed packs**: real purchases through RevenueCat, which talks to both the App Store and Google Play (`@revenuecat/purchases-capacitor`). Buttons show the store's price in the player's own currency. **Off until your RevenueCat keys are in**; until then the packs say they go on sale with the store release.
 - **Android app**: `android/` project (portrait only, status bar hidden, the hardware Back button pauses a night, closes cards and at the title sends the app to the background instead of quitting).
 - **Icons and launch screens** for both phones, and store art in `store/`: `appstore-icon-1024.png`, `play-icon-512.png`, `play-feature-1024x500.png`. Redraw with `.venv/bin/python tools/app_art.py`.
@@ -17,16 +17,18 @@ What is built, what the owner has to supply, and the order to do it in. Last upd
 ### 1. Accounts (you)
 - **Apple Developer Program**, 99 USD a year: developer.apple.com/programs.
 - **Google Play Console**, 25 USD once: play.google.com/console. Google asks new personal accounts to run a **closed test with at least 12 testers for 14 days** before the game can go public, so start that early.
-- **Google AdMob** (free): admob.google.com. Add two apps, "Gourd Guard iOS" and "Gourd Guard Android", and in each make one **Rewarded** ad unit.
+- **Google AdMob** (free): admob.google.com. Add two apps, "Gourd Guard iOS" and "Gourd Guard Android", and in each make one **Rewarded** ad unit and one **Interstitial** ad unit.
 - **RevenueCat** (free until 2,500 USD a month in revenue): revenuecat.com. One project with an App Store app and a Play Store app.
 
-### 2. Keys to send me
+### 2. Keys to send me (eight)
 | What | Where you find it | Where it goes |
 |---|---|---|
 | AdMob **app ID** for iOS (`ca-app-pub-…~…`) | AdMob → Apps → App settings | `ios/App/App/Info.plist` (`GADApplicationIdentifier`) |
 | AdMob **app ID** for Android | same | `android/app/src/main/AndroidManifest.xml` |
 | AdMob **rewarded ad unit ID** for iOS (`ca-app-pub-…/…`) | AdMob → Apps → Ad units | `src/data/appkeys.js` |
 | AdMob **rewarded ad unit ID** for Android | same | `src/data/appkeys.js` |
+| AdMob **interstitial ad unit ID** for iOS | same | `src/data/appkeys.js` |
+| AdMob **interstitial ad unit ID** for Android | same | `src/data/appkeys.js` |
 | RevenueCat **public SDK key** for iOS (`appl_…`) | RevenueCat → Project settings → API keys | `src/data/appkeys.js` |
 | RevenueCat **public SDK key** for Android (`goog_…`) | same | `src/data/appkeys.js` |
 
@@ -51,7 +53,7 @@ Then add the same three products in RevenueCat for both apps. RevenueCat's setup
 - **Description and keywords**: I can draft them.
 
 ### 5. Before submitting (together)
-- [ ] Send me the six keys above; I fill them in, set `ADMOB.test = false`, and rebuild.
+- [ ] Send me the eight keys above; I fill them in, set `ADMOB.test = false`, and rebuild.
 - [ ] Add the full `SKAdNetworkItems` list from Google's iOS guide to `Info.plist` (I added Google's own entry only).
 - [ ] Test on your iPhone through **TestFlight** and on a real Android phone: an ad pays a seed, a sandbox purchase gives seeds, the save survives deleting and reinstalling is NOT expected (that clears app storage on purpose), but survives restarting the phone.
 - [ ] Play the levels the balance bot could not judge (3-15, 3-19, 4-10, 1-20).

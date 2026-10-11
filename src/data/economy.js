@@ -26,6 +26,9 @@ export const SEED_PACKS = [
 
 /** Rewarded ads. One ad pays one seed, up to SEED_ADS_PER_DAY a day. */
 export const SEED_ADS_PER_DAY = 15;
+/** A full-screen ad (skippable after a few seconds) plays when an Endless Night run ends, before its result card, unless the run was
+ *  shorter than this many seconds (owner, 2026-10-11). Story nights never show one. */
+export const ENDLESS_AD_MIN_SECONDS = 60;
 export const AD_SEEDS = 1;
 
 /** Treasure chests (owner, 2026-10-07; full reference in docs/LOOT.md). Each chest holds `slots` prizes; every prize is one

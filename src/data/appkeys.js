@@ -9,6 +9,10 @@ export const ADMOB = {
     ios:     'ca-app-pub-3940256099942544/1712485313',   // Google's iOS rewarded test unit: replace with the owner's
     android: 'ca-app-pub-3940256099942544/5224354917',   // Google's Android rewarded test unit: replace with the owner's
   },
+  interstitial: {   // the full-screen ad after an Endless Night run
+    ios:     'ca-app-pub-3940256099942544/4411468910',   // Google's iOS interstitial test unit: replace with the owner's
+    android: 'ca-app-pub-3940256099942544/1033173712',   // Google's Android interstitial test unit: replace with the owner's
+  },
 };
 // RevenueCat public SDK keys (Project settings → API keys). Empty = in-app purchases off.
 export const REVENUECAT = { ios:'', android:'' };

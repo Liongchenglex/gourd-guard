@@ -25,7 +25,7 @@ export async function initNative(){
 }
 
 // ---------- Rewarded ads: Google AdMob ----------
-import { AdMob, AdmobConsentStatus, RewardAdPluginEvents } from '@capacitor-community/admob';
+import { AdMob, AdmobConsentStatus, RewardAdPluginEvents, InterstitialAdPluginEvents } from '@capacitor-community/admob';
 import { ADMOB, REVENUECAT } from '../data/appkeys.js';
 import { audioSleep } from './audio.js';
 
@@ -68,6 +68,27 @@ async function showRewarded(){
   });
 }
 
+/** The full-screen ad after an Endless Night run: loaded ahead, resolves when the player closes it (or at once if none is ready). */
+let iLoaded = false, iLoading = null;
+function preloadInterstitial(){
+  if (iLoaded) return Promise.resolve(true);
+  if (!iLoading) iLoading = AdMob.prepareInterstitial({ adId:ADMOB.interstitial[platform()], isTesting:ADMOB.test })
+    .then(() => (iLoaded = true)).catch(() => false).finally(() => { iLoading = null; });
+  return iLoading;
+}
+async function showInterstitial(){
+  if (!(await startAds())) return;
+  if (!iLoaded && !(await Promise.race([preloadInterstitial(), new Promise(r => setTimeout(() => r(false), 4000))]))) return;   // not ready: skip it rather than make the player wait
+  await new Promise(resolve => {
+    let done = false; const subs = [];
+    const finish = () => { if (done) return; done = true; subs.forEach(s => s.then(h => h.remove()).catch(() => {})); audioSleep(false); iLoaded = false; preloadInterstitial(); resolve(); };
+    subs.push(AdMob.addListener(InterstitialAdPluginEvents.Dismissed, finish));
+    subs.push(AdMob.addListener(InterstitialAdPluginEvents.FailedToShow, finish));
+    audioSleep(true);
+    AdMob.showInterstitial().catch(finish);
+  });
+}
+
 // ---------- Seed packs: in-app purchases through RevenueCat (App Store and Google Play) ----------
 import { Purchases, PRODUCT_CATEGORY } from '@revenuecat/purchases-capacitor';
 let products = null;   // sku → store product, with the price in the player's own currency
@@ -85,8 +106,8 @@ async function startStore(skus){
 /** Installs window.GGAds and window.GGStore (src/engine/ads.js and src/engine/store.js use them). */
 export async function initMoney(skus, onStoreReady){
   if (!isNative()) return;
-  window.GGAds = { showRewarded };
-  startAds().then(ok => { if (ok) preload(); });
+  window.GGAds = { showRewarded, showInterstitial };
+  startAds().then(ok => { if (ok){ preload(); preloadInterstitial(); } });
   if (await startStore(skus)){
     window.GGStore = {
       price: sku => products[sku] ? products[sku].priceString : null,

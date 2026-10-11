@@ -10,8 +10,10 @@ import { render } from './engine/render/draw.js';
 import { G, LANE, bannerTimer, graves, grid, setBannerTimer, state, walls } from './engine/state.js';
 import { $ } from './engine/util.js';
 import { persist, save } from './save.js';
-import { buildLegend, setState, syncSound, wireButtons, openPreview, openBook } from './ui/screens.js';
+import { buildLegend, setState, syncSound, wireButtons, openPreview, openBook, renderShop } from './ui/screens.js';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { initNative, initMoney, initBackButton } from './engine/native.js';
+import { SEED_PACKS } from './data/economy.js';
 
 // ---------- Loop ----------
 
@@ -44,6 +46,9 @@ buildLegend();
 syncSound();
 
 setState('title');
+initNative();   // the phone app: native save copy (no-op in a browser)
+initMoney(SEED_PACKS.map(p => p.sku), () => { try { renderShop(); } catch (e) {} });   // real rewarded ads and seed packs in the app
+initBackButton(() => state);   // Android's Back button
 if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()){   // the iPhone app: keep the launch image up until the title screen has drawn
   document.documentElement.classList.add('native');
   requestAnimationFrame(() => requestAnimationFrame(() => SplashScreen.hide().catch(() => {})));

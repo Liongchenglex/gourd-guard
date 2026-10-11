@@ -322,7 +322,6 @@ let curBook = null;   // the open storybook (world index), so Back from a previe
 /** Level select: a shelf of storybooks, one per world; an open book shows the world's lore and its level grid (owner, 2026-09-26). */
 export function openLevels(){
   $('#lvCoins').textContent = save.coins.toLocaleString(); syncSeedPrompts();
-  $('#bUnlockAll').textContent = save.testUnlock ? 'Testing: relock levels' : 'Testing: unlock all levels';
   if (curBook != null){ openBook(curBook, false); return; }
   const shelf = $('#shelf'); shelf.innerHTML = '';
   let row = null;
@@ -775,7 +774,7 @@ function renderSeedsPane(){
     const d = document.createElement('div'); d.className = 'item pack';
     const ic = seedIcon(48, pk.seeds * 20); ic.className = 'ic'; d.appendChild(ic);
     const tx = document.createElement('div'); tx.className = 'tx'; tx.innerHTML = `<b>${PACK_NAMES[pk.seeds] || 'Seeds'}${pk.tag ? ` <span class="tag">${pk.tag}</span>` : ''}</b><p>${pk.seeds} pumpkin seeds</p>`; d.appendChild(tx);
-    const b = document.createElement('button'); b.className = 'btn small'; b.textContent = live ? pk.price : `${pk.price}`; b.disabled = !live; if (!live) b.title = 'On sale with the app store release';
+    const b = document.createElement('button'); b.className = 'btn small'; b.textContent = (live && window.GGStore.price && window.GGStore.price(pk.sku)) || pk.price;   // the store's price, in the player's currency b.disabled = !live; if (!live) b.title = 'On sale with the app store release';
     b.onclick = async () => { if (await buyPack(pk.sku)){ SFX.perk(); renderShop(); } };
     d.appendChild(b); sp.appendChild(d);
   }
@@ -817,9 +816,18 @@ function showChest(){
   const art = $('#chArt'); art.innerHTML = ''; art.appendChild(dom(chestIcon(ch.kind, false, 132))); art.className = 'chestArt shake';
   $('#chLoot').innerHTML = ''; $('#chNote').textContent = `${C.slots} prizes inside. ${save.chests.length > 1 ? `${save.chests.length - 1} more waiting after this one.` : ''}`;
   const box = $('#chBtns'); box.innerHTML = '';
+  renderOdds(ch);
   addBtn(box, 'Open', () => { chestRoll = rollChest(ch); SFX.perk(); showChestLoot(); });
   addBtn(box, 'Later', leaveChests, 'alt');
   setState('chest');
+}
+/** The chest's odds (App Store rule for random rewards tied to purchases; owner, 2026-10-11), built from CHESTS so it always
+ *  matches what the game rolls. Full reference: docs/LOOT.md. */
+function renderOdds(ch){
+  const C = CHESTS[ch.kind] || CHESTS.normal, box = $('#chOdds');
+  const name = z => z.tools ? `Set of ${z.tools} tools` : z.seeds ? (z.seeds[0] === z.seeds[1] ? `${z.seeds[0]} pumpkin seed${z.seeds[0] > 1 ? 's' : ''}` : `${z.seeds[0]}–${z.seeds[1]} pumpkin seeds`) : z.bossItem ? 'Boss item' : `${z.coins[0]}–${z.coins[1]} coins`;
+  box.innerHTML = `<p>${C.slots} prizes, each rolled on its own:</p><table>${C.table.map(([p, z]) => `<tr><td>${name(z)}</td><td>${Math.round(p * 100)}%</td></tr>`).join('')}</table><p class="small">Tools you already carry 5 of pay 100 coins each instead.</p>`;
+  box.hidden = true; $('#bChOdds').setAttribute('aria-expanded', 'false');
 }
 function showChestLoot(){
   const ch = save.chests[0];
@@ -912,6 +920,7 @@ export function stepSpawn(d){
 export function wireButtons(){
   $('#bStory').onclick = () => { ensureAudio(); curBook = null; openLevels(); };
 
+  $('#bChOdds').onclick = () => { const o = $('#chOdds'); o.hidden = !o.hidden; $('#bChOdds').setAttribute('aria-expanded', o.hidden ? 'false' : 'true'); SFX.ui('tap'); };
   $('#bEnGo').onclick = () => { ensureAudio(); SFX.ui('go'); loadoutFromPreview = false; loadoutFromEndless = true; beginEndless(); };
   $('#bEnBack').onclick = () => { SFX.ui('back'); curBook = null; openLevels(); };
   $('#bEnShop').onclick = () => { SFX.ui('tap'); openShop('endless'); };
@@ -946,7 +955,6 @@ export function wireButtons(){
   $('#bBkShop').onclick = () => openShop('levels');
 
   $('#bLvShop').onclick = () => openShop('levels');
-  $('#bUnlockAll').onclick = () => { save.testUnlock = !save.testUnlock; persist(); openLevels(); };   // TESTING ONLY: remove before release
 
   $('#bLoBack').onclick = () => { if (loadoutFromEndless) openEndless(); else if (loadoutFromPreview) openPreview(previewNight); else setState('title'); };   // back to the level card the night was started from (owner)
 
@@ -959,7 +967,6 @@ export function wireButtons(){
   $('#bLvChest').onclick = () => openChests('levels');
   $('#bOpenChest').onclick = () => openChests('shop');
   $('#bPvSack').onclick = async () => { if (sackIsQueued()) return; if (await showRewarded('sack')){ queueSack(); SFX.perk(); syncSack(); } };
-  $('#bSeedTest').onclick = () => { save.seeds = (save.seeds || 0) + 500; persist(); renderShop(); };   // TESTING ONLY until seed packs are sold: remove before release
   $('#bShopBack').onclick = () => { if (shopReturn === 'result') setState('result'); else if (shopReturn === 'loadout') backToLoadout(); else if (shopReturn === 'endless') openEndless(); else openLevels(); };
   $('#bLoShop').onclick = () => { SFX.ui('tap'); openShop('loadout'); };   // tester: upgrades from the pick-pumpkin screen (owner, 2026-10-07)
 

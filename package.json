@@ -13,10 +13,14 @@
     "vite": "^5.4.0"
   },
   "dependencies": {
+    "@capacitor-community/admob": "^8.2.1",
+    "@capacitor/android": "^8.5.3",
     "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.5.2",
     "@capacitor/ios": "^8.5.2",
+    "@capacitor/preferences": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.2",
-    "@capacitor/status-bar": "^8.0.3"
+    "@capacitor/status-bar": "^8.0.3",
+    "@revenuecat/purchases-capacitor": "^13.7.3"
   }
 }

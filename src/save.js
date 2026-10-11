@@ -54,4 +54,7 @@ if (save.seenHelp && !save.seenPowers){ save.seenHelp = false; }
 
 save.seenPowers = true;
 
-export function persist(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+/** Called with the save JSON after every write; the phone app sets it to also keep a copy in native storage (src/engine/native.js). */
+let mirror = null;
+export const setSaveMirror = fn => { mirror = fn; };
+export function persist(){ let j = ''; try { j = JSON.stringify(save); localStorage.setItem(SAVE_KEY, j); } catch (e) {} if (mirror && j) try { mirror(j); } catch (e) {} }

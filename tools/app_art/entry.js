@@ -40,4 +40,27 @@ export function splash(px){
   g.fillText('Gourd Guard', mid, mid + px * .12);
   return c;
 }
-window.ART = { icon, splash };
+/** The launch art centred on any rectangle (Android launch images come in many shapes). */
+export function splashWH(w, h){
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+  g.fillStyle = '#1a0f22'; g.fillRect(0, 0, w, h); const m = Math.min(w, h); g.drawImage(splash(m), (w - m) / 2, (h - m) / 2);
+  return c;
+}
+/** Android's round launcher icon. */
+export function round(px){
+  const c = document.createElement('canvas'); c.width = c.height = px; const g = c.getContext('2d');
+  g.beginPath(); g.arc(px / 2, px / 2, px / 2, 0, Math.PI * 2); g.clip(); g.drawImage(icon(px), 0, 0);
+  return c;
+}
+/** Google Play's feature graphic (1024 x 500): night sky, moon, the pumpkin on the left and the title on the right. */
+export function feature(w, h){
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+  night(g, w, h, [w * .86, h * .3, h * .16]);
+  g.fillStyle = '#1c0f16'; g.beginPath(); g.ellipse(w * .26, h * 1.05, w * .34, h * .22, 0, 0, Math.PI * 2); g.fill();
+  bat(g, w * .62, h * .2, h * .06); bat(g, w * .7, h * .32, h * .04);
+  g.save(); g.translate(w * .25, h * .6); pumpkin(g, ORANGE, true, h * .3, faceFor('yellow')); g.restore();
+  g.font = `400 ${Math.round(h * .2)}px Creepster`; g.textAlign = 'center'; g.fillStyle = '#ffc14a'; g.shadowColor = 'rgba(255,140,40,.7)'; g.shadowBlur = h * .03;
+  g.fillText('Gourd Guard', w * .64, h * .62);
+  return c;
+}
+window.ART = { icon, splash, splashWH, round, feature };

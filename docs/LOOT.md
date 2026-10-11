@@ -2,7 +2,7 @@
 
 Every chest, drop and seed source in one place, as currently built. The numbers live in `src/data/economy.js` (chests, the Loot Sack, boss seeds) and `src/data/rules.js` (kill rewards). When a number changes there, change it here in the same edit.
 
-Last updated 2026-10-07.
+Last updated 2026-10-11. Players see the chest tables in the game too: the "What's inside?" link on every chest, generated from the same data.
 
 ## Treasure chest
 

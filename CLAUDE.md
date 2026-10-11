@@ -51,7 +51,7 @@ Build `docs/WORLDS.md` one world at a time, each with its own bot runs. Next: **
 - `.venv/bin/python tools/balance_bot.py --nights 1,5,10,15 --repeats 3 --url …`: human-paced bot plays full nights and prints one JSON line per run plus a per-night summary (win rate, mean wall %). Single runs are noise; **3 repeats per night is the minimum** for any balance claim. Run it after any rule or number change and record results in the design doc's balance section.
 
 ## iPhone app (Capacitor, 2026-09-28)
-- The game ships as an iOS app with Capacitor 8 (`capacitor.config.json`, app ID `com.liongchenglex.gourdguard`, project in `ios/`, Swift Package Manager, no CocoaPods). Android comes later (the owner is buying the Google Play account).
+- The game ships as an iOS app with Capacitor 8 (`capacitor.config.json`, app ID `com.chenglex.gourdguard`, project in `ios/`, Swift Package Manager, no CocoaPods). Android comes later (the owner is buying the Google Play account).
 - After any game change: `npm run build`, then `npx cap sync ios`, then open `ios/App/App.xcodeproj` in Xcode (or `npx cap open ios`) and press Run with the iPhone selected. Signing uses the owner's Apple ID (Signing & Capabilities → Team).
 - Portrait only, status bar hidden, full screen (`ios/App/App/Info.plist`). Leaving the app pauses the night and silences audio (`audioSleep` in `src/engine/audio.js`).
 - Fonts are bundled (`src/fonts/`, SIL OFL), so the game needs no network. The icon and launch screen are drawn with the game's pumpkin by `.venv/bin/python tools/app_art.py`.

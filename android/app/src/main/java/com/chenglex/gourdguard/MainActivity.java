@@ -1,4 +1,4 @@
-package com.liongchenglex.gourdguard;
+package com.chenglex.gourdguard;
 
 import com.getcapacitor.BridgeActivity;
 

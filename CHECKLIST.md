@@ -7,17 +7,17 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
 
 **Your info, used everywhere:**
 - App name: **Gourd Guard**
-- App ID / bundle ID / package name: **com.liongchenglex.gourdguard**
+- App ID / bundle ID / package name: **com.chenglex.gourdguard**
 - Version: **1.0**, build **1**
 
 ---
 
 ## Part 1: Accounts (day 1)
 
-- [ ] **1.1 Apple Developer Program**. Go to developer.apple.com/programs → Enroll. Sign up as an Individual with your Apple ID (two-factor authentication must be on). It costs 99 USD a year, and approval can take up to 2 days.
-- [ ] **1.2 Google Play Console**. Go to play.google.com/console → sign up as a **Personal** account. It costs 25 USD once. Google checks your ID and your phone, which can take a few days.
-- [ ] **1.3 Google AdMob**. Go to admob.google.com and sign in with the same Google account. Fill in your payment and tax details (Payments → Settings), or AdMob won't pay you.
-- [ ] **1.4 RevenueCat**. Go to revenuecat.com and sign up (free).
+- [x ] **1.1 Apple Developer Program**. Go to developer.apple.com/programs → Enroll. Sign up as an Individual with your Apple ID (two-factor authentication must be on). It costs 99 USD a year, and approval can take up to 2 days.
+- [ x] **1.2 Google Play Console**. Go to play.google.com/console → sign up as a **Personal** account. It costs 25 USD once. Google checks your ID and your phone, which can take a few days.
+- [x ] **1.3 Google AdMob**. Go to admob.google.com and sign in with the same Google account. Fill in your payment and tax details (Payments → Settings), or AdMob won't pay you.
+- [x ] **1.4 RevenueCat**. Go to revenuecat.com and sign up (free).
 
 ---
 
@@ -29,7 +29,7 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
   - Platform: iOS
   - Name: Gourd Guard
   - Language: English
-  - Bundle ID: com.liongchenglex.gourdguard. If it isn't in the list, open the project in Xcode once (`npx cap open ios`) → Signing & Capabilities → pick your Team, and it appears.
+  - Bundle ID: com.chenglex.gourdguard. If it isn't in the list, open the project in Xcode once (`npx cap open ios`) → Signing & Capabilities → pick your Team, and it appears.
   - SKU: `gourdguard`
 
 ### Google
@@ -55,8 +55,8 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
 
 ### RevenueCat
 - [ ] **2.9 Create the project**. Make a new project called "Gourd Guard".
-- [ ] **2.10 Add the App Store app**. Use bundle ID com.liongchenglex.gourdguard. Copy its **public API key** (starts with `appl_`).
-- [ ] **2.11 Add the Play Store app**. Use package com.liongchenglex.gourdguard. Copy its **public API key** (starts with `goog_`).
+- [ ] **2.10 Add the App Store app**. Use bundle ID com.chenglex.gourdguard. Copy its **public API key** (starts with `appl_`).
+- [ ] **2.11 Add the Play Store app**. Use package com.chenglex.gourdguard. Copy its **public API key** (starts with `goog_`).
 
 ---
 

@@ -42,13 +42,13 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
   - Tick the declarations.
 
 ### AdMob
-- [ ] **2.5 Add the iPhone app**. Apps → Add app → iOS → "Is it listed on a store?" **No** → name "Gourd Guard iOS". Copy its **App ID** (`ca-app-pub-…~…`).
-- [ ] **2.6 Make the iPhone ad units**. In that app → Ad units → Add:
+- [x] **2.5 Add the iPhone app**. Apps → Add app → iOS → "Is it listed on a store?" **No** → name "Gourd Guard iOS". Copy its **App ID** (`ca-app-pub-…~…`).
+- [x] **2.6 Make the iPhone ad units**. In that app → Ad units → Add:
   - a **Rewarded** unit named "Seeds reward"
   - an **Interstitial** unit named "Endless end"
 
   Copy both **ad unit IDs** (`ca-app-pub-…/…`).
-- [ ] **2.7 Repeat 2.5 and 2.6 for Android**. Name the app "Gourd Guard Android", and copy its App ID and both ad unit IDs.
+- [x] **2.7 Repeat 2.5 and 2.6 for Android**. Name the app "Gourd Guard Android", and copy its App ID and both ad unit IDs.
 - [ ] **2.8 Consent messages**. AdMob → **Privacy & messaging**. These are the pop-ups the game shows before ads; without them, ads in Europe won't work.
   1. Create a **European regulations (GDPR)** message for both apps and publish it.
   2. Create an **IDFA explainer** message for the iOS app and publish it.

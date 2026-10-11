@@ -56,7 +56,7 @@ Build `docs/WORLDS.md` one world at a time, each with its own bot runs. Next: **
 - Portrait only, status bar hidden, full screen (`ios/App/App/Info.plist`). Leaving the app pauses the night and silences audio (`audioSleep` in `src/engine/audio.js`).
 - Fonts are bundled (`src/fonts/`, SIL OFL), so the game needs no network. The icon and launch screen are drawn with the game's pumpkin by `.venv/bin/python tools/app_art.py`.
 - Android app too (2026-10-11): `android/`, same app ID, portrait, Back button handled in `src/engine/native.js`. Building it needs Java 21.
-- Launch work (2026-10-11), all in `src/engine/native.js`: saves mirrored into native storage (`@capacitor/preferences`), rewarded ads with Google AdMob (`window.GGAds`), seed packs through RevenueCat (`window.GGStore`). Keys in `src/data/appkeys.js` (AdMob test units until the owner's are in; RevenueCat keys in; packs go live once the store products exist). Chests show their odds. **`docs/LAUNCH.md` is the launch checklist** with everything the owner must supply.
+- Launch work (2026-10-11), all in `src/engine/native.js`: saves mirrored into native storage (`@capacitor/preferences`), rewarded ads with Google AdMob (`window.GGAds`), seed packs through RevenueCat (`window.GGStore`). Keys in `src/data/appkeys.js` (owner's real AdMob units and RevenueCat keys, all in; packs go live once the store products exist). Chests show their odds. **`docs/LAUNCH.md` is the launch checklist** with everything the owner must supply.
 - Icons, launch screens and store art for both phones: `.venv/bin/python tools/app_art.py` (store art in `store/`).
 
 ## Phone playtests

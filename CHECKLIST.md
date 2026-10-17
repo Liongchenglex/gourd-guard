@@ -18,18 +18,18 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
 
 ## Part 1: Accounts (day 1)
 
-- [x ] **1.1 Apple Developer Program**. Go to developer.apple.com/programs → Enroll. Sign up as an Individual with your Apple ID (two-factor authentication must be on). It costs 99 USD a year, and approval can take up to 2 days.
-- [ x] **1.2 Google Play Console**. Go to play.google.com/console → sign up as a **Personal** account. It costs 25 USD once. Google checks your ID and your phone, which can take a few days.
-- [x ] **1.3 Google AdMob**. Go to admob.google.com and sign in with the same Google account. Fill in your payment and tax details (Payments → Settings), or AdMob won't pay you.
-- [x ] **1.4 RevenueCat**. Go to revenuecat.com and sign up (free).
+- [x] **1.1 Apple Developer Program**. Go to developer.apple.com/programs → Enroll. Sign up as an Individual with your Apple ID (two-factor authentication must be on). It costs 99 USD a year, and approval can take up to 2 days.
+- [x] **1.2 Google Play Console**. Go to play.google.com/console → sign up as a **Personal** account. It costs 25 USD once. Google checks your ID and your phone, which can take a few days.
+- [x] **1.3 Google AdMob**. Go to admob.google.com and sign in with the same Google account. Fill in your payment and tax details (Payments → Settings), or AdMob won't pay you.
+- [x] **1.4 RevenueCat**. Go to revenuecat.com and sign up (free).
 
 ---
 
 ## Part 2: Create the app in each place
 
 ### Apple
-- [ ] **2.1 Paid apps agreement**. In App Store Connect (appstoreconnect.apple.com) → **Business** (or "Agreements, Tax, and Banking"), accept the **Paid Apps** agreement and fill in bank and tax details. Without this, seed packs can't be sold.
-- [ ] **2.2 Create the app**. App Store Connect → Apps → **+** → New App.
+- [x] **2.1 Paid apps agreement**. In App Store Connect (appstoreconnect.apple.com) → **Business** (or "Agreements, Tax, and Banking"), accept the **Paid Apps** agreement and fill in bank and tax details. Without this, seed packs can't be sold.
+- [x] **2.2 Create the app**. App Store Connect → Apps → **+** → New App.
   - Platform: iOS
   - Name: Gourd Guard
   - Language: English
@@ -37,8 +37,8 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
   - SKU: `gourdguard`
 
 ### Google
-- [ ] **2.3 Payments profile**. In Play Console → Settings → **Payments profile**, set one up. You need it to sell seed packs.
-- [ ] **2.4 Create the app**. Play Console → **Create app**.
+- [x] **2.3 Payments profile**. In Play Console → Settings → **Payments profile**, set one up. You need it to sell seed packs.
+- [x] **2.4 Create the app**. Play Console → **Create app**.
   - App name: Gourd Guard
   - Language: English
   - Type: **Game**
@@ -53,7 +53,7 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
 
   Copy both **ad unit IDs** (`ca-app-pub-…/…`).
 - [x] **2.7 Repeat 2.5 and 2.6 for Android**. Name the app "Gourd Guard Android", and copy its App ID and both ad unit IDs.
-- [ ] **2.8 Consent messages**. AdMob → **Privacy & messaging**. These are the pop-ups the game shows before ads; without them, ads in Europe won't work.
+- [x] **2.8 Consent messages**. AdMob → **Privacy & messaging**. These are the pop-ups the game shows before ads; without them, ads in Europe won't work.
   1. Create a **European regulations (GDPR)** message for both apps and publish it.
   2. Create an **IDFA explainer** message for the iOS app and publish it.
 
@@ -93,12 +93,12 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
 
 ### iPhone → TestFlight
 - [x] **4.1–4.3 Archive**. ✅ Claude built the release archive "Gourd Guard 1.0 (1)". (For later updates: `npx cap open ios`, pick **Any iOS Device (arm64)**, then **Product → Archive**.)
-- [ ] **4.4 Upload** (after 2.2, so App Store Connect has the app). Open Xcode → menu **Window → Organizer** → **Archives** → select **Gourd Guard 1.0 (1)** → **Distribute App → App Store Connect → Upload**, then click through the defaults. (Claude wasn't allowed to upload on your behalf.)
+- [x] **4.4 Upload**. ✅ Claude uploaded build 1.0 (1) to App Store Connect on 2026-10-17. (For later updates: Xcode → **Window → Organizer** → **Archives** → pick the build → **Distribute App → App Store Connect → Upload**.)
 - [ ] **4.5 Wait for processing**. In App Store Connect → your app → **TestFlight**, wait about 15–30 min. Then add yourself as an internal tester and install the **TestFlight** app on your iPhone.
 
 ### Android → closed test (starts the 14-day clock, so do it soon)
 - [ ] **4.6 Open the project**. In Terminal, run: `npx cap open android`.
-- [ ] **4.7 Check Java**. In Android Studio, make sure Gradle uses **Java 21**: Settings → Build Tools → Gradle → Gradle JDK.
+- [ ] **4.7 Check Java**. In Android Studio, make sure Gradle uses **Java 21**: Settings → Build Tools → Gradle → Gradle JDK → pick **jdk-21** (Claude installed it on 2026-10-17 in `~/Library/Java/JavaVirtualMachines/jdk-21.0.12.1+1`).
 - [ ] **4.8 Build the signed bundle**. Menu: **Build → Generate Signed App Bundle / APK → Android App Bundle**.
   1. Click **Create new** keystore and save the file somewhere safe (not in the project folder).
   2. Pick a password and write it down.

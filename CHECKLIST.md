@@ -176,7 +176,7 @@ I'll have drafted the text and screenshots in step 3.2; copy them in.
 - [ ] **7.8 Pick the build**. Select the TestFlight build you tested.
 
 ### Play Console (left menu → Grow → Store presence, and Policy → App content)
-- [ ] **7.9 Main store listing**. Fill in the short description, full description, app icon (`store/play-icon-512.png`), feature graphic (`store/play-feature-1024x500.png`) and the six phone screenshots in `store/screenshots/android/`. Text is in `store/LISTING.md`.
+- [ ] **7.9 Main store listing**. Fill in the short description, full description, app icon (`store/play-icon-512.png`), feature graphic (`store/play-feature-1024x500.jpg`) and the six phone screenshots in `store/screenshots/android/`. Text is in `store/LISTING.md`.
 - [ ] **7.10 Category and contact**. Store settings: category **Puzzle**, contact email `chenglex1@gmail.com`, and **website `https://liongchenglex.github.io`** (AdMob reads app-ads.txt from there).
 - [ ] **7.11 App content**. Fill in every item:
   - Privacy policy: `https://liongchenglex.github.io/gourd-guard-support/privacy-policy.html`.

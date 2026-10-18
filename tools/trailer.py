@@ -217,7 +217,7 @@ def main():
     ap.add_argument('--music', default=str(ROOT / 'assets/music/play_draft1.mp3'))
     ap.add_argument('--out', default=str(ROOT / 'store/trailer.mp4'))
     ap.add_argument('--work', default=None, help='scratch folder for frames (default: a temp folder)')
-    ap.add_argument('--endline', default='Coming soon on iPhone and Android')
+    ap.add_argument('--endline', default='Out now on iPhone and Android')
     ap.add_argument('--only', default=None, help='comma list of parts to (re)record: intro, clip names, end, or none; others reuse --work')
     ap.add_argument('--interval', type=int, default=520, help='ms between bot actions')
     args = ap.parse_args()

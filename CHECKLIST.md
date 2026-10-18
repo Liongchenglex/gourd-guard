@@ -94,7 +94,7 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
 ### iPhone → TestFlight
 - [x] **4.1–4.3 Archive**. ✅ Claude built the release archive "Gourd Guard 1.0 (1)". (For later updates: `npx cap open ios`, pick **Any iOS Device (arm64)**, then **Product → Archive**.)
 - [x] **4.4 Upload**. ✅ Claude uploaded build 1.0 (1) to App Store Connect on 2026-10-17. (For later updates: Xcode → **Window → Organizer** → **Archives** → pick the build → **Distribute App → App Store Connect → Upload**.)
-- [ ] **4.5 Wait for processing**. In App Store Connect → your app → **TestFlight**, wait about 15–30 min. Then add yourself as an internal tester and install the **TestFlight** app on your iPhone.
+- [x] **4.5 Wait for processing**. In App Store Connect → your app → **TestFlight**, wait about 15–30 min. Then add yourself as an internal tester and install the **TestFlight** app on your iPhone.
 
 ### Android → closed test (starts the 14-day clock, so do it soon)
 - [x] **4.6 Open the project**. In Terminal, run: `npx cap open android`.
@@ -106,19 +106,19 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
 
   ✅ Done 2026-10-18: key at `/Users/liongchenglex/GourdGuard-keys/gourdguard-upload.jks` (alias `upload`), bundle at `android/app/release/app-release.aab`.
   ⚠️ **Back up the keystore file and its password** (for example in a password manager and cloud storage). If you lose them, you can never update the app.
-- [ ] **4.9 Upload to closed testing**. Play Console → Test and release → Testing → **Closed testing** → Create track → Create release.
+- [x] **4.9 Upload to closed testing**. Play Console → Test and release → Testing → **Closed testing** → Create track → Create release.
   1. Accept **Play App Signing**.
   2. Upload the `.aab` file from `android/app/release/`.
   3. Release name: 1.0.
-- [ ] **4.10 Add 12 testers**. Add **at least 12 testers** (Gmail addresses of friends with Android phones) and save. Send them the **opt-in link** Play Console shows.
-- [ ] **4.11 Keep them in for 14 days**. Make sure all 12 tap the link, install the game and **keep it installed for 14 days**. Ask them to open it a few times. Google checks this.
+- [x] **4.10 Add 12 testers**. Add **at least 12 testers** (Gmail addresses of friends with Android phones) and save. Send them the **opt-in link** Play Console shows.
+- [ ] **4.11 Keep them in for 14 days** (clock started about 2026-10-18, so earliest is about 2026-11-01). Make sure all 12 tap the link, install the game and **keep it installed for 14 days**. Ask them to open it a few times. Google checks this.
 
 ---
 
 ## Part 5: Seed packs (in-app purchases)
 
 ### Apple
-- [ ] **5.1 Create the three products**. App Store Connect → your app → **Monetization → In-App Purchases** → **+** → **Consumable**. Make three (names, descriptions and review notes are ready to paste in `store/LISTING.md`):
+- [x] **5.1 Create the three products**. App Store Connect → your app → **Monetization → In-App Purchases** → **+** → **Consumable**. Make three (names, descriptions and review notes are ready to paste in `store/LISTING.md`):
 
   | Product ID | Display name | Price |
   |---|---|---|
@@ -127,14 +127,14 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
   | `seeds_50` | 50 Seeds | 10.99 USD |
 
   Fill in the description ("10 pumpkin seeds") and add a review screenshot. I'll give you one of the shop screen.
-- [ ] **5.2 In-App Purchase key**. App Store Connect → Users and Access → **Integrations → In-App Purchase** → generate a key and download the `.p8` file. Upload it in **RevenueCat** → your App Store app (also copy the Issuer ID and Key ID it asks for). Also paste the **App-Specific Shared Secret** if RevenueCat asks; it's under your app → App Information.
+- [x] **5.2 In-App Purchase key**. App Store Connect → Users and Access → **Integrations → In-App Purchase** → generate a key and download the `.p8` file. Upload it in **RevenueCat** → your App Store app (also copy the Issuer ID and Key ID it asks for). Also paste the **App-Specific Shared Secret** if RevenueCat asks; it's under your app → App Information.
 
 ### Google
-- [ ] **5.3 Create the three products**. Do this after step 4.9: Play Console only allows products once a build is uploaded. Play Console → **Monetize → Products → In-app products** → Create product. Use the same three IDs, names and prices as 5.1, and press **Activate** on each.
-- [ ] **5.4 Service account**. Follow RevenueCat's guide "Creating Play Service Credentials" (it's in the Play Store app settings in RevenueCat). It makes a `.json` key file; upload it to RevenueCat. This can take up to 36 hours to start working, which is normal.
+- [x] **5.3 Create the three products**. Do this after step 4.9: Play Console only allows products once a build is uploaded. Play Console → **Monetize → Products → In-app products** → Create product. Use the same three IDs, names and prices as 5.1, and press **Activate** on each.
+- [x] **5.4 Service account**. Follow RevenueCat's guide "Creating Play Service Credentials" (it's in the Play Store app settings in RevenueCat). It makes a `.json` key file; upload it to RevenueCat. This can take up to 36 hours to start working, which is normal.
 
 ### RevenueCat
-- [ ] **5.5 Add the products**. In RevenueCat → **Products**, add `seeds_10`, `seeds_25` and `seeds_50` for **both** apps.
+- [x] **5.5 Add the products**. In RevenueCat → **Products**, add `seeds_10`, `seeds_25` and `seeds_50` for **both** apps.
 
 ---
 

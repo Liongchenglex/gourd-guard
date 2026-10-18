@@ -97,13 +97,14 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
 - [ ] **4.5 Wait for processing**. In App Store Connect → your app → **TestFlight**, wait about 15–30 min. Then add yourself as an internal tester and install the **TestFlight** app on your iPhone.
 
 ### Android → closed test (starts the 14-day clock, so do it soon)
-- [ ] **4.6 Open the project**. In Terminal, run: `npx cap open android`.
-- [ ] **4.7 Check Java**. In Android Studio, make sure Gradle uses **Java 21**: Settings → Build Tools → Gradle → Gradle JDK → pick **jdk-21** (Claude installed it on 2026-10-17 in `~/Library/Java/JavaVirtualMachines/jdk-21.0.12.1+1`).
-- [ ] **4.8 Build the signed bundle**. Menu: **Build → Generate Signed App Bundle / APK → Android App Bundle**.
+- [x] **4.6 Open the project**. In Terminal, run: `npx cap open android`.
+- [x] **4.7 Check Java**. In Android Studio, make sure Gradle uses **Java 21**: Settings → Build Tools → Gradle → Gradle JDK → pick **jdk-21** (Claude installed it on 2026-10-17 in `~/Library/Java/JavaVirtualMachines/jdk-21.0.12.1+1`).
+- [x] **4.8 Build the signed bundle**. Menu: **Build → Generate Signed App Bundle / APK → Android App Bundle**.
   1. Click **Create new** keystore and save the file somewhere safe (not in the project folder).
   2. Pick a password and write it down.
   3. Choose **release**.
 
+  ✅ Done 2026-10-18: key at `/Users/liongchenglex/GourdGuard-keys/gourdguard-upload.jks` (alias `upload`), bundle at `android/app/release/app-release.aab`.
   ⚠️ **Back up the keystore file and its password** (for example in a password manager and cloud storage). If you lose them, you can never update the app.
 - [ ] **4.9 Upload to closed testing**. Play Console → Test and release → Testing → **Closed testing** → Create track → Create release.
   1. Accept **Play App Signing**.

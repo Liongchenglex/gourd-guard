@@ -184,7 +184,7 @@ I'll have drafted the text and screenshots in step 3.2; copy them in.
   - App access: **All functionality available without special access**.
   - Content rating: fill in the questionnaire (fantasy violence, in-app purchases). Expect Everyone 10+ / PEGI 7.
   - Target audience: **13 and over**. Don't tick under-13 ages, or Google's stricter family rules apply.
-  - Data safety:
+  - Data safety: see `store/PLAY_APP_CONTENT.md` for every answer, click by click.
     - Collects **Device or other IDs** (for advertising) and **Purchase history** (for app functionality)
     - Data is encrypted in transit: Yes
     - Users can't request deletion: there are no accounts

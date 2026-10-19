@@ -42,3 +42,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return config
     }
 }
+
+/// The game's screen. Flicks start low on the patch, right where iOS listens for "swipe up to go home", so a fast
+/// flick could leave the game. Deferring the edges makes the first edge swipe only light up the home bar; a second
+/// swipe still leaves the app (owner report, 2026-10-19).
+class GameViewController: CAPBridgeViewController {
+    override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge { .all }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
+    }
+}

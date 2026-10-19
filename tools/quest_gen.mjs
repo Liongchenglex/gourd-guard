@@ -79,7 +79,9 @@ function fixed(d){
   return null;
 }
 // "freeze OR burn" (owner): each such slot is one or the other, never both; chosen by level so the other picks stay put
-const N15 = (k, d) => k === 'iceOrFire' ? [(d.world + d.level) % 2 ? 'chill' : 'burn', 15] : null;
+// Owner, 2026-10-19: short levels ask for fewer Fire/Ice hits (15 was more than their monsters allow; about 60% of the monsters)
+const FIRE_ICE_N = { '2-2':8, '3-1':9, '4-2':8, '5-1':8, '2-7':11, '3-4':10, '3-6':12, '4-5':10, '4-7':11, '5-5':11 };
+const N15 = (k, d) => k === 'iceOrFire' ? [(d.world + d.level) % 2 ? 'chill' : 'burn', FIRE_ICE_N[`${d.world}-${d.level}`] || 15] : null;
 
 const fam = k => k.startsWith('wall') ? 'wall' : k.startsWith('noTouch') ? 'noTouch' : k;   // never two wall quests or two fence quests on one level
 const table = {};

@@ -31,12 +31,12 @@ export const QUEST_TABLE = {
   '1-18': [['oneLaunch',5],['bunch5',3]],
   '1-19': [['noTouch','ghoul'],['wallMin',75]],
   '2-1': [['bunch5',1],['oneLaunch',2]],
-  '2-2': [['burn',15],['wallMin',50]],
+  '2-2': [['burn',8],['wallMin',50]],   // owner, 2026-10-19: was 15, more than the level's monsters allow
   '2-3': [['noTools'],['oneLaunch',2]],
   '2-4': [['boomer',4],['bunch5',1]],
   '2-5': [['wallMin',55],['noTouch','ghoul']],
   '2-6': [['noTools'],['boomer',4]],
-  '2-7': [['wallMin',60],['chill',15]],
+  '2-7': [['wallMin',60],['chill',11]],   // owner, 2026-10-19: was 15, more than the level's monsters allow
   '2-8': [['bunch5',2],['oneLaunch',3]],
   '2-9': [['boomer',5],['noTouch','ghoul']],
   '2-11': [['noTouch','ghoul'],['boomer',6]],
@@ -48,12 +48,12 @@ export const QUEST_TABLE = {
   '2-17': [['noTouch','fogwalker'],['oneLaunch',5]],
   '2-18': [['noTouch','fogwalker'],['noTools']],
   '2-19': [['noTouch','fogwalker'],['chill',15]],
-  '3-1': [['burn',15],['boomer',3]],
+  '3-1': [['burn',9],['boomer',3]],   // owner, 2026-10-19: was 15, more than the level's monsters allow
   '3-2': [['oneLaunch',2],['bunch5',1]],
   '3-3': [['boomer',4],['noTools']],
-  '3-4': [['wallMin',55],['chill',15]],
+  '3-4': [['wallMin',55],['chill',10]],   // owner, 2026-10-19: was 15, more than the level's monsters allow
   '3-5': [['boomer',4],['bunch5',1]],
-  '3-6': [['noTouch','ghoul'],['chill',15]],
+  '3-6': [['noTouch','ghoul'],['chill',12]],   // owner, 2026-10-19: was 15, more than the level's monsters allow
   '3-7': [['wallMin',60],['boomer',5]],
   '3-8': [['noTools'],['oneLaunch',3]],
   '3-9': [['bunch5',2],['wallMin',60]],
@@ -64,12 +64,12 @@ export const QUEST_TABLE = {
   '3-18': [['wallMin',70],['heal',14]],
   '3-19': [['noTools'],['wallAvg',85]],
   '4-1': [['noTools'],['noTouch','ghoul']],
-  '4-2': [['burn',15],['bunch5',1]],
+  '4-2': [['burn',8],['bunch5',1]],   // owner, 2026-10-19: was 15, more than the level's monsters allow
   '4-3': [['oneLaunch',2],['must',['purple']]],
   '4-4': [['wallMin',55],['noTools']],
-  '4-5': [['chill',15],['heal',11]],
+  '4-5': [['chill',10],['heal',11]],   // owner, 2026-10-19: was 15, more than the level's monsters allow
   '4-6': [['must',['grey','green']],['noTools']],
-  '4-7': [['chill',15],['castlesAll']],
+  '4-7': [['chill',11],['castlesAll']],   // owner, 2026-10-19: was 15, more than the level's monsters allow
   '4-8': [['noTools'],['noTouch','ghoul']],
   '4-9': [['heal',12],['chill',15]],
   '4-11': [['heal',13],['oneLaunch',4]],
@@ -81,11 +81,11 @@ export const QUEST_TABLE = {
   '4-17': [['must',['yellow','green']],['bunch5',3]],
   '4-18': [['castlesAll'],['oneLaunch',5]],
   '4-19': [['castlesAll'],['must',['turquoise','black']]],
-  '5-1': [['pierce',8],['burn',15]],
+  '5-1': [['pierce',8],['burn',8]],   // owner, 2026-10-19: was 15, more than the level's monsters allow
   '5-2': [['oneLaunch',2],['must',['pink','purple']]],
   '5-3': [['heal',11],['bunch5',1]],
   '5-4': [['pierce',9],['noTouch','ghoul']],
-  '5-5': [['wallMin',55],['burn',15]],
+  '5-5': [['wallMin',55],['burn',11]],   // owner, 2026-10-19: was 15, more than the level's monsters allow
   '5-6': [['must',['ice','black']],['heal',11]],
   '5-7': [['brownBig',11],['pierce',10]],
   '5-8': [['must',['turquoise']],['noTouch','ghoul']],

@@ -91,12 +91,12 @@ export const QUEST_TABLE = {
   '5-8': [['must',['turquoise']],['noTouch','ghoul']],
   '5-9': [['heal',12],['wallMin',60]],
   '5-11': [['brownBig',12],['burn',15]],
-  '5-12': [['pierce',12],['noTouch','ghoul']],
+  '5-12': [['noTools'],['noTouch','ghoul']],   // owner, 2026-10-19: was Grey pierce 12
   '5-13': [['wallMin',65],['bunch5',2]],
   '5-14': [['noTools'],['heal',13]],
   '5-15': [['oneLaunch',4],['wallMin',70]],
   '5-16': [['pierce',14],['noTouch','ghoul']],
   '5-17': [['oneLaunch',5],['wallMin',70]],
-  '5-18': [['brownBig',14],['heal',14]],
+  '5-18': [['bunch5',3],['heal',14]],   // owner, 2026-10-19: was big Brown kills 14
   '5-19': [['bunch5',3],['pierce',15]],
 };

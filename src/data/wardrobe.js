@@ -2,7 +2,7 @@ import { WORLD_LEVELS, LEVELS } from './worlds/index.js';
 import { persist, save } from '../save.js';
 // ---------- Wardrobe (owner, 2026-09-27) ----------
 // Costumes are worn by every pumpkin at once: a hat or accessory plus a hit effect. Visual only, never power.
-// Boss costumes are traded for 30 of that boss's items (economy.js); boss items come from level-20 boss chests or are bought.
+// Boss costumes are traded for 15 of that boss's items (economy.js); boss items come from level-20 boss chests or are bought.
 // Skins change one pumpkin colour: its body, its lit face and its flight trail. Prices are in pumpkin seeds (first guesses, scaled to 1 seed per ad and $0.22-0.40 per seed).
 
 export const COSTUMES = [

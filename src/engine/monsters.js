@@ -267,7 +267,7 @@ export function updateMonster(m, dt){
         m.hexT -= dt;
         if (m.hexT <= 0 && m.p > 0.05){
           m.hexT = TYPES.witch.hexEvery;
-          const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'sack' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.rise <= 0 && o.p > 0);   // anything but bosses and true chameleons; may re-hex an already hexed monster; witches hex each other (owner)
+          const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'sack' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.type !== 'mummy' && o.type !== 'firemummy' && o.rise <= 0 && o.p > 0);   // anything but bosses, true chameleons and mummies (owner, 2026-10-19: a hexed mummy's colour immunity could leave nothing able to finish it); may re-hex an already hexed monster; witches hex each other (owner)
           if (pick.length){ const o = pick[Math.floor(Math.random() * pick.length)]; hexBolt(m, o); hexMonster(o, Math.random() >= TYPES.witch.chameleonChance); SFX.monsterAct('witch', 'hex'); m.anim = { clip:'hex', t:0, dur:0.5 }; }
         }
         m.x = m.tx + Math.sin(m.ph * 1.6) * 2;

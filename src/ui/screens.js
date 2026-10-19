@@ -690,7 +690,7 @@ function renderWardrobe(){
       const have = Math.min(starsHave(), starsMax()), need = starsMax();
       const pr = document.createElement('div'); pr.className = 'bossItems starProg';
       pr.innerHTML = `<span class="bigStar" aria-hidden="true">★</span><span><b>${have} / ${need}</b> stars · 3 on every level of worlds 1 to 5</span><i style="--f:${have / need}"></i>`; info.insertBefore(pr, actions);
-    } else if (c.boss && !owned(c.key)){   // traded for 30 of the boss's items (owner's monetization.md); boss items cost seeds only
+    } else if (c.boss && !owned(c.key)){   // traded for 15 of the boss's items (owner's monetization.md); boss items cost seeds only
       const have = bossItemsFor(c.boss), need = BOSS_ITEMS_FOR_COSTUME;
       const pr = document.createElement('div'); pr.className = 'bossItems'; pr.appendChild(dom(bossItemIcon(c.boss, 30)));
       pr.insertAdjacentHTML('beforeend', `<span><b>${Math.min(have, need)} / ${need}</b> ${BOSS_ITEM_NAMES[c.boss]}s · from ${BOSS_NAMES[c.boss]}'s level-20 chest</span><i style="--f:${Math.min(1, have / need)}"></i>`); info.insertBefore(pr, actions);

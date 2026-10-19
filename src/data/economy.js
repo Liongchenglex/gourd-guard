@@ -49,7 +49,7 @@ export const BOSS_SEED = { chance:0.05, min:1, max:3 };   // any boss kill
 export const ENDLESS_BOSS_SEED = { chance:0.5, min:1, max:3 };   // a boss beaten in Endless Night (owner, 2026-10-08)
 
 /** Boss items: collect BOSS_ITEMS_FOR_COSTUME of one boss's item to trade for its costume. */
-export const BOSS_ITEMS_FOR_COSTUME = 30;
+export const BOSS_ITEMS_FOR_COSTUME = 15;   // owner, 2026-10-19 (was 30)
 export const BOSS_ITEM_SEED_PACK = { items:1, seeds:10 };    // one boss item costs 10 seeds; never sold for coins (owner, 2026-09-27)
 
 /** The Loot Sack: summoned by watching an ad on the level card. Two lanes wide, never chews walls, flees when its time is up. */

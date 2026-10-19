@@ -31,6 +31,14 @@ CLIPS = [
 ]
 END_SECS = 3.2
 
+# Captions over the gameplay: (first clip, last clip, text). Each stays up from the start of its first clip to the end of its last.
+GAME_CAPTIONS = [
+    ('patch', 'patch', 'Fight off the horde!'),
+    ('fog', 'wind', 'Explore five haunted worlds'),
+    ('keep', 'marsh', 'Think fast. Plan smart.'),
+    ('boss', 'boss', 'The boss awaits...'),
+]
+
 # Intro sound effects (seconds into the intro, sample in assets/sfx/raw or enc, volume), matched to tools/trailer/cinema.js.
 INTRO_SFX = [
     (0.0, 'wind_0', .55), (3.4, 'wind_0', .45), (7.0, 'wind_0', .35), (1.3, 'creak_1', .5),
@@ -158,6 +166,23 @@ def resample(frames, start, end, outdir):
     return n
 
 
+def render_captions(browser, dev, outdir):
+    """One transparent full-frame PNG per gameplay caption (drawn by cinema.js so the lettering matches the intro)."""
+    outdir.mkdir(parents=True, exist_ok=True)
+    page = browser.new_page(viewport={'width': 540, 'height': 960})
+    page.goto(dev.rstrip('/') + '/tools/trailer/cinema.html')
+    page.wait_for_function('window.ready')
+    page.evaluate('window.ready')
+    paths = []
+    for i, (_, _, text) in enumerate(GAME_CAPTIONS):
+        d = page.evaluate('(t) => window.captionPNG(t)', text)
+        path = outdir / f'cap{i}.png'
+        path.write_bytes(base64.b64decode(d.split(',', 1)[1]))
+        paths.append(path)
+    page.close()
+    return paths
+
+
 def render_intro(browser, dev, outdir):
     """Frame-exact render of the story intro."""
     outdir.mkdir(parents=True, exist_ok=True)
@@ -239,6 +264,7 @@ def main():
         if want('end'):
             shutil.rmtree(work / 'end', ignore_errors=True)
             record(browser, page_url, 'end', 0, END_SECS + .4, .2, END_SECS + .2, work / 'end', args.endline, args.interval)
+        caps = render_captions(browser, args.dev, work / 'captions')
         browser.close()
 
     # Video: intro, a white flash cut into the gameplay, quick fades between nights, a slower fade to the end card.
@@ -250,19 +276,30 @@ def main():
         encode(work / name / 'out', seg)
         inputs += ['-i', str(seg)]
         durs.append(len(list((work / name / 'out').glob('o*.jpg'))) / FPS)
-    last, acc, xs = '0:v', 0.0, 0.0
+    last, acc, xs, start = '0:v', 0.0, 0.0, {'intro': 0.0}
     for i in range(1, len(parts)):
         tr, xf = fades[i - 1]
         acc += durs[i - 1]; xs += xf
         off = acc - xs
+        start[parts[i]] = off
         if i == 1:
             music_at = off + xf   # the music lands on the first gameplay frame
         filt.append(f'[{last}][{i}:v]xfade=transition={tr}:duration={xf}:offset={off:.3f}[v{i}]')
         last = f'v{i}'
     total = sum(durs) - xs
 
+    # Gameplay captions: each PNG fades in and out over its clips.
+    k = len(parts)
+    for (a, b, _), png in zip(GAME_CAPTIONS, caps):
+        t0, t1 = start[a] + .15, start[b] + durs[parts.index(b)] - .25
+        inputs += ['-loop', '1', '-framerate', str(FPS), '-t', f'{total:.3f}', '-i', str(png)]
+        filt.append(f'[{k}:v]format=rgba,fade=t=in:st={t0:.3f}:d=0.25:alpha=1,fade=t=out:st={t1 - .25:.3f}:d=0.25:alpha=1[c{k}]')
+        filt.append(f"[{last}][c{k}]overlay=0:0:enable='between(t,{t0:.3f},{t1:.3f})'[o{k}]")
+        last = f'o{k}'
+        k += 1
+
     # Audio: the intro's sound effects, then the music from 0:00 at the cut, faded out under the end card.
-    m = k = len(parts)
+    m = k
     for t, f, vol in INTRO_SFX:
         src = SFX / 'raw' / f'{f}.mp3'
         inputs += ['-i', str(src if src.exists() else SFX / 'enc' / f'{f}.mp3')]

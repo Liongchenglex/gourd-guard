@@ -199,3 +199,14 @@ window.renderFrame = t => {
 };
 window.END = END;
 window.ready = (async () => { const f = new FontFace('Fredoka', 'url(/src/fonts/fredoka-latin.woff2)', { weight:'300 700' }); document.fonts.add(await f.load()); return true; })();
+
+/** A gameplay caption as a transparent full-frame PNG, laid over the recorded nights by tools/trailer.py: a dark band over the top bar, the same lettering as the intro. */
+window.captionPNG = text => {
+  const c = document.createElement('canvas'); c.width = W * K; c.height = H * K;
+  const x = c.getContext('2d'), lines = text.split('\n'); x.scale(K, K);
+  const band = x.createLinearGradient(0, 0, 0, 190 + lines.length * 20); band.addColorStop(0, 'rgba(10,4,14,.92)'); band.addColorStop(.55, 'rgba(10,4,14,.75)'); band.addColorStop(1, 'rgba(10,4,14,0)');
+  x.fillStyle = band; x.fillRect(0, 0, W, 190 + lines.length * 20);
+  x.textAlign = 'center'; x.font = '700 36px Fredoka'; x.lineJoin = 'round';
+  lines.forEach((ln, i) => { const y = 82 + i * 44; x.lineWidth = 8; x.strokeStyle = '#2a0d05'; x.strokeText(ln, W / 2, y); x.fillStyle = '#ffd9a0'; x.fillText(ln, W / 2, y); });
+  return c.toDataURL('image/png');
+};

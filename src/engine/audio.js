@@ -25,7 +25,7 @@ export function ensureAudio(){
       noiseBuf = AC.createBuffer(1, Math.floor(AC.sampleRate * 1), AC.sampleRate);
       const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     }
-    if (AC.state === 'suspended') AC.resume();
+    if (AC.state !== 'running' && AC.state !== 'closed'){ const p = AC.resume(); if (p && p.catch) p.catch(() => {}); }
     decodeBank();
   } catch (e) {}
 }
@@ -74,7 +74,12 @@ export function musicStop(fade = 0.8){
 }
 /** Mute toggle: duck or restore the running track without restarting it. */
 /** Leaving the app (or hiding the tab) silences everything; coming back resumes (the phone app, 2026-09-28). */
-export function audioSleep(hidden){ try { if (!AC) return; if (hidden) AC.suspend(); else if (AC.state === 'suspended') AC.resume(); } catch (e) {} }
+/** iOS brings the context back "interrupted" (not "suspended") and may refuse to resume it until the next tap, so the
+ *  wake is retried on every tap until the sound runs again (owner: no sound after minimising the app, 2026-10-21). */
+let wantWake = false;
+function wake(){ if (!AC || AC.state === 'running'){ wantWake = false; return; } try { const p = AC.resume(); if (p && p.then) p.then(() => { if (AC.state === 'running') wantWake = false; }).catch(() => {}); } catch (e) {} }
+export function audioSleep(hidden){ try { if (!AC) return; if (hidden){ wantWake = false; AC.suspend(); } else { wantWake = true; wake(); } } catch (e) {} }
+['touchend', 'pointerdown', 'keydown'].forEach(t => document.addEventListener(t, () => { if (wantWake && !document.hidden) wake(); }, true));
 export function musicSync(){ if (musicGain && AC) musicGain.gain.setTargetAtTime(save.muted ? 0.0001 : MUSIC_GAIN, AC.currentTime, 0.1); }
 /** Duck the music to `level` of its gain for `seconds`, then ease back (boss warnings). */
 export function musicDuck(level = 0.35, seconds = 3){

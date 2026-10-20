@@ -9,3 +9,4 @@ Designs kept for future use. None of this is in the game. Open any `preview.html
 | `paint-pumpkin/sketch/` | The owner's Paint pumpkin: pastel, big paint patches, normal stem; plus its **Masterpiece** skin (oil-painted body, painted face, black-tipped brush stem, ribbon trail) | Chosen design for a future pumpkin and skin |
 | `nightmare-worlds/` | The Hallow's End map (world 6) and a nightmare version of each of the five worlds | In the game since 2026-09-28 as the nightmare storybooks and the Hallow's End sneak peek (`src/engine/render/nightmare/`); the playable nightmare levels are still to come |
 | `hollow-king/` | The Hollow King, boss of Hallow's End: three animated forms (first, full, fallen), his five-stage fight and the Fallen Hollow King's nightmare fight | Kept for the Hallow's End release |
+| `fallen-bosses/` | Nightmare "fallen" versions of the five story bosses, each animated beside the original | Kept for nightmare mode |

@@ -161,15 +161,20 @@ export function fallenGravekeeper(g, P = {}){
   const cave = SM([[-24, -38], [-18, -58], [0, -66], [18, -58], [24, -38], [16, -24], [0, -20], [-16, -24]], .9); S.dot(g, cave, '#140c1c');
   if (F2){   // a skull half-visible in the hood: brow and sockets lit by the embers, the jaw lost in shadow
     g.save(); cave(g); g.clip(); S.part(g, SM([[-17, -40], [-19, -52], [-12, -63], [0, -66], [12, -63], [19, -52], [17, -40], [11, -33], [-11, -33]], .8), k, { x:0, y:-50, r:18 }, { mat:'bone', hx:-7, hy:-59 });
-    if (FL){ S.ln(g, [[-6, -64], [-3, -56], [-8, -50], [-4, -46]], { deep:'#1a0c08' }, 1.2, .8); S.ln(g, [[10, -60], [13, -52]], { deep:'#1a0c08' }, 1, .7); g.fillStyle = 'rgba(20,8,6,.35)'; ell(g, -4, -60, 9, 5, .3); g.fill(); }   // a split brow and soot
-    for (const s of [-1, 1]) S.dot(g, E(s * 9, -44, 6.5, 6.2), '#0c0812'); S.dot(g, PL([[-2.6, -38], [2.6, -38], [0, -32]]), '#0c0812');
+    if (FL){ S.ln(g, [[-17, -47], [-9, -51.5], [-3, -47.5]], { deep:'#0c0812' }, 2.6, .95); S.ln(g, [[17, -47], [9, -51.5], [3, -47.5]], { deep:'#0c0812' }, 2.6, .95);   // heavy angry brow ridge
+      S.ln(g, [[-6, -64], [-3, -56], [-8, -50], [-4, -46]], { deep:'#1a0c08' }, 1.2, .8); S.ln(g, [[10, -60], [13, -52]], { deep:'#1a0c08' }, 1, .7); g.fillStyle = 'rgba(20,8,6,.35)'; ell(g, -4, -60, 9, 5, .3); g.fill(); }   // a split brow and soot
+    if (FL){ for (const s of [-1, 1]) S.dot(g, PL([[s * 3, -41], [s * 16, -48.5], [s * 15, -41.5], [s * 4, -38.5]]), '#0c0812'); S.dot(g, PL([[-2.6, -38], [2.6, -38], [0, -32]]), '#0c0812'); }   // fallen: slanted sockets, narrow and sunk under the brow
+    else { for (const s of [-1, 1]) S.dot(g, E(s * 9, -44, 6.5, 6.2), '#0c0812'); S.dot(g, PL([[-2.6, -38], [2.6, -38], [0, -32]]), '#0c0812'); }
     for (let x = -8; x <= 8; x += 4){ S.dot(g, RR(x - 1.6, -34, 3.2, 5, 1), FL ? '#b8a898' : '#e4dcee', .85); } S.overlay(g, cave, { deep:'#0c0812' }, { x:0, y:-52, r:22 }, .7); g.restore(); }
   g.save(); cave(g); g.clip(); const gr = g.createRadialGradient(0, -40, 2, 0, -40, 28); gr.addColorStop(0, `rgba(255,138,42,${.35 + cast * .4 + (F2 ? .1 : 0) + (FL ? .15 : 0)})`); gr.addColorStop(1, 'rgba(255,138,42,0)'); g.fillStyle = gr; g.fillRect(-40, -80, 80, 80); g.restore();
   S.stroke(g, SO([[-24, -38], [-18, -58], [0, -66], [18, -58], [24, -38]]), { deep:FL ? '#ff9a3a' : r.light }, 2.4, FL ? .7 : .5);
   const eyeR = 4.5 + cast * 1.5 + (F2 ? 1.6 : 0), eyeCol = F2 ? GK_EYE : '#ff8a2a';
-  if (FL) for (const s of [-1, 1]){   // eclipse eyes: a burning ring round a black pupil
-    const ex = s * 9, ey = -44; g.save(); g.shadowColor = FL_GLOW; g.shadowBlur = 14; S.dot(g, E(ex, ey, eyeR * 1.15, eyeR * 1.35), '#ff8c2a'); g.restore();
-    S.dot(g, E(ex, ey, eyeR * .95, eyeR * 1.15), FL_RING); S.dot(g, E(ex, ey, eyeR * .52, eyeR * .66), FL_BLACK); S.dot(g, E(ex - eyeR * .3, ey - eyeR * .45, eyeR * .2, eyeR * .2), '#fff6e0', .95); }
+  if (FL) for (const s of [-1, 1]){   // fallen eyes: narrow burning slits slanting inward under the brow, the fire bleeding up out of the socket
+    const w = 6.2 + cast * 1.2, slit = (yy, k) => PL([[s * 3.6, yy - 1.2 * k], [s * (3.6 + w), yy - 6.4 * k], [s * (3.6 + w * .92), yy - 2.2 * k], [s * 4.2, yy + 1.4 * k]]);
+    g.save(); g.shadowColor = FL_GLOW; g.shadowBlur = 16; S.dot(g, slit(-43, 1.25), '#ff7a1a', .9); g.restore();   // the glow bleed
+    S.dot(g, slit(-43, 1), FL_RING); S.dot(g, slit(-43.2, .5), '#fff0c0', .95);   // ring of fire, white-hot core
+    g.save(); g.shadowColor = FL_EMBER; g.shadowBlur = 5; for (let i = 0; i < 3; i++){ const q = ((i * .37 + ph) % 1), x = s * (7 + i * 3) + Math.sin(q * 9 + i) * 1.2, y = -47 - q * 11 - cast * 4; S.dot(g, E(x, y, .8 + q * .5, 1.6), i ? '#ffc060' : '#fff0c0', .85 * (1 - q)); } g.restore();   // fire licking up from the slit
+  }
   else { S.glow(g, -9, -44, eyeR, eyeCol); S.glow(g, 9, -44, eyeR, eyeCol); }
   if (F2){ const R2 = rng(77); for (let i = 0; i < 8; i++){ const s = i % 2 ? 1 : -1, x = s * 9 + (R2() - .5) * 9, y = -49 - R2() * 16 - breathe * 2 - cast * 6, rr = .9 + R2() * 1.2; g.save(); g.shadowColor = '#ffb040'; g.shadowBlur = 4; S.dot(g, E(x, y, rr, rr * 1.3), i % 3 ? '#ffc060' : '#fff0c0', .75); g.restore(); } }   // embers drifting up from the sockets
   const ca = cast * 1.15 + breathe * .04, cs = Math.cos(ca), sn = Math.sin(ca), hx = -36 + (-34 * cs - 30 * sn), hy = -14 + (-34 * sn + 30 * cs);

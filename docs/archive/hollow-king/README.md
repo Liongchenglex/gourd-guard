@@ -1,0 +1,9 @@
+# The Hollow King (archive, 2026-10-20)
+
+The boss of Hallow's End (world 6) and his nightmare version, the Fallen Hollow King. Design and fight: `HOLLOW_KING.md`. Art: `hollowking.js`, a character entry in the registry format of `src/engine/render/chars/index.js` (first form, `form2` full form and `fallen` variants; idle, cast, summon, hurt and die clips; a `stage` pose field 0-4 tints the ember heart, eye-fire and lantern to the current stage's boss colour). Open `preview.html` to see him animated with form, stage and clip buttons, every baked frame as strips, and a game-size row. Nothing here is in the game.
+
+**Registry values chosen:** box `{ x:-180, y:-280, w:360, h:360 }` (shared by all variants and clips), scale `.74`, dy `-3` for a boss radius of 36 (use `.72` / `-4` for r 34). The idle clip should also be registered as `walk` (the engine's boss idle name).
+
+**To bring him into the game:** move `hollowking.js` into `src/engine/render/chars/` (imports become `../paint.js` and `../../util.js`), spread it into `CHARS`, add a `hollowking` boss entry to `src/data/monsters.js` (hp, hold 0.3, the stage timers from `HOLLOW_KING.md`) and the stage logic to `src/engine/monsters.js` the way the other bosses are done. Stage colours need either one atlas per stage (`hollowking|s0`…) or a tint pass, because atlases are baked per variant. All glow and shadowBlur lives in the baked frames; nothing may be painted per frame. Frames are large (about 533 px square at bake scale 2); the box could be tightened for the first form if per-variant boxes are ever added.
+
+Rebuild the preview: `bash docs/archive/hollow-king/build.sh` (needs esbuild; the imports use absolute paths from the owner's machine). Published preview: https://claude.ai/artifact/GCyv1DV4UecioUqxPZfVvA

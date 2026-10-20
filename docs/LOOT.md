@@ -2,7 +2,7 @@
 
 Every chest, drop and seed source in one place, as currently built. The numbers live in `src/data/economy.js` (chests, the Loot Sack, boss seeds) and `src/data/rules.js` (kill rewards). When a number changes there, change it here in the same edit.
 
-Last updated 2026-10-11. Players see the chest tables in the game too: the "What's inside?" link on every chest, generated from the same data.
+Last updated 2026-10-20. Players see the chest tables in the game too: the "What's inside?" link on every chest, generated from the same data.
 
 ## Treasure chest
 
@@ -45,7 +45,7 @@ Where it comes from: every level-20 boss.
 | Level-10 boss | A treasure chest, given at once |
 | Level-20 boss | A boss chest, given at once |
 | Any boss kill in the story | Also a 5% chance of 1–3 seeds |
-| A boss beaten in Endless Night | A 50% chance of 1–3 seeds (no chest) |
+| A boss beaten in Endless Night | A 50% chance of 1–2 seeds (no chest; owner, 2026-10-20, was 1–3) |
 | Loot Sack (an ad on the level card summons it) | A treasure chest 50% (tap to pick up), a set of 5 tools 25%, or 80–160 coins 25%; plus a 50% chance of 1 seed. In endless, a Loot Sack comes every other hour. |
 | Rewarded ad | 1 seed, up to 15 ads a day |
 

@@ -81,13 +81,13 @@ export const QUEST_TABLE = {
   '4-17': [['must',['yellow','green']],['bunch5',3]],
   '4-18': [['castlesAll'],['oneLaunch',5]],
   '4-19': [['castlesAll'],['must',['turquoise','black']]],
-  '5-1': [['pierce',8],['burn',8]],   // owner, 2026-10-19: was 15, more than the level's monsters allow
+  '5-1': [['noTools'],['burn',8]],   // owner, 2026-10-20: was Grey pierce 8 (too few monsters); burn was 15 (2026-10-19)
   '5-2': [['oneLaunch',2],['must',['pink','purple']]],
   '5-3': [['heal',11],['bunch5',1]],
-  '5-4': [['pierce',9],['noTouch','ghoul']],
+  '5-4': [['wallMin',55],['noTouch','ghoul']],   // owner, 2026-10-20: was Grey pierce 9
   '5-5': [['wallMin',55],['burn',11]],   // owner, 2026-10-19: was 15, more than the level's monsters allow
   '5-6': [['must',['ice','black']],['heal',11]],
-  '5-7': [['brownBig',11],['pierce',10]],
+  '5-7': [['brownBig',11],['noTouch','ghoul']],   // owner, 2026-10-20: was Grey pierce 10
   '5-8': [['must',['turquoise']],['noTouch','ghoul']],
   '5-9': [['heal',12],['wallMin',60]],
   '5-11': [['brownBig',12],['burn',15]],

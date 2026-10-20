@@ -92,6 +92,7 @@ export function attachInput(){
   cv.addEventListener('pointercancel', e => endGesture(e, true));
 
   cv.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('gesturestart', e => e.preventDefault());   // iOS pinch zoom (owner, 2026-10-21; double-tap zoom is off in index.html and style.css)
 
   document.addEventListener('visibilitychange', () => { audioSleep(document.hidden); if (document.hidden && state === 'play' && G && !G.over) setState('pause'); });   // app to background: pause the night and silence the sound
 

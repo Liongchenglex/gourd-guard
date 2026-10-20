@@ -13,7 +13,7 @@
 :root[data-theme="dark"]{ --page:#0d0913; --page-ink:#efe4d6; }
 :root.native{ --page:#140c1c; }   /* the iPhone app: the strips above and below the game match its night background */
 *,*::before,*::after{ box-sizing:border-box; }
-html{ height:100%; scroll-padding-top:env(safe-area-inset-top,0px); }
+html{ height:100%; scroll-padding-top:env(safe-area-inset-top,0px); touch-action:manipulation; }   /* no double-tap or pinch zoom in the app (owner, 2026-10-21) */
 body{
   height:100%; margin:0; background:var(--page); color:var(--page-ink);
   display:flex; align-items:center; justify-content:center; overflow:hidden; overscroll-behavior:none;

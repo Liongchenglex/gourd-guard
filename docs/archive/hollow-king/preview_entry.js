@@ -42,6 +42,17 @@ requestAnimationFrame(frame);
 const strips = el('div', 'strips');
 app.appendChild(strips);
 const FW = 150, FH = Math.round(FW * box.h / box.w);
+// ---- stage colours (owner, 2026-10-20): every heart colour for both story forms, at rest and at the peak of a cast ----
+const STG = [['Ember', undefined], ['Gravekeeper', 0], ['Poltergeist', 1], ['Vampire Count', 2], ['Twin Tides', 3], ['Hexwitch', 4]];
+const gal = el('div', 'sec'); gal.appendChild(el('h2', null, 'Stage colours: the ember heart, eye-fire, lantern and flames take the current stage\'s boss colour'));
+for (const [label, variant] of [['Form 1', null], ['Full form', 'form2']]) for (const [cn, clip, t] of [['at rest', 'idle', .2], ['cast', 'cast', .62]]){
+  const row = el('div', 'row'); row.appendChild(el('span', 'lbl', label + ' ' + cn));
+  const c = el('canvas'); c.width = FW * STG.length * 2; c.height = (FH + 18) * 2; c.style.width = FW * STG.length + 'px'; c.style.height = FH + 18 + 'px';
+  const g = c.getContext('2d'); g.scale(2, 2);
+  STG.forEach(([sn, st], i) => { g.save(); g.translate(i * FW, 0); g.fillStyle = i % 2 ? '#120e1c' : '#0d0a14'; g.fillRect(0, 0, FW, FH + 18); drawFit(g, FW, FH, { ...C.clips[clip].pose(t), variant, stage:st }, .98); g.fillStyle = '#c8b8d8'; g.font = '11px system-ui'; g.textAlign = 'center'; g.fillText(sn, FW / 2, FH + 12); g.restore(); });
+  row.appendChild(c); gal.appendChild(row);
+}
+strips.appendChild(gal);
 for (const [label, variant] of [['Form 1', null], ['Full form', 'form2'], ['Fallen', 'fallen']]){
   const sec = el('div', 'sec'); sec.appendChild(el('h2', null, label));
   for (const name of ['idle', 'cast', 'summon', 'hurt', 'die']){

@@ -18,7 +18,7 @@ body{
   height:100%; margin:0; background:var(--page); color:var(--page-ink);
   display:flex; align-items:center; justify-content:center; overflow:hidden; overscroll-behavior:none;
   font-family:'Fredoka','Trebuchet MS',system-ui,sans-serif;
-  -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none;   /* no long-press pop-up on iOS */
 }
 #wrap{ position:relative; overflow:hidden; background:#140c1c; color:var(--ink); --u:1; width:540px; height:960px; }
 #wrap.framed{ border-radius:calc(var(--u)*22px); box-shadow:0 24px 70px rgba(0,0,0,.45); }

@@ -49,7 +49,7 @@ Level addresses are written `world-level`, e.g. `3-12` = world 3, level 12. Leve
 | 3 | Witchwood | Enchanted autumn forest, witches | Wind gusts shift the patch; occasional graves | Purple (spawn), Turquoise (bunches of 2) | Chameleon, Reverse Chameleon, Mirror Sprite | Wood Ghoul (Swift), Broom Imp (Hungry), Bat (Owl-bat), Wisp | Hexwitch |
 | 4 | Crumbling Keep | Vampire's castle under siege | Castle walls block shots; occasional graves | Grey (piercing), Black (blast) | Shield Knight, Gargoyle Hauler, Skeleton Archer, Vampire | Crypt Ghoul (Stubborn), Keep Imp (Armoured), Bat (swarm), Mossback (Siege Brute) | Vampire Count |
 | 5 | Drowned Marsh | Sunken shore, drowned sailors, sea row | Puddles spawn monsters; sea-row levels; occasional graves | Deep Blue (chain), Brown (grows) | Puddle Crawler, Drunk Sailor, Puddle Diver, Splitter Slime | Drowned Ghoul (Hungry), Tide Imp (Swift), Mossback (Bog Turtle), Mummy (Sodden) | Twin Tides |
-| 6 | Hallow's End | All Hallows' night, everything at once | Graves only | none (full choice from all 11) | none | Everything from worlds 1–5, all with modifiers | Hollow King (5 stages) |
+| 6 | Hallow's End | All Hallows' night, everything at once | Hand-designed per level: any world's map gimmicks, plus the Frenzy jukebox from 6-4 | none (full choice) | none yet | Everything from worlds 1–5 in deadly cross-world mixes (owner, 2026-10-31) | Two-boss levels and the Hollow King (owner still deciding, below) |
 
 Names are placeholders the owner is free to change.
 
@@ -67,7 +67,7 @@ Names are placeholders the owner is free to change.
 
 **World 5: Puddles and sea.** Puddle cells are marked field tiles. Monsters may rise from any puddle instead of the top of the field. On sea levels the whole top row is water and monsters surface anywhere along it. The Puddle Diver hides in a puddle between attacks and is immune while submerged.
 
-**World 6: Graves only.** The challenge is the monster mix.
+**World 6 (beta, owner 2026-10-31): hand-designed.** Every level mixes monsters and map gimmicks from all five worlds (fog, sea, puddles, castle walls, wind, graves). From 6-4 some levels are **Frenzy** levels: a jukebox drops near the end and monsters keep coming until pumpkins smash it. Built so far: 6-1 to 6-4 (`docs/GAME_DESIGN.md` §9). Boss plan, owner still thinking: 6-8 Poltergeist and Gravekeeper together, 6-12 Hexwitch and Vampire Count, 6-16 maybe three Twin Tides, 6-20 the Hollow King.
 
 ---
 
@@ -277,7 +277,7 @@ Stats (HP, speed, eat rate, coins) come from bot runs; this table fixes behaviou
 
 ### World 6: Hallow's End
 
-Every monster above, all carrying modifiers.
+Every monster above, in hand-picked cross-world mixes (owner, 2026-10-31; 6-1 to 6-4 use plain monsters, no modifiers).
 
 ### Modifiers (data, any monster, any world)
 
@@ -383,6 +383,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 | Nightmare mode (owner, 2026-09-27) | A harder version of each world, played after it is beaten. Idea only; to define: how it unlocks (beat level 20, or three-star the world); whether it replays the same 20 levels with harder rules or is a shorter gauntlet; which knobs make it a nightmare (faster and denser spawns, monsters at +1 HP, every modifier stacked, bosses in fallen mode, fewer sprouts, no tools, darker map and music); how it rewards the player (a nightmare trophy, a cosmetic, a sixth power); and how it shows in the storybook (a dark second edition of each book, or a flip side). |
 | Poison pumpkin (owner) | To define: e.g. a hit leaves a poison that ticks like Fire's burn but also spreads to monsters that touch the victim. |
 | Burning Mummy | Only Ice kills it. Burns other mummies along the way. To define in R2: does "burn" kill them, or turn them into Burning Mummies (spreading)? Natural home: world 4 or 6. |
+| Faster Frenzy jukebox (owner, 2026-10-31) | A second jukebox whose monsters also come faster while it plays (the World 6 one keeps the night's pace). Maybe for nightmare mode. |
 | Medium / Hard per level | Variables: longer sprout interval, 1 pumpkin per sprout instead of 2, no wall (any monster reaching the bottom loses), more graves, more monsters, stacked modifiers, more frequent gusts. Data-wise these are overrides on a level. |
 | Quests | Optional objectives per level (e.g. "keep every wall above 50%", "kill 5 with Fire"). Meaning to confirm. |
 | Gravedigger 💡 | Plants a new grave on the patch when it reaches the wall. |
@@ -400,6 +401,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
+| 2026-10-31 | Owner: World 6 redesigned as hand-built levels with cross-world mixes and the Frenzy jukebox from 6-4; opens after 5-20; beta behind `VITE_W6` on branch `w6-hallows-end`. 6-1 to 6-4 built. |
 | 2026-10-11 | Owner: a full-screen ad after every Endless Night run of 60 s or more, before the result card. |
 | 2026-10-11 | Launch prep: testing links removed, saves mirrored to native storage, chest odds shown, AdMob rewarded ads and RevenueCat seed packs wired (test keys), Android app added. Checklist: `docs/LAUNCH.md`. |
 | 2026-10-09 | Owner: an inheriting Paint pumpkin counts as both Paint and the inherited colour for chameleon colour locks and immunities. |

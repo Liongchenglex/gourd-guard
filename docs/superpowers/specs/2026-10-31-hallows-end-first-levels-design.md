@@ -17,7 +17,7 @@ This milestone builds levels 6-1 to 6-4 and the Frenzy jukebox, so the owner can
 
 - World 6 levels 1–4 are playable in a build made with `VITE_W6=1`, with their maps exactly as described below.
 - The Frenzy jukebox works as described and is introduced on 6-4.
-- Store builds (`npm run build` without the flag) are byte-for-byte the same game as Release 1: five worlds, the "coming soon" Hallow's End sneak peek after 5-20, no World 6 book.
+- Store builds (`npm run build` without the flag) play exactly like Release 1 (no World 6 levels, book or song in the bundle): five worlds, the "coming soon" Hallow's End sneak peek after 5-20, no World 6 book.
 
 ## Non-goals
 

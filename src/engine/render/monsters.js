@@ -1,7 +1,8 @@
 import { sprites } from './sprites.js';
 import { PTYPES } from '../../data/pumpkins.js';
 import { mS, mY } from '../monsters.js';
-import { ctx } from './canvas.js';
+import { K, ctx } from './canvas.js';
+import { pipSprite } from './fx.js';
 import { FIELD_TOP } from '../state.js';
 import { TYPES, VARIANTS } from '../../data/monsters.js';
 import { CS } from '../state.js';
@@ -87,9 +88,8 @@ export function drawMonster(m, t){
     const n = Math.ceil(m.maxHp), d = 8, gap = 3, tw = n * d + (n - 1) * gap;
     for (let i = 0; i < n; i++){
       const px = m.x - tw / 2 + i * (d + gap) + d / 2, fill = clamp(m.hp - i, 0, 1);
-      cx.fillStyle = 'rgba(0,0,0,.65)'; ell(cx, px, by, d / 2 + 1.5, d / 2 + 1.5);
-      cx.fillStyle = 'rgba(255,255,255,.18)'; ell(cx, px, by, d / 2, d / 2);
-      if (fill > 0){ cx.save(); cx.beginPath(); cx.rect(px - d / 2, by - d / 2, d * fill, d); cx.clip(); cx.fillStyle = '#ff5a4d'; ell(cx, px, by, d / 2, d / 2); cx.restore(); }
+      const sp = pipSprite(K, fill > 0 ? Math.ceil(fill * 8) : 0);   // baked: three live ellipses and a clip per pip once cost more than the monster itself
+      cx.drawImage(sp.c, px - sp.ox, by - sp.oy, sp.w, sp.h);
     }
   }
   if (m.bulk === 2){ cx.fillStyle = '#bcd0ff'; cx.font = 'bold 13px Fredoka, system-ui, sans-serif'; cx.textAlign = 'left'; cx.fillText('×2', m.x + Math.ceil(m.maxHp) * 5.5 + 8, by + 5); }   // bulwark aura

@@ -12,7 +12,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon } from './tools.js';
-import { castleSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
+import { castleSprite, coinSprite, discSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -86,9 +86,10 @@ export function render(){
     const skinKey = save.wardrobe && save.wardrobe.skins[pr.vis];
     if (skinKey){ const s0 = pr.guar ? 0.76 : 0.66; wake(ctx, SKIN_ART[skinKey], pr.x, pr.y + 4, CS * s0 * .4, 96, t); }   // a skin's comet wake (owner)
     else { ctx.globalCompositeOperation = 'lighter';
+    const dot = discSprite(K, PTYPES[pr.vis].spark);
     for (let i = 0; i < pr.trail.length; i += 2){
-      const a = (i / pr.trail.length); ctx.globalAlpha = a * 0.35; ctx.fillStyle = PTYPES[pr.vis].spark;
-      ell(ctx, pr.trail[i], pr.trail[i + 1], pr.r * a * 0.9, pr.r * a * 0.9);
+      const a = (i / pr.trail.length), r = pr.r * a * 0.9; if (r <= 0) continue;
+      ctx.globalAlpha = a * 0.35; ctx.drawImage(dot.c, pr.trail[i] - r, pr.trail[i + 1] - r, r * 2, r * 2);
     }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
     const s = pr.guar ? 0.76 : 0.66;
@@ -107,9 +108,9 @@ export function render(){
       ctx.globalAlpha = a; ctx.fillStyle = p.color;
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.7); ctx.restore();
     } else {
-      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.fillStyle = p.color;
-      const sz = p.kind === 'flame' ? p.size * a : p.size;
-      ell(ctx, p.x, p.y, sz, sz);
+      const sz = p.kind === 'flame' ? p.size * a : p.size; if (sz <= 0) continue;
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a;
+      const dot = discSprite(K, p.color); ctx.drawImage(dot.c, p.x - sz, p.y - sz, sz * 2, sz * 2);   // a baked disc, not a live ellipse path
       ctx.globalCompositeOperation = 'source-over';
     }
   }
@@ -118,7 +119,7 @@ export function render(){
     if (c.t < 0) continue;
     const u = clamp(c.t / c.dur, 0, 1), e = u * u * (3 - 2 * u);
     const cx = c.sx + (coinTarget.x - c.sx) * e, cy = c.sy + (coinTarget.y - c.sy) * e - Math.sin(u * Math.PI) * 60;
-    ctx.fillStyle = '#c7861a'; ell(ctx, cx, cy, 8, 8); ctx.fillStyle = '#ffd24a'; ell(ctx, cx - 1, cy - 1, 6.5, 6.5); ctx.fillStyle = '#fff4b8'; ell(ctx, cx - 3, cy - 3, 2, 2);
+    const coin = coinSprite(K); ctx.drawImage(coin.c, cx - coin.ox, cy - coin.oy, coin.w, coin.h);
   }
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (const f of g.floats){

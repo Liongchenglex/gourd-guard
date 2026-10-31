@@ -384,6 +384,21 @@ export function drawMist(g, k, x, y, len, thick, t, cleared, idx, vertical, pad 
 /** A soft warm glow disc for live flicker (torches). */
 export function glowSprite(k, col = '#ffa040'){ k = bakeK(k); return bake(`glow:${k}:${col}`, 64, 64, 32, 32, k, g => { const gr = g.createRadialGradient(0, 0, 0, 0, 0, 32); gr.addColorStop(0, rgba(col, .9)); gr.addColorStop(.4, rgba(col, .35)); gr.addColorStop(1, rgba(col, 0)); g.fillStyle = gr; g.fillRect(-32, -32, 64, 64); }); }
 
+// ---------- tiny per-frame marks, baked (2026-10-31: live ellipse paths were the busiest canvas calls in a crowded Endless Night) ----------
+/** A flat disc of one colour, 32 px across, blitted at any size: one drawImage instead of an anti-aliased ellipse path (particles, trails). */
+export function discSprite(k, col){ k = bakeK(k); return bake(`disc:${k}:${col}`, 32, 32, 16, 16, k, g => { g.fillStyle = col; g.beginPath(); g.ellipse(0, 0, 16, 16, 0, 0, TAU); g.fill(); }); }
+/** A coin flying to the purse: the three stacked discs of the old live drawing, centred. */
+export function coinSprite(k){ k = bakeK(k); return bake(`coin:${k}`, 20, 20, 10, 10, k, g => {
+  const d = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.ellipse(x, y, r, r, 0, 0, TAU); g.fill(); };
+  d(0, 0, 8, '#c7861a'); d(-1, -1, 6.5, '#ffd24a'); d(-3, -3, 2, '#fff4b8');
+}); }
+/** One health pip of a small monster: dark ring, pale empty disc, red fill clipped to `step`/8 (0 = empty). 12 px, centred. */
+export function pipSprite(k, step){ k = bakeK(k); return bake(`pip:${k}:${step}`, 12, 12, 6, 6, k, g => {
+  const d = (r, c) => { g.fillStyle = c; g.beginPath(); g.ellipse(0, 0, r, r, 0, 0, TAU); g.fill(); };
+  d(5.5, 'rgba(0,0,0,.65)'); d(4, 'rgba(255,255,255,.18)');
+  if (step > 0){ g.save(); g.beginPath(); g.rect(-4, -4, 8 * step / 8, 8); g.clip(); d(4, '#ff5a4d'); g.restore(); }
+}); }
+
 // ---------- castle walls: rough hewn courses, crenellations, a portcullis, moss and a torch; three damage states ----------
 const STONE = pal('#8f90a0'), STONED = pal('#6d6f80'), STONEL = pal('#a8a9b8'), IRONC = pal('#4c505c'), TORCH = pal('#5a3a20');
 function bakeCastle(k, state){

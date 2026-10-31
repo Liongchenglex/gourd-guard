@@ -6,10 +6,10 @@ const ROW = p => [0, 1, 2, 3, 4, 5, 6].map(lane => [lane, p]);   // a castle wal
 const PILLARS = [[1, 1], [2, 1], [3, 1], [1, 5], [2, 5], [3, 5]];
 
 export default [
-  // 6-1: fog over the middle three rows hides puddles; crawlers and turtles climb out unseen. Knights and archers from the top,
+  // 6-1: fog over the middle three rows hides puddles; Puddle Divers attack from them unseen and Shell Turtles climb out (owner: divers, the "attack"). Knights and archers from the top,
   // a castle row in front of the fence (it blocks your pumpkins until broken; monsters and arrows pass through). Graves: an "n".
   { world:6, level: 1, theme:5, opensAfter:20, name:'Attack and Defend', pattern:0, graves:0, total:26, interval:2.75, spMul:1.0, boss:null, bossForm:1,
-    pool:[['knight', 5], ['archer', 4], ['crawler', 5], ['turtle', 2]], fog:[[0.2, 0.8]], puddlesLayout:[[1, 0.45], [3, 0.6], [5, 0.4]],
+    pool:[['knight', 5], ['archer', 4], ['diver', 5], ['turtle', 2]], fog:[[0.2, 0.8]], puddlesLayout:[[1, 0.45], [3, 0.6], [5, 0.4]],
     castles:{ n:7, hp:12 }, castlesLayout:ROW(0.9), gravesLayout:[[1, 2], [1, 3], [1, 4], [2, 2], [2, 4], [3, 2], [3, 4]],
     quests:[['noTools'], ['wallMin', 50]], unlockPumpkins:[], unlockGear:[], intro:[] },
   // 6-2: the sea covers the top half; fogwalkers, witches, mirror sprites and knights surface at the shoreline.

@@ -249,7 +249,7 @@ Level data lists fog banks as `[top, bottom]` fractions of the field. The map be
 World 6 exists only in builds made with `VITE_W6=1` (the private playtest link) and on the `w6-hallows-end` branch; store builds have five worlds and keep the "coming soon" Hallow's End book and the sneak peek after 5-20. Spec: `docs/superpowers/specs/2026-10-31-hallows-end-first-levels-design.md`.
 - **Opens after 5-20** (level field `opensAfter:20` on 6-1; every other world opens after the previous world's level 10). No pumpkin unlocks: the player picks 5 from everything owned; the mummy auto-lock still applies.
 - **Every level is hand-designed** around a cross-world monster mix (plain monsters, no modifiers in 6-1 to 6-4). Background: the owner's archived Hallow's End map (theme 5, `hallowSky` / `hallowProps`). Rows are fractions of the field so every phone sees the same map.
-- **6-1 Attack and Defend**: fog over the middle three rows hiding three fixed puddles (`puddlesLayout`) that Puddle Crawlers and Shell Turtles climb out of; Shield Knights and Skeleton Archers from the top; a full castle row at 90% just in front of the fence (castle walls keep their rules: they block pumpkins, monsters and arrows pass through); graves in an "n".
+- **6-1 Attack and Defend**: fog over the middle three rows hiding three fixed puddles (`puddlesLayout`): Puddle Divers attack the walls from them unseen and Shell Turtles climb out (owner, 2026-10-31: divers, not crawlers); Shield Knights and Skeleton Archers from the top; a full castle row at 90% just in front of the fence (castle walls keep their rules: they block pumpkins, monsters and arrows pass through); graves in an "n".
 - **6-2 Timing!**: the sea covers the top half (`shoreFrac:0.5`); Fogwalkers, Witches, Mirror Sprites and Shield Knights surface at the shoreline; graves in two pillars.
 - **6-3 Fire and Ice, Round 2**: Mummies and Flaming Mummies; fog over everything but the two rows by the fence, a full castle row at 35% hidden in it; witch wind; 6-2's graves.
 - **6-4 A Revisit**: the level-16 monsters only: Flaming Mummies, Fogwalkers, Witches, Bulwark Knights, Shell Turtles (owner, 2026-10-31; no Vampires or Plague Doctors); three random puddles; a full castle row at 50%; no fog banks (the Fogwalkers bring their own); witch wind; graves on the four corners and the centre; the first **Frenzy**.
@@ -439,6 +439,18 @@ Reading:
 - 6-1 and 6-2 meet the rule (winnable at the profile, lost below it).
 - 6-3 is borderline: the bot cannot tell a Mummy from a Flaming Mummy and throws whatever bunch is ready, so most of its hits only knock mummies down (kills 2–10 of 10–16). A player who matches Fire and Ice once mummies leave the fog should do better; the owner's playtest decides.
 - 6-4: the central "plus" of graves starved the middle lanes of bunches (the middle walls fell first in a watched run). With corner graves every run at the profile now survives past the night's total into the Frenzy (23–27 of 18 resolved), and loses while the jukebox plays. Next levers are the owner's rules (jukebox health 30 like the Loot Sack, the 80% drop point); asked the owner before changing them.
+
+### Hallow's End after the owner's first playtest (2026-10-31, `--repeats 3`, wins out of 3 at offset 0 / −1)
+The owner found 6-1 to 6-3 easy (playing with the Paint pumpkin, which the bot does not use) and changed 6-4 to the level-16 monsters only. Numbers now: 6-1 26 monsters every 2.75 s; 6-2 24 every 2.85 s; 6-3 14 every 4.2 s; 6-4 24 every 3.0 s, no fog banks; the jukebox drop brings a burst of 4–6, then pairs.
+
+| Night | Before (round 4) | Harder (owner's ask) |
+|---|---|---|
+| 6-1 | 3 / 0 | 1 / 0 |
+| 6-2 | 2 / 0 | 1 / 1 |
+| 6-3 | 1 / 0 | 0 / 0 |
+| 6-4 | 0 / 0 | 0 / 0 (two runs reached 30 and 45 of 24 resolved, deep into the Frenzy) |
+
+Below the bot's target by design: the owner asked for harder nights and tunes from their own play. (6-1's crawlers became Puddle Divers right after this run.)
 
 ### 5-20 slightly easier (owner, 2026-10-09)
 

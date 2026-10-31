@@ -101,7 +101,7 @@ def check_levels(browser, url, on):
         ok(len(cas) == 7 and all(p == 0.9 for _, p in cas), f'[{h}] 6-1 castle row at 0.9 ({len(cas)} walls)')
         ok(grave_cells(page) == sorted(ARCH), f'[{h}] 6-1 graves in an arch')
         ok(page.evaluate("() => JSON.stringify(window.__gg.G.def.fog)") == '[[0.2,0.8]]', f'[{h}] 6-1 fog band in the middle')
-        for t in ('crawler', 'turtle'):
+        for t in ('diver', 'turtle'):
             m = page.evaluate("(t) => { const m = window.__gg.spawnMonster(t); return [m.lane, m.p]; }", t)
             ok(m in pud, f'[{h}] a {t} rises from a puddle {m}')
         start(page, 102)

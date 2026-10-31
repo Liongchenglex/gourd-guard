@@ -86,7 +86,7 @@ export function startGame(mode, n, loadout){
     loot:{ chests:0, seeds:0 }, chestDropped:false, continued:false, sackT:0, jukebox:null, jukeboxDone:false,
   });
   if (mode === 'story' && takeSack()) G.sackT = SACK.spawnAt;
-  if (def) prebake([...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), 'ghoul']);   // bake this level's sprite strips now, not on first sight
+  if (def) prebake([...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), 'ghoul']);   // bake this level's sprite strips now, not on first sight
   if (def && def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
   else if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def && def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def && def.puddles) placePuddles(def.puddles);
@@ -110,7 +110,8 @@ export function startGame(mode, n, loadout){
     }
     for (const t of def.intro){ const v = VARIANTS[t]; if (v) parts.push(v.intro); else if (MINTRO[t]) parts.push(MINTRO[t]); }
     if (def.fog.length && !(n > 1 && levelFor(n - 1).fog.length)) parts.push('Fog hides part of the field. A Lantern clears it.');
-    if (def.boss) parts.push(def.boss === 'twintides' ? `${BOSS_NAMES[def.boss]} wait in this night. Monsters keep coming until both fall.` : `${BOSS_NAMES[def.boss]} waits in this night. Monsters keep coming until it falls.`);
+    if (def.boss2) parts.push(`${BOSS_NAMES[def.boss]} and ${BOSS_NAMES[def.boss2]} wait in this night. Monsters keep coming until both fall.`);
+    else if (def.boss) parts.push(def.boss === 'twintides' ? `${BOSS_NAMES[def.boss]} wait in this night. Monsters keep coming until both fall.` : `${BOSS_NAMES[def.boss]} waits in this night. Monsters keep coming until it falls.`);
     if (def.graves && def.graves > (n > 1 ? levelFor(n - 1).graves : 0)) parts.push(n === 3 ? 'Graves now appear in your patch. They block slides.' : 'One more grave in the patch.');
     if (n === 1) parts.push('Swipe a pumpkin to slide it. Bunch 3 of a color.');
     banner(`Night ${def.label}`, parts.length ? parts.join(' ') : WORLDS[G.world].name, parts.length > 1 ? 4.2 : 3); SFX.levelStart();
@@ -456,8 +457,8 @@ export function continueState(){
   const g = G; if (!g || g.mode !== 'story' || g.continued) return null;
   const alive = g.monsters.filter(m => !m.dead && !m.minion && m.type !== 'boss' && m.type !== 'sack' && m.type !== 'jukebox').length;
   const remaining = alive + Math.max(0, g.def.total - g.spawned);
-  const bosses = g.monsters.filter(m => !m.dead && m.type === 'boss').map(m => Math.max(1, Math.ceil(m.hp)));
-  return { n:g.n, loadout:g.loadout.slice(), q:JSON.parse(JSON.stringify(g.q)), remaining, bossSpawned:g.bossSpawned, bossDead:g.bossDead, bossHp:bosses,
+  const living = g.monsters.filter(m => !m.dead && m.type === 'boss'), bosses = living.map(m => Math.max(1, Math.ceil(m.hp)));
+  return { n:g.n, loadout:g.loadout.slice(), q:JSON.parse(JSON.stringify(g.q)), remaining, bossSpawned:g.bossSpawned, bossDead:g.bossDead, bossHp:bosses, bossKinds:g.def.boss2 ? living.map(m => m.kind) : null,
     jukebox:{ done:g.jukeboxDone, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null } };   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
@@ -465,7 +466,7 @@ export function continueNight(c){
   startGame('story', c.n, c.loadout);
   G.continued = true; if (c.q) G.q = c.q;   // quest progress carries into the continued night
   G.spawned = G.resolved = Math.max(0, G.def.total - c.remaining);   // the progress bar picks up where the lost night left off
-  if (c.bossSpawned){ G.bossDead = c.bossDead; G.bossHp = c.bossHp.slice(); if (c.bossDead) G.bossSpawned = true; }
+  if (c.bossSpawned){ G.bossDead = c.bossDead; G.bossHp = c.bossHp.slice(); G.bossKinds = c.bossKinds ? c.bossKinds.slice() : null; if (c.bossDead) G.bossSpawned = true; }
   if (c.jukebox){ G.jukeboxDone = c.jukebox.done; if (c.jukebox.hp != null) dropJukebox(c.jukebox.hp); }
   banner('Night continues', `${c.remaining} monster${c.remaining === 1 ? '' : 's'} left${c.bossSpawned && !c.bossDead ? ', and the boss is still hurt' : ''}. Hold the walls!`, 3);
 }

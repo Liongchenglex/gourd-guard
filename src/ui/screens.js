@@ -213,7 +213,7 @@ export function openPreview(n){
   renderQuests(n, def);
   $('#pvSub').textContent = WORLD_NAMES[def.worldNo - 1];
   const mons = $('#pvMonsters'); mons.innerHTML = '';
-  prebakeAsync([...def.pool.map(([t]) => poolKey(t, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), 'ghoul']);   // bake this level's sprite strips while the card is read
+  prebakeAsync([...def.pool.map(([t]) => poolKey(t, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), 'ghoul']);   // bake this level's sprite strips while the card is read
   for (const [t] of def.pool){
     const d = document.createElement('div'); d.className = 'pv-ic';
     d.appendChild(monsterIcon(t, 108));
@@ -223,10 +223,10 @@ export function openPreview(n){
   }
   $('#pvBossBlock').hidden = !def.boss;
   const bb = $('#pvBoss'); bb.innerHTML = '';
-  if (def.boss){
+  for (const k of [def.boss, def.boss2].filter(Boolean)){   // one or two bosses
     const d = document.createElement('div'); d.className = 'pv-ic big';
-    d.appendChild(monsterIcon(def.boss, 160, def.bossForm));
-    const sm = document.createElement('small'); sm.textContent = `${BOSS_NAMES[def.boss]}${def.bossForm === 2 ? ', full form' : ''}`; d.appendChild(sm);
+    d.appendChild(monsterIcon(k, def.boss2 ? 120 : 160, def.bossForm));
+    const sm = document.createElement('small'); sm.textContent = `${BOSS_NAMES[k]}${def.bossForm === 2 ? ', full form' : ''}`; d.appendChild(sm);
     bb.appendChild(d);
   }
   const pk = $('#pvPumpkins'); pk.innerHTML = '';   // only what this level unlocks (owner): a pumpkin or a tool
@@ -254,7 +254,7 @@ export function openPreview(n){
   $('#pvNewBlock').hidden = !pk.childElementCount;
   powerPick = null; $('#pvPowerInfo').hidden = true; renderPowers();
   const info = [];   // no counts here (owner): just what is special
-  if (def.boss) info.push('Monsters keep coming until the boss falls.');
+  if (def.boss) info.push(def.boss2 ? 'Two bosses at once. Monsters keep coming until both fall.' : 'Monsters keep coming until the boss falls.');
   if (def.levelNo === 10){ const nextName = WORLD_NAMES[def.worldNo]; info.push(`🎁 Reward: levels 11–20${nextName && WORLD_LEVELS[def.worldNo] && WORLD_LEVELS[def.worldNo].length ? ` and World ${def.worldNo + 1}: ${nextName}` : ''}.`); }
   if (def.levelNo === 20){ const perk = PERKS.find(p => perkNight(p) === n); if (perk) info.push(`🎁 Reward: ${perk.name}. ${perk.desc}`); }
   if (def.name) $('#pvSub').textContent = `${WORLD_NAMES[def.worldNo - 1]} · ${def.name}`;
@@ -295,7 +295,7 @@ function startPreviewedNight(){
   if (def.sea && !(n > 1 && levelFor(n - 1).sea)) cards.push({ key:'sea', icon:'🌊', title:'The sea row', text:SEA_INTRO });
   if (def.gust && !(n > 1 && levelFor(n - 1).gust)) cards.push({ key:'wind', icon:'🍂', title:'Wind', text:WIND_INTRO });
   for (const t of def.intro) if (!VARIANTS[t]) cards.push({ key:'m:' + t, icon:monsterIcon(t, 160), title:`New monster: ${MNAME[t] || t}`, text:MINTRO[t] || '' });   // returning variants get no card (owner)
-  if (def.boss) cards.push({ key:`b:${def.boss}:${def.bossForm}`, icon:monsterIcon(def.boss, 200, def.bossForm), title:def.bossForm === 2 ? `${BOSS_NAMES[def.boss]}, full form` : `Boss: ${BOSS_NAMES[def.boss]}`, text:BOSS_INTRO[def.boss][def.bossForm] });
+  for (const k of [def.boss, def.boss2].filter(Boolean)) cards.push({ key:`b:${k}:${def.bossForm}`, icon:monsterIcon(k, 200, def.bossForm), title:def.bossForm === 2 ? `${BOSS_NAMES[k]}, full form` : `Boss: ${BOSS_NAMES[k]}`, text:BOSS_INTRO[k][def.bossForm] });
   introQueue = cards.filter(c => !save.seenIntro[c.key]);
   introNext = () => beginNight(n);
   showNextIntro();

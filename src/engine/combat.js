@@ -198,8 +198,9 @@ export function kill(m){
     addFloat('Split!', m.x, y - 30, '#7fe0a0', 16, 0.9); SFX.monsterAct('slime', 'split');
   }
   if (m.type === 'boss'){
-    const twinAlive = m.kind === 'twintides' && m.twin && !m.twin.dead;
+    const twinAlive = G.monsters.some(o => o !== m && o.type === 'boss' && !o.dead);   // the other Twin Tide, or the other boss of a two-boss night
     if (!twinAlive && G.mode === 'story' && G.def && (G.def.levelNo === 10 || G.def.levelNo === 20)){ addChest(G.def.levelNo === 20 ? 'boss' : 'normal', m.kind); addFloat(G.def.levelNo === 20 ? 'Boss chest!' : 'Treasure chest!', m.x, mY(m) - m.r - 70, '#ffd35a', 22, 2); if (G.vfx) G.vfx.push({ kind:'loot', item:G.def.levelNo === 20 ? 'bossChest' : 'chest', x:m.x, y:mY(m) - 20, t:0, dur:1.8 }); }
+    if (twinAlive && m.kind !== 'twintides' && G.def && G.def.boss2){ G.shake = 1; banner(`${BOSS_NAMES[m.kind]} falls!`, 'One boss left. Monsters keep coming until it falls.', 2.4); SFX.bossSfx(m.kind, 'die'); }
     if (!twinAlive){ G.bossDead = true; G.shake = 1.2; banner(`${BOSS_NAMES[m.kind]} ${m.kind === 'twintides' ? 'fall' : 'falls'}!`, G.mode === 'endless' ? 'The night goes on…' : 'Finish the stragglers and grab the pumpkins it dropped!', 2.4); SFX.bossSfx(m.kind, 'die'); }
   }
 }

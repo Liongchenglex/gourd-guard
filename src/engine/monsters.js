@@ -38,6 +38,7 @@ export function pickLane(){
 
 /** Resolve a pool key (type, variant or 'boss') into { type, kind, T, variant }. */
 export function resolveMonster(key){
+  if (key.startsWith('boss:')){ const kind = key.slice(5); return { type:'boss', kind, T:TYPES[kind], variant:null }; }   // a named boss (a two-boss night)
   if (key === 'boss'){
     const kind = G.mode === 'story' && G.def.boss ? G.def.boss : G.endBoss || 'gravekeeper';
     return { type:'boss', kind, T:TYPES[kind], variant:null };

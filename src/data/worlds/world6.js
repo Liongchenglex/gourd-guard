@@ -42,4 +42,9 @@ export default [
   { world:6, level: 7, theme:5, name:'Iron Rush', pattern:1, graves:0, total:24, interval:2.9, spMul:1.0, boss:null, bossForm:1, frenzy:true,
     pool:[['vampire', 3], ['rider', 4], ['sailor', 4], ['bulwark', 3]], fogCols:[0, 6], castles:{ n:7, hp:8 }, castlesLayout:ROW(0.5),
     gravesLayout:[[0, 1], [0, 5], [4, 1], [4, 5]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
+  // 6-8: the Poltergeist and the Gravekeeper at once, first form, full health (owner: "not that challenging"), with their minions:
+  // Flaming Mummies, Mummies, Fogwalkers, Plague Doctors and Wisp Riders. Monsters keep coming until both fall. Introduces Emergency Pumpkins.
+  { world:6, level: 8, theme:5, name:'Double Trouble', pattern:2, graves:0, total:18, interval:3.2, spMul:0.95, boss:'gravekeeper', boss2:'poltergeist', bossForm:1, bossGap:2.0,
+    pool:[['firemummy', 3], ['mummy', 3], ['fogwalker', 2], ['doctor', 2], ['rider', 3]],
+    gravesLayout:[[0, 3], [2, 0], [2, 6], [4, 3]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:['emergency'], intro:[] },
 ];

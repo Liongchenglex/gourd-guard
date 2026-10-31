@@ -51,7 +51,14 @@ export function storySpawn(dt){
     if (Math.random() < (keepComing && d.bossGap ? burst / 2 : burst)) G.spawnTimer *= 0.3;
   }
   if (d.frenzy && !G.jukebox && !G.jukeboxDone && G.spawned >= Math.floor(d.total * (d.frenzyAt || 0.8))) dropJukebox();
-  if (d.boss && !G.bossSpawned && (G.spawned >= Math.floor(d.total * 0.4) || (G.bossHp && G.bossHp.length))){   // a continued night brings its hurt boss straight back
+  if (d.boss2 && !G.bossSpawned && (G.spawned >= Math.floor(d.total * 0.4) || (G.bossHp && G.bossHp.length))){   // two bosses at once (World 6)
+    G.bossSpawned = true;
+    const kinds = [d.boss, d.boss2].filter(k => !G.bossKinds || G.bossKinds.includes(k));   // a continued night brings back only those still standing
+    kinds.forEach(k => { const m = spawnMonster('boss:' + k); if (G.bossHp && G.bossKinds){ const i = G.bossKinds.indexOf(k); if (i >= 0) m.hp = Math.min(m.maxHp, G.bossHp[i]); } });
+    G.bossHp = null; G.bossKinds = null;
+    banner(`${BOSS_NAMES[d.boss]} and ${BOSS_NAMES[d.boss2]}!`, 'Two bosses at once. Monsters keep coming until both fall.', 3); SFX.bossAlert();
+    setTimeout(() => { for (const k of kinds) SFX.bossSfx(k, 'arrive'); }, 900); setTimeout(() => { if (G && !G.over && G.mode === 'story') musicStart('boss'); }, 1600);
+  } else if (d.boss && !G.bossSpawned && (G.spawned >= Math.floor(d.total * 0.4) || (G.bossHp && G.bossHp.length))){   // a continued night brings its hurt boss straight back
     const b = spawnMonster('boss'); G.bossSpawned = true;
     if (d.bossHpMul) for (const m of b.twin ? [b, b.twin] : [b]){ m.maxHp = Math.max(1, Math.round(m.maxHp * d.bossHpMul)); m.hp = m.maxHp; }   // per-level boss health (tuning, 2026-10-01)
     if (G.bossHp && G.bossHp.length){ const bs = b.twin ? [b, b.twin] : [b]; bs.forEach((m, i) => { const hp = G.bossHp[Math.min(i, G.bossHp.length - 1)]; m.hp = Math.min(m.maxHp, hp); }); G.bossHp = null; }   // a continued night: the boss keeps the health it had left

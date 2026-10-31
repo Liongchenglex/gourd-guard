@@ -268,6 +268,40 @@ def check_6_5_to_7(browser, url, on):
     page.close()
 
 
+BOSSES = "window.__gg.G.monsters.filter(m => m.type === 'boss' && !m.dead)"
+
+
+def check_double_boss(browser, url, on):
+    if not on: return
+    page, errors = open_page(browser, url)
+    set_stars(page, {n: 3 for n in range(1, 108)})
+    start(page, 108)
+    if page.evaluate("() => window.__gg.G.def.label") != '6-8':
+        ok(False, '6-8 exists'); page.close(); return
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }"); time.sleep(0.8)
+    bs = page.evaluate(f"() => {BOSSES}.map(m => [m.kind, m.maxHp]).sort()")
+    ok(bs == [['gravekeeper', 15], ['poltergeist', 20]], f'both bosses arrive at full health {bs}')
+    page.evaluate(f"() => {{ const g = {BOSSES}.find(m => m.kind === 'gravekeeper'); g.lastHit = 0; window.__gg.damage(g, 999); }}")
+    s0 = page.evaluate("() => { window.__gg.G.spawnTimer = 0; return window.__gg.G.spawned; }"); time.sleep(1)
+    ok(page.evaluate("() => !window.__gg.G.bossDead && !window.__gg.G.over") and page.evaluate("() => window.__gg.G.spawned") > s0, 'with one boss down, monsters keep coming and the night goes on')
+    c = page.evaluate(f"() => {{ {BOSSES}.find(m => m.kind === 'poltergeist').hp = 9; return window.__gg.continueState(); }}")
+    ok(c and c.get('bossKinds') == ['poltergeist'], f"the continue snapshot keeps only the living boss {c and c.get('bossKinds')}")
+    page.evaluate("(c) => window.__gg.continueNight(c)", c); time.sleep(0.4)
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = Math.max(G.spawned, Math.ceil(G.def.total * 0.4)); G.spawnTimer = 0; }"); time.sleep(0.8)
+    bs = page.evaluate(f"() => {BOSSES}.map(m => [m.kind, m.hp])")
+    ok(bs == [['poltergeist', 9]], f'a continued night brings back only the living boss, hurt {bs}')
+    page.evaluate(f"() => {{ for (const b of {BOSSES}) {{ b.lastHit = 0; window.__gg.damage(b, 999); }} }}")
+    ok(page.evaluate("() => window.__gg.G.bossDead === true"), 'both down: the bosses are beaten')
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = G.def.total; for (const m of G.monsters) m.dead = true; }"); time.sleep(1)
+    ok(page.evaluate("() => window.__gg.G.over"), 'clearing the field then wins the night')
+    time.sleep(1.5)   # let the result card open before starting another night
+    start(page, 90)
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }"); time.sleep(0.8)
+    ok(page.evaluate(f"() => {{ const b = {BOSSES}; return b.length === 2 && b.every(m => m.kind === 'twintides' && m.twin); }}"), '5-10 still brings two linked Twin Tides')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 def check_owner_1031(browser, url, on):
     if not on: return
     page, errors = open_page(browser, url)
@@ -286,7 +320,7 @@ def check_owner_1031(browser, url, on):
 
 
 CHECKS = {
-    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst, 'check_6_5_to_7': check_6_5_to_7,
+    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst, 'check_6_5_to_7': check_6_5_to_7, 'check_double_boss': check_double_boss,
 }
 
 

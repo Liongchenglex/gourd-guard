@@ -376,6 +376,16 @@ def check_wind(browser, url, on):
     page.close()
 
 
+def check_divers_hide(browser, url, on):
+    if not on: return
+    page, errors = open_page(browser, url)
+    start(page, 110)
+    walkers = page.evaluate("() => { let n = 0; for (let i = 0; i < 20; i++){ const m = window.__gg.spawnMonster('diver'); if (m.walker) n++; } return n; }")
+    ok(walkers == 0, f'on 6-10 every Puddle Diver hides in the sea, none walk ({walkers} of 20 walked)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 def check_owner_1031(browser, url, on):
     if not on: return
     page, errors = open_page(browser, url)
@@ -394,7 +404,7 @@ def check_owner_1031(browser, url, on):
 
 
 CHECKS = {
-    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst, 'check_6_5_to_7': check_6_5_to_7, 'check_double_boss': check_double_boss, 'check_emergency': check_emergency, 'check_6_9_to_12': check_6_9_to_12, 'check_wind': check_wind,
+    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst, 'check_6_5_to_7': check_6_5_to_7, 'check_double_boss': check_double_boss, 'check_emergency': check_emergency, 'check_6_9_to_12': check_6_9_to_12, 'check_wind': check_wind, 'check_divers_hide': check_divers_hide,
 }
 
 

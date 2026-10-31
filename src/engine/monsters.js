@@ -58,7 +58,7 @@ export function spawnMonster(key, lane, minion, p){
   }
   let puddle = null;
   const seaEdge = shoreP();
-  if (type === 'diver' && seaEdge > 0.05 && p == null && Math.random() < 0.5){   // divers may lurk anywhere in the sea
+  if (type === 'diver' && seaEdge > 0.05 && p == null && (Math.random() < 0.5 || !(G.puddles && G.puddles.length))){   // divers may lurk anywhere in the sea (always, when there are no puddles: a diver never walks while there is water to hide in)
     puddle = { lane:lane != null ? lane : pickLane(), p:rnd(0.02, seaEdge - 0.03) }; lane = puddle.lane; p = puddle.p;
   } else if ((type === 'crawler' || type === 'diver' || type === 'turtle') && G.puddles && G.puddles.length && p == null){   // rise from a random puddle
     puddle = G.puddles[Math.floor(Math.random() * G.puddles.length)];

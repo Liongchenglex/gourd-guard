@@ -206,6 +206,14 @@ def check_jukebox_more(browser, url, on):
     for _ in range(4):
         page.evaluate("() => { window.__hw.hexT = 0; window.__gg.G.spawnTimer = 99; }"); time.sleep(0.4)
     ok(page.evaluate(f"() => {{ const m = {JB}[0]; return !!m && m.colourLock == null && m.colourImmune == null; }}"), 'the Hexwitch never hexes it')
+    # Bulwark auras and Plague Doctors leave it alone (owner, 2026-10-31)
+    start(page, 104); force_drop(page)
+    page.evaluate(f"""() => {{ const G = window.__gg.G, j = {JB}[0]; for (const m of G.monsters) if (m !== j) m.dead = true; G.spawnTimer = 99;
+      j.lastHit = 0; window.__gg.damage(j, 10);
+      for (const t of ['bulwark', 'doctor']) {{ const m = window.__gg.spawnMonster(t, j.lane, true, j.p); m.sp = 0; }} }}""")
+    time.sleep(4.5)   # two doctor heal ticks
+    hp = page.evaluate(f"() => {{ const j = {JB}[0]; return [j.hp, j.maxHp]; }}")
+    ok(hp == [20, 30], f'Bulwark auras and Plague Doctors do not touch it (hp/max {hp})')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 

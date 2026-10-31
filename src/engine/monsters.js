@@ -303,7 +303,7 @@ export function updateMonster(m, dt){
         if (m.healT <= 0 && m.p > 0.05){
           m.healT = TYPES.doctor.healEvery;
           const reach = 1.5 * TILE_P();   // 3 lanes × 3 tile heights around the doctor
-          for (const o of G.monsters) if (o !== m && !o.dead && Math.abs(o.lane - m.lane) <= 1 && Math.abs(o.p - m.p) <= reach && o.rise <= 0 && o.hp < o.maxHp){
+          for (const o of G.monsters) if (o !== m && !o.dead && o.type !== 'jukebox' && Math.abs(o.lane - m.lane) <= 1 && Math.abs(o.p - m.p) <= reach && o.rise <= 0 && o.hp < o.maxHp){
             o.hp = Math.min(o.maxHp, o.hp + TYPES.doctor.heal); addFloat('+' + TYPES.doctor.heal, o.x, mY(o) - o.r - 20, '#9fe07a', 14, 0.7);
           }
           ring(m.x, mY(m), 40, 'rgba(160,230,120,.8)'); SFX.monsterAct('doctor', 'heal');
@@ -525,7 +525,7 @@ export function inHexZone(m){
 export function applyBulwarks(){
   const knights = G.monsters.filter(k => k.type === 'bulwark' && !k.dead);
   for (const o of G.monsters){
-    if (o.dead || o.type === 'bulwark' || o.type === 'boss') continue;
+    if (o.dead || o.type === 'bulwark' || o.type === 'boss' || o.type === 'jukebox') continue;   // the Frenzy jukebox is immune (owner, 2026-10-31)
     const inside = knights.some(k => Math.abs(o.lane - k.lane) <= 1 && Math.abs(o.p - k.p) <= 1.5 * TILE_P());
     if (inside && o.bulk !== 2){ o.bulk = 2; o.hp *= 2; o.maxHp *= 2; }
     else if (!inside && o.bulk === 2){ o.bulk = 1; o.maxHp /= 2; o.hp = Math.min(o.hp / 2, o.maxHp); }

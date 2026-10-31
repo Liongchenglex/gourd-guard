@@ -67,7 +67,7 @@ Names are placeholders the owner is free to change.
 
 **World 5: Puddles and sea.** Puddle cells are marked field tiles. Monsters may rise from any puddle instead of the top of the field. On sea levels the whole top row is water and monsters surface anywhere along it. The Puddle Diver hides in a puddle between attacks and is immune while submerged.
 
-**World 6 (beta, owner 2026-10-31): hand-designed.** Every level mixes monsters and map gimmicks from all five worlds (fog, sea, puddles, castle walls, wind, graves). From 6-4 some levels are **Frenzy** levels: a jukebox drops near the end and monsters keep coming until pumpkins smash it. Built so far: 6-1 to 6-4 (`docs/GAME_DESIGN.md` §9). Boss plan, owner still thinking: 6-8 Poltergeist and Gravekeeper together, 6-12 Hexwitch and Vampire Count, 6-16 maybe three Twin Tides, 6-20 the Hollow King.
+**World 6 (beta, owner 2026-10-31): hand-designed.** Every level mixes monsters and map gimmicks from all five worlds (fog, sea, puddles, castle walls, wind, graves). From 6-4 some levels are **Frenzy** levels: a jukebox drops near the end and monsters keep coming until pumpkins smash it. Built so far: 6-1 to 6-8 (`docs/GAME_DESIGN.md` §9), with 6-8 the first two-boss night (Gravekeeper and Poltergeist) and a new tool, Emergency Pumpkins. Boss plan, owner still thinking: 6-8 Poltergeist and Gravekeeper together, 6-12 Hexwitch and Vampire Count, 6-16 maybe three Twin Tides, 6-20 the Hollow King.
 
 ---
 

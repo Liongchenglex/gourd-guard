@@ -247,6 +247,27 @@ def check_frenzy_burst(browser, url, on):
     page.close()
 
 
+def check_6_5_to_7(browser, url, on):
+    if not on: return
+    page, errors = open_page(browser, url)
+    set_stars(page, {n: 3 for n in range(1, 101)})
+    defs = page.evaluate("() => window.__gg.WORLD_LEVELS[5].slice(4, 7).map(d => ({ pool:d.pool.map(e => e[0]).sort(), frenzy:!!d.frenzy, castles:(d.castlesLayout || []).map(c => c.join(',')).sort(), fogCols:d.fogCols || [], graves:d.gravesLayout || [] }))")
+    if len(defs) < 3:
+        ok(False, f'6-5 to 6-7 exist ({len(defs)} found)'); page.close(); return
+    ok([d['pool'] for d in defs] == [['bulwark', 'doctor'], ['bulwark', 'witch'], ['bulwark', 'rider', 'sailor', 'vampire']], f"6-5 to 6-7 monsters {[d['pool'] for d in defs]}")
+    ok(all(d['frenzy'] for d in defs), '6-5 to 6-7 are Frenzy levels')
+    flanks = sorted(f'{l},{p}' for l in (0, 6) for p in (0.3, 0.5, 0.7))
+    ok(defs[0]['castles'] == flanks and defs[1]['castles'] == flanks, '6-5 and 6-6 have castle walls down both outer lanes')
+    ok(len(defs[2]['castles']) == 7 and all(c.endswith(',0.5') for c in defs[2]['castles']) and defs[2]['fogCols'] == [0, 6], '6-7 has a castle row at 50% and fog down the outer lanes')
+    ok(sorted(defs[0]['graves']) == sorted([[1, 2], [1, 3], [1, 4], [2, 2], [2, 4], [3, 2], [3, 3], [3, 4]]), '6-5 graves in a ring')
+    ok(sorted(defs[1]['graves']) == sorted([[1, 1], [2, 2], [1, 3], [2, 4], [1, 5]]), '6-6 graves in a zig-zag')
+    for n in (105, 106, 107):
+        start(page, n)
+        ok(page.evaluate("() => window.__gg.G.castles.length") == (6 if n < 107 else 7), f'night {n} starts with its castle walls')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 def check_owner_1031(browser, url, on):
     if not on: return
     page, errors = open_page(browser, url)
@@ -265,7 +286,7 @@ def check_owner_1031(browser, url, on):
 
 
 CHECKS = {
-    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst,
+    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst, 'check_6_5_to_7': check_6_5_to_7,
 }
 
 

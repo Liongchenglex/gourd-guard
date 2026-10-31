@@ -4,6 +4,7 @@
 // Schema: ../levels.js.
 const ROW = p => [0, 1, 2, 3, 4, 5, 6].map(lane => [lane, p]);   // a castle wall in every lane at height p
 const PILLARS = [[1, 1], [2, 1], [3, 1], [1, 5], [2, 5], [3, 5]];
+const FLANKS = [[0, 0.3], [0, 0.5], [0, 0.7], [6, 0.3], [6, 0.5], [6, 0.7]];   // castle walls down both outer lanes
 
 export default [
   // 6-1: fog over the middle three rows hides puddles; Puddle Divers attack from them unseen and Shell Turtles climb out (owner: divers, the "attack"). Knights and archers from the top,
@@ -27,4 +28,18 @@ export default [
     pool:[['firemummy', 3], ['fogwalker', 3], ['witch', 3], ['bulwark', 2], ['turtle', 3]], puddles:3,
     castles:{ n:7, hp:8 }, castlesLayout:ROW(0.5), gust:{ every:22, dirs:['left', 'right'] },
     gravesLayout:[[0, 0], [0, 6], [2, 3], [4, 0], [4, 6]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
+  // 6-5: Plague Doctors and Bulwark Knights only (owner: no brutes): the Doctors heal, the Bulwarks double health in their auras,
+  // so each protects the other. Castle walls down both outer lanes, graves in a ring, Frenzy.
+  { world:6, level: 5, theme:5, name:'Field Hospital', pattern:4, graves:0, total:22, interval:3.0, spMul:0.95, boss:null, bossForm:1, frenzy:true,
+    pool:[['doctor', 5], ['bulwark', 4]], castles:{ n:6, hp:8 }, castlesLayout:FLANKS,
+    gravesLayout:[[1, 2], [1, 3], [1, 4], [2, 2], [2, 4], [3, 2], [3, 3], [3, 4]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
+  // 6-6: 6-5 with Witches in place of the Doctors (owner); a zig-zag of graves, the same walls and Frenzy.
+  { world:6, level: 6, theme:5, name:'Field Spell', pattern:0, graves:0, total:22, interval:3.0, spMul:0.95, boss:null, bossForm:1, frenzy:true,
+    pool:[['witch', 5], ['bulwark', 4]], castles:{ n:6, hp:8 }, castlesLayout:FLANKS,
+    gravesLayout:[[1, 1], [2, 2], [1, 3], [2, 4], [1, 5]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
+  // 6-7: the fast ones (Vampires, Wisp Riders, Drunk Sailors), strengthened by Bulwark Knights (owner). Fog down both outer lanes,
+  // a castle row across the middle, Frenzy.
+  { world:6, level: 7, theme:5, name:'Iron Rush', pattern:1, graves:0, total:24, interval:2.9, spMul:1.0, boss:null, bossForm:1, frenzy:true,
+    pool:[['vampire', 3], ['rider', 4], ['sailor', 4], ['bulwark', 3]], fogCols:[0, 6], castles:{ n:7, hp:8 }, castlesLayout:ROW(0.5),
+    gravesLayout:[[0, 1], [0, 5], [4, 1], [4, 5]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
 ];

@@ -44,6 +44,16 @@ def check_flag(browser, url, on):
     page.close()
 
 
+def check_shelf(browser, url, on):
+    page, errors = open_page(browser, url)
+    page.click('#bStory'); time.sleep(0.8)
+    books = page.evaluate("() => [...document.querySelectorAll('#shelf .book')].map(b => [b.getAttribute('aria-label') || '', b.classList.contains('soon')])")
+    ok(len(books) == 6, f'the shelf shows six books ({len(books)})')
+    if len(books) == 6: ok(books[5][1] == (not on), f"the Hallow's End book is {'open for play' if on else 'coming soon'}")
+    ok(not errors, f'no page errors opening the shelf {errors[:2]}')
+    page.close()
+
+
 def check_bundle(browser, url, on):
     js = ''.join(p.read_text(errors='ignore') for p in (ROOT / 'dist/assets').glob('*.js'))
     ok(('Attack and Defend' in js) == on, f"World 6 level names {'in' if on else 'not in'} the bundle")
@@ -107,8 +117,71 @@ def check_levels(browser, url, on):
         page.close()
 
 
+# ---------- Task 3: the Frenzy jukebox (6-4) ----------
+JB = "window.__gg.G.monsters.filter(m => m.type === 'jukebox' && !m.dead)"
+
+
+def force_drop(page):
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = Math.ceil(G.def.total * 0.8); G.spawnTimer = 0; }")
+    time.sleep(0.6)
+
+
+def check_jukebox(browser, url, on):
+    if not on:
+        js = ''.join(p.read_text(errors='ignore') for p in (ROOT / 'dist/assets').glob('*.js'))
+        src = ROOT / 'src/data/music_w6.js'
+        ok(src.exists(), 'src/data/music_w6.js exists')
+        if src.exists():
+            t = src.read_text(); piece = t[t.index('base64,') + 5000:][:120]
+            ok(piece not in js, 'no Frenzy song in the store bundle')
+        return
+    page, errors = open_page(browser, url)
+    start(page, 104)
+    ok(page.evaluate(f"() => {JB}.length") == 0, 'no jukebox before 80% of the night')
+    force_drop(page)
+    jb = page.evaluate(f"() => {JB}.map(m => [m.p, m.hp, window.__gg.lanesOf(m).length])")
+    ok(len(jb) == 1, f'exactly one jukebox drops at 80% ({len(jb)})')
+    if jb:
+        p, hp, lanes = jb[0]
+        ok(p <= 0.2 and hp == 30 and lanes == 2, f'it sits at the top, 30 health, two lanes wide (p={p:.2f}, hp={hp}, lanes={lanes})')
+    hp = page.evaluate(f"() => {{ const m = {JB}[0]; m.lastHit = -1; window.__gg.damage(m, 4); return m.hp; }}")
+    ok(hp == 30, f'tools do not hurt it (hp {hp})')
+    hp = page.evaluate(f"() => {{ const m = {JB}[0]; m.lastHit = 0; window.__gg.damage(m, 4); return m.hp; }}")
+    ok(hp == 26, f'pumpkins do (hp {hp})')
+    page.evaluate("() => { for (let i = 0; i < 3; i++) window.__gg.spawnMonster('witch', i * 2, true, 0.3); }")
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = G.def.total; G.spawnTimer = 0; }")
+    time.sleep(13)   # two witch hex cycles, and spawns past the total
+    ok(page.evaluate(f"() => {{ const m = {JB}[0]; return m && m.colourLock == null && m.colourImmune == null; }}"), 'witches never hex it')
+    ok(page.evaluate("() => window.__gg.G.spawned > window.__gg.G.def.total"), 'monsters keep coming past the total while it stands')
+    page.evaluate("() => { for (const m of window.__gg.G.monsters) if (m.type !== 'jukebox') m.dead = true; window.__gg.G.spawnTimer = 99; }")
+    time.sleep(0.5)
+    ok(page.evaluate("() => !window.__gg.G.over"), 'the night is not won while it stands')
+    c = page.evaluate(f"() => {{ const m = {JB}[0]; m.hp = 12; return window.__gg.continueState(); }}")
+    page.evaluate(f"() => {{ const m = {JB}[0]; m.lastHit = 0; window.__gg.damage(m, 999); }}")
+    ok(page.evaluate("() => window.__gg.G.jukeboxDone === true && window.__gg.G.jukebox === null"), 'smashing it marks the Frenzy over')
+    s0 = page.evaluate("() => { for (const m of window.__gg.G.monsters) m.dead = true; window.__gg.G.spawnTimer = 0; return window.__gg.G.spawned; }")
+    time.sleep(1.5)
+    ok(page.evaluate("() => window.__gg.G.over") and page.evaluate("() => window.__gg.G.spawned") == s0, 'spawning stops and the night is won once it falls')
+    # continued night with the jukebox still standing at 12 health
+    page.evaluate("(c) => window.__gg.continueNight(c)", c)
+    time.sleep(0.6)
+    jb = page.evaluate(f"() => {JB}.map(m => m.hp)")
+    ok(jb == [12], f'a continued night brings the jukebox back with its health ({jb})')
+    # continued night after the jukebox fell
+    start(page, 104); force_drop(page)
+    page.evaluate(f"() => {{ const m = {JB}[0]; m.lastHit = 0; window.__gg.damage(m, 999); }}")
+    c = page.evaluate("() => window.__gg.continueState()")
+    page.evaluate("(c) => window.__gg.continueNight(c)", c)
+    force_drop(page)
+    ok(page.evaluate(f"() => {JB}.length") == 0, 'a continued night after the jukebox fell drops no second one')
+    js = ''.join(p.read_text(errors='ignore') for p in (ROOT / 'dist/assets').glob('*.js'))
+    ok(('"jukebox"' in js or "'jukebox'" in js) and 'sack' in js, 'jukebox is drawn above fog like the Loot Sack (type named in the bundle)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 CHECKS = {
-    'check_flag': check_flag, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels,
+    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox,
 }
 
 

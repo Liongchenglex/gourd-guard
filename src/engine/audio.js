@@ -1,6 +1,8 @@
 import { save } from '../save.js';
 import { BANK } from '../data/sfxbank.js';
 import { MUSIC } from '../data/music.js';
+import { MUSIC_W6 } from '../data/music_w6.js';
+const W6_MUSIC = import.meta.env.VITE_W6 ? MUSIC_W6 : {};   // World 6 beta tracks (the Frenzy jukebox); dropped from store builds
 
 // ---------- Audio ----------
 // Two layers: recorded CC0 samples (src/data/sfxbank.js, built by tools/sfx_build.py from assets/sfx) for the organic,
@@ -62,7 +64,7 @@ export function musicStart(key = 'play', offset = 0){
     musicSrc = AC.createBufferSource(); musicSrc.buffer = buf; musicSrc.loop = true; musicSrc.connect(musicGain); musicGain.connect(musicBus); musicSrc.start(0, at); musicT0 = AC.currentTime - at; musicKey = key;
   };
   if (musicBufs[key]) return play(musicBufs[key]);
-  const uri = MUSIC[key]; if (!uri) return;
+  const uri = MUSIC[key] || W6_MUSIC[key]; if (!uri) return;
   try {
     const bin = atob(uri.slice(uri.indexOf(',') + 1)), arr = new Uint8Array(bin.length);
     for (let j = 0; j < bin.length; j++) arr[j] = bin.charCodeAt(j);

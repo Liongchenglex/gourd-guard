@@ -3,7 +3,7 @@ import { WORLDS, levelFor, ALL_LEVELS } from '../data/worlds/index.js';
 import * as E from '../data/endless.js';
 import { PTYPES } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
-import { spawnMonster, spawnSack } from './monsters.js';
+import { spawnMonster, spawnSack, spawnJukebox } from './monsters.js';
 import { buildBg } from './render/sprites.js';
 import { G, COLS } from './state.js';
 import { rnd, shuffle } from './util.js';
@@ -19,11 +19,18 @@ export function pickFrom(pool){
   return pool[0][0];
 }
 
+/** Frenzy (World 6, owner 2026-10-31): the jukebox drops near the end of the night; its song plays until pumpkins smash it. */
+export function dropJukebox(hp){
+  G.jukebox = spawnJukebox(hp);
+  banner('Frenzy!', 'Smash the jukebox to stop the monsters.', 2.4); SFX.bossAlert(); musicStart('frenzy');
+}
+
 export function storySpawn(dt){
   if (coachHolds()) return;   // the 1-1 coach sends its own ghoul
   const d = G.def;
   G.spawnTimer -= dt;
-  const keepComing = d.boss && G.bossSpawned && !G.bossDead;   // boss levels: monsters keep coming until the boss dies
+  const keepComing = (d.boss && G.bossSpawned && !G.bossDead)   // boss levels: monsters keep coming until the boss dies
+    || (d.frenzy && G.jukebox && !G.jukebox.dead);   // Frenzy (World 6): and while the jukebox stands
   if ((G.spawned < d.total || keepComing) && G.spawnTimer <= 0){
     if (!G.introQueue) G.introQueue = d.intro.filter(k => d.pool.some(([t]) => t === k));   // every monster this level introduces shows up at least once, early
     const counts = G.spawnCounts = G.spawnCounts || {};
@@ -36,6 +43,7 @@ export function storySpawn(dt){
     G.spawnTimer = d.interval * gap * (keepComing && d.bossGap ? d.bossGap : 1) * rnd(0.6, 1.4);   // bossGap: slower spawns while the boss is up (tuning, 2026-10-01)
     if (Math.random() < (keepComing && d.bossGap ? burst / 2 : burst)) G.spawnTimer *= 0.3;
   }
+  if (d.frenzy && !G.jukebox && !G.jukeboxDone && G.spawned >= Math.floor(d.total * (d.frenzyAt || 0.8))) dropJukebox();
   if (d.boss && !G.bossSpawned && (G.spawned >= Math.floor(d.total * 0.4) || (G.bossHp && G.bossHp.length))){   // a continued night brings its hurt boss straight back
     const b = spawnMonster('boss'); G.bossSpawned = true;
     if (d.bossHpMul) for (const m of b.twin ? [b, b.twin] : [b]){ m.maxHp = Math.max(1, Math.round(m.maxHp * d.bossHpMul)); m.hp = m.maxHp; }   // per-level boss health (tuning, 2026-10-01)

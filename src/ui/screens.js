@@ -3,7 +3,7 @@ import { SPAWN_STEPS } from '../data/patterns.js';
 import { NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, firstNightOf, typesForNight, gearUnlockNightOf } from '../data/worlds/index.js';
-import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS } from '../data/monsters.js';
+import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO } from '../data/monsters.js';
 import { monsterIcon } from '../engine/render/monsters.js';
 import { poolKey, prebakeAsync } from '../engine/render/anim.js';
 import { atlasKey } from '../engine/render/chars.js';
@@ -290,6 +290,7 @@ function startPreviewedNight(){
   if (def.graves && !prevGraves) cards.push({ key:'graves', icon:'🪦', title:'Graves', text:GRAVES_INTRO });
   if (def.fog.length && !(n > 1 && levelFor(n - 1).fog.length)) cards.push({ key:'fog', icon:'🌫️', title:'Fog', text:FOG_INTRO });
   if (def.castles && !(n > 1 && levelFor(n - 1).castles)) cards.push({ key:'castles', icon:'🏰', title:'Castle walls', text:CASTLE_INTRO });
+  if (def.frenzy && !(n > 1 && levelFor(n - 1).frenzy)) cards.push({ key:'frenzy', icon:'🎵', title:'Frenzy', text:FRENZY_INTRO });
   if ((def.puddles || def.puddlesLayout) && !(n > 1 && (levelFor(n - 1).puddles || levelFor(n - 1).puddlesLayout))) cards.push({ key:'puddles', icon:'💧', title:'Puddles', text:PUDDLE_INTRO });
   if (def.sea && !(n > 1 && levelFor(n - 1).sea)) cards.push({ key:'sea', icon:'🌊', title:'The sea row', text:SEA_INTRO });
   if (def.gust && !(n > 1 && levelFor(n - 1).gust)) cards.push({ key:'wind', icon:'🍂', title:'Wind', text:WIND_INTRO });
@@ -329,7 +330,7 @@ export function openLevels(){
   let row = null;
   WORLD_NAMES.forEach((name, wi) => {
     if (wi % 3 === 0){ row = document.createElement('div'); row.className = 'shelfRow'; shelf.appendChild(row); }
-    const levels = WORLD_LEVELS[wi], bk = BOOKS[wi], start = levels.length ? firstNightOf(wi + 1) : null;
+    const levels = WORLD_LEVELS[wi] || [], bk = BOOKS[wi], start = levels.length ? firstNightOf(wi + 1) : null;   // store builds have no World 6 levels: its book is "coming soon"
     const open = start != null && isOpen(start), soon = !levels.length;
     const unlockNow = pendingUnlock === wi && open && !soon;   // just earned: show it locked, then play the unlock
     const b = document.createElement('button'); b.className = 'book' + (soon ? ' soon' : open && !unlockNow ? '' : ' locked'); b.style.setProperty('--cover', bk.cover);

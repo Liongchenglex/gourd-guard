@@ -55,7 +55,7 @@ export function render(){
   const fogOn = (bands.length || fogCols.length) && !(g.fogClear > 0);
   for (const m of ms){
     if (m.hidden && m.type !== 'diver') continue;                       // wraith: invisible (a submerged diver still shows ripples)
-    if (m.type === 'sack' && fogOn) continue;   // drawn over the fog below: the ad-summoned Loot Sack must never hide
+    if ((m.type === 'sack' || m.type === 'jukebox') && fogOn) continue;   // drawn over the fog below: the ad-summoned Loot Sack must never hide
     if (fogOn && m.type !== 'boss' && m.p > -0.02 && (bands.some(([a, b]) => m.p >= a && m.p <= b) || fogCols.includes(m.lane))) continue;   // inside a fog bank (bosses glow through)
     drawMonster(m, t);
   }
@@ -67,7 +67,7 @@ export function render(){
   if (bands.length) drawFog(t, bands, g.fogClear > 0);
   if (fogCols.length) drawFogCols(t, fogCols, g.fogClear > 0);
   if (bands.length || fogCols.length) drawBossBarsOverFog(g);   // owner: the boss's health bar must show through the mist
-  if (fogOn) for (const m of ms) if (m.type === 'sack') drawMonster(m, t);
+  if (fogOn) for (const m of ms) if (m.type === 'sack' || m.type === 'jukebox') drawMonster(m, t);
   if (g.gustDir) drawWindArrows(t);
   drawMines(t);
   drawDrops(t);

@@ -5,6 +5,9 @@
 export const TYPES = {
   ghoul:  { hp:1,  r:21, sp:0.055, coins:3,  eat:0.5, pts:10, drop:1 },
   sack:   { hp:10, r:40, sp:0.05, coins:0, eat:0, pts:100, drop:0, noKnockback:true },   // Loot Sack (economy.js SACK sets its real health, stay and drops)
+  // Frenzy jukebox (World 6, owner 2026-10-31): drops at the top of the field near the end of a `frenzy` night, two lanes wide like the
+  // Loot Sack with the sack's health rule (spawnJukebox), never moves or eats; monsters keep coming while it stands; only pumpkins hurt it.
+  jukebox:{ hp:30, r:40, sp:0, coins:20, eat:0, pts:120, drop:3, noKnockback:true },
   bat:    { hp:1,  r:16, sp:0.085, coins:3,  eat:0.4, pts:12, drop:1 },
   imp:    { hp:2,  r:17, sp:0.074, coins:5,  eat:0.6, pts:14, drop:2 },
   brute:  { hp:4,  r:28, sp:0.028, coins:10, eat:1.1, pts:30, drop:3 },
@@ -99,7 +102,7 @@ export const VARIANTS = {
 export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch' };
 export const BOSS_NAME = BOSS_NAMES.gravekeeper;   // legacy alias used by endless mode
 
-export const MNAME = { sack:'Loot Sack', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss' };
+export const MNAME = { sack:'Loot Sack', jukebox:'Jukebox', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss' };
 
 export const BOSS_INTRO = {
   gravekeeper: { 1:'It stops a third of the way down and never reaches the wall, but it teleports between lanes and raises ghouls. Monsters keep coming until it falls.',
@@ -119,6 +122,7 @@ export const CASTLE_INTRO = 'Castle walls stand in some lanes. A pumpkin that hi
 export const PUDDLE_INTRO = 'Puddles dot the field. Some monsters climb out of them instead of walking in from the top, and Puddle Divers hide inside them between attacks.';
 export const SEA_INTRO = 'The sea has reached the top of the field. Anything can surface anywhere along it.';
 export const WIND_INTRO = 'Wind blows through Witchwood. Leaves show the direction for two seconds, then every pumpkin in your patch shifts one cell that way, as if pushed. Bunches can form or break.';
+export const FRENZY_INTRO = 'Near the end of the night a jukebox drops at the top of the field. Monsters keep coming while it plays. Only pumpkins can smash it.';
 export const FOG_INTRO = 'Fog covers part of the field. Monsters inside it are invisible but still walking. Pumpkins fly through it and hit as normal. A Lantern clears it for a while.';
 
 export const MINTRO = {

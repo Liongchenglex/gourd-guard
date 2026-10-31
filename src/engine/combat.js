@@ -1,6 +1,7 @@
 import { TYPES, BOSS_NAMES } from '../data/monsters.js';
 import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW, TURQUOISE, BROWN, TURQ_FRAC, BROWN_KB, BROWN_SIZE_MULT, PAINT } from '../data/pumpkins.js';
-import { SFX } from './audio.js';
+import { SFX, musicStart } from './audio.js';
+import { MUSIC } from '../data/music.js';
 import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches, brownSize, paintPull, paintInherit } from './board.js';
 import { TILE_P, mS, mY, spMulNow, spawnMonster, inHexZone } from './monsters.js';
 import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS, walls, FENCE_Y } from './state.js';
@@ -44,6 +45,7 @@ export function launchGroup(ref){
 
 export function damage(m, amt, color, small){
   if (m.dead) return;
+  if (m.type === 'jukebox' && m.lastHit === -1){ m.flash = 0.1; addFloat('Pumpkins only', m.x, mY(m) - m.r - 14, '#ffd35a', 15, 0.7); return; }   // tools never hurt the jukebox (owner)
   if (m.shield){   // shield knight marching: the hit bounces off
     m.flash = 0.1; addFloat('Blocked', m.x, mY(m) - m.r * mS(m) - 14, '#d8d8e0', 15, 0.6); SFX.monsterHit('knight', true);
     return;
@@ -146,7 +148,7 @@ export function kill(m){
     }
     m.trueDeath = true;
   }
-  if (m.type !== 'boss' && !m.trueDeath && G.hexZones && G.hexZones.length && inHexZone(m)){   // inside a hex zone: it rises again
+  if (m.type !== 'boss' && m.type !== 'jukebox' && !m.trueDeath && G.hexZones && G.hexZones.length && inHexZone(m)){   // inside a hex zone: it rises again
     m.hp = 0; m.rise = TYPES.hexwitch.zoneRise; m.eating = false; m.kb = 0; m.burnLeft = 0;
     addFloat('Hexed: it will rise', m.x, mY(m) - m.r - 30, '#d09bff', 16, 1);
     for (let i = 0; i < 10; i++) spark(m.x, mY(m), '#d09bff', 160); SFX.knock();
@@ -171,7 +173,7 @@ export function kill(m){
   G.score += m.pts;
   const reward = m.type === 'sack' ? 'sack' : m.type === 'boss' ? 'boss' : m.lastHit === YELLOW ? 'gold' : rollReward();
   const y = mY(m), s = mS(m);
-  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', chameleon:'#6ab04a', rchameleon:'#3a3a4a', mirror:'#c8d8f0', firemummy:'#ff8a3a', fogwalker:'#b8c8d8', witch:'#6a3a8a', bulwark:'#8090a8', turtle:'#4a7a5a', sack:'#b08850', boss:'#6a3a7a' }[m.type] || '#aaa';
+  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', chameleon:'#6ab04a', rchameleon:'#3a3a4a', mirror:'#c8d8f0', firemummy:'#ff8a3a', fogwalker:'#b8c8d8', witch:'#6a3a8a', bulwark:'#8090a8', turtle:'#4a7a5a', sack:'#b08850', jukebox:'#c0392b', boss:'#6a3a7a' }[m.type] || '#aaa';
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
   ring(m.x, y, m.r * s * 2.2, 'rgba(255,220,150,.8)');
   if (G.vfx) G.vfx.push({ kind:'pop', m:{ type:m.type, kind:m.kind, ph:m.ph, eating:m.eating, hop:m.hop, tint:m.tint, age:5, rise:0, flash:0, slowT:0, frozenT:0, r:m.r }, x:m.x, y, s, t:0, dur:0.35 });   // the last frame squashes and fades (baked characters only)
@@ -187,6 +189,10 @@ export function kill(m){
   else if (reward === 'pumpkin') dropPumpkins(m, Math.max(1, Math.round(m.drop)));
   else if (reward === 'weapon') dropWeapon(m);
   SFX.monsterDie(m.type);
+  if (m.type === 'jukebox' && G.jukebox === m){   // the Frenzy is over: no more monsters past the night's total, the night's song comes back
+    G.jukebox = null; G.jukeboxDone = true; G.shake = 0.8;
+    banner('The music stops!', 'Finish the stragglers.', 2); musicStart(MUSIC['w' + G.def.worldNo] ? 'w' + G.def.worldNo : 'play');
+  }
   if (m.type === 'slime'){   // splits into blobs
     for (let i = 0; i < TYPES.slime.splits; i++){ const l = Math.max(0, Math.min(COLS - 1, m.lane + (i ? 1 : -1))); const bl = spawnMonster('blob', l, true, Math.max(0, m.p - 0.02)); bl.age = 0.2; }
     addFloat('Split!', m.x, y - 30, '#7fe0a0', 16, 0.9); SFX.monsterAct('slime', 'split');

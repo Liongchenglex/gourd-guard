@@ -1,10 +1,10 @@
 import { SFX, ensureAudio, sfxReady, sample } from './engine/audio.js';
 import './style.css';
 import { bestLitGroup, bestMove, collectDrop, emptyCells, groupCells, resolveMatches, slideOne } from './engine/board.js';
-import { launchGroup } from './engine/combat.js';
-import { beginNight, demoUpdate, makeDemo, startGame, update, repairWall, placeMine, endGame, useRepair } from './engine/game.js';
+import { launchGroup, damage } from './engine/combat.js';
+import { beginNight, demoUpdate, makeDemo, startGame, update, repairWall, placeMine, endGame, useRepair, continueState, continueNight } from './engine/game.js';
 import { attachInput } from './engine/input.js';
-import { spawnMonster } from './engine/monsters.js';
+import { spawnMonster, lanesOf } from './engine/monsters.js';
 import { measureCoin, resize } from './engine/render/canvas.js';
 import { render } from './engine/render/draw.js';
 import { G, LANE, bannerTimer, graves, grid, setBannerTimer, state, walls } from './engine/state.js';
@@ -65,5 +65,5 @@ requestAnimationFrame(frame);
 
 if (new URLSearchParams(location.search).has('test')){
   window.__gg = { get G(){ return G; }, get grid(){ return grid; }, get graves(){ return graves; }, get walls(){ return walls; }, get state(){ return state; },
-    startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair, openPreview, openBook, LEVELS, isOpen, WORLD_LEVELS };
+    startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair, openPreview, openBook, LEVELS, isOpen, WORLD_LEVELS, damage, lanesOf, continueState, continueNight };
 }

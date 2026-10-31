@@ -167,6 +167,56 @@ export function sack(g, P = {}){
   g.restore(); g.restore();
 }
 
+// ---------- the Frenzy jukebox (World 6) ----------
+// An arched Halloween jukebox two lanes wide: a plum wood cabinet, a neon arch that cycles orange, violet and green, a record turning
+// behind the glass, a carved jack-o'-lantern speaker grille glowing to the beat, bubble lights up the sides and notes puffing out.
+// Feet (the plinth) at y = 50. Pose { walk:t } (t in 0..1) is the looping play cycle; the glow is baked into the frames.
+const JWOOD = pal('#6e3a2c'), JTRIM = pal('#c89a3a'), JGLASS = pal('#2a1838'), JVINYL = pal('#1c1420'), JLABEL = pal('#ff8a2a'), JGRILLE = pal('#e8741a'),
+  JNEON = ['#ff9a2a', '#b46aff', '#7ae05a'];
+function arch(g, w, top, bot){ g.beginPath(); g.moveTo(-w, bot); g.lineTo(-w, top + w * .9); g.quadraticCurveTo(-w, top, 0, top); g.quadraticCurveTo(w, top, w, top + w * .9); g.lineTo(w, bot); g.closePath(); }
+function note(g, x, y, s, a, col){
+  if (a <= .02) return;
+  g.save(); g.globalAlpha *= a; g.translate(x, y); g.rotate(-.2); g.fillStyle = col; g.strokeStyle = col; g.lineWidth = 1.6 * s;
+  ell(g, 0, 0, 4 * s, 3 * s, -.4); g.fill(); g.beginPath(); g.moveTo(3.6 * s, -1 * s); g.lineTo(3.6 * s, -13 * s); g.quadraticCurveTo(7 * s, -10 * s, 9 * s, -6 * s); g.stroke(); g.restore();
+}
+export function jukebox(g, P = {}){
+  const t = P.walk || 0, beat = Math.abs(Math.sin(t * TAU * 2)), neon = JNEON[Math.floor(t * 3) % 3], neon2 = JNEON[(Math.floor(t * 3) + 1) % 3];
+  S.shadow(g, 2, 50, 86, 11);
+  g.save(); g.translate(0, 50); g.scale(1 + beat * .02, 1 - beat * .025); g.translate(0, -50);   // it bounces to its own beat
+  // plinth and cabinet
+  S.part(g, RR(-74, 34, 148, 16, 6), JTRIM, { x:0, y:40, r:70 }, { mat:'metal', hx:-30, hy:36 });
+  S.part(g, g2 => arch(g2, 68, -132, 38), JWOOD, { x:0, y:-40, r:110 }, { mat:'wood', hx:-34, hy:-96 });
+  // the neon arch: a glowing tube just inside the cabinet's edge
+  g.save(); g.shadowColor = neon; g.shadowBlur = 14; g.strokeStyle = neon; g.lineWidth = 5; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-58, 30); g.lineTo(-58, -132 + 58 * .9 + 8); g.quadraticCurveTo(-58, -120, 0, -120); g.quadraticCurveTo(58, -120, 58, -132 + 58 * .9 + 8); g.lineTo(58, 30); g.stroke();
+  g.shadowBlur = 0; g.strokeStyle = 'rgba(255,255,240,.75)'; g.lineWidth = 1.6; g.stroke(); g.restore();
+  // glass window with the record
+  S.part(g, g2 => arch(g2, 42, -110, -34), JGLASS, { x:0, y:-72, r:44 }, { flat:true, lw:1.4 });
+  g.save(); g2clip(g); g.translate(0, -62); g.rotate(t * TAU);
+  S.part(g, E(0, 0, 27, 27), JVINYL, { x:0, y:0, r:27 }, { flat:true, lw:1 });
+  g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = .8; for (let r = 11; r < 26; r += 3.4){ ell(g, 0, 0, r, r); g.stroke(); }
+  g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 26, -.9, -.5); g.closePath(); g.fill();   // the light catching the grooves
+  S.part(g, E(0, 0, 9, 9), JLABEL, { x:0, y:0, r:9 }, { flat:true, lw:1 }); g.fillStyle = '#2a1610'; ell(g, 0, 0, 1.8, 1.8); g.fill();
+  g.restore();
+  g.fillStyle = 'rgba(255,255,255,.14)'; g.beginPath(); g.moveTo(-30, -96); g.quadraticCurveTo(-24, -104, -12, -106); g.lineTo(-20, -50); g.lineTo(-32, -50); g.closePath(); g.fill();   // glass glint
+  // carved jack-o'-lantern speaker grille, lit from inside to the beat
+  S.part(g, RR(-46, -24, 92, 52, 12), JGRILLE, { x:0, y:0, r:52 }, { mat:'pumpkin', hx:-20, hy:-16 });
+  g.save(); g.shadowColor = '#ffd23a'; g.shadowBlur = 8 + beat * 10; g.fillStyle = `rgb(255,${200 + Math.round(beat * 40)},${70 + Math.round(beat * 60)})`;
+  PL([[-30, -12], [-14, -12], [-22, -1]])(g); g.fill(); PL([[14, -12], [30, -12], [22, -1]])(g); g.fill();
+  PL([[-30, 8], [-22, 13], [-15, 8], [-7, 14], [0, 8], [7, 14], [15, 8], [22, 13], [30, 8], [26, 20], [-26, 20]])(g); g.fill(); g.restore();
+  // bubble lights up both sides, chasing upward
+  for (const s of [-1, 1]) for (let i = 0; i < 6; i++){
+    const y = 22 - i * 17, on = (Math.floor(t * 12) - i + 12) % 3 === 0, col = on ? neon2 : '#4a2a3a';
+    g.save(); if (on){ g.shadowColor = col; g.shadowBlur = 8; } S.dot(g, E(s * 63, y, 3.6, 3.6), col); g.restore();
+  }
+  // trim along the arch
+  S.stroke(g, g2 => arch(g2, 68, -132, 38), JTRIM, 2.4, .9);
+  g.restore();
+  // notes puffing out of the top
+  for (let i = 0; i < 3; i++){ const k = (t + i / 3) % 1; note(g, -26 + i * 26 + Math.sin(k * TAU) * 8, -126 - k * 36, .9 + i * .1, Math.sin(k * Math.PI), JNEON[i]); }
+}
+function g2clip(g){ arch(g, 42, -110, -34); g.clip(); }
+
 // ---------- registry ----------
 // r 40, feet at 38 below the centre: scale .7, dy = 38 − 50 × .7 = 3. The body spans about ±90 drawing units (±63 in game), two lanes.
 export const EXTRA = {
@@ -177,4 +227,7 @@ export const EXTRA = {
       if (m.hold != null && m.p >= m.hold){ const c = clips.taunt; return ['taunt', Math.floor((m.age || 0) * c.fps) % c.n]; }
       return null;
     }, still:{ taunt:.15 } },
+  // r 40 like the sack; scale .75 keeps its arch clear of the tool tray at the top of the field; feet at 50: dy = 38 − 50 × .75 = .5.
+  // It never walks: `walk` is its looping play cycle.
+  jukebox: { draw:jukebox, scale:.75, dy:.5, box:{ x:-128, y:-180, w:256, h:240 }, clips:{ walk:{ n:12, fps:10, pose:t => ({ walk:t }) } } },
 };

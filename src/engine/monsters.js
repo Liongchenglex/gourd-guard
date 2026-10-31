@@ -23,7 +23,7 @@ export function spMulNow(){ return G.mode === 'story' ? G.def.spMul : Math.min(E
 
 export function hpExtra(){ return G.mode === 'story' ? 0 : E.hpExtraForHour(G.hour || 0); }
 
-export function lanesOf(m){ return m.type === 'sack' ? [m.lane, m.lane + 1] : [m.lane]; }   // the Loot Sack spans two lanes
+export function lanesOf(m){ return m.type === 'sack' || m.type === 'jukebox' ? [m.lane, m.lane + 1] : [m.lane]; }   // the Loot Sack and the jukebox span two lanes
 
 export function pickLane(){
   const busy = new Set(G.monsters.filter(m => m.p < 0.15).map(m => m.lane));
@@ -82,7 +82,7 @@ export function spawnMonster(key, lane, minion, p){
     colourLock:null, colourImmune:null, reflecting:false, mirrorT:T.open || 0, hexT:T.hexEvery || 0, zoneT:T.zoneEvery || 0, bulk:1 };
   if (T.noKnockback) m.noKnockback = true;
   if (form === 2 && T.form2 && T.form2.hold != null) m.hold = T.form2.hold;
-  if (G.def && G.def.hexAll && type !== 'boss' && type !== 'sack' && type !== 'chameleon' && type !== 'rchameleon') hexMonster(m, G.def.hexAll === 'reverse', true);
+  if (G.def && G.def.hexAll && type !== 'boss' && type !== 'sack' && type !== 'jukebox' && type !== 'chameleon' && type !== 'rchameleon') hexMonster(m, G.def.hexAll === 'reverse', true);
   if (type === 'turtle' && !puddle && G.puddles && G.puddles.length && p == null){ const pd = G.puddles[Math.floor(Math.random() * G.puddles.length)]; m.lane = pd.lane; m.x = m.tx = LANE(pd.lane); m.p = pd.p; }
   if (type === 'chameleon' || type === 'rchameleon'){   // takes one of the player's colours
     const pool = (G.loadout || [0, 1]).filter(t => t !== RAINBOW);
@@ -112,7 +112,7 @@ function standsStill(o){
   if (o.type === 'boss') return o.p >= (o.hold || 1) - 0.001;
   if (o.type === 'archer') return o.p >= TYPES.archer.hold;
   if (o.type === 'diver') return !o.walker;
-  if (o.type === 'sack') return true;
+  if (o.type === 'sack' || o.type === 'jukebox') return true;
   return false;
 }
 export function aheadLimit(m){
@@ -145,6 +145,15 @@ export function spawnSack(){
   addFloat('A Loot Sack! Knock it down before it runs!', W / 2, FIELD_TOP + 120, '#ffd35a', 18, 2);
   return m;
 }
+const JUKEBOX_P = 0.18;   // its feet sit this far down the field: the top end, with the cabinet clear of the HUD
+/** The Frenzy jukebox: two lanes wide at the top of the field, with the Loot Sack's health rule unless the level sets `frenzyHp`. */
+export function spawnJukebox(hp){
+  const lane = Math.floor(Math.random() * (COLS - 1)), m = spawnMonster('jukebox', lane, true, JUKEBOX_P);
+  m.x = m.tx = (LANE(lane) + LANE(lane + 1)) / 2; m.hw = CS * 0.95; m.noKnockback = true;
+  m.maxHp = (G.def && G.def.frenzyHp) || SACK.hpBase + SACK.hpPerWorld * ((G.def ? G.def.worldNo : 1) - 1);
+  m.hp = hp != null ? Math.min(m.maxHp, hp) : m.maxHp;
+  return m;
+}
 export function updateMonster(m, dt){
   m.age += dt; m.ph += dt;
   if (m.flash > 0) m.flash -= dt;
@@ -169,6 +178,7 @@ export function updateMonster(m, dt){
     return;
   }
   if (m.type === 'sack'){ updateSack(m, dt, sp); return; }
+  if (m.type === 'jukebox') return;   // it only plays: never walks, never chews
   if (m.eating){
     m.shield = false;   // a shield knight lowers its shield to chew
     m.reflecting = false;   // a mirror sprite drops its mirror to chew
@@ -267,7 +277,7 @@ export function updateMonster(m, dt){
         m.hexT -= dt;
         if (m.hexT <= 0 && m.p > 0.05){
           m.hexT = TYPES.witch.hexEvery;
-          const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'sack' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.type !== 'mummy' && o.type !== 'firemummy' && o.rise <= 0 && o.p > 0);   // anything but bosses, true chameleons and mummies (owner, 2026-10-19: a hexed mummy's colour immunity could leave nothing able to finish it); may re-hex an already hexed monster; witches hex each other (owner)
+          const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'sack' && o.type !== 'jukebox' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.type !== 'mummy' && o.type !== 'firemummy' && o.rise <= 0 && o.p > 0);   // anything but bosses, true chameleons and mummies (owner, 2026-10-19: a hexed mummy's colour immunity could leave nothing able to finish it); may re-hex an already hexed monster; witches hex each other (owner)
           if (pick.length){ const o = pick[Math.floor(Math.random() * pick.length)]; hexBolt(m, o); hexMonster(o, Math.random() >= TYPES.witch.chameleonChance); SFX.monsterAct('witch', 'hex'); m.anim = { clip:'hex', t:0, dur:0.5 }; }
         }
         m.x = m.tx + Math.sin(m.ph * 1.6) * 2;

@@ -594,6 +594,8 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .resetBox{ width:100%; margin-top:calc(var(--u)*6px); padding-top:calc(var(--u)*10px); border-top:1px solid var(--line); text-align:center; }
 .resetBox[hidden], .resetAsk[hidden], #bReset[hidden]{ display:none; }
 .link.danger{ color:#ff8a7a; min-height:calc(var(--u)*44px); }
+.aboutRow{ display:flex; flex-wrap:wrap; justify-content:center; gap:0 calc(var(--u)*8px); }   /* Settings: rate, privacy, terms (testers' report, 2026-10-31) */
+.aboutRow .link{ min-height:calc(var(--u)*44px); font-size:calc(var(--u)*15px); }
 .resetAsk p{ margin:0 0 calc(var(--u)*10px); font-size:calc(var(--u)*14px); color:var(--ink); line-height:1.4; }
 .btn.danger{ background:linear-gradient(#e0533f, #b8321f); color:#fff; box-shadow:0 calc(var(--u)*4px) 0 #6e1a10; }
 

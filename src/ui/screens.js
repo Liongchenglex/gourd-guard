@@ -18,6 +18,7 @@ import { showCrownReveal } from './reveal.js';
 import { upgradeCost, PAINT_UNLOCK, COINS_PER_SEED, SEED_TRADES, SEED_PACKS, BOSS_ITEMS_FOR_COSTUME, BOSS_ITEM_SEED_PACK, CHESTS, SEED_ADS_PER_DAY } from '../data/economy.js';
 import { showRewarded, seedAdsLeft, adsBusy } from '../engine/ads.js';
 import { storeReady, buyPack } from '../engine/store.js';
+import { SUPPORT_URL, openPage, storeUrl } from '../engine/native.js';
 import { rollChest, grant, bossItemsFor, foundThisNight, queueSack, sackIsQueued } from '../engine/loot.js';
 import { chestIcon, bossItemIcon, BOSS_ITEM_NAMES, seedIcon as seedArt } from '../engine/render/loot.js';
 import { costumeIcon, skinIcon, previewScene } from '../engine/render/wardrobe.js';
@@ -942,6 +943,9 @@ export function wireButtons(){
     location.reload();
   };
   $('#bSettingsDone').onclick = () => { ensureAudio(); if (settingsFrom === 'pause') setState('pause'); else openLevels(); };
+  $('#bPrivacy').onclick = () => { SFX.ui('tap'); openPage(SUPPORT_URL + 'privacy-policy.html'); };
+  $('#bTerms').onclick = () => { SFX.ui('tap'); openPage(SUPPORT_URL + 'terms.html'); };
+  const rateUrl = storeUrl(); $('#bRate').hidden = !rateUrl; $('#bRate').onclick = () => { SFX.ui('tap'); openPage(rateUrl); };
   for (const [id, key] of [['#volMusic', 'musicVol'], ['#volSfx', 'sfxVol']]){
     $(id).oninput = e => { save[key] = Math.round(+e.target.value) / 100; persist(); ensureAudio(); applyVolumes(); syncVolumes(); if (key === 'sfxVol') SFX.ui('tap'); };
   }

@@ -26,10 +26,21 @@ export async function initNative(){
 
 // ---------- Rewarded ads: Google AdMob ----------
 import { AdMob, AdmobConsentStatus, RewardAdPluginEvents, InterstitialAdPluginEvents } from '@capacitor-community/admob';
-import { ADMOB, REVENUECAT } from '../data/appkeys.js';
+import { ADMOB, APP_STORE_ID, REVENUECAT } from '../data/appkeys.js';
 import { audioSleep } from './audio.js';
 
 const platform = () => Capacitor.getPlatform();   // 'ios' | 'android'
+
+// ---- the game's web pages and store listing (Settings: rate, privacy policy, terms; the testers' report, 2026-10-31) ----
+export const SUPPORT_URL = 'https://liongchenglex.github.io/gourd-guard-support/';
+/** Opens a page outside the game: Capacitor hands a `_blank` window to the phone's browser (or the store app for store links). */
+export function openPage(url){ try { window.open(url, '_blank', 'noopener'); } catch (e) {} }
+/** The store page for rating the game, or '' where there is none (a browser, or an iPhone before APP_STORE_ID is known). */
+export function storeUrl(){
+  if (!isNative()) return '';
+  if (platform() === 'android') return 'https://play.google.com/store/apps/details?id=com.chenglex.gourdguard';
+  return APP_STORE_ID ? `https://apps.apple.com/app/id${APP_STORE_ID}?action=write-review` : '';
+}
 let adsReady = null, loaded = false, loading = null;
 
 /** Consent (EU/UK form from Google, then Apple's tracking prompt on iOS), then start the SDK. Runs once. */

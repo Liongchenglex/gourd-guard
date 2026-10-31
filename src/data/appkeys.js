@@ -13,4 +13,8 @@ export const ADMOB = {
   },
 };
 // RevenueCat public SDK keys (Project settings → API keys). Empty = in-app purchases off.
+/** The App Store's numeric id for the game (App Store Connect → App Information → Apple ID). Public. Until it is filled in, the
+ *  iPhone app hides its "Rate Gourd Guard" button; Android needs only the package name. */
+export const APP_STORE_ID = '';
+
 export const REVENUECAT = { ios:'appl_UzKtocTYerztpmTbIAXDGUqBnVZ', android:'goog_saWUEUGejDPTzbXPvCpJxtcNLde' };

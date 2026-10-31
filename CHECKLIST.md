@@ -7,6 +7,7 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
 
 **Your info, used everywhere:**
 - Privacy policy URL: **https://liongchenglex.github.io/gourd-guard-support/privacy-policy.html**
+- Terms of use URL: **https://liongchenglex.github.io/gourd-guard-support/terms.html** (page drafted in `store/support-site/terms.html`; goes live once it is pushed to the `gourd-guard-support` repo)
 - Support URL: **https://liongchenglex.github.io/gourd-guard-support/**
 - Website (for app-ads.txt): **https://liongchenglex.github.io**
 - Contact email: **chenglex1@gmail.com**
@@ -153,6 +154,8 @@ On your iPhone (TestFlight) and an Android phone (closed test), check:
 - [ ] **6.7** Close the app fully, restart the phone, open again: your progress is still there.
 - [ ] **6.8 (Android only)** The phone's Back button pauses a night and closes cards.
 - [ ] **6.9** Play levels **1-20, 3-15, 3-19 and 4-10** once each to check they feel fair.
+- [ ] **6.11** Minimise the game in the middle of a night, come back and tap: sound and music return. Double-tap the patch: nothing zooms.
+- [ ] **6.12** Settings → **Privacy policy** and **Terms of use** open the web pages; **Rate Gourd Guard** opens the store page (on iPhone it only appears once 7.12 is done).
 - [ ] **6.10 Tell Claude anything that's wrong** → I fix it, you upload a new build. Before you upload, I bump the build number: Apple and Google reject the same number twice.
 
 ---
@@ -174,6 +177,7 @@ I'll have drafted the text and screenshots in step 3.2; copy them in.
 - [ ] **7.6 Pricing**. Set price **Free** and availability to all countries.
 - [ ] **7.7 Add the seed packs**. On the version page, under "In-App Purchases", **add the three seed packs** so they're reviewed together with the app.
 - [ ] **7.8 Pick the build**. Select the TestFlight build you tested.
+- [ ] **7.12 Apple ID number for the Rate button**. App Store Connect → your app → **App Information** → General Information → **Apple ID** (a number like 6740000000). Paste it to me → I put it in `src/data/appkeys.js` (`APP_STORE_ID`) so the iPhone app's "Rate Gourd Guard" button works. It's public, like the AdMob ids.
 
 ### Play Console (left menu → Grow → Store presence, and Policy → App content)
 - [ ] **7.9 Main store listing**. Fill in the short description, full description, app icon (`store/play-icon-512.png`), feature graphic (`store/play-feature-1024x500.jpg`) and the six phone screenshots in `store/screenshots/android/`. Text is in `store/LISTING.md`.
@@ -201,7 +205,7 @@ I'll have drafted the text and screenshots in step 3.2; copy them in.
 - [ ] **8.3 Release**. When approved, press **Release** (or set it to release automatically). 🎉
 
 ### Android
-- [ ] **8.4 Apply for production**. After **14 days** of closed testing with 12 testers: Play Console → Dashboard → **Apply for production access** and answer the questions about your test. Google replies in about a week.
+- [ ] **8.4 Apply for production**. After **14 days** of closed testing with 12 testers: Play Console → Dashboard → **Apply for production access** and answer the questions about your test. Google replies in about a week. **Drafted, true-to-our-test answers are in `store/PLAY_PRODUCTION_FORM.md`**; don't paste the testing provider's template answers (they describe surveys and tester-driven changes that didn't happen).
 - [ ] **8.5 Release to production**. When approved: Test and release → **Production** → Create release → **Add from library** (pick the tested build) → Review → **Start rollout**. Google reviews it, usually in 1–3 days. 🎉
 
 ---

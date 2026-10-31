@@ -213,7 +213,7 @@ export function openPreview(n){
   renderQuests(n, def);
   $('#pvSub').textContent = WORLD_NAMES[def.worldNo - 1];
   const mons = $('#pvMonsters'); mons.innerHTML = '';
-  prebakeAsync([...def.pool.map(([t]) => poolKey(t, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), 'ghoul']);   // bake this level's sprite strips while the card is read
+  prebakeAsync([...def.pool.map(([t]) => poolKey(t, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), 'ghoul']);   // bake this level's sprite strips while the card is read
   for (const [t] of def.pool){
     const d = document.createElement('div'); d.className = 'pv-ic';
     d.appendChild(monsterIcon(t, 108));

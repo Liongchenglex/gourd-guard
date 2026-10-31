@@ -86,7 +86,7 @@ export function startGame(mode, n, loadout){
     loot:{ chests:0, seeds:0 }, chestDropped:false, continued:false, sackT:0, jukebox:null, jukeboxDone:false,
   });
   if (mode === 'story' && takeSack()) G.sackT = SACK.spawnAt;
-  if (def) prebake([...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), 'ghoul']);   // bake this level's sprite strips now, not on first sight
+  if (def) prebake([...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), 'ghoul']);   // bake this level's sprite strips now, not on first sight
   if (def && def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
   else if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def && def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def && def.puddles) placePuddles(def.puddles);

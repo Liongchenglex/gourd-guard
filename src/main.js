@@ -6,6 +6,7 @@ import { beginNight, demoUpdate, makeDemo, startGame, update, repairWall, placeM
 import { attachInput } from './engine/input.js';
 import { spawnMonster, lanesOf } from './engine/monsters.js';
 import { measureCoin, resize } from './engine/render/canvas.js';
+import { isBaked } from './engine/render/anim.js';
 import { render } from './engine/render/draw.js';
 import { G, LANE, bannerTimer, graves, grid, setBannerTimer, state, walls } from './engine/state.js';
 import { $ } from './engine/util.js';
@@ -65,5 +66,5 @@ requestAnimationFrame(frame);
 
 if (new URLSearchParams(location.search).has('test')){
   window.__gg = { get G(){ return G; }, get grid(){ return grid; }, get graves(){ return graves; }, get walls(){ return walls; }, get state(){ return state; },
-    startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair, openPreview, openBook, LEVELS, isOpen, WORLD_LEVELS, damage, lanesOf, continueState, continueNight };
+    startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair, openPreview, openBook, LEVELS, isOpen, WORLD_LEVELS, damage, lanesOf, continueState, continueNight, isBaked };
 }

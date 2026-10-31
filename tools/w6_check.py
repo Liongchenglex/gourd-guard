@@ -174,14 +174,44 @@ def check_jukebox(browser, url, on):
     page.evaluate("(c) => window.__gg.continueNight(c)", c)
     force_drop(page)
     ok(page.evaluate(f"() => {JB}.length") == 0, 'a continued night after the jukebox fell drops no second one')
-    js = ''.join(p.read_text(errors='ignore') for p in (ROOT / 'dist/assets').glob('*.js'))
-    ok(('"jukebox"' in js or "'jukebox'" in js) and 'sack' in js, 'jukebox is drawn above fog like the Loot Sack (type named in the bundle)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def orange_px(page):
+    # bright orange/yellow pixels in the field's top half (the jukebox grille and neon); the Hallow's End moon sits above this band
+    return page.evaluate("""() => { const c = document.querySelector('canvas'), g = c.getContext('2d'), k = c.width / c.clientWidth;
+      const d = g.getImageData(0, Math.round(130 * k), c.width, Math.round(200 * k)).data; let n = 0;
+      for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 1] > 90 && d[i + 1] < 200 && d[i + 2] < 90) n++; return n; }""")
+
+
+def check_jukebox_more(browser, url, on):
+    if not on: return
+    page, errors = open_page(browser, url)
+    start(page, 104)
+    ok(page.evaluate("() => window.__gg.isBaked && window.__gg.isBaked('jukebox')"), 'the jukebox frames are baked at night start, not on the drop frame')
+    force_drop(page)
+    # fog over the jukebox: it must still be drawn above it
+    page.evaluate("() => { const G = window.__gg.G; G.def.fog = [[0, 0.45]]; for (const m of G.monsters) if (m.type !== 'jukebox') m.dead = true; G.spawnTimer = 99; }")
+    time.sleep(0.6)
+    with_jb = orange_px(page)
+    page.evaluate(f"() => {{ {JB}[0].hidden = true; }}")
+    page.evaluate(f"() => {{ const m = {JB}[0]; window.__gg.G.monsters.splice(window.__gg.G.monsters.indexOf(m), 1); window.__gg.G.spawnTimer = 99; }}")
+    time.sleep(0.4)
+    without = orange_px(page)
+    ok(with_jb > 400 and with_jb > without * 4, f'the jukebox shows through fog ({with_jb} lit pixels vs {without} without it)')
+    # the Hexwitch never hexes it
+    start(page, 104); force_drop(page)
+    page.evaluate("() => { const G = window.__gg.G; for (const m of G.monsters) if (m.type !== 'jukebox') m.dead = true; G.spawnTimer = 99; G.def.boss = 'hexwitch'; G.def.bossForm = 1; window.__hw = window.__gg.spawnMonster('boss', 5, true, 0.3); }")
+    for _ in range(4):
+        page.evaluate("() => { window.__hw.hexT = 0; window.__gg.G.spawnTimer = 99; }"); time.sleep(0.4)
+    ok(page.evaluate(f"() => {{ const m = {JB}[0]; return !!m && m.colourLock == null && m.colourImmune == null; }}"), 'the Hexwitch never hexes it')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
 
 CHECKS = {
-    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox,
+    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more,
 }
 
 

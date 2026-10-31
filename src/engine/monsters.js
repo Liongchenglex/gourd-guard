@@ -496,7 +496,7 @@ function updateHexwitch(m, dt){
   m.hexT -= dt;
   if (m.hexT <= 0){
     m.hexT = m.form === 2 ? T.form2.hexEvery : T.hexEvery;
-    const pick = shuffle(G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.rise <= 0 && o.p > 0));   // same targets as a witch
+    const pick = shuffle(G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'sack' && o.type !== 'jukebox' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.rise <= 0 && o.p > 0));   // same targets as a witch (never the Loot Sack or the Frenzy jukebox)
     const n = T.hexCount[0] + Math.floor(Math.random() * (T.hexCount[1] - T.hexCount[0] + 1));
     for (const o of pick.slice(0, n)){ hexBolt(m, o); hexMonster(o, m.form === 2 ? Math.random() >= T.chameleonChance : true); }   // form 1: reverse only (owner); form 2: 25% chameleon, 75% reverse
     if (pick.length){ SFX.bossSfx('hexwitch', 'hex'); m.anim = { clip:'hex', t:0, dur:0.73 }; }

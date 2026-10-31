@@ -18,13 +18,13 @@ export default [
     quests:[['noTools'], ['bunch5', 2]], unlockPumpkins:[], unlockGear:[], intro:[] },
   // 6-3: mummies and flaming mummies (Fire and Ice both locked in); fog over all but the two rows by the fence, a castle row
   // hidden in it, and witch wind. Same graves as 6-2.
-  { world:6, level: 3, theme:5, name:'Fire and Ice, Round 2', pattern:2, graves:0, total:16, interval:3.4, spMul:0.95, boss:null, bossForm:1,
-    pool:[['mummy', 6], ['firemummy', 5]], fog:[[0, 0.6]], castles:{ n:7, hp:12 }, castlesLayout:ROW(0.35), gust:{ every:22, dirs:['left', 'right'] },
+  { world:6, level: 3, theme:5, name:'Fire and Ice, Round 2', pattern:2, graves:0, total:10, interval:5.0, spMul:0.9, boss:null, bossForm:1,
+    pool:[['mummy', 6], ['firemummy', 5]], fog:[[0, 0.6]], castles:{ n:7, hp:8 }, castlesLayout:ROW(0.35), gust:{ every:22, dirs:['left', 'right'] },
     gravesLayout:PILLARS, quests:[['bunch5', 2], ['wallMin', 50]], unlockPumpkins:[], unlockGear:[], intro:[] },
   // 6-4: a revisit of the level-16 monsters (and the Plague Doctor and Vampire, owner's list). A castle row across the middle with one
   // row of fog above it and one below, puddles scattered for the turtles, witch wind, and the first Frenzy jukebox.
-  { world:6, level: 4, theme:5, name:'A Revisit', pattern:3, graves:0, total:26, interval:2.9, spMul:1.0, boss:null, bossForm:1, frenzy:true,
-    pool:[['firemummy', 3], ['doctor', 3], ['witch', 3], ['vampire', 2], ['bulwark', 2], ['turtle', 3]], puddles:3,
-    castles:{ n:7, hp:12 }, castlesLayout:ROW(0.5), fog:[[0.22, 0.4], [0.6, 0.78]], gust:{ every:22, dirs:['left', 'right'] },
-    gravesLayout:[[1, 3], [2, 2], [2, 3], [2, 4], [3, 3]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
+  { world:6, level: 4, theme:5, name:'A Revisit', pattern:3, graves:0, total:18, interval:3.6, spMul:0.95, boss:null, bossForm:1, frenzy:true,
+    pool:[['firemummy', 2], ['doctor', 2], ['witch', 2], ['vampire', 2], ['bulwark', 1], ['turtle', 2]], puddles:3,
+    castles:{ n:7, hp:8 }, castlesLayout:ROW(0.5), fog:[[0.22, 0.4], [0.6, 0.78]], gust:{ every:22, dirs:['left', 'right'] },
+    gravesLayout:[[0, 0], [0, 6], [2, 3], [4, 0], [4, 6]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
 ];

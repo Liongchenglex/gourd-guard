@@ -252,7 +252,7 @@ World 6 exists only in builds made with `VITE_W6=1` (the private playtest link) 
 - **6-1 Attack and Defend**: fog over the middle three rows hiding three fixed puddles (`puddlesLayout`) that Puddle Crawlers and Shell Turtles climb out of; Shield Knights and Skeleton Archers from the top; a full castle row at 90% just in front of the fence (castle walls keep their rules: they block pumpkins, monsters and arrows pass through); graves in an "n".
 - **6-2 Timing!**: the sea covers the top half (`shoreFrac:0.5`); Fogwalkers, Witches, Mirror Sprites and Shield Knights surface at the shoreline; graves in two pillars.
 - **6-3 Fire and Ice, Round 2**: Mummies and Flaming Mummies; fog over everything but the two rows by the fence, a full castle row at 35% hidden in it; witch wind; 6-2's graves.
-- **6-4 A Revisit**: Flaming Mummies, Plague Doctors, Witches, Vampires, Bulwark Knights, Shell Turtles; three random puddles; a full castle row at 50% with a fog row above and below; witch wind; graves in a plus; the first **Frenzy**.
+- **6-4 A Revisit**: Flaming Mummies, Plague Doctors, Witches, Vampires, Bulwark Knights, Shell Turtles; three random puddles; a full castle row at 50% with a fog row above and below; witch wind; graves on the four corners and the centre; the first **Frenzy**.
 - **Frenzy jukebox** (level field `frenzy`): once `frenzyAt` (default 80%) of the night's `total` has spawned, a jukebox drops at the top of the field (18% down, two lanes wide, the Loot Sack's hit box). Health: the Loot Sack's rule (`SACK.hpBase + SACK.hpPerWorld × (world − 1)`, 30 in World 6) unless `frenzyHp` is set. It never moves or chews. **Only pumpkins hurt it** (Fire's burn counts; tools do not). Monsters in its lanes shield it, as with any target. While it stands, monsters keep coming at the night's normal pace past `total`; the night is won only when it is smashed and the field is clear. Its song is the owner's `frenzy.mp3` (from 0:00, a separate module loaded only in `VITE_W6` builds); the night's track returns when it falls. It is drawn above fog, never hexed, and gives the normal kill roll. A continued night keeps a fallen jukebox fallen and brings a standing one back with its health. A faster-pace jukebox is in the backlog (`docs/WORLDS.md` §10).
 
 ### Authored levels 11–19
@@ -424,6 +424,21 @@ Bot runs, `--repeats 3`, expected profile. The bot fixed in this pass: it counte
 Unchanged and already near target: 1-1 to 1-7, 1-11 (3/3), 1-14 (2/3), 3-1 to 3-8, 3-11 (2/3), 3-13 (2/3), 3-14 (3/3), 3-18 (2/3).
 
 Reading: every level that was 0/3 except four now wins at least some runs. The four left are bot blind spots rather than settings: 3-15 and 3-19 are chameleon levels and the bot cannot choose colours (it loses within a minute with few kills); on 4-10 it survives four to five minutes and kills 50 to 80 monsters but never focuses the Vampire Count to break his trance (boss health was taken to ×0.6 there and set back to ×0.7, untested, so the fight stays a fight for people); 1-20 is the world's final boss with a 40% target. These four need a hand playtest before cutting further.
+
+### Hallow's End 6-1 to 6-4, first tuning (World 6 beta, 2026-10-31, `VITE_W6=1` build, `--repeats 3`)
+Profile for World 6: every pumpkin at level 5 and Sturdy walls 3 (offset 0), level 4 and walls 2 (offset −1). Wins out of 3; two bots ran side by side.
+
+| Night | Round 1 (first numbers) 0 / −1 | Change | Round 2 0 / −1 | Change | Round 3 0 / −1 | Change | Round 4 0 / −1 |
+|---|---|---|---|---|---|---|---|
+| 6-1 | **3** / 0 | none | | | | | |
+| 6-2 | **2** / 0 | none | | | | | |
+| 6-3 | 0 / 0 | total 16→12, interval 3.4→4.2, speed .95→.9, castles 12→8 HP | 0 / 1 | total 12→10, interval 4.2→5.0 | **1** / 0 | none | |
+| 6-4 | 0 / 0 | total 26→20, interval 2.9→3.4, speed 1→.95, castles 12→8 HP | 0 / 0 | total 20→18, interval 3.6, lighter pool (Bulwark 1, others 2) | 0 / 0 | graves "plus" → corners + centre | 0 / 0 |
+
+Reading:
+- 6-1 and 6-2 meet the rule (winnable at the profile, lost below it).
+- 6-3 is borderline: the bot cannot tell a Mummy from a Flaming Mummy and throws whatever bunch is ready, so most of its hits only knock mummies down (kills 2–10 of 10–16). A player who matches Fire and Ice once mummies leave the fog should do better; the owner's playtest decides.
+- 6-4: the central "plus" of graves starved the middle lanes of bunches (the middle walls fell first in a watched run). With corner graves every run at the profile now survives past the night's total into the Frenzy (23–27 of 18 resolved), and loses while the jukebox plays. Next levers are the owner's rules (jukebox health 30 like the Loot Sack, the 80% drop point); asked the owner before changing them.
 
 ### 5-20 slightly easier (owner, 2026-10-09)
 

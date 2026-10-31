@@ -46,7 +46,7 @@ This milestone builds levels 6-1 to 6-4 and the Frenzy jukebox, so the owner can
 - **Pumpkins:** no unlocks. The player picks a team of 5 from everything they own, as in late world 5. Where a level's monsters force a colour (Fire and Ice for the two mummy types), the existing auto-lock rule applies.
 - **Monsters (owner):** the plain versions from worlds 1–5, as listed per level, with no modifiers. These levels use no regular monsters (ghouls, imps, bats, brutes), which is where modifiers would apply.
 - **Graves:** every level has a hand-placed grave pattern (`gravesLayout`) on the 5×7 patch. The owner wants them to vary between levels.
-- **Map art:** a sixth background theme, "Hallow's End", built with the existing `buildBg()` and colours taken from the Hallow's End scene already in the game (`src/engine/render/nightmare/scenes.js`, `'hallow'`). Fog, sea, puddles, castle walls and wind draw as they do in their home worlds.
+- **Map art (owner):** use the owner's finished Hallow's End map from the archive (`docs/archive/nightmare-worlds/`, already in the game as the 5-20 sneak peek: `hallowSky()` / `hallowProps()` and the `hallow` palette in `src/engine/render/nightmare/scenes.js`). Bring it in as a sixth background theme as the archive README says (palette into `WORLDS`, props into the scene painter, baked once). Do not redraw it. Fog, sea, puddles, castle walls and wind draw as they do in their home worlds.
 - **Book:** a Hallow's End storybook on the shelf with short placeholder lore and a bestiary page listing the monsters met so far.
 
 ## The Frenzy jukebox (owner's rules)

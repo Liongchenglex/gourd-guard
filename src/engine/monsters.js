@@ -63,7 +63,7 @@ export function spawnMonster(key, lane, minion, p){
     puddle = G.puddles[Math.floor(Math.random() * G.puddles.length)];
     lane = puddle.lane; p = puddle.p;
   }
-  if (p == null && type !== 'boss' && G.def && G.def.shore) p = seaEdge - 0.02;   // shoreline levels: everything else surfaces at the water's edge
+  if (p == null && type !== 'boss' && G.def && (G.def.shore || G.def.shoreFrac)) p = seaEdge - 0.02;   // shoreline levels: everything else surfaces at the water's edge
   let hp = T.hp + (type === 'imp' || type === 'brute' || type === 'wisp' ? hpExtra() : 0) + (mod && mod.hp ? mod.hp : 0);
   const form = type === 'boss' ? (G.mode === 'story' ? (G.def.bossForm || 1) : (G.endForm || 1)) : 1;
   if (type === 'boss') hp = form === 2 ? T.form2.hp : T.hp;

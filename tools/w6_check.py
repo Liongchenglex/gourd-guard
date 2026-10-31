@@ -65,8 +65,50 @@ def check_open(browser, url, on):
     page.close()
 
 
+# ---------- Task 2: levels 6-1 to 6-3 ----------
+ARCH = [[1, 2], [1, 3], [1, 4], [2, 2], [2, 4], [3, 2], [3, 4]]
+PILLARS = [[1, 1], [2, 1], [3, 1], [1, 5], [2, 5], [3, 5]]
+LO = [0, 1, 2, 3, 4]
+
+
+def start(page, n):
+    page.evaluate("([n, lo]) => window.__gg.startGame('story', n, lo)", [n, LO])
+    time.sleep(0.3)
+
+
+def grave_cells(page):
+    return sorted(page.evaluate("() => window.__gg.graves.flatMap((row, r) => row.map((g, c) => g ? [r, c] : null).filter(Boolean))"))
+
+
+def check_levels(browser, url, on):
+    if not on: return
+    for h in (844, 664):
+        page, errors = open_page(browser, url, h)
+        start(page, 101)
+        pud = page.evaluate("() => window.__gg.G.puddles.map(p => [p.lane, p.p])")
+        ok(pud == [[1, 0.45], [3, 0.6], [5, 0.4]], f'[{h}] 6-1 puddles at fixed spots {pud}')
+        cas = page.evaluate("() => window.__gg.G.castles.map(c => [c.lane, c.p])")
+        ok(len(cas) == 7 and all(p == 0.9 for _, p in cas), f'[{h}] 6-1 castle row at 0.9 ({len(cas)} walls)')
+        ok(grave_cells(page) == sorted(ARCH), f'[{h}] 6-1 graves in an arch')
+        ok(page.evaluate("() => JSON.stringify(window.__gg.G.def.fog)") == '[[0.2,0.8]]', f'[{h}] 6-1 fog band in the middle')
+        for t in ('crawler', 'turtle'):
+            m = page.evaluate("(t) => { const m = window.__gg.spawnMonster(t); return [m.lane, m.p]; }", t)
+            ok(m in pud, f'[{h}] a {t} rises from a puddle {m}')
+        start(page, 102)
+        kp = page.evaluate("() => window.__gg.spawnMonster('knight').p")
+        ok(abs(kp - 0.5) < 0.03, f'[{h}] 6-2 monsters surface at the half-field shoreline (p={kp:.3f})')
+        ok(grave_cells(page) == sorted(PILLARS), f'[{h}] 6-2 graves are two pillars')
+        start(page, 103)
+        cas = page.evaluate("() => window.__gg.G.castles.map(c => c.p)")
+        ok(len(cas) == 7 and all(p == 0.35 for p in cas), f'[{h}] 6-3 castle row at 0.35 under the fog')
+        ok(page.evaluate("() => window.__gg.G.def.gust && window.__gg.G.def.gust.every") == 22, f'[{h}] 6-3 has wind')
+        ok(grave_cells(page) == sorted(PILLARS), f'[{h}] 6-3 graves match 6-2')
+        ok(not errors, f'[{h}] no page errors {errors[:2]}')
+        page.close()
+
+
 CHECKS = {
-    'check_flag': check_flag, 'check_bundle': check_bundle, 'check_open': check_open,
+    'check_flag': check_flag, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels,
 }
 
 

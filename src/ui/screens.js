@@ -258,7 +258,8 @@ export function openPreview(n){
   if (def.levelNo === 10){ const nextName = WORLD_NAMES[def.worldNo]; info.push(`🎁 Reward: levels 11–20${nextName && WORLD_LEVELS[def.worldNo] && WORLD_LEVELS[def.worldNo].length ? ` and World ${def.worldNo + 1}: ${nextName}` : ''}.`); }
   if (def.levelNo === 20){ const perk = PERKS.find(p => perkNight(p) === n); if (perk) info.push(`🎁 Reward: ${perk.name}. ${perk.desc}`); }
   if (def.name) $('#pvSub').textContent = `${WORLD_NAMES[def.worldNo - 1]} · ${def.name}`;
-  if (def.shore) info.push(`The shoreline has moved ${def.shore} rows down the field.`);
+  if (def.shoreFrac) info.push(`The sea covers ${def.shoreFrac >= 0.5 ? 'half' : 'part'} of the field. Monsters surface at the shoreline.`);
+  else if (def.shore) info.push(`The shoreline has moved ${def.shore} rows down the field.`);
   else if (def.sea) info.push('The sea reaches the top of the field.');
   $('#pvInfo').textContent = info.join(' ');
   setState('preview');
@@ -289,7 +290,7 @@ function startPreviewedNight(){
   if (def.graves && !prevGraves) cards.push({ key:'graves', icon:'🪦', title:'Graves', text:GRAVES_INTRO });
   if (def.fog.length && !(n > 1 && levelFor(n - 1).fog.length)) cards.push({ key:'fog', icon:'🌫️', title:'Fog', text:FOG_INTRO });
   if (def.castles && !(n > 1 && levelFor(n - 1).castles)) cards.push({ key:'castles', icon:'🏰', title:'Castle walls', text:CASTLE_INTRO });
-  if (def.puddles && !(n > 1 && levelFor(n - 1).puddles)) cards.push({ key:'puddles', icon:'💧', title:'Puddles', text:PUDDLE_INTRO });
+  if ((def.puddles || def.puddlesLayout) && !(n > 1 && (levelFor(n - 1).puddles || levelFor(n - 1).puddlesLayout))) cards.push({ key:'puddles', icon:'💧', title:'Puddles', text:PUDDLE_INTRO });
   if (def.sea && !(n > 1 && levelFor(n - 1).sea)) cards.push({ key:'sea', icon:'🌊', title:'The sea row', text:SEA_INTRO });
   if (def.gust && !(n > 1 && levelFor(n - 1).gust)) cards.push({ key:'wind', icon:'🍂', title:'Wind', text:WIND_INTRO });
   for (const t of def.intro) if (!VARIANTS[t]) cards.push({ key:'m:' + t, icon:monsterIcon(t, 160), title:`New monster: ${MNAME[t] || t}`, text:MINTRO[t] || '' });   // returning variants get no card (owner)

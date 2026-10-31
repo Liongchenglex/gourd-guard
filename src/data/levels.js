@@ -37,6 +37,9 @@
  * @property {string} [hexAll]          'reverse' or 'chameleon': every non-boss monster spawns hexed that way
  * @property {string} [name]            optional title shown on the preview card
  * @property {string[]} [introPumpkins]  pumpkins to explain with a card on this level without unlocking them (e.g. rainbow)
+ * @property {number} [opensAfter]      level 1 only: which level of the previous world opens this world (default 10; Hallow's End: 20)
+ * @property {Array<[number, number]>} [puddlesLayout]  explicit puddles [lane, p] (replaces the random `puddles`)
+ * @property {number} [shoreFrac]       sea edge as a fraction of the field (same on every phone); wins over `shore`
  */
 
 /** Runtime shape the engine reads. `n` is the global story index (1-based across all worlds). */
@@ -44,6 +47,6 @@ export function expandLevel(def, n){
   return { n, world:def.theme, total:def.total, interval:def.interval, spMul:def.spMul,
     boss:def.boss ? def.boss : false, bossForm:def.bossForm || 1, pool:def.pool.map(([t, w]) => [t, w]),
     pattern:def.pattern, graves:def.graves, unlockPumpkins:def.unlockPumpkins || [], unlockGear:def.unlockGear || [],
-    intro:def.intro || [], fog:def.fog || [], castles:def.castles || null, puddles:def.puddles || 0, sea:!!def.sea || !!def.shore, gust:def.gust || null, gravesLayout:def.gravesLayout || null, laneWeights:def.laneWeights || null,
-    fogRows:def.fogRows || [], fogCols:def.fogCols || [], caps:def.caps || null, spawnGap:def.spawnGap == null ? null : def.spawnGap, spawnBurst:def.spawnBurst == null ? null : def.spawnBurst, bossGap:def.bossGap || null, bossHpMul:def.bossHpMul || null, unlockCopy:def.unlockCopy || null, castlesLayout:def.castlesLayout || null, shore:def.shore || 0, hexAll:def.hexAll || null, quests:def.quests || null, name:def.name || null, introPumpkins:def.introPumpkins || [], worldNo:def.world, levelNo:def.level, label:`${def.world}-${def.level}` };
+    intro:def.intro || [], fog:def.fog || [], castles:def.castles || null, puddles:def.puddles || 0, sea:!!def.sea || !!def.shore || !!def.shoreFrac, gust:def.gust || null, gravesLayout:def.gravesLayout || null, laneWeights:def.laneWeights || null,
+    fogRows:def.fogRows || [], fogCols:def.fogCols || [], caps:def.caps || null, spawnGap:def.spawnGap == null ? null : def.spawnGap, spawnBurst:def.spawnBurst == null ? null : def.spawnBurst, bossGap:def.bossGap || null, bossHpMul:def.bossHpMul || null, unlockCopy:def.unlockCopy || null, castlesLayout:def.castlesLayout || null, shore:def.shore || 0, hexAll:def.hexAll || null, quests:def.quests || null, name:def.name || null, introPumpkins:def.introPumpkins || [], puddlesLayout:def.puddlesLayout || null, shoreFrac:def.shoreFrac || 0, worldNo:def.world, levelNo:def.level, label:`${def.world}-${def.level}` };
 }

@@ -20,3 +20,7 @@ export const SPAWN_BURST_EARLY = 0.18;
 
 /** Firework (owner, 2026-10-07): hits only the FIREWORK_TARGETS monsters nearest the walls, for FIREWORK_DAMAGE each; bosses are immune. */
 export const FIREWORK_TARGETS = 6, FIREWORK_DAMAGE = 3;   // owner, 2026-10-08: 6 targets (was 8)
+
+// Frenzy jukebox (World 6, owner 2026-10-31): a burst of monsters arrives the moment it drops, one every FRENZY_BURST_GAP
+// seconds, then every spawn brings FRENZY_PAIR monsters while it stands.
+export const FRENZY_BURST = [4, 6], FRENZY_BURST_GAP = 0.2, FRENZY_PAIR = 2;

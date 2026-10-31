@@ -49,9 +49,10 @@ export function render(){
   drawHexZones(t);
   const ms = g.monsters.slice().sort((a, b) => a.p - b.p);
   const walkerBands = g.monsters.filter(m => m.type === 'fogwalker' && !m.dead && m.p > 0).map(m => [m.p - TYPES.fogwalker.band, m.p + TYPES.fogwalker.band]);
-  const rowBands = ((g.def && g.def.fogRows) || []).map(r => [r * TILE_P(), (r + 1) * TILE_P()]);
-  const bands = [...((g.def && g.def.fog) || []), ...rowBands, ...walkerBands];
-  const fogCols = (g.def && g.def.fogCols) || [];
+  const mapDef = g.def && !g.preview ? g.def : null;   // the level preview shows the map without its fog: castles and puddles stay visible until the night starts (owner, 2026-10-31)
+  const rowBands = ((mapDef && mapDef.fogRows) || []).map(r => [r * TILE_P(), (r + 1) * TILE_P()]);
+  const bands = [...((mapDef && mapDef.fog) || []), ...rowBands, ...walkerBands];
+  const fogCols = (mapDef && mapDef.fogCols) || [];
   const fogOn = (bands.length || fogCols.length) && !(g.fogClear > 0);
   for (const m of ms){
     if (m.hidden && m.type !== 'diver') continue;                       // wraith: invisible (a submerged diver still shows ripples)

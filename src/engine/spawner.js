@@ -8,7 +8,7 @@ import { buildBg } from './render/sprites.js';
 import { G, COLS } from './state.js';
 import { rnd, shuffle } from './util.js';
 import { banner } from '../ui/hud.js';
-import { SPAWN_GAP, SPAWN_BURST, SPAWN_BURST_EARLY, SPAWN_LATE_FROM } from '../data/rules.js';
+import { SPAWN_GAP, SPAWN_BURST, SPAWN_BURST_EARLY, SPAWN_LATE_FROM, FRENZY_BURST, FRENZY_BURST_GAP, FRENZY_PAIR } from '../data/rules.js';
 import { musicStart } from './audio.js';
 import { coachHolds } from './coach.js';
 
@@ -22,7 +22,17 @@ export function pickFrom(pool){
 /** Frenzy (World 6, owner 2026-10-31): the jukebox drops near the end of the night; its song plays until pumpkins smash it. */
 export function dropJukebox(hp){
   G.jukebox = spawnJukebox(hp);
+  if (hp == null){ G.burstLeft = FRENZY_BURST[0] + Math.floor(Math.random() * (FRENZY_BURST[1] - FRENZY_BURST[0] + 1)); G.burstT = 0; }   // a fresh drop brings a burst (not a continued night's)
   banner('Frenzy!', 'Smash the jukebox to stop the monsters.', 2.4); SFX.bossAlert(); musicStart('frenzy');
+}
+
+function spawnOne(d){
+  if (!G.introQueue) G.introQueue = d.intro.filter(k => d.pool.some(([t]) => t === k));   // every monster this level introduces shows up at least once, early
+  const counts = G.spawnCounts = G.spawnCounts || {};
+  const pool = d.caps ? d.pool.filter(([t]) => (counts[t] || 0) < (d.caps[t] == null ? Infinity : d.caps[t])) : d.pool;   // per-type caps (owner: "only 2 haulers")
+  const t = G.spawned >= 1 && G.introQueue.length ? G.introQueue.shift() : pickFrom(pool.length ? pool : d.pool);
+  counts[t] = (counts[t] || 0) + 1; spawnMonster(t);
+  G.spawned++;
 }
 
 export function storySpawn(dt){
@@ -31,13 +41,10 @@ export function storySpawn(dt){
   G.spawnTimer -= dt;
   const keepComing = (d.boss && G.bossSpawned && !G.bossDead)   // boss levels: monsters keep coming until the boss dies
     || (d.frenzy && G.jukebox && !G.jukebox.dead);   // Frenzy (World 6): and while the jukebox stands
+  const frenzyOn = d.frenzy && G.jukebox && !G.jukebox.dead;
+  if (frenzyOn && G.burstLeft > 0 && (G.burstT -= dt) <= 0){ spawnOne(d); G.burstLeft--; G.burstT = FRENZY_BURST_GAP; }   // the drop's burst
   if ((G.spawned < d.total || keepComing) && G.spawnTimer <= 0){
-    if (!G.introQueue) G.introQueue = d.intro.filter(k => d.pool.some(([t]) => t === k));   // every monster this level introduces shows up at least once, early
-    const counts = G.spawnCounts = G.spawnCounts || {};
-    const pool = d.caps ? d.pool.filter(([t]) => (counts[t] || 0) < (d.caps[t] == null ? Infinity : d.caps[t])) : d.pool;   // per-type caps (owner: "only 2 haulers")
-    const t = G.spawned >= 1 && G.introQueue.length ? G.introQueue.shift() : pickFrom(pool.length ? pool : d.pool);
-    counts[t] = (counts[t] || 0) + 1; spawnMonster(t);
-    G.spawned++;
+    for (let i = frenzyOn ? FRENZY_PAIR : 1; i > 0; i--) spawnOne(d);   // in pairs while the jukebox plays
     const late = d.levelNo >= SPAWN_LATE_FROM;   // the harder half of each world is spaced out (owner)
     const gap = d.spawnGap != null ? d.spawnGap : late ? SPAWN_GAP : 1, burst = d.spawnBurst != null ? d.spawnBurst : late ? SPAWN_BURST : SPAWN_BURST_EARLY;   // per-level overrides win
     G.spawnTimer = d.interval * gap * (keepComing && d.bossGap ? d.bossGap : 1) * rnd(0.6, 1.4);   // bossGap: slower spawns while the boss is up (tuning, 2026-10-01)

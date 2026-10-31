@@ -218,8 +218,54 @@ def check_jukebox_more(browser, url, on):
     page.close()
 
 
+def mist_px(page):
+    # pale mist pixels across the field (fog banks are light grey-blue)
+    return page.evaluate("""() => { const c = document.querySelector('canvas'), g = c.getContext('2d'), k = c.width / c.clientWidth;
+      const d = g.getImageData(0, Math.round(140 * k), c.width, Math.round(320 * k)).data; let n = 0;
+      for (let i = 0; i < d.length; i += 4) if (d[i] > 150 && d[i + 1] > 160 && d[i + 2] > 165 && Math.abs(d[i] - d[i + 2]) < 50) n++; return n; }""")
+
+
+def check_frenzy_burst(browser, url, on):
+    if not on: return
+    page, errors = open_page(browser, url)
+    start(page, 104)
+    s0 = page.evaluate("() => { const G = window.__gg.G; G.spawned = Math.ceil(G.def.total * 0.8); G.spawnTimer = 0; return G.spawned; }")
+    page.wait_for_function("() => window.__gg.G.jukebox"); page.evaluate("() => { window.__gg.G.spawnTimer = 99; }")
+    time.sleep(2)
+    burst = page.evaluate("() => window.__gg.G.spawned") - s0 - 1
+    ok(4 <= burst <= 6, f'a burst of 4-6 monsters arrives when the jukebox drops ({burst})')
+    s1 = page.evaluate("() => { window.__gg.G.spawnTimer = 0; return window.__gg.G.spawned; }")
+    page.wait_for_function(f"() => window.__gg.G.spawned > {s1}")   # the next spawn: count what it brought
+    d1 = page.evaluate("() => { window.__gg.G.spawnTimer = 99; return window.__gg.G.spawned; }") - s1
+    ok(d1 == 2, f'while it plays, monsters come in pairs ({d1})')
+    page.evaluate(f"() => {{ const m = {JB}[0]; m.lastHit = 0; window.__gg.damage(m, 999); }}")
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = 0; G.spawnTimer = 0; }")
+    page.wait_for_function("() => window.__gg.G.spawned > 0")
+    d2 = page.evaluate("() => { window.__gg.G.spawnTimer = 99; return window.__gg.G.spawned; }")
+    ok(d2 == 1, f'after it falls, one at a time again ({d2})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_owner_1031(browser, url, on):
+    if not on: return
+    page, errors = open_page(browser, url)
+    set_stars(page, {n: 3 for n in range(1, 101)})
+    d = page.evaluate("() => { const d = window.__gg.WORLD_LEVELS[5][3]; return { pool:d.pool.map(e => e[0]).sort(), fog:d.fog || [] }; }")
+    ok(d['pool'] == sorted(['firemummy', 'fogwalker', 'witch', 'bulwark', 'turtle']), f"6-4 is the level-16 monsters only {d['pool']}")
+    ok(d['fog'] == [], '6-4 has no fog banks')
+    # the level preview shows the map without its fog; the fog appears once the night starts
+    page.evaluate("() => window.__gg.openPreview(103)"); time.sleep(1.2)
+    prev = mist_px(page)
+    start(page, 103); time.sleep(2.5)
+    game = mist_px(page)
+    ok(game > 2000 and prev * 4 < game, f'no fog on the preview map, fog in the night ({prev} vs {game} mist pixels)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 CHECKS = {
-    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more,
+    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst,
 }
 
 

@@ -24,3 +24,6 @@ export const FIREWORK_TARGETS = 6, FIREWORK_DAMAGE = 3;   // owner, 2026-10-08: 
 // Frenzy jukebox (World 6, owner 2026-10-31): a burst of monsters arrives the moment it drops, one every FRENZY_BURST_GAP
 // seconds, then every spawn brings FRENZY_PAIR monsters while it stands.
 export const FRENZY_BURST = [4, 6], FRENZY_BURST_GAP = 0.2, FRENZY_PAIR = 2;
+
+// Emergency Pumpkins (World 6 tool, owner 2026-10-31): pumpkins dropped into empty patch cells per use.
+export const EMERGENCY_N = 9;

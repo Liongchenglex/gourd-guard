@@ -115,6 +115,23 @@ const bombSprite = f => sprite(`bomb:${f}`, 60, 64, 30, 36, g => bomb(g, f / 4))
 
 // ---------- icons for the tray, shop, cards and drops ----------
 const iconCache = new Map();
+/** Emergency Pumpkins: a wicker basket heaped with three pumpkins (World 6 tool icon). */
+const PUMPK = pal('#f07a1e'), STEM = pal('#5a7a2a');
+function basket(g){
+  for (const [x, y, r] of [[-11, -6, 9], [11, -6, 9], [0, -13, 10]]){   // the heap, back to front
+    S.part(g, E(x, y, r * 1.15, r), PUMPK, { x, y, r }, { mat:'pumpkin', hx:x - r * .4, hy:y - r * .45 });
+    g.strokeStyle = rgba(PUMPK.deep, .5); g.lineWidth = 1.2; ell(g, x, y, r * .45, r * .95); g.stroke();
+    S.part(g, RR(x - 1.6, y - r - 4, 3.2, 5, 1.2), STEM, { x, y:y - r, r:3 }, { flat:true, lw:1 });
+  }
+  const body = SM([[-22, 0], [22, 0], [17, 21], [-17, 21]], .5);
+  S.part(g, body, WOOD, { x:0, y:10, r:22 }, { mat:'wood', hx:-8, hy:4 });
+  g.save(); body(g); g.clip(); g.strokeStyle = rgba(WOODD.base, .55); g.lineWidth = 1.4;
+  for (let y = 4; y < 22; y += 4.5){ g.beginPath(); g.moveTo(-24, y); g.lineTo(24, y); g.stroke(); }
+  for (let x = -20; x <= 20; x += 6){ g.beginPath(); g.moveTo(x, 0); g.lineTo(x * .8, 22); g.stroke(); }
+  g.restore();
+  S.part(g, RR(-24, -3, 48, 6, 3), WOODD, { x:0, y:0, r:24 }, { mat:'wood', hx:-10, hy:-2 });   // the rim
+}
+
 export function toolIcon(key, px = 44){
   const ck = key + ':' + px; if (iconCache.has(ck)) return iconCache.get(ck);
   const c = document.createElement('canvas'); c.width = c.height = px * 2; const g = c.getContext('2d'); g.scale(px * 2 / 64, px * 2 / 64); g.translate(32, 34);
@@ -126,6 +143,7 @@ export function toolIcon(key, px = 44){
     case 'mine': g.scale(1.05, 1.05); g.translate(0, 4); mine(g, 0); break;
     case 'bomb': g.scale(1, 1); g.translate(0, 4); bomb(g, .2); break;
     case 'scarecrow': g.scale(.62, .62); g.translate(0, 8); scarecrow(g, { sway:.25 }); break;
+    case 'emergency': g.translate(0, 2); basket(g); break;
     case 'fence': g.translate(0, 2); for (let i = -1; i <= 1; i++) S.part(g, PL([[i * 16 - 6, -14], [i * 16, -22], [i * 16 + 6, -14], [i * 16 + 6, 20], [i * 16 - 6, 20]]), WOOD, { x:i * 16, y:0, r:12 }, { mat:'wood', flat:i !== 0 }); for (const y of [-4, 10]) S.part(g, RR(-26, y - 3, 52, 6, 2), WOODD, { x:0, y, r:26 }, { flat:true, mat:'wood' }); break;
     default: S.part(g, E(0, 0, 20, 20), STEEL, { x:0, y:0, r:20 }, { mat:'metal' });
   }

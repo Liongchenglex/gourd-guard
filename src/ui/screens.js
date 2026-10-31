@@ -8,7 +8,7 @@ import { monsterIcon } from '../engine/render/monsters.js';
 import { poolKey, prebakeAsync } from '../engine/render/anim.js';
 import { atlasKey } from '../engine/render/chars.js';
 import { SFX, ensureAudio, musicStop, musicSync, musicStart, applyVolumes } from '../engine/audio.js';
-import { beginEndless, beginNight, continueNight, continueState, makeDemo, makePreview, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow } from '../engine/game.js';
+import { beginEndless, beginNight, continueNight, continueState, makeDemo, makePreview, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow, useEmergency } from '../engine/game.js';
 import { bgWorld, buildBg, buildSprites, pumpkinIcon, worldScene, setBg } from '../engine/render/sprites.js';
 import { BOOKS, NIGHTMARE_LORE } from '../data/lore.js';
 import { BESTIARY, COMPANIONS } from '../data/bestiary.js';
@@ -979,6 +979,7 @@ export function wireButtons(){
   $('#pauseBtn').onclick = () => { if (state === 'play' && !G.over) setState('pause'); };
 
   $('#fwBtn').onclick = useFirework;
+  $('#epBtn').onclick = useEmergency;   // World 6 tool (hidden in store builds)
   $('#gbBtn').onclick = useBuster;
   $('#lnBtn').onclick = useLantern;
   $('#lmBtn').onclick = useMine;

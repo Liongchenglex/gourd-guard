@@ -7,7 +7,7 @@ import { newQuestCounters } from '../data/quests.js';
 import { WORLDS, levelFor, typesForNight, highestOpen } from '../data/worlds/index.js';
 import { SFX, ensureAudio, musicStart, musicStop } from './audio.js';
 import { MUSIC } from '../data/music.js';
-import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, landingCell, landingNear, flyInto, DIRV } from './board.js';
+import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, spawnPumpkin, landingCell, landingNear, flyInto, DIRV } from './board.js';
 import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle, pumpkinPower, pinkHeal } from './combat.js';
 import { mS, mY, updateMonster, TILE_P, applyBulwarks, spawnSack } from './monsters.js';
 import { SACK, ENDLESS_AD_MIN_SECONDS } from '../data/economy.js';
@@ -23,7 +23,7 @@ import { initWalls, damageWall } from './walls.js';
 import { persist, save } from '../save.js';
 import { banner, updateHud } from '../ui/hud.js';
 import { openLoadout, setState, showResult } from '../ui/screens.js';
-import { SPROUT_EVERY, FIREWORK_TARGETS, FIREWORK_DAMAGE } from '../data/rules.js';
+import { SPROUT_EVERY, FIREWORK_TARGETS, FIREWORK_DAMAGE, EMERGENCY_N } from '../data/rules.js';
 import { startCoach, coachHolds, coachUpdate } from './coach.js';
 
 // ---------- Flow ----------
@@ -128,6 +128,15 @@ export function endGame(win){
   setTimeout(async () => { if (ad) await showInterstitial(); showResult(win); }, win ? 1100 : 1000);
 }
 
+/** Emergency Pumpkins (World 6 tool): up to EMERGENCY_N pumpkins in the team's colours drop into empty cells; a full patch keeps the tool. */
+export function useEmergency(){
+  if (state !== 'play' || G.over || (save.emergency || 0) <= 0 || !emptyCells().length) return;
+  let placed = 0;
+  for (let i = 0; i < EMERGENCY_N; i++) if (spawnPumpkin()) placed++;
+  if (!placed) return;
+  save.emergency--; persist(); G.q.tools++;
+  SFX.sprout(placed);
+}
 export function useFirework(){
   if (state !== 'play' || G.over || save.fw <= 0) return;
   save.fw--; persist(); G.q.tools++;

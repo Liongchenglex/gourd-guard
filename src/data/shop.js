@@ -6,6 +6,7 @@ export const GEAR = [
   { key:'fw',      icon:'🎆', name:'Firework',     desc:'Use it mid-battle to hit the 6 monsters nearest your walls for 3. Bosses are immune. Carry up to 5.', max:5, cost:[TOOL_COST], consumable:true },
   { key:'buster',  icon:'🧨', name:'Grave buster', desc:'Tap it, then tap a grave to dig it out of your patch. Carry up to 5.', max:5, cost:[TOOL_COST], consumable:true },
   { key:'lantern', icon:'🏮', name:'Lantern',      desc:'Clears every fog bank for 10 seconds. Carry up to 5.', max:5, cost:[TOOL_COST], consumable:true },
+  { key:'emergency', icon:'🧺', name:'Emergency Pumpkins', desc:'Tap it: 9 pumpkins in your team\'s colours drop into empty cells of your patch. Carry up to 5.', max:5, cost:[TOOL_COST], consumable:true },   // World 6 (introduced at 6-8)
   { key:'bomb',    icon:'💥', name:'Bomb',         desc:'Tap it, then tap the field. Blasts 3 columns by 3 rows around that spot for 4, castle walls included. Carry up to 5.', max:5, cost:[TOOL_COST], consumable:true },
   { key:'scarecrow', icon:'🌾', name:'Scarecrow', desc:'Tap it, then tap a column. Monsters in that column stop to chew the scarecrow (12 health) before your wall. Carry up to 5.', max:5, cost:[TOOL_COST], consumable:true },
   { key:'mine',    icon:'💣', name:'Landmine',     desc:'Tap it, then tap any tile of the field. The mine lies buried for 6 seconds, then surfaces and blasts the first monster to step on it, hitting everything in the 3×3 around it for 6. Carry up to 5.', max:5, cost:[TOOL_COST], consumable:true },

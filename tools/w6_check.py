@@ -302,6 +302,34 @@ def check_double_boss(browser, url, on):
     page.close()
 
 
+def check_emergency(browser, url, on):
+    page, errors = open_page(browser, url)
+    if not on:
+        ok(page.evaluate("() => { const b = document.querySelector('#epBtn'); return !b || b.hidden; }"), 'no Emergency Pumpkins button in the store build')
+        page.close(); return
+    set_stars(page, {n: 3 for n in range(1, 108)})
+    page.evaluate("() => { window.__gg.save.emergency = 0; }")
+    start(page, 108)
+    ok(page.evaluate("() => window.__gg.save.emergency") == 1, 'one free Emergency Pumpkins on 6-8')
+    hold = "() => { window.__gg.G.sproutT = -1e9; window.__gg.G.spawnTimer = 99; return window.__gg.emptyCells().length; }"
+    page.evaluate("() => { window.__gg.save.emergency = 5; }")
+    e0 = page.evaluate(hold)
+    page.click('#epBtn'); time.sleep(0.3)
+    e1 = page.evaluate(hold)
+    ok(e0 - e1 == min(9, e0) and page.evaluate("() => window.__gg.save.emergency") == 4, f'a tap fills up to 9 empty cells and uses one ({e0} -> {e1} empty)')
+    for _ in range(6):   # fill the rest (bounded, so a broken button cannot hang the check)
+        if e1 == 0: break
+        page.click('#epBtn'); time.sleep(0.3); e1 = page.evaluate(hold)
+    ok(e1 == 0, f'more taps fill the patch ({e1} empty left)')
+    left = page.evaluate("() => window.__gg.save.emergency")
+    page.click('#epBtn'); time.sleep(0.3)
+    ok(page.evaluate("() => window.__gg.save.emergency") == left, 'with a full patch the tap does nothing and keeps the tool')
+    tops = page.evaluate("() => [...document.querySelectorAll('#tools > button')].filter(b => !b.hidden).map(b => b.offsetTop)")
+    ok(len(tops) == 8 and len(set(tops)) == 1, f'the tray shows eight tools on one row ({len(tops)} buttons, rows at {sorted(set(tops))})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 def check_owner_1031(browser, url, on):
     if not on: return
     page, errors = open_page(browser, url)
@@ -320,7 +348,7 @@ def check_owner_1031(browser, url, on):
 
 
 CHECKS = {
-    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst, 'check_6_5_to_7': check_6_5_to_7, 'check_double_boss': check_double_boss,
+    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst, 'check_6_5_to_7': check_6_5_to_7, 'check_double_boss': check_double_boss, 'check_emergency': check_emergency,
 }
 
 

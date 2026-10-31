@@ -441,7 +441,7 @@ export function openBook(wi, animate){
   const view = $('#bookView'), spread = $('#spread');
   spread.style.setProperty('--cover', bk.cover);
   $('#bkTitle').textContent = name; $('#bkTitle').style.color = bk.ink;
-  $('#bkWorld').textContent = `World ${wi + 1} of 5`;
+  $('#bkWorld').textContent = `World ${wi + 1} of ${WORLD_LEVELS.length}`;   // 5, or 6 in World 6 beta builds
   $('#bkLore').textContent = bk.lore;
   const sc = worldScene(levels[0].theme, 456, 120), cv = $('#bkScene'); cv.width = sc.width; cv.height = sc.height; cv.getContext('2d').drawImage(sc, 0, 0);
   const bossKey = (levels.find(d => d.boss) || {}).boss, bossBox = $('#bkBoss'); bossBox.innerHTML = '';

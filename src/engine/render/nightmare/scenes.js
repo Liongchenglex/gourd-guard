@@ -104,7 +104,7 @@ const THEMES = [
     w:{ sky:['#0c0c0e','#2a2a2e','#6a6a70'], ground:['#34343a','#141418'], moon:'#f0f0f0', halo:'#b8b8c0', sil:['#26262c','#0c0c10'], rim:'#e0e0e8', soil:['#5a5a60','#38383e','#1a1a1e'] }, grey:true },
 ];
 
-function hallowSky(g, w, R, hz){
+export function hallowSky(g, w, R, hz){
   let gr = g.createLinearGradient(0, 0, 0, hz + 30); gr.addColorStop(0, w.sky[0]); gr.addColorStop(.55, w.sky[1]); gr.addColorStop(1, w.sky[2]); g.fillStyle = gr; g.fillRect(0, 0, W, hz + 30);
   vband(g, hz - 70, hz + 30, w.sky[2], 0, .35, .7); stars(g, R, 90, hz - 30, '#ffe8d0');
   for (let b = 0; b < 3; b++){ const col = ['#b04aff', '#ff8a2a', '#5affc0'][b]; g.save(); g.globalCompositeOperation = 'lighter';   // aurora ribbons
@@ -123,7 +123,7 @@ function hallowSky(g, w, R, hz){
   for (let i = 0; i < 14; i++){ const x = 20 + R() * (W - 40), y = 40 + R() * (hz - 90), s = 2 + R() * 2.5; glow(g, x, y, s * 6, '#ffb040', .35); g.fillStyle = '#ffd890'; g.beginPath(); g.roundRect(x - s, y - s * 1.3, s * 2, s * 2.6, s * .6); g.fill(); }   // drifting lanterns
   for (let i = 0; i < 5; i++) bat(g, 60 + R() * (W - 120), 30 + R() * 90, .8 + R() * .7, 'rgba(10,4,16,.9)');
 }
-function hallowProps(g, w, R, hz){
+export function hallowProps(g, w, R, hz){
   const [far, near] = w.sil, rim = w.rim;
   ridge(g, hz - 30, 10, far, rgba(rim, .12), .008, .4);
   // crooked town: houses, spires and a leaning clock tower, windows lit

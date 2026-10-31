@@ -72,6 +72,8 @@ def profile(n, offset=0):
     if w == 0:
         lv = 1 if l <= 3 else 2 if l <= 7 else 3 if l <= 10 else 4 if l <= 15 else 5
         fence = 0 if l <= 5 else 1 if l <= 10 else 2 if l <= 15 else 3
+    elif w >= 5:   # Hallow's End (World 6 beta): every pumpkin owned and grown, as after 5-20
+        lv, fence = 5, 3
     else:
         lv = 3 if l <= 10 else 4 if l <= 15 else 5
         fence = 2 if l <= 10 else 3

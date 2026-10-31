@@ -14,6 +14,7 @@ import { buildLegend, setState, syncSound, wireButtons, openPreview, openBook, r
 import { SplashScreen } from '@capacitor/splash-screen';
 import { initNative, initMoney, initBackButton } from './engine/native.js';
 import { SEED_PACKS } from './data/economy.js';
+import { LEVELS, isOpen, WORLD_LEVELS } from './data/worlds/index.js';
 
 // ---------- Loop ----------
 
@@ -64,5 +65,5 @@ requestAnimationFrame(frame);
 
 if (new URLSearchParams(location.search).has('test')){
   window.__gg = { get G(){ return G; }, get grid(){ return grid; }, get graves(){ return graves; }, get walls(){ return walls; }, get state(){ return state; },
-    startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair, openPreview, openBook };
+    startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair, openPreview, openBook, LEVELS, isOpen, WORLD_LEVELS };
 }

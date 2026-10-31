@@ -24,12 +24,20 @@ export const WORLDS = [
     moon:'#dcfff5', halo:'#5fd0bc', sil:['#0f2c30','#071619'], rim:'#a8f0e0', soil:['#77704f','#48432d','#211f16'], mist:'#a8d8d0' },
   { name:'Witchwood', sky:['#150818','#3f1630','#a8522c'], ground:['#3a2418','#1a1009'], grass:'#5a3a22',
     moon:'#dcc0ff', halo:'#8a48d0', sil:['#331226','#12060e'], rim:'#e0a8ff', soil:['#6c4028','#43261a','#24130a'], mist:null },
+  // Hallow's End (World 6 beta): the owner's archived map (docs/archive/nightmare-worlds/), painted by hallowSky/hallowProps in
+  // render/nightmare/scenes.js; `base` is the theme whose field texture it borrows.
+  { name:"Hallow's End", sky:['#07030f','#2a0d3c','#d4602a'], ground:['#3a2233','#170b14'], grass:'#331d32',
+    moon:'#ff9a2a', halo:'#ff7a1a', sil:['#24102f','#0b0510'], rim:'#ffb060', soil:['#7c4a2a','#4a2a18','#26140a'], mist:null, custom:'hallow', base:0 },
 ];
 
 /** Display names for the six worlds (docs/WORLDS.md §3). Worlds without levels yet show as "coming soon". */
 export const WORLD_NAMES = ['Pumpkin Patch', 'Foggy Hollow', 'Witchwood', 'Crumbling Keep', 'Drowned Marsh', "Hallow's End"];   // order changed by the owner 2026-09-25
 
-export const WORLD_LEVELS = [world1, world2, world3, world4, world5, world6];
+/** World 6 (Hallow's End) is a beta for the private playtest only: it exists in builds made with VITE_W6=1 and never in the
+ *  store builds (docs/WORLD6_BRIEFING.md). With the flag off the expression below is constant and world6.js is dropped. */
+export const W6 = !!import.meta.env.VITE_W6;
+
+export const WORLD_LEVELS = import.meta.env.VITE_W6 ? [world1, world2, world3, world4, world5, world6] : [world1, world2, world3, world4, world5];
 
 // Flat list of every level in play order. Story night n (1-based) is ALL_LEVELS[n - 1].
 export const ALL_LEVELS = WORLD_LEVELS.flat();
@@ -68,7 +76,8 @@ export function typesForNight(n){
   return [...Array(NTYPES).keys()].filter(t => t < 1 || unlockNightOf(PTYPES[t].key) <= n || (PTYPES[t].key === 'paint' && save.paintOwned));   // Paint: once bought, in every level (owner)   // only Green from the start; Yellow unlocks at 1-2 (owner)
 }
 
-/** Is story night n open to play? Level 1 of a world opens when the previous world's level 10 has been beaten;
+/** Is story night n open to play? Level 1 of a world opens when the previous world's level 10 has been beaten
+ *  (or the level its `opensAfter` names: Hallow's End opens after 5-20, owner 2026-10-31);
  *  every other level opens when the level before it has been beaten. */
 export function isOpen(n){
   const d = ALL_LEVELS[n - 1];
@@ -77,7 +86,7 @@ export function isOpen(n){
   if (d.level === 1){
     if (d.world === 1) return true;
     const prev = firstNightOf(d.world - 1);
-    return prev != null && !!save.stars[prev + 9];
+    return prev != null && !!save.stars[prev + (d.opensAfter || 10) - 1];
   }
   return !!save.stars[n - 1];
 }

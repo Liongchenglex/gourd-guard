@@ -254,7 +254,8 @@ def check_6_5_to_7(browser, url, on):
     defs = page.evaluate("() => window.__gg.WORLD_LEVELS[5].slice(4, 7).map(d => ({ pool:d.pool.map(e => e[0]).sort(), frenzy:!!d.frenzy, castles:(d.castlesLayout || []).map(c => c.join(',')).sort(), fogCols:d.fogCols || [], graves:d.gravesLayout || [] }))")
     if len(defs) < 3:
         ok(False, f'6-5 to 6-7 exist ({len(defs)} found)'); page.close(); return
-    ok([d['pool'] for d in defs] == [['bulwark', 'doctor'], ['bulwark', 'witch'], ['bulwark', 'rider', 'sailor', 'vampire']], f"6-5 to 6-7 monsters {[d['pool'] for d in defs]}")
+    ok([d['pool'] for d in defs] == [['bulwark', 'doctor', 'turtle'], ['bulwark', 'turtle', 'witch'], ['bulwark', 'rider', 'sailor', 'vampire']], f"6-5 to 6-7 monsters {[d['pool'] for d in defs]}")
+    ok(page.evaluate("() => window.__gg.WORLD_LEVELS[5].slice(4, 6).every(d => d.puddles === 3)"), '6-5 and 6-6 have puddles for the turtles')
     ok(all(d['frenzy'] for d in defs), '6-5 to 6-7 are Frenzy levels')
     flanks = sorted(f'{l},{p}' for l in (0, 6) for p in (0.3, 0.5, 0.7))
     ok(defs[0]['castles'] == flanks and defs[1]['castles'] == flanks, '6-5 and 6-6 have castle walls down both outer lanes')
@@ -281,7 +282,12 @@ def check_double_boss(browser, url, on):
     page.evaluate("() => { const G = window.__gg.G; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }"); time.sleep(0.8)
     bs = page.evaluate(f"() => {BOSSES}.map(m => [m.kind, m.maxHp]).sort()")
     ok(bs == [['gravekeeper', 15], ['poltergeist', 20]], f'both bosses arrive at full health {bs}')
-    page.evaluate(f"() => {{ const g = {BOSSES}.find(m => m.kind === 'gravekeeper'); g.lastHit = 0; window.__gg.damage(g, 999); }}")
+    bar = "() => parseFloat(document.querySelector('#prog').style.width)"
+    page.evaluate(f"() => {{ const p = {BOSSES}.find(m => m.kind === 'poltergeist'); p.lastHit = 0; window.__gg.damage(p, 5); }}"); time.sleep(0.3)
+    w0 = page.evaluate(bar)
+    page.evaluate(f"() => {{ const g = {BOSSES}.find(m => m.kind === 'gravekeeper'); g.lastHit = 0; window.__gg.damage(g, 999); }}"); time.sleep(0.3)
+    w1 = page.evaluate(bar)
+    ok(w1 > w0 and w1 >= 55, f'the boss bar moves forward when one boss falls ({w0:.0f}% -> {w1:.0f}%)')
     s0 = page.evaluate("() => { window.__gg.G.spawnTimer = 0; return window.__gg.G.spawned; }"); time.sleep(1)
     ok(page.evaluate("() => !window.__gg.G.bossDead && !window.__gg.G.over") and page.evaluate("() => window.__gg.G.spawned") > s0, 'with one boss down, monsters keep coming and the night goes on')
     c = page.evaluate(f"() => {{ {BOSSES}.find(m => m.kind === 'poltergeist').hp = 9; return window.__gg.continueState(); }}")
@@ -306,10 +312,18 @@ def check_emergency(browser, url, on):
     page, errors = open_page(browser, url)
     if not on:
         ok(page.evaluate("() => { const b = document.querySelector('#epBtn'); return !b || b.hidden; }"), 'no Emergency Pumpkins button in the store build')
+        page.evaluate("() => window.__gg.openShop()"); time.sleep(0.5)
+        ok(page.evaluate("() => !document.querySelector('#ovShop').textContent.includes('Emergency')"), 'no Emergency Pumpkins in the store build shop')
         page.close(); return
+    set_stars(page, {n: 3 for n in range(1, 107)})   # 6-8 not open yet
+    start(page, 107); time.sleep(0.3)
+    ok(page.evaluate("() => document.querySelector('#epBtn').hidden"), 'no Emergency Pumpkins button before 6-8 is reached')
+    page.evaluate("() => window.__gg.openShop()"); time.sleep(0.5)
+    ok(page.evaluate("() => !document.querySelector('#ovShop').textContent.includes('Emergency')"), 'not in the shop before 6-8 either')
     set_stars(page, {n: 3 for n in range(1, 108)})
     page.evaluate("() => { window.__gg.save.emergency = 0; }")
-    start(page, 108)
+    start(page, 108); time.sleep(1)   # let the shop screen finish fading out
+    page.evaluate("() => document.querySelectorAll('.crownReveal').forEach(e => e.remove())")   # the stars handed out above can trigger the Crown of Stars reveal
     ok(page.evaluate("() => window.__gg.save.emergency") == 1, 'one free Emergency Pumpkins on 6-8')
     hold = "() => { window.__gg.G.sproutT = -1e9; window.__gg.G.spawnTimer = 99; return window.__gg.emptyCells().length; }"
     page.evaluate("() => { window.__gg.save.emergency = 5; }")

@@ -27,7 +27,7 @@ export function updateHud(force){
   let prog;
   if (G.mode !== 'story') prog = (G.t % E_HOUR) / E_HOUR;   // endless: progress to the next hour
   else if (G.def.boss){   // boss level: the bar fills a little until the boss shows, then tracks its health
-    const bs = G.monsters.filter(m => m.type === 'boss'), hp = bs.reduce((a, b) => a + Math.max(0, b.hp), 0), mx = bs.reduce((a, b) => a + b.maxHp, 0);
+    const bs = G.monsters.filter(m => m.type === 'boss'), hp = bs.reduce((a, b) => a + Math.max(0, b.hp), 0), mx = G.bossMax || bs.reduce((a, b) => a + b.maxHp, 0);   // two-boss nights: both bosses' full health, a fallen one counting 0
     prog = G.bossDead ? 1 : bs.length ? 0.1 + 0.9 * (1 - hp / mx) : 0.1 * Math.min(1, G.spawned / Math.max(1, Math.floor(G.total * 0.4)));
   } else prog = G.total ? G.resolved / G.total : 0;
   const label = G.mode === 'story' ? `Night ${G.def.label}` : `${G.frenzy ? 'Frenzy' : 'Hour'} ${(G.hour || 0) + 1} · ${G.score.toLocaleString()}`;
@@ -65,7 +65,7 @@ export function updateHud(force){
   $('#lmCount').textContent = save.mine; $('#lmBtn').disabled = save.mine <= 0; $('#lmBtn').classList.toggle('aim', G.aim === 'mine');
   for (const [btn, key] of TRAY){
     const el = $(btn), locked = !tools.includes(key);   // the full set is always shown; locked tools are dimmed with a padlock
-    el.classList.toggle('locked', locked); el.hidden = false;
+    el.classList.toggle('locked', locked); el.hidden = key === 'emergency' && locked;   // Emergency Pumpkins stays out of sight until 6-8 (owner); the rest show padlocked
     if (locked) el.disabled = true;
   }
   if (coinsChanged){ const cb = $('#coinBox'); cb.classList.add('bump'); setTimeout(() => cb.classList.remove('bump'), 120); }

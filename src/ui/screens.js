@@ -873,6 +873,7 @@ export function renderShop(){
     const lvl = save[it.key] || 0, maxed = lvl >= it.max;
     const cost = it.consumable ? it.cost[0] : it.cost[lvl];
     const gu = it.consumable ? gearUnlockNightOf(it.key) : 1, gLocked = gu > highestOpen();
+    if (it.key === 'emergency' && gLocked) continue;   // Emergency Pumpkins appears only once 6-8 is reached (owner)
     const d = document.createElement('div'); d.className = 'item';
     const pips = Array.from({ length:it.max }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('');
     d.innerHTML = `<div class="tx"><b>${it.name}${it.consumable ? ` <span class="dim">\u00b7 ${lvl} of ${it.max} carried</span>` : ` <span class="dim">\u00b7 level ${lvl} of ${it.max}</span>`}</b><p>${it.desc}</p><div class="pips" aria-label="${lvl} of ${it.max}">${pips}</div></div>`;

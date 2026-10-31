@@ -1,4 +1,4 @@
-import { BOSS_NAME, BOSS_NAMES, BOSS_INTRO } from '../data/monsters.js';
+import { BOSS_NAME, BOSS_NAMES, BOSS_INTRO, TYPES } from '../data/monsters.js';
 import { WORLDS, levelFor, ALL_LEVELS } from '../data/worlds/index.js';
 import * as E from '../data/endless.js';
 import { PTYPES } from '../data/pumpkins.js';
@@ -55,6 +55,7 @@ export function storySpawn(dt){
     G.bossSpawned = true;
     const kinds = [d.boss, d.boss2].filter(k => !G.bossKinds || G.bossKinds.includes(k));   // a continued night brings back only those still standing
     kinds.forEach(k => { const m = spawnMonster('boss:' + k); if (G.bossHp && G.bossKinds){ const i = G.bossKinds.indexOf(k); if (i >= 0) m.hp = Math.min(m.maxHp, G.bossHp[i]); } });
+    G.bossMax = [d.boss, d.boss2].reduce((a, k) => a + (d.bossForm === 2 ? TYPES[k].form2.hp : TYPES[k].hp), 0);   // the boss bar spans both, even when one is already down
     G.bossHp = null; G.bossKinds = null;
     banner(`${BOSS_NAMES[d.boss]} and ${BOSS_NAMES[d.boss2]}!`, 'Two bosses at once. Monsters keep coming until both fall.', 3); SFX.bossAlert();
     setTimeout(() => { for (const k of kinds) SFX.bossSfx(k, 'arrive'); }, 900); setTimeout(() => { if (G && !G.over && G.mode === 'story') musicStart('boss'); }, 1600);

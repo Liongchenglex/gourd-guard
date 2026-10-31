@@ -11,7 +11,7 @@ import { render } from './engine/render/draw.js';
 import { G, LANE, bannerTimer, graves, grid, setBannerTimer, state, walls } from './engine/state.js';
 import { $ } from './engine/util.js';
 import { persist, save } from './save.js';
-import { buildLegend, setState, syncSound, wireButtons, openPreview, openBook, renderShop } from './ui/screens.js';
+import { buildLegend, setState, syncSound, wireButtons, openPreview, openBook, renderShop, openShop } from './ui/screens.js';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { initNative, initMoney, initBackButton } from './engine/native.js';
 import { SEED_PACKS } from './data/economy.js';
@@ -66,5 +66,5 @@ requestAnimationFrame(frame);
 
 if (new URLSearchParams(location.search).has('test')){
   window.__gg = { get G(){ return G; }, get grid(){ return grid; }, get graves(){ return graves; }, get walls(){ return walls; }, get state(){ return state; },
-    startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair, openPreview, openBook, LEVELS, isOpen, WORLD_LEVELS, damage, lanesOf, continueState, continueNight, isBaked };
+    startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair, openPreview, openBook, LEVELS, isOpen, WORLD_LEVELS, damage, lanesOf, continueState, continueNight, isBaked, openShop };
 }

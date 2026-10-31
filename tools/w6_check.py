@@ -368,6 +368,14 @@ def check_6_9_to_12(browser, url, on):
     page.close()
 
 
+def check_wind(browser, url, on):
+    if not on: return
+    page, errors = open_page(browser, url)
+    g = page.evaluate("() => window.__gg.WORLD_LEVELS[5].slice(4, 12).map(d => d.gust ? (d.gust.partial ? 'narrow' : 'full') : 'none')")
+    ok(g == ['narrow'] * 4 + ['full'] * 4, f'narrow wind on 6-5 to 6-8, full witch wind on 6-9 to 6-12 {g}')
+    page.close()
+
+
 def check_owner_1031(browser, url, on):
     if not on: return
     page, errors = open_page(browser, url)
@@ -386,7 +394,7 @@ def check_owner_1031(browser, url, on):
 
 
 CHECKS = {
-    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst, 'check_6_5_to_7': check_6_5_to_7, 'check_double_boss': check_double_boss, 'check_emergency': check_emergency, 'check_6_9_to_12': check_6_9_to_12,
+    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst, 'check_6_5_to_7': check_6_5_to_7, 'check_double_boss': check_double_boss, 'check_emergency': check_emergency, 'check_6_9_to_12': check_6_9_to_12, 'check_wind': check_wind,
 }
 
 

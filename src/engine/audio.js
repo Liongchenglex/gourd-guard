@@ -48,15 +48,18 @@ export const sfxReady = () => bankReady > 0;
 
 // ---- music: one looping track per key (src/data/music.js), decoded on first use, faded in and out ----
 const MUSIC_GAIN = 0.32;   // owner: current balance is fine for now (2026-09-26)
-const musicBufs = {}; let musicSrc = null, musicGain = null, musicKey = null, musicWant = null;
-export function musicStart(key = 'play'){
+const musicBufs = {}; let musicSrc = null, musicGain = null, musicKey = null, musicWant = null, musicT0 = 0;
+const musicPos = () => musicSrc && musicSrc.buffer && AC ? Math.max(0, AC.currentTime - musicT0) % musicSrc.buffer.duration : 0;   // where the loop is now
+/** Start a track from its beginning (owner: tracks always play from 0:00); `offset` only continues the same track after the audio was rebuilt. */
+export function musicStart(key = 'play', offset = 0){
   ensureAudio(); if (!AC) return;
   if (musicSrc && musicKey === key) return;
   musicStop(0.4); musicWant = key;   // set after the stop, which clears the wish
   const play = buf => {
     if (musicWant !== key || musicSrc) return;
     musicGain = AC.createGain(); musicGain.gain.setValueAtTime(0.0001, AC.currentTime); musicGain.gain.exponentialRampToValueAtTime(save.muted ? 0.0001 : MUSIC_GAIN, AC.currentTime + 1.2);
-    musicSrc = AC.createBufferSource(); musicSrc.buffer = buf; musicSrc.loop = true; musicSrc.connect(musicGain); musicGain.connect(musicBus); musicSrc.start(); musicKey = key;
+    const at = offset % buf.duration;
+    musicSrc = AC.createBufferSource(); musicSrc.buffer = buf; musicSrc.loop = true; musicSrc.connect(musicGain); musicGain.connect(musicBus); musicSrc.start(0, at); musicT0 = AC.currentTime - at; musicKey = key;
   };
   if (musicBufs[key]) return play(musicBufs[key]);
   const uri = MUSIC[key]; if (!uri) return;
@@ -72,14 +75,43 @@ export function musicStop(fade = 0.8){
   const src = musicSrc, g = musicGain; musicSrc = null; musicGain = null; musicKey = null;
   try { g.gain.cancelScheduledValues(AC.currentTime); g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), AC.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + fade); src.stop(AC.currentTime + fade + 0.05); } catch (e) {}
 }
-/** Mute toggle: duck or restore the running track without restarting it. */
-/** Leaving the app (or hiding the tab) silences everything; coming back resumes (the phone app, 2026-09-28). */
-/** iOS brings the context back "interrupted" (not "suspended") and may refuse to resume it until the next tap, so the
- *  wake is retried on every tap until the sound runs again (owner: no sound after minimising the app, 2026-10-21). */
-let wantWake = false;
-function wake(){ if (!AC || AC.state === 'running'){ wantWake = false; return; } try { const p = AC.resume(); if (p && p.then) p.then(() => { if (AC.state === 'running') wantWake = false; }).catch(() => {}); } catch (e) {} }
-export function audioSleep(hidden){ try { if (!AC) return; if (hidden){ wantWake = false; AC.suspend(); } else { wantWake = true; wake(); } } catch (e) {} }
-['touchend', 'pointerdown', 'keydown'].forEach(t => document.addEventListener(t, () => { if (wantWake && !document.hidden) wake(); }, true));
+
+// ---- leaving and coming back (the phone app, 2026-09-28; rewritten 2026-10-31 after the owner's iPhone kept losing its sound) ----
+// Leaving: iOS interrupts the context by itself. A page-side suspend() on top of that left it stuck (resume() during an
+// interruption flips a suspended context back to "interrupted", which WebKit then never resumes), so the game now only
+// mutes the master bus while hidden and never suspends on its own.
+// Coming back: resume() whatever state it is in; iOS only honours that inside a tap, so it is retried on every tap. A
+// WKWebView context can also come back "running" but dead (its clock stops), so the clock is checked and a dead context
+// is rebuilt inside the tap: a fresh graph, the decoded clips reused, the music continued from where it was.
+let wantWake = false, wakeT = 0, wakeAt = 0, wakeTimer = 0;
+const clockDead = () => AC && AC.state === 'running' && wakeAt && performance.now() - wakeAt > 300 && AC.currentTime === wakeT;
+function sampleClock(){ wakeT = AC ? AC.currentTime : 0; wakeAt = performance.now(); }
+function rebuild(){
+  const key = musicKey, pos = musicPos(), old = AC;
+  try { if (musicSrc) musicSrc.stop(); } catch (e) {}
+  musicSrc = null; musicGain = null; musicKey = null; musicWant = null;
+  AC = null; master = null; sfxBus = null; musicBus = null; noiseBuf = null;
+  try { const p = old.close(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+  ensureAudio();   // a new graph; the clips already decoded are kept (an AudioBuffer is not tied to its context)
+  if (key && AC) musicStart(key, pos);
+}
+function wake(gesture){
+  if (!AC || document.hidden) return;
+  if (gesture && clockDead()) rebuild();   // only a fresh context made inside a tap will play again
+  else if (AC.state !== 'running' && AC.state !== 'closed'){ try { const p = AC.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+  if (master) master.gain.value = 1;
+  if (gesture || !wakeAt) sampleClock();
+  clearTimeout(wakeTimer);
+  wakeTimer = setTimeout(() => { if (wantWake && AC && !document.hidden && AC.state === 'running' && AC.currentTime > wakeT) wantWake = false; }, 500);   // awake once the clock runs
+}
+export function audioSleep(hidden){
+  try {
+    if (!AC) return;
+    if (hidden){ wantWake = false; wakeAt = 0; clearTimeout(wakeTimer); if (master) master.gain.value = 0; }
+    else { wantWake = true; wakeAt = 0; wake(false); }
+  } catch (e) {}
+}
+['touchend', 'pointerdown', 'keydown'].forEach(t => document.addEventListener(t, () => { if (wantWake) wake(true); }, true));
 export function musicSync(){ if (musicGain && AC) musicGain.gain.setTargetAtTime(save.muted ? 0.0001 : MUSIC_GAIN, AC.currentTime, 0.1); }
 /** Duck the music to `level` of its gain for `seconds`, then ease back (boss warnings). */
 export function musicDuck(level = 0.35, seconds = 3){

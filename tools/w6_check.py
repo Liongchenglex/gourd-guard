@@ -372,7 +372,7 @@ def check_wind(browser, url, on):
     if not on: return
     page, errors = open_page(browser, url)
     g = page.evaluate("() => window.__gg.WORLD_LEVELS[5].slice(4, 12).map(d => d.gust ? (d.gust.partial ? 'narrow' : 'full') : 'none')")
-    ok(g == ['narrow'] * 4 + ['full'] * 4, f'narrow wind on 6-5 to 6-8, full witch wind on 6-9 to 6-12 {g}')
+    ok(g == ['none'] * 2 + ['narrow'] * 2 + ['full'] * 4, f'no wind on 6-5 and 6-6, narrow on 6-7 and 6-8, full on 6-9 to 6-12 {g}')
     page.close()
 
 

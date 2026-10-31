@@ -30,11 +30,11 @@ export default [
     gravesLayout:[[0, 0], [0, 6], [2, 3], [4, 0], [4, 6]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
   // 6-5: Plague Doctors, Bulwark Knights and Shell Turtles (owner: no brutes): the Doctors heal, the Bulwarks double health in their auras,
   // so each protects the other; turtles rise from three puddles. Castle walls down both outer lanes, graves in a ring, Frenzy.
-  { world:6, level: 5, theme:5, name:'Field Hospital', pattern:4, graves:0, total:22, interval:3.0, spMul:0.95, boss:null, bossForm:1, gust:{ every:22, dirs:['left', 'right'], partial:true }, frenzy:true,
+  { world:6, level: 5, theme:5, name:'Field Hospital', pattern:4, graves:0, total:22, interval:3.0, spMul:0.95, boss:null, bossForm:1, frenzy:true,
     pool:[['doctor', 5], ['bulwark', 4], ['turtle', 2]], puddles:3, castles:{ n:6, hp:8 }, castlesLayout:FLANKS,
     gravesLayout:[[1, 2], [1, 3], [1, 4], [2, 2], [2, 4], [3, 2], [3, 3], [3, 4]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
   // 6-6: 6-5 with Witches in place of the Doctors (owner), turtles and puddles too; a zig-zag of graves, the same walls and Frenzy.
-  { world:6, level: 6, theme:5, name:'Field Spell', pattern:0, graves:0, total:22, interval:3.0, spMul:0.95, boss:null, bossForm:1, gust:{ every:22, dirs:['left', 'right'], partial:true }, frenzy:true,
+  { world:6, level: 6, theme:5, name:'Field Spell', pattern:0, graves:0, total:22, interval:3.0, spMul:0.95, boss:null, bossForm:1, frenzy:true,
     pool:[['witch', 5], ['bulwark', 4], ['turtle', 2]], puddles:3, castles:{ n:6, hp:8 }, castlesLayout:FLANKS,
     gravesLayout:[[1, 1], [2, 2], [1, 3], [2, 4], [1, 5]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
   // 6-7: the fast ones (Vampires, Wisp Riders, Drunk Sailors), strengthened by Bulwark Knights (owner). Fog down both outer lanes,

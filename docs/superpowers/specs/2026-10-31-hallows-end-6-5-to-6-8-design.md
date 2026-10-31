@@ -1,6 +1,6 @@
 # Hallow's End 6-5 to 6-8, the double boss and Emergency Pumpkins
 
-Status: reviewed by a builder; waiting for the owner's OK (2026-10-31). Branch `w6-hallows-end` only, behind `VITE_W6`, like 6-1 to 6-4 (`2026-10-31-hallows-end-first-levels-design.md`). The store version is not touched (owner).
+Status: approved by the owner (2026-10-31), with full boss health. Branch `w6-hallows-end` only, behind `VITE_W6`, like 6-1 to 6-4 (`2026-10-31-hallows-end-first-levels-design.md`). The store version is not touched (owner).
 
 ## Intent
 
@@ -46,7 +46,7 @@ All levels use theme 5 (the Hallow's End map), plain monsters with no modifiers,
 ### 6-8 "Double Trouble" (boss level)
 - **The Poltergeist and the Gravekeeper at the same time**, each with its first-form (level-10) kit: the Gravekeeper teleports between lanes and raises ghouls, and the Poltergeist drifts between lanes and swaps two of your pumpkins. Monsters keep coming until **both** have fallen.
 - Their minions (the level's monster pool): **Flaming Mummies, Mummies, Fogwalkers, Plague Doctors and Wisp Riders**. The Gravekeeper's own raised ghouls are part of its kit and still appear.
-- Both bosses arrive together at 40% of the night, like a single boss today. *(My call:* each with less health than its level-10 self, `bossHpMul` per level, tuned with the bot.)
+- Both bosses arrive together at 40% of the night, like a single boss today. Each keeps its **full first-form health** (Gravekeeper 15, Poltergeist 20; no `bossHpMul`), owner: "they were not that challenging".
 - Fire and Ice are both locked into the team (both mummy types).
 - No Frenzy. No castle walls or fog *(my call)*. A grave pattern *(my call)*.
 - Plague Doctors heal the bosses, as they already do on every level today *(my call: unlike the jukebox, which the owner made immune)*.

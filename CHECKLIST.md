@@ -7,7 +7,7 @@ Expect about 3 weeks in total, mostly waiting: Apple and Google take a day or tw
 
 **Your info, used everywhere:**
 - Privacy policy URL: **https://liongchenglex.github.io/gourd-guard-support/privacy-policy.html**
-- Terms of use URL: **https://liongchenglex.github.io/gourd-guard-support/terms.html** (page drafted in `store/support-site/terms.html`; goes live once it is pushed to the `gourd-guard-support` repo)
+- Terms of use URL: **https://liongchenglex.github.io/gourd-guard-support/terms.html** (source in `store/support-site/terms.html`, live since 2026-10-31)
 - Support URL: **https://liongchenglex.github.io/gourd-guard-support/**
 - Website (for app-ads.txt): **https://liongchenglex.github.io**
 - Contact email: **chenglex1@gmail.com**
@@ -177,7 +177,7 @@ I'll have drafted the text and screenshots in step 3.2; copy them in.
 - [ ] **7.6 Pricing**. Set price **Free** and availability to all countries.
 - [ ] **7.7 Add the seed packs**. On the version page, under "In-App Purchases", **add the three seed packs** so they're reviewed together with the app.
 - [ ] **7.8 Pick the build**. Select the TestFlight build you tested.
-- [ ] **7.12 Apple ID number for the Rate button**. App Store Connect → your app → **App Information** → General Information → **Apple ID** (a number like 6740000000). Paste it to me → I put it in `src/data/appkeys.js` (`APP_STORE_ID`) so the iPhone app's "Rate Gourd Guard" button works. It's public, like the AdMob ids.
+- [x] **7.12 Apple ID number for the Rate button** (6821578420, in since 2026-10-31). App Store Connect → your app → **App Information** → General Information → **Apple ID** (a number like 6740000000). Paste it to me → I put it in `src/data/appkeys.js` (`APP_STORE_ID`) so the iPhone app's "Rate Gourd Guard" button works. It's public, like the AdMob ids.
 
 ### Play Console (left menu → Grow → Store presence, and Policy → App content)
 - [ ] **7.9 Main store listing**. Fill in the short description, full description, app icon (`store/play-icon-512.png`), feature graphic (`store/play-feature-1024x500.jpg`) and the six phone screenshots in `store/screenshots/android/`. Text is in `store/LISTING.md`.

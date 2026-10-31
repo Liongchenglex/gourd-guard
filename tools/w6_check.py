@@ -262,6 +262,8 @@ def check_6_5_to_7(browser, url, on):
     ok(len(defs[2]['castles']) == 7 and all(c.endswith(',0.5') for c in defs[2]['castles']) and defs[2]['fogCols'] == [0, 6], '6-7 has a castle row at 50% and fog down the outer lanes')
     ok(sorted(defs[0]['graves']) == sorted([[1, 2], [1, 3], [1, 4], [2, 2], [2, 4], [3, 2], [3, 3], [3, 4]]), '6-5 graves in a ring')
     ok(sorted(defs[1]['graves']) == sorted([[1, 1], [2, 2], [1, 3], [2, 4], [1, 5]]), '6-6 graves in a zig-zag')
+    sea = page.evaluate("() => window.__gg.WORLD_LEVELS[5][6].shoreFrac")
+    ok(sea and 0.4 <= sea < 0.5, f'6-7 has the sea right behind its castle row (shore at {sea})')
     for n in (105, 106, 107):
         start(page, n)
         ok(page.evaluate("() => window.__gg.G.castles.length") == (6 if n < 107 else 7), f'night {n} starts with its castle walls')
@@ -344,6 +346,28 @@ def check_emergency(browser, url, on):
     page.close()
 
 
+def check_6_9_to_12(browser, url, on):
+    if not on: return
+    page, errors = open_page(browser, url)
+    set_stars(page, {n: 3 for n in range(1, 112)})
+    defs = page.evaluate("() => window.__gg.WORLD_LEVELS[5].slice(8, 12).map(d => ({ pool:d.pool.map(e => e[0]).sort(), frenzy:!!d.frenzy, boss:d.boss || null, boss2:d.boss2 || null, shore:d.shore || 0, shoreFrac:d.shoreFrac || 0, fogCols:d.fogCols || [], castles:(d.castlesLayout || []).length }))")
+    if len(defs) < 4:
+        ok(False, f'6-9 to 6-12 exist ({len(defs)} found)'); page.close(); return
+    ok(defs[0]['pool'] == ['chameleon', 'firemummy', 'fogwalker', 'rchameleon'] and defs[0]['frenzy'], f"6-9: chameleons, reverse chameleons, flaming mummies, fogwalkers, Frenzy {defs[0]['pool']}")
+    ok(defs[1]['pool'] == ['diver', 'rchameleon'] and defs[1]['frenzy'] and 0.4 <= defs[1]['shoreFrac'] < 0.5 and defs[1]['castles'] == 7 and defs[1]['fogCols'] == [0, 6], f'6-10: reverse chameleons and divers on 6-7\'s map, Frenzy {defs[1]}')
+    ok(defs[2]['pool'] == ['hauler', 'slime', 'vampire'] and defs[2]['frenzy'] and defs[2]['shore'] == 4, f'6-11: haulers, slimes, vampires, the 5-19 tide, Frenzy {defs[2]}')
+    ok(defs[3]['boss'] == 'hexwitch' and defs[3]['boss2'] == 'vampirecount' and not defs[3]['frenzy'] and defs[3]['pool'] == sorted(['witch', 'rchameleon', 'mirror', 'vampire', 'knight', 'archer', 'bulwark']), f'6-12: the Hexwitch and the Vampire Count with their minions {defs[3]}')
+    start(page, 112)
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }"); time.sleep(0.8)
+    ok(page.evaluate(f"() => {BOSSES}.map(m => m.kind).sort().join()") == 'hexwitch,vampirecount', '6-12 brings both bosses')
+    time.sleep(1.5)
+    page.evaluate("() => window.__gg.openBook(5)"); time.sleep(0.8)
+    stamps = page.evaluate("() => [...document.querySelectorAll('.pg')].map(t => !!t.querySelector('.devilStamp'))")
+    ok(len(stamps) >= 12 and stamps[7] and stamps[11] and not stamps[0], f'World 6 boss tiles carry the purple devil stamp ({[i + 1 for i, v in enumerate(stamps) if v]})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 def check_owner_1031(browser, url, on):
     if not on: return
     page, errors = open_page(browser, url)
@@ -362,7 +386,7 @@ def check_owner_1031(browser, url, on):
 
 
 CHECKS = {
-    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst, 'check_6_5_to_7': check_6_5_to_7, 'check_double_boss': check_double_boss, 'check_emergency': check_emergency,
+    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst, 'check_6_5_to_7': check_6_5_to_7, 'check_double_boss': check_double_boss, 'check_emergency': check_emergency, 'check_6_9_to_12': check_6_9_to_12,
 }
 
 

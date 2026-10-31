@@ -408,6 +408,13 @@ function nightmareBg(key){
   if (key){ if (bgBeforeNm == null) bgBeforeNm = typeof bgWorld === 'number' ? bgWorld : 0; setBg(sceneFull(key), 'nm:' + key); }
   else if (bgBeforeNm != null){ buildBg(bgBeforeNm); bgBeforeNm = null; }
 }
+/** The purple devil stamp on World 6 boss tiles: the nightmare bookmark's face (index.html #bBookmark .face) on a wax seal. */
+function devilStamp(){
+  const d = document.createElement('div'); d.className = 'devilStamp';
+  const face = document.querySelector('#bBookmark .face').cloneNode(true);
+  d.innerHTML = '<svg viewBox="6 6 36 52" aria-hidden="true"></svg>'; d.firstChild.appendChild(face);
+  return d;
+}
 function applyNightmare(wi){
   const spread = $('#spread'), levels = WORLD_LEVELS[wi], bm = $('#bBookmark');
   const cleared = (save.stars[firstNightOf(wi + 1) + levels.length - 1] || 0) > 0;   // the bookmark appears once the world's level 20 is beaten (owner)
@@ -455,7 +462,8 @@ export function openBook(wi, animate){
     if (!locked && !st && nextN == null) nextN = n;
     const b = document.createElement('button'); b.className = 'pg' + (d.boss ? ' boss' : '') + (st ? ' done' : '') + (d.boss && st && pendingStamp !== n ? ' stamped' : ''); b.disabled = locked;   // a beaten boss keeps its stamp (owner)
     b.setAttribute('aria-label', locked ? `Level ${d.world}-${d.level}, locked` : `Level ${d.world}-${d.level}${d.name ? ', ' + d.name : ''}, ${st} of 3 stars`);
-    if (d.boss) b.appendChild(monsterIcon(d.boss, 88, d.bossForm)); else b.textContent = d.level;
+    if (d.boss && d.world === 6) b.appendChild(devilStamp());   // World 6 boss nights: a purple wax stamp with the bookmark's devil (owner)
+    else if (d.boss) b.appendChild(monsterIcon(d.boss, 88, d.bossForm)); else b.textContent = d.level;
     if (!locked){ const sp = document.createElement('span'); sp.className = 'st'; sp.innerHTML = '★'.repeat(st) + '<span class="off">' + '★'.repeat(3 - st) + '</span>'; b.appendChild(sp); }
     b.onclick = () => { SFX.ui('level'); withHelp(() => openPreview(n)); };
     if (pendingStamp === n){ pendingStamp = null; setTimeout(() => { b.classList.add('stamping'); SFX.star(); }, 700); setTimeout(() => { b.classList.remove('stamping'); b.classList.add('stamped'); }, 1900); }

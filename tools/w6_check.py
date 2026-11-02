@@ -880,6 +880,24 @@ def check_review_fixes(browser, url, on):
 CHECKS.update({'check_review_fixes': check_review_fixes})
 
 
+def check_hk_memory(browser, url, on):
+    """Owner's phone froze opening 6-20 (2026-11-02): the Hollow King's baked frames must stay small at phone sharpness."""
+    if not R3:
+        return
+    page, errors = open_page(browser, url)
+    set_stars(page, {n: 3 for n in range(1, 120)})
+    page.evaluate("() => window.__gg.setBakeScale(2.5)")
+    t0 = time.time(); start(page, 120); dt = time.time() - t0
+    mb = page.evaluate("() => window.__gg.atlasBytes('hollowking') / 1e6")
+    ok(mb < 30, f'his frames and the first form take {mb:.0f} MB at bake scale 2.5 (limit 30)')
+    ok(dt < 3, f'the night opens in {dt:.1f} s')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_hk_memory': check_hk_memory})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

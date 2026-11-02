@@ -81,8 +81,8 @@ export function updateHollowKing(m, dt){
   const T = TYPES.hollowking;
   m.powerT = T.powerEvery;
   const pw = POWERS[m.powerI % POWERS.length]; m.powerI++;
-  if (pw === 'wipe'){ G.hkTell = { col:fullestColumn(), t:T.wipeTell, dur:T.wipeTell }; m.anim = { clip:'cast', t:0, dur:0.7 }; SFX.bossSfx('hollowking', 'tell'); }
-  else if (pw === 'smash'){ smashFence(m); m.anim = { clip:'cast', t:0, dur:0.7 }; }
+  if (pw === 'wipe'){ G.hkTell = { col:fullestColumn(), t:T.wipeTell, dur:T.wipeTell }; m.anim = { clip:'summon', t:0, dur:0.7 }; SFX.bossSfx('hollowking', 'tell'); }
+  else if (pw === 'smash'){ smashFence(m); m.anim = { clip:'summon', t:0, dur:0.7 }; }
   else { summon(m); m.anim = { clip:'summon', t:0, dur:0.7 }; }
 }
 
@@ -105,7 +105,7 @@ export function hkSplit(k){
   ring(f.x, mY(f), 60, 'rgba(255,140,42,.9)'); ring(k.x, mY(k), 60, 'rgba(255,140,42,.9)');
   for (let i = 0; i < 18; i++) chunk(f.x, mY(f), '#ff8c2a', 260);
   banner(`${BOSS_NAMES[kind].replace(/^The /, '')} form!`, 'Beat it to hurt the Hollow King again.', 2.4);
-  SFX.bossSfx('hollowking', 'split'); k.anim = { clip:'cast', t:0, dur:0.7 };
+  SFX.bossSfx('hollowking', 'split'); k.anim = { clip:'summon', t:0, dur:0.7 };
   return f;
 }
 

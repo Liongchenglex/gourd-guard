@@ -12,11 +12,15 @@ let atlases = new Map(), bakeK = 1;
 let scratch = null;
 
 /** Set the bake scale (device pixels per world unit). Drops every atlas when it changes. */
+const bakeKNow = () => bakeK;
 export function setBakeScale(k){ k = Math.min(2.5, Math.max(0.5, k)); if (k !== bakeK){ bakeK = k; atlases = new Map(); } }
 
 function bake(akey){
-  const [key, vkey] = akey.split('|'), C = CHARS[key], { box, scale } = C, fw = Math.ceil(box.w * scale * bakeK), fh = Math.ceil(box.h * scale * bakeK), clips = {};
-  for (const [name, cl] of Object.entries(C.clips)){
+  const [key, vkey] = akey.split('|'), C = CHARS[key], { scale } = C;
+  // optional per-character limits (the Hollow King, 2026-11-02: his frames froze a phone): a box and a clip set per variant, a bake-scale cap
+  const box = C.boxFor ? C.boxFor(vkey || null) : C.box, clipSet = C.clipsFor ? C.clipsFor(vkey || null) : C.clips, bakeK = Math.min(bakeKNow(), C.maxK || Infinity);
+  const fw = Math.ceil(box.w * scale * bakeK), fh = Math.ceil(box.h * scale * bakeK), clips = {};
+  for (const [name, cl] of Object.entries(clipSet)){
     const c = document.createElement('canvas'); c.width = fw * cl.n; c.height = fh;
     const g = c.getContext('2d');
     for (let i = 0; i < cl.n; i++){
@@ -35,6 +39,8 @@ export function atlas(akey){ return atlases.get(akey) || bake(akey); }
 export function poolKey(k, VARIANTS){ const v = VARIANTS[k]; return v ? atlasKey(v.base, k) : k; }
 /** Bake every character a level can spawn so nothing hitches on first sight. keys are atlas keys (see poolKey). */
 export const isBaked = k => atlases.has(k);   // test hook
+/** Test hook: bytes held by baked atlases whose key starts with `pre`. */
+export const atlasBytes = pre => [...atlases].filter(([k]) => k.startsWith(pre)).reduce((a, [, A]) => a + Object.values(A.clips).reduce((b, c) => b + c.c.width * c.c.height * 4, 0), 0);
 /** Forget one baked atlas (the Hollow King's spent world boss forms: their frames are large). */
 export function dropAtlas(akey){ atlases.delete(akey); }
 export function prebake(keys){ for (const k of keys) if (CHARS[k.split('|')[0]] && !atlases.has(k)) bake(k); }
@@ -64,7 +70,7 @@ export function pickFrame(m, key){
 /** Draw a character's current frame at the origin of `ctx` (already translated and scaled to the monster). tint = [colour, alpha] or null. */
 export function drawChar(ctx, m, key, tint, clipOverride){
   const A = atlas(atlasKey(key, vkeyOf(m, key))), [clip, fi] = clipOverride || pickFrame(m, key), cl = A.clips[clip] || A.clips.walk;
-  const sx = fi * cl.fw;
+  const sx = Math.min(fi, cl.n - 1) * cl.fw;   // a clip missing from a slimmed atlas falls back to walk
   if (!tint){ ctx.drawImage(cl.c, sx, 0, cl.fw, cl.fh, A.dx, A.dy, A.dw, A.dh); return; }
   if (!scratch){ scratch = document.createElement('canvas'); }
   if (scratch.width < cl.fw || scratch.height < cl.fh){ scratch.width = Math.max(scratch.width, cl.fw); scratch.height = Math.max(scratch.height, cl.fh); }

@@ -295,5 +295,11 @@ const clips = { idle:{ n:8, fps:6, pose:t => ({ idle:t }) }, cast:{ n:8, fps:12,
 // World boss forms (6-20, Release 3): the first form in a stage colour, one atlas per form, keyed by the boss kind it borrows.
 const STAGE_OF = { gravekeeper:0, poltergeist:1, vampirecount:2, twintides:3, hexwitch:4 };
 const drawKing = (g, P) => hollowking(g, P.variant && STAGE_OF[P.variant] != null ? { ...P, variant:null, stage:STAGE_OF[P.variant] } : P);
-export const HOLLOWKING = { hollowking: { draw:drawKing, scale:.74, dy:-3, box:{ x:-180, y:-280, w:360, h:360 }, variants:{ form2:true, fallen:true, gravekeeper:true, poltergeist:true, vampirecount:true, twintides:true, hexwitch:true },
-  vkeyOf:m => m.look === 'hollowking' ? m.kind : null, clips:{ walk:clips.idle, ...clips }, still:{} } };
+// In the game (owner, 2026-11-02: first form only, the full form is saved for later) his frames are slimmed so a phone can hold them:
+// the first form fits a 265 × 315 box (measured over walk and summon), he bakes only walk and summon (his powers play summon), each
+// world boss form only walk, and the bake scale is capped at 2. The full and fallen forms keep the big box and every clip.
+const BIG = { x:-180, y:-280, w:360, h:360 }, SMALL = { x:-135, y:-232, w:265, h:315 }, ALL = { walk:clips.idle, ...clips };
+export const HOLLOWKING = { hollowking: { draw:drawKing, scale:.74, dy:-3, box:BIG, variants:{ form2:true, fallen:true, gravekeeper:true, poltergeist:true, vampirecount:true, twintides:true, hexwitch:true },
+  vkeyOf:m => m.look === 'hollowking' ? m.kind : null, clips:ALL, still:{}, maxK:2,
+  boxFor:v => v === 'form2' || v === 'fallen' ? BIG : SMALL,
+  clipsFor:v => v === 'form2' || v === 'fallen' ? ALL : v ? { walk:clips.idle } : { walk:clips.idle, summon:clips.summon } } };

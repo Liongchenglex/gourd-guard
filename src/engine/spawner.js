@@ -23,8 +23,6 @@ export function pickFrom(pool){
 /** The night's jukebox drop points as fractions of its total: `frenzyAt` is one number (default 0.8) or, from Release 3, a list (6-19: [0.5, 1]). */
 export const jukeboxPoints = d => __RELEASE__ >= 3 && Array.isArray(d.frenzyAt) ? d.frenzyAt : [d.frenzyAt || 0.8];
 /** A standing jukebox that is not the night's last: the monsters it brings are a bonus and do not count toward the total (Release 3). */
-/** 6-19 (owner, 2026-11-02): with a list of drop points, monsters stop at the next point until the bar (kills) reaches its mark. */
-const waitForBar = d => __RELEASE__ >= 3 && Array.isArray(d.frenzyAt) && !G.jukebox && (G.jbNext || 0) < d.frenzyAt.length && G.spawned >= Math.floor(d.total * d.frenzyAt[G.jbNext || 0]);
 const midJukebox = () => __RELEASE__ >= 3 && G.jukebox && !G.jukebox.dead && G.jbNext < jukeboxPoints(G.def).length;
 export function dropJukebox(hp){
   G.jukebox = spawnJukebox(hp);
@@ -51,7 +49,7 @@ export function storySpawn(dt){
     || (d.frenzy && G.jukebox && !G.jukebox.dead);   // Frenzy (World 6): and while the jukebox stands
   const frenzyOn = d.frenzy && G.jukebox && !G.jukebox.dead;
   if (frenzyOn && G.burstLeft > 0 && (G.burstT -= dt) <= 0){ spawnOne(d); G.burstLeft--; G.burstT = FRENZY_BURST_GAP; }   // the drop's burst
-  if ((G.spawned < d.total || keepComing) && G.spawnTimer <= 0 && !waitForBar(d)){
+  if ((G.spawned < d.total || keepComing) && G.spawnTimer <= 0){
     for (let i = frenzyOn ? FRENZY_PAIR : 1; i > 0; i--) spawnOne(d);   // in pairs while the jukebox plays
     const late = d.levelNo >= SPAWN_LATE_FROM;   // the harder half of each world is spaced out (owner)
     const gap = d.spawnGap != null ? d.spawnGap : late ? SPAWN_GAP : 1, burst = d.spawnBurst != null ? d.spawnBurst : late ? SPAWN_BURST : SPAWN_BURST_EARLY;   // per-level overrides win
@@ -60,8 +58,7 @@ export function storySpawn(dt){
   }
   if (d.frenzy && !d.frenzyAfterBoss && !G.jukebox && !G.jukeboxDone){
     const pts = jukeboxPoints(d), i = G.jbNext || 0;
-    const at = Math.floor(d.total * pts[i] || 0);
-    if (i < pts.length && G.spawned >= at && (!(__RELEASE__ >= 3 && Array.isArray(d.frenzyAt)) || G.resolved >= at)) dropJukebox();   // a list waits for the bar to reach the mark (6-19, owner)
+    if (i < pts.length && G.spawned >= Math.floor(d.total * pts[i])) dropJukebox();   // with marks the bar counts arrivals too, so it drops on the mark (owner, 2026-11-03)
   }
   if (d.boss2 && !G.bossSpawned && (G.spawned >= Math.floor(d.total * 0.4) || (G.bossHp && G.bossHp.length))){   // two bosses at once (World 6)
     G.bossSpawned = true;

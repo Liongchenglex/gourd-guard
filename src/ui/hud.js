@@ -39,7 +39,8 @@ export function updateHud(force){
   else if (G.def.boss){   // boss level: the bar fills a little until the boss shows, then tracks its health
     const bs = G.monsters.filter(m => m.type === 'boss' && !m.hkClone), hp = bs.reduce((a, b) => a + Math.max(0, b.hp), 0), mx = G.bossMax || bs.reduce((a, b) => a + b.maxHp, 0);   // two-boss nights: both bosses' full health, a fallen one counting 0
     prog = G.bossDead ? 1 : bs.length ? 0.1 + 0.9 * (1 - hp / mx) : 0.1 * Math.min(1, G.spawned / Math.max(1, Math.floor(G.total * 0.4)));
-  } else prog = G.total ? G.resolved / G.total : 0;
+  } else if (__RELEASE__ >= 3 && Array.isArray(G.def.frenzyAt)) prog = G.total ? Math.min(G.spawned, G.total) / G.total : 0;   // levels with jukebox marks: the bar counts monsters that arrived, so each jukebox drops on its mark (owner, 2026-11-03)
+  else prog = G.total ? G.resolved / G.total : 0;
   const label = G.mode === 'story' ? `Night ${G.def.label}` : `${G.frenzy ? 'Frenzy' : 'Hour'} ${(G.hour || 0) + 1} · ${G.score.toLocaleString()}`;
   const wf = Math.round(wallFrac() * 100);
   const tools = toolsForNight(G.mode === 'story' ? Math.max(G.n, highestOpen()) : highestOpen());

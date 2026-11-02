@@ -21,8 +21,8 @@ export const PTYPES = [
 
 export const RAINBOW = __RELEASE__ >= 3 ? 14 : 13, NTYPES = RAINBOW;   // type indices: 0 Green, 1 Yellow, 2 Ice, 3 Fire, 4 Grey, 5 Purple, 6 White, 7 Black, 8 Deep Blue, 9 Pink, 10 Turquoise, 11 Brown, 12 Paint, 13 Rainbow
 export const BEIGE = __RELEASE__ >= 3 ? 13 : -1;   // Release 3; -1 (never a type) in earlier builds
-// Beige glue (owner, 2026-11-02): laid on a Beige kill; tiles by level: one, one, 3 across, 3 across, a plus
-export const GLUE_T = [1, 2, 3, 4, 5], GLUE_SHAPE = ['one', 'one', 'row', 'row', 'plus'], GLUE_DMG = 0.3, GLUE_EVERY = 1, GLUE_SLOW = 0.5;
+// Beige glue (owner, 2026-11-02; durations 2-10 s, owner 2026-11-03): laid on a Beige kill; tiles by level: one, one, 3 across, 3 across, a plus
+export const GLUE_T = [2, 4, 6, 8, 10], GLUE_SHAPE = ['one', 'one', 'row', 'row', 'plus'], GLUE_DMG = 0.3, GLUE_EVERY = 1, GLUE_SLOW = 0.5;
 export const YELLOW = 1, BLUE = 8, PINK = 9, WHITE = 6, BLACK = 7, TURQUOISE = 10, BROWN = 11, PAINT = 12;
 export const PAINT_PULL = [2, 3, 4, 5, Infinity];   // Paint (owner, 2026-10-08): touching pumpkins pulled into a lit Paint bunch, by level (5 = every one)
 export const TURQ_FRAC = 0.5;                          // Turquoise: power as a fraction of Green's; bunches of 2 launch

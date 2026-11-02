@@ -18,6 +18,7 @@ import { poolKey, prebake } from './render/anim.js';
 import { atlasKey } from './render/chars.js';
 import { endlessSpawn, storySpawn, dropJukebox, jukeboxPoints } from './spawner.js';
 import { updateGlue } from './glue.js';
+import { hkState } from './hollowking.js';
 import { COLS, CS, FENCE_Y, FIELD_TOP, G, GY, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, setG, setGest, state, walls, GX, FIELD_BOT, HOLD_TIME_QUICK } from './state.js';
 import { rnd, shuffle, clamp, TAU } from './util.js';
 import { initWalls, damageWall } from './walls.js';
@@ -469,8 +470,9 @@ export function continueState(){
   const g = G; if (!g || g.mode !== 'story' || g.continued) return null;
   const alive = g.monsters.filter(m => !m.dead && !m.minion && m.type !== 'boss' && m.type !== 'sack' && m.type !== 'jukebox').length;
   const remaining = alive + Math.max(0, g.def.total - g.spawned);
-  const living = g.monsters.filter(m => !m.dead && m.type === 'boss'), bosses = living.map(m => Math.max(1, Math.ceil(m.hp)));
+  const living = g.monsters.filter(m => !m.dead && m.type === 'boss' && !m.hkClone), bosses = living.map(m => Math.max(1, Math.ceil(m.hp)));
   return { n:g.n, loadout:g.loadout.slice(), q:JSON.parse(JSON.stringify(g.q)), remaining, bossSpawned:g.bossSpawned, bossDead:g.bossDead, bossHp:bosses, bossKinds:g.def.boss2 ? living.map(m => m.kind) : null,
+    hk:__RELEASE__ >= 3 ? hkState() : null,   // the Hollow King's phase and his standing form (Release 3)
     jukebox:{ next:g.jbNext || 0, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null } };   // next: drop points already used (one per jukebox dropped)   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
@@ -478,6 +480,7 @@ export function continueNight(c){
   startGame('story', c.n, c.loadout);
   G.continued = true; if (c.q) G.q = c.q;   // quest progress carries into the continued night
   G.spawned = G.resolved = Math.max(0, G.def.total - c.remaining);   // the progress bar picks up where the lost night left off
+  if (__RELEASE__ >= 3) G.hkRestore = c.hk || null;
   if (c.bossSpawned){ G.bossDead = c.bossDead; G.bossHp = c.bossHp.slice(); G.bossKinds = c.bossKinds ? c.bossKinds.slice() : null; if (c.bossDead) G.bossSpawned = true; }
   if (c.jukebox){
     const next = c.jukebox.next != null ? c.jukebox.next : c.jukebox.done ? 1 : 0;   // an older snapshot said only "done"

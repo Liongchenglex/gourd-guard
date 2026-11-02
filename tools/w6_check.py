@@ -681,7 +681,7 @@ KING = "window.__gg.G.monsters.find(m => m.kind === 'hollowking' && !m.dead)"
 
 def spawn_king(page, n=104):
     start(page, n)
-    page.evaluate("() => { const G = window.__gg.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; window.__gg.spawnMonster('boss:hollowking', 3, false, 0.3, 2); }")
+    page.evaluate("() => { const G = window.__gg.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.def.boss = 'hollowking'; G.bossSpawned = true; window.__gg.spawnMonster('boss:hollowking', 3, false, 0.3, 2); }")
     time.sleep(0.2)
 
 
@@ -712,6 +712,76 @@ def check_hk_powers(browser, url, on):
 
 
 CHECKS.update({'check_hk_powers': check_hk_powers})
+
+
+FORM = "window.__gg.G.monsters.find(m => m.hkClone && !m.dead)"
+HKF = ['gravekeeper', 'poltergeist', 'hexwitch', 'vampirecount', 'twintides']
+HKF_HP = [15, 20, 22, 24, 14]
+
+
+def hk_hit(page, who, amt, last=0):
+    return page.evaluate(f"() => {{ const m = {who}; if (!m) return null; m.lastHit = {last}; window.__gg.damage(m, {amt}); return m.hp; }}")
+
+
+def check_hk_phases(browser, url, on):
+    if not R3:
+        return
+    page, errors = open_page(browser, url)
+    spawn_king(page); time.sleep(0.3)
+    bar = "() => parseFloat(document.querySelector('#prog').style.width)"
+    floors = [60, 48, 36, 24, 12]
+    for i, (kind, hp) in enumerate(zip(HKF, HKF_HP)):
+        f = page.evaluate(f"() => {{ const f = {FORM}; return f && [f.kind, f.maxHp, f.look, f.form, f.twin || null]; }}")
+        ok(f == [kind, hp, 'hollowking', 1, None], f'phase {i + 1}: a {kind} form in his colours with {hp} health {f}')
+        k0 = page.evaluate(f"() => {KING}.hp")
+        ok(k0 == floors[i], f'phase {i + 1}: the king is at {floors[i]} ({k0})')
+        if i == 0:
+            hk_hit(page, KING, 5)
+            for last in (3, -1, 7, 8):   # burn, glue/tools, Black splash, Deep Blue lightning
+                hk_hit(page, KING, 2, last)
+            ok(page.evaluate(f"() => {KING}.hp") == 60, 'while a form stands, nothing hurts the king')
+            ok(page.evaluate("() => window.__gg.G.floats.some(f => f.text === 'No damage')"), 'he shows "No damage"')
+            time.sleep(0.4); w0 = page.evaluate(bar)
+            hk_hit(page, FORM, 5); time.sleep(0.4)
+            ok(page.evaluate(bar) == w0, f'hurting the form does not move the boss bar ({w0})')
+        if i == 1:
+            page.wait_for_function("() => !(window.__gg.G.hkDrop || []).length", timeout=5000)
+            baked = page.evaluate("(ks) => ks.filter(k => window.__gg.isBaked('hollowking|' + k))", HKF)
+            ok('gravekeeper' not in baked and len(baked) <= 2, f'spent form frames are dropped: at most two forms baked {baked}')
+        hk_hit(page, FORM, 999); time.sleep(0.2)
+        ok(page.evaluate(f"() => !{FORM}"), f'phase {i + 1}: the {kind} form falls for good')
+        if i < 4:
+            hk_hit(page, KING, 999); time.sleep(0.3)
+    ok(page.evaluate(f"() => !!{KING} && {KING}.hp === 12 && !{FORM}"), 'after the fifth form the king stands open at 12')
+    time.sleep(0.4); w1 = page.evaluate(bar)
+    ch = page.evaluate("() => window.__gg.save.chests.length")
+    hk_hit(page, KING, 999); time.sleep(0.4)
+    ok(page.evaluate("() => window.__gg.G.bossDead === true"), 'then he dies and the boss is beaten')
+    ok(w1 > 70, f'the boss bar tracked the king down ({w1:.0f}%)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_hk_continue(browser, url, on):
+    if not R3:
+        return
+    page, errors = open_page(browser, url)
+    spawn_king(page); time.sleep(0.3)
+    for _ in range(2):
+        hk_hit(page, FORM, 999); time.sleep(0.1); hk_hit(page, KING, 999); time.sleep(0.2)
+    page.evaluate(f"() => {{ {FORM}.hp = 10; }}")
+    c = page.evaluate("() => window.__gg.continueState()")
+    ok(c['hk'] == {'phase': 3, 'hp': 36, 'formHp': 10} and len(c['bossHp']) == 1, f"the snapshot keeps the phase, his health and the form's {c.get('hk')} {c.get('bossHp')}")
+    page.evaluate("(c) => window.__gg.continueNight(c)", c); time.sleep(0.3)
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = Math.max(G.spawned, Math.ceil(G.def.total * 0.4)); G.def.boss = 'hollowking'; G.spawnTimer = 0; }"); time.sleep(0.3)
+    page.evaluate(f"() => {{ const k = {KING}; if (k) k.p = 0.3; }}"); time.sleep(0.4)
+    d = page.evaluate(f"() => {{ const k = {KING}, f = {FORM}; return [k && k.hp, k && k.hkPhase, f && f.kind, f && f.hp]; }}")
+    ok(d == [36, 3, 'hexwitch', 10], f'a continued night brings him back at 36 with the hurt Hexwitch form {d}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_hk_phases': check_hk_phases, 'check_hk_continue': check_hk_continue})
 
 
 def main():

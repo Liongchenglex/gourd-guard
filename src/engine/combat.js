@@ -1,6 +1,7 @@
 import { TYPES, BOSS_NAMES } from '../data/monsters.js';
 import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW, TURQUOISE, BROWN, TURQ_FRAC, BROWN_KB, BROWN_SIZE_MULT, PAINT, BEIGE } from '../data/pumpkins.js';
 import { layGlue } from './glue.js';
+import { hkGate, hkAfterHit, onHkFormDown } from './hollowking.js';
 import { SFX, musicStart } from './audio.js';
 import { MUSIC } from '../data/music.js';
 import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches, brownSize, paintPull, paintInherit } from './board.js';
@@ -75,9 +76,11 @@ export function damage(m, amt, color, small){
     addFloat('Wisp broken', m.x, mY(m) - m.r - 24, '#cfe8f2', 16, 0.9);
     return;
   }
+  if (__RELEASE__ >= 3 && m.kind === 'hollowking' && !m.hkClone){ amt = hkGate(m, amt); if (amt <= 0) return; }   // immune while his form stands
   m.hp -= amt; m.flash = 0.1;
   addFloat(fmt(amt), m.x + rnd(-8, 8), mY(m) - m.r * mS(m) - 14, color || '#fff', small ? 16 : 23, 0.8);
   if (m.hp <= 0.001) kill(m);
+  else if (__RELEASE__ >= 3 && m.kind === 'hollowking') hkAfterHit(m);
 }
 
 export function dropHop(d){ return d.t < 0.45 ? Math.sin(d.t / 0.45 * Math.PI) * 26 : Math.sin(G.t * 3 + d.ph) * 2; }
@@ -178,7 +181,7 @@ export function kill(m){
   const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', chameleon:'#6ab04a', rchameleon:'#3a3a4a', mirror:'#c8d8f0', firemummy:'#ff8a3a', fogwalker:'#b8c8d8', witch:'#6a3a8a', bulwark:'#8090a8', turtle:'#4a7a5a', sack:'#b08850', jukebox:'#c0392b', boss:'#6a3a7a' }[m.type] || '#aaa';
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
   ring(m.x, y, m.r * s * 2.2, 'rgba(255,220,150,.8)');
-  if (G.vfx) G.vfx.push({ kind:'pop', m:{ type:m.type, kind:m.kind, ph:m.ph, eating:m.eating, hop:m.hop, tint:m.tint, age:5, rise:0, flash:0, slowT:0, frozenT:0, r:m.r }, x:m.x, y, s, t:0, dur:0.35 });   // the last frame squashes and fades (baked characters only)
+  if (G.vfx) G.vfx.push({ kind:'pop', m:{ type:m.type, kind:m.kind, look:m.look, ph:m.ph, eating:m.eating, hop:m.hop, tint:m.tint, age:5, rise:0, flash:0, slowT:0, frozenT:0, r:m.r }, x:m.x, y, s, t:0, dur:0.35 });   // the last frame squashes and fades (baked characters only)
   if (reward === 'boss' || reward === 'coins' || reward === 'gold'){
     const mult = reward === 'gold' ? COIN_MULT[(m.lastHitLv || 1) - 1] : 1;
     G.coins += Math.round(m.coins * mult);
@@ -201,6 +204,7 @@ export function kill(m){
     for (let i = 0; i < TYPES.slime.splits; i++){ const l = Math.max(0, Math.min(COLS - 1, m.lane + (i ? 1 : -1))); const bl = spawnMonster('blob', l, true, Math.max(0, m.p - 0.02)); bl.age = 0.2; }
     addFloat('Split!', m.x, y - 30, '#7fe0a0', 16, 0.9); SFX.monsterAct('slime', 'split');
   }
+  if (__RELEASE__ >= 3 && m.hkClone) onHkFormDown(m);
   if (m.type === 'boss'){
     const twinAlive = G.monsters.some(o => o !== m && o.type === 'boss' && !o.dead);   // the other Twin Tide, or the other boss of a two-boss night
     if (!twinAlive && G.mode === 'story' && G.def && (G.def.levelNo === 10 || G.def.levelNo === 20)){ addChest(G.def.levelNo === 20 ? 'boss' : 'normal', m.kind); addFloat(G.def.levelNo === 20 ? 'Boss chest!' : 'Treasure chest!', m.x, mY(m) - m.r - 70, '#ffd35a', 22, 2); if (G.vfx) G.vfx.push({ kind:'loot', item:G.def.levelNo === 20 ? 'bossChest' : 'chest', x:m.x, y:mY(m) - 20, t:0, dur:1.8 }); }

@@ -207,7 +207,10 @@ export function kill(m){
   if (__RELEASE__ >= 3 && m.hkClone) onHkFormDown(m);
   if (m.type === 'boss'){
     const twinAlive = G.monsters.some(o => o !== m && o.type === 'boss' && !o.dead);   // the other Twin Tide, or the other boss of a two-boss night
-    if (!twinAlive && G.mode === 'story' && G.def && (G.def.levelNo === 10 || G.def.levelNo === 20)){ addChest(G.def.levelNo === 20 ? 'boss' : 'normal', m.kind); addFloat(G.def.levelNo === 20 ? 'Boss chest!' : 'Treasure chest!', m.x, mY(m) - m.r - 70, '#ffd35a', 22, 2); if (G.vfx) G.vfx.push({ kind:'loot', item:G.def.levelNo === 20 ? 'bossChest' : 'chest', x:m.x, y:mY(m) - 20, t:0, dur:1.8 }); }
+    if (!twinAlive && G.mode === 'story' && G.def && (G.def.levelNo === 10 || G.def.levelNo === 20)){ const itemOf = TYPES[m.kind].noItems ? null : m.kind;   // no costume for the Hollow King yet: boss items become coins
+      addChest(G.def.levelNo === 20 ? 'boss' : 'normal', itemOf);
+      if (__RELEASE__ >= 3 && G.def.extraChestP && Math.random() < G.def.extraChestP){ addChest(G.def.levelNo === 20 ? 'boss' : 'normal', itemOf); addFloat('A second chest!', m.x, mY(m) - m.r - 100, '#ffd35a', 22, 2.2); }   // 6-20 (owner)
+      addFloat(G.def.levelNo === 20 ? 'Boss chest!' : 'Treasure chest!', m.x, mY(m) - m.r - 70, '#ffd35a', 22, 2); if (G.vfx) G.vfx.push({ kind:'loot', item:G.def.levelNo === 20 ? 'bossChest' : 'chest', x:m.x, y:mY(m) - 20, t:0, dur:1.8 }); }
     const groupDown = m.kind !== 'twintides' || (m.twin && m.twin.dead);   // a whole boss is down (both of a Twin Tides pair)
     if (twinAlive && groupDown && G.def && G.def.boss2){
       G.shake = 1; SFX.bossSfx(m.kind, 'die');

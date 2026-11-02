@@ -54,5 +54,6 @@ export const BESTIARY = {
   diver:      { lore:'A drowned villager who never quite noticed. Waits under the puddle for company.', ability:'Hides in a puddle, surfaces to hurl water at your wall, and ducks under again. Hit it while it is up.' },
   soddenMummy:{ lore:'A mummy the sea got hold of. The wrappings are green now and it does not care to discuss it.', ability:'Cannot be knocked back, and still only Fire finishes it.' },
   turtle:     { lore:'The oldest thing in the marsh. Walks backwards so it can keep an eye on you.', ability:'A slow ten-hit wall of shell. Grey pierces through; everything else has to chew.' },
+  ...(__RELEASE__ >= 3 ? { hollowking: { lore:'On All Hallows\u2019 night the fires of the five fallen bosses gathered in one hollow pumpkin. It carved itself a face and crowned itself with thorns.', ability:'Never reaches the wall. Five times he splits off a world boss in his colours and takes no damage until it falls. Wipes a column of your patch, smashes a fence, calls monsters.' } } : {}),
   twintides:  { lore:'Two serpents hatched from one egg on the night the village drowned. They finish each other’s sentences.', ability:'Never reach the wall. Both must die within a short window or the fallen one rises again.' },
 };

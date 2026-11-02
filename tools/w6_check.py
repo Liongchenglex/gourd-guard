@@ -784,6 +784,53 @@ def check_hk_continue(browser, url, on):
 CHECKS.update({'check_hk_phases': check_hk_phases, 'check_hk_continue': check_hk_continue})
 
 
+def beat_king(page, rnd):
+    page.evaluate(f"() => {{ const k = {KING}; k.p = 0.3; }}"); time.sleep(0.3)
+    for i in range(5):
+        hk_hit(page, FORM, 999); time.sleep(0.15)
+        if i < 4:
+            hk_hit(page, KING, 999); time.sleep(0.25)
+    ch = page.evaluate("() => window.__gg.save.chests.length")
+    page.evaluate(f"(r) => {{ const old = Math.random; Math.random = () => r; try {{ const k = {KING}; k.lastHit = 0; window.__gg.damage(k, 999); }} finally {{ Math.random = old; }} }}", rnd)
+    time.sleep(0.2)
+    return page.evaluate("(n) => window.__gg.save.chests.slice(n)", ch)
+
+
+def check_6_20(browser, url, on):
+    if not R3:
+        return
+    page, errors = open_page(browser, url)
+    set_stars(page, {n: 3 for n in range(1, 120)})
+    start(page, 120)
+    d = page.evaluate("() => { const d = window.__gg.G.def; return { label:d.label, name:d.name, boss:d.boss, form:d.bossForm, frenzy:!!d.frenzy, fog:(d.fog || []).length, xc:d.extraChestP, pool:d.pool.map(e => e[0]).sort() }; }")
+    ok(d['label'] == '6-20' and d['name'] == 'The Hollow King' and d['boss'] == 'hollowking' and d['form'] == 2, f'6-20 is the Hollow King, full form {d}')
+    ok(not d['frenzy'] and d['fog'] == 0 and d['xc'] == 0.5, f'no jukebox, no fog, a 50% second chest {d}')
+    ok(d['pool'] == sorted(['firemummy', 'fogwalker', 'witch', 'bulwark', 'turtle']), f"his minions are the revisit monsters {d['pool']}")
+    ok(grave_cells(page) == sorted(CROWN), f'graves in a crown {grave_cells(page)}')
+    ok(page.evaluate("() => ['hollowking|form2', 'hollowking|gravekeeper'].every(k => window.__gg.isBaked(k))"), 'his frames and the first form are baked before the night')
+    page.evaluate("() => { const G = window.__gg.G; G.sproutT = -999; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }"); time.sleep(0.5)
+    ok(page.evaluate(f"() => !!{KING} && {KING}.maxHp === 60"), 'he arrives with 60 health')
+    got = beat_king(page, 0.1)
+    boss = [c for c in got if c['kind'] == 'boss']
+    ok(len(boss) == 2 and all(c['boss'] is None for c in boss), f'a lucky roll gives two boss chests, no boss items {got}')
+    time.sleep(1.5)
+    start(page, 120)
+    page.evaluate("() => { const G = window.__gg.G; G.sproutT = -999; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }"); time.sleep(0.5)
+    got = beat_king(page, 0.9)
+    ok(len([c for c in got if c['kind'] == 'boss']) == 1, f'otherwise one boss chest {got}')
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = G.def.total; for (const m of G.monsters) m.dead = true; }"); time.sleep(2.5)
+    ok(page.evaluate("() => window.__gg.G.over && window.__gg.save.stars[120] > 0"), 'clearing the field wins 6-20, the last night of the world')
+    time.sleep(1.5)
+    page.evaluate("() => window.__gg.openPreview(120)"); time.sleep(0.8)
+    txt = page.evaluate("() => document.body.innerText")
+    ok('Hollow King' in txt, 'the level card names the Hollow King')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_6_20': check_6_20})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

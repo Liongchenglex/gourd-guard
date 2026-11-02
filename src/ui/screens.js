@@ -463,7 +463,8 @@ export function openBook(wi, animate){
   $('#bkLore').textContent = bk.lore;
   const sc = worldScene(levels[0].theme, 456, 120), cv = $('#bkScene'); cv.width = sc.width; cv.height = sc.height; cv.getContext('2d').drawImage(sc, 0, 0);
   const bossKey = (levels.find(d => d.boss) || {}).boss, bossBox = $('#bkBoss'); bossBox.innerHTML = '';
-  if (__RELEASE__ >= 2 && wi === 5){ bossBox.appendChild(hollowSilhouette(192)); const cap = document.createElement('span'); cap.textContent = '???'; bossBox.appendChild(cap); }   // Hallow's End: the Hollow King, still a shadow (owner)
+  if (__RELEASE__ >= 3 && wi === 5){ bossBox.appendChild(monsterIcon('hollowking', 192, 2)); const cap = document.createElement('span'); cap.textContent = BOSS_NAMES.hollowking; bossBox.appendChild(cap); }   // Release 3: he steps out of the shadow
+  else if (__RELEASE__ >= 2 && wi === 5){ bossBox.appendChild(hollowSilhouette(192)); const cap = document.createElement('span'); cap.textContent = '???'; bossBox.appendChild(cap); }   // Hallow's End: the Hollow King, still a shadow (owner)
   else if (bossKey){ bossBox.appendChild(monsterIcon(bossKey, 192, 1)); const cap = document.createElement('span'); cap.textContent = BOSS_NAMES[bossKey]; bossBox.appendChild(cap); }
   const grid = $('#bkLevels'); grid.innerHTML = '';
   let stars = 0, nextN = null;

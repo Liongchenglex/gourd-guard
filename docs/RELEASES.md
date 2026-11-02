@@ -18,11 +18,10 @@ The owner builds many ideas ahead of the stores and wants to see all of them on 
 |---|---|---|
 | 1 | Worlds 1–5 | In the stores (branch `r1-ground-rules`) |
 | 2 | Hallow's End 6-1 to 6-16 | Content complete on `dev` (owner: "a wrap", 2026-11-02); not yet shipped (cut `release/2` when the owner says) |
-| 3 | Hallow's End 6-17 to 6-20 (the Hollow King) | Not started |
-| 4 | Beige pumpkin | Idea |
-| 5 | Nightmare Pumpkin Patch | Idea (maps in `docs/archive/nightmare-worlds/`) |
-| 6 | Nightmare Foggy Hollow | Idea |
-| … | further nightmare worlds, etc. | Owner to order |
+| 3 | Hallow's End 6-17 to 6-20 (the Hollow King) **and** the Beige pumpkin | Not started (owner merged the old R3 and R4 on 2026-11-02) |
+| 4 | Nightmare Pumpkin Patch | Idea (maps in `docs/archive/nightmare-worlds/`) |
+| 5 | Nightmare Foggy Hollow | Idea |
+| … | further nightmare worlds, one per release | Owner to order |
 
 The owner may reorder or regroup releases at any time. When they do, update this table and the tags in the code together.
 
@@ -83,4 +82,5 @@ Run these after any change:
 - **Specs and plans** are in `docs/superpowers/specs/` and `docs/superpowers/plans/`. Rules are in `docs/GAME_DESIGN.md` §9 ("Hallow's End").
 - **Balance:** `tools/balance_bot.py`, 3 repeats, `--offset 0` and `-1`. The owner tunes from their own play. They use the Paint pumpkin, which the bot doesn't, and the bot can't read chameleon colours or tell the two mummy types apart. Record runs in `GAME_DESIGN.md`.
 - **Art:** Toy Plastic, drawn in code and baked. Never paint or use `shadowBlur` per frame.
+- **Beige pumpkin** (Release 3): tag it `__RELEASE__ >= 3`, like the Hallow's End levels 6-17 to 6-20.
 - **Hollow King** (boss of 6-20, Release 3): design and art in `docs/archive/hollow-king/`.

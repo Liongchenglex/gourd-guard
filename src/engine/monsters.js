@@ -51,7 +51,8 @@ export function spawnMonster(key, lane, minion, p){
   const { type, kind, T, variant } = resolveMonster(key);
   const mod = variant ? MODS[variant.mod] : null;
   if (type === 'boss' && kind === 'twintides' && !minion){   // the twins spawn as a pair on the sea row
-    const lanes = shuffle([...Array(COLS).keys()]).slice(0, 2);
+    const taken = G.monsters.filter(o => o.type === 'boss' && !o.dead).map(o => o.lane);   // a second pair takes other lanes
+    const lanes = shuffle([...Array(COLS).keys()].filter(l => !taken.includes(l))).slice(0, 2);
     const a = spawnMonster('boss', lanes[0], true, p), b = spawnMonster('boss', lanes[1], true, p);
     a.minion = b.minion = false; a.twin = b; b.twin = a;
     return a;

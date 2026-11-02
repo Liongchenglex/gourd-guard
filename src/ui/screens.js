@@ -6,6 +6,7 @@ import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestO
 import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO } from '../data/monsters.js';
 import { monsterIcon } from '../engine/render/monsters.js';
 import { poolKey, prebakeAsync } from '../engine/render/anim.js';
+import { hollowking } from '../engine/render/chars/hollowking.js';
 import { atlasKey } from '../engine/render/chars.js';
 import { SFX, ensureAudio, musicStop, musicSync, musicStart, applyVolumes } from '../engine/audio.js';
 import { beginEndless, beginNight, continueNight, continueState, makeDemo, makePreview, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow, useEmergency } from '../engine/game.js';
@@ -223,10 +224,10 @@ export function openPreview(n){
   }
   $('#pvBossBlock').hidden = !def.boss;
   const bb = $('#pvBoss'); bb.innerHTML = '';
-  for (const k of [def.boss, def.boss2].filter(Boolean)){   // one or two bosses
+  for (const k of [...new Set([def.boss, def.boss2].filter(Boolean))]){   // one or two bosses (two pairs of Twin Tides show once, with ×2)
     const d = document.createElement('div'); d.className = 'pv-ic big';
     d.appendChild(monsterIcon(k, def.boss2 ? 120 : 160, def.bossForm));
-    const sm = document.createElement('small'); sm.textContent = `${BOSS_NAMES[k]}${def.bossForm === 2 ? ', full form' : ''}`; d.appendChild(sm);
+    const sm = document.createElement('small'); sm.textContent = `${BOSS_NAMES[k]}${def.boss2 === def.boss ? ' ×2' : ''}${def.bossForm === 2 ? ', full form' : ''}`; d.appendChild(sm);
     bb.appendChild(d);
   }
   const pk = $('#pvPumpkins'); pk.innerHTML = '';   // only what this level unlocks (owner): a pumpkin or a tool
@@ -254,7 +255,8 @@ export function openPreview(n){
   $('#pvNewBlock').hidden = !pk.childElementCount;
   powerPick = null; $('#pvPowerInfo').hidden = true; renderPowers();
   const info = [];   // no counts here (owner): just what is special
-  if (def.boss) info.push(def.boss2 ? 'Two bosses at once. Monsters keep coming until both fall.' : 'Monsters keep coming until the boss falls.');
+  if (def.boss) info.push(def.boss2 === def.boss ? 'Two pairs of bosses. Monsters keep coming until all fall.' : def.boss2 ? 'Two bosses at once. Monsters keep coming until both fall.' : 'Monsters keep coming until the boss falls.');
+  if (def.frenzyAfterBoss) info.push('When the first pair falls, the jukebox drops.');
   if (def.levelNo === 10){ const nextName = WORLD_NAMES[def.worldNo]; info.push(`🎁 Reward: levels 11–20${nextName && WORLD_LEVELS[def.worldNo] && WORLD_LEVELS[def.worldNo].length ? ` and World ${def.worldNo + 1}: ${nextName}` : ''}.`); }
   if (def.levelNo === 20){ const perk = PERKS.find(p => perkNight(p) === n); if (perk) info.push(`🎁 Reward: ${perk.name}. ${perk.desc}`); }
   if (def.name) $('#pvSub').textContent = `${WORLD_NAMES[def.worldNo - 1]} · ${def.name}`;
@@ -295,7 +297,7 @@ function startPreviewedNight(){
   if (def.sea && !(n > 1 && levelFor(n - 1).sea)) cards.push({ key:'sea', icon:'🌊', title:'The sea row', text:SEA_INTRO });
   if (def.gust && !(n > 1 && levelFor(n - 1).gust)) cards.push({ key:'wind', icon:'🍂', title:'Wind', text:WIND_INTRO });
   for (const t of def.intro) if (!VARIANTS[t]) cards.push({ key:'m:' + t, icon:monsterIcon(t, 160), title:`New monster: ${MNAME[t] || t}`, text:MINTRO[t] || '' });   // returning variants get no card (owner)
-  for (const k of [def.boss, def.boss2].filter(Boolean)) cards.push({ key:`b:${k}:${def.bossForm}`, icon:monsterIcon(k, 200, def.bossForm), title:def.bossForm === 2 ? `${BOSS_NAMES[k]}, full form` : `Boss: ${BOSS_NAMES[k]}`, text:BOSS_INTRO[k][def.bossForm] });
+  for (const k of [...new Set([def.boss, def.boss2].filter(Boolean))]) cards.push({ key:`b:${k}:${def.bossForm}`, icon:monsterIcon(k, 200, def.bossForm), title:def.bossForm === 2 ? `${BOSS_NAMES[k]}, full form` : `Boss: ${BOSS_NAMES[k]}`, text:BOSS_INTRO[k][def.bossForm] });
   introQueue = cards.filter(c => !save.seenIntro[c.key]);
   introNext = () => beginNight(n);
   showNextIntro();
@@ -408,6 +410,13 @@ function nightmareBg(key){
   if (key){ if (bgBeforeNm == null) bgBeforeNm = typeof bgWorld === 'number' ? bgWorld : 0; setBg(sceneFull(key), 'nm:' + key); }
   else if (bgBeforeNm != null){ buildBg(bgBeforeNm); bgBeforeNm = null; }
 }
+/** The Hollow King as a shadow (Hallow's End book page): his archived drawing (render/chars/hollowking.js) filled with one dark tone, painted once per book open. */
+function hollowSilhouette(px){
+  const c = document.createElement('canvas'); c.width = c.height = px; const g = c.getContext('2d'), box = { x:-180, y:-280, w:360, h:360 }, k = px / box.w;
+  g.save(); g.scale(k, k); g.translate(-box.x, -box.y); hollowking(g, { idle:.3 }); g.restore();
+  g.globalCompositeOperation = 'source-in'; g.fillStyle = '#1c1028'; g.fillRect(0, 0, px, px);
+  return c;
+}
 /** The purple devil stamp on World 6 boss tiles: the nightmare bookmark's face (index.html #bBookmark .face) on a wax seal. */
 function devilStamp(){
   const d = document.createElement('div'); d.className = 'devilStamp';
@@ -454,7 +463,8 @@ export function openBook(wi, animate){
   $('#bkLore').textContent = bk.lore;
   const sc = worldScene(levels[0].theme, 456, 120), cv = $('#bkScene'); cv.width = sc.width; cv.height = sc.height; cv.getContext('2d').drawImage(sc, 0, 0);
   const bossKey = (levels.find(d => d.boss) || {}).boss, bossBox = $('#bkBoss'); bossBox.innerHTML = '';
-  if (bossKey){ bossBox.appendChild(monsterIcon(bossKey, 192, 1)); const cap = document.createElement('span'); cap.textContent = BOSS_NAMES[bossKey]; bossBox.appendChild(cap); }
+  if (__RELEASE__ >= 2 && wi === 5){ bossBox.appendChild(hollowSilhouette(192)); const cap = document.createElement('span'); cap.textContent = '???'; bossBox.appendChild(cap); }   // Hallow's End: the Hollow King, still a shadow (owner)
+  else if (bossKey){ bossBox.appendChild(monsterIcon(bossKey, 192, 1)); const cap = document.createElement('span'); cap.textContent = BOSS_NAMES[bossKey]; bossBox.appendChild(cap); }
   const grid = $('#bkLevels'); grid.innerHTML = '';
   let stars = 0, nextN = null;
   levels.forEach((d, i) => {

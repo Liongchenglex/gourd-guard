@@ -13,6 +13,7 @@ import { addChest, addSeeds, grant, toolSet } from './loot.js';
 import { GEAR } from '../data/shop.js';
 import { toolsForNight, highestOpen } from '../data/worlds/index.js';
 import { banner } from '../ui/hud.js';
+import { dropJukebox } from './spawner.js';
 
 export function launchGroup(ref){
   if (!ref || !ref.lit || !G || G.over) return;
@@ -191,7 +192,8 @@ export function kill(m){
   SFX.monsterDie(m.type);
   if (m.type === 'jukebox' && G.jukebox === m){   // the Frenzy is over: no more monsters past the night's total, the night's song comes back
     G.jukebox = null; G.jukeboxDone = true; G.shake = 0.8;
-    banner('The music stops!', 'Finish the stragglers.', 2); musicStart(MUSIC['w' + G.def.worldNo] ? 'w' + G.def.worldNo : 'play');
+    const bossUp = G.monsters.some(o => o.type === 'boss' && !o.dead);
+    banner('The music stops!', bossUp ? 'Now the boss.' : 'Finish the stragglers.', 2); musicStart(bossUp ? 'boss' : MUSIC['w' + G.def.worldNo] ? 'w' + G.def.worldNo : 'play');   // back to the boss track if a boss is still up
   }
   if (m.type === 'slime'){   // splits into blobs
     for (let i = 0; i < TYPES.slime.splits; i++){ const l = Math.max(0, Math.min(COLS - 1, m.lane + (i ? 1 : -1))); const bl = spawnMonster('blob', l, true, Math.max(0, m.p - 0.02)); bl.age = 0.2; }
@@ -200,7 +202,12 @@ export function kill(m){
   if (m.type === 'boss'){
     const twinAlive = G.monsters.some(o => o !== m && o.type === 'boss' && !o.dead);   // the other Twin Tide, or the other boss of a two-boss night
     if (!twinAlive && G.mode === 'story' && G.def && (G.def.levelNo === 10 || G.def.levelNo === 20)){ addChest(G.def.levelNo === 20 ? 'boss' : 'normal', m.kind); addFloat(G.def.levelNo === 20 ? 'Boss chest!' : 'Treasure chest!', m.x, mY(m) - m.r - 70, '#ffd35a', 22, 2); if (G.vfx) G.vfx.push({ kind:'loot', item:G.def.levelNo === 20 ? 'bossChest' : 'chest', x:m.x, y:mY(m) - 20, t:0, dur:1.8 }); }
-    if (twinAlive && m.kind !== 'twintides' && G.def && G.def.boss2){ G.shake = 1; banner(`${BOSS_NAMES[m.kind]} falls!`, 'One boss left. Monsters keep coming until it falls.', 2.4); SFX.bossSfx(m.kind, 'die'); }
+    const groupDown = m.kind !== 'twintides' || (m.twin && m.twin.dead);   // a whole boss is down (both of a Twin Tides pair)
+    if (twinAlive && groupDown && G.def && G.def.boss2){
+      G.shake = 1; SFX.bossSfx(m.kind, 'die');
+      if (m.kind === 'twintides') banner('One pair falls!', 'One pair left. Monsters keep coming until it falls.', 2.4); else banner(`${BOSS_NAMES[m.kind]} falls!`, 'One boss left. Monsters keep coming until it falls.', 2.4);
+      if (G.def.frenzy && G.def.frenzyAfterBoss && !G.jukebox && !G.jukeboxDone) dropJukebox();   // 6-16: the first pair down drops the jukebox
+    }
     if (!twinAlive){ G.bossDead = true; G.shake = 1.2; banner(`${BOSS_NAMES[m.kind]} ${m.kind === 'twintides' ? 'fall' : 'falls'}!`, G.mode === 'endless' ? 'The night goes on…' : 'Finish the stragglers and grab the pumpkins it dropped!', 2.4); SFX.bossSfx(m.kind, 'die'); }
   }
 }

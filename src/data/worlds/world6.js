@@ -64,6 +64,25 @@ export default [
   { world:6, level:12, theme:5, name:'Court of Hexes', pattern:1, graves:0, total:20, interval:3.2, spMul:0.95, boss:'hexwitch', boss2:'vampirecount', bossForm:1, gust:{ every:22, dirs:['left', 'right'] }, bossGap:2.0,
     pool:[['witch', 2], ['rchameleon', 3], ['mirror', 2], ['vampire', 2], ['knight', 3], ['archer', 2], ['bulwark', 1]],
     gravesLayout:[[0, 0], [0, 6], [4, 0], [4, 6]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
+  // 6-13: Blind Night: everything is hard to aim at: wraiths fade, wisps drift, sailors stagger, fogwalkers hide the rest. Fog down
+  // lanes 1 and 5, witch wind, Frenzy.
+  { world:6, level:13, theme:5, name:'Blind Night', pattern:2, graves:0, total:22, interval:3.0, spMul:0.95, boss:null, bossForm:1, gust:{ every:22, dirs:['left', 'right'] }, frenzy:true,
+    pool:[['wraith', 4], ['wisp', 4], ['sailor', 3], ['fogwalker', 3]], fogCols:[1, 5],
+    gravesLayout:[[0, 3], [2, 1], [2, 5], [4, 3]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
+  // 6-14: Turncoat Tide 2: 6-10 with true chameleons (only their colour hurts) in place of the reverse ones, and puddle divers. Frenzy.
+  { world:6, level:14, theme:5, name:'Turncoat Tide 2', pattern:3, graves:0, total:22, interval:3.0, spMul:0.95, boss:null, bossForm:1, gust:{ every:22, dirs:['left', 'right'] }, frenzy:true,
+    pool:[['chameleon', 6], ['diver', 4]], fogCols:[0, 6], sea:true, shoreFrac:0.44, castles:{ n:7, hp:8 }, castlesLayout:ROW(0.5),
+    gravesLayout:[[0, 2], [0, 4], [4, 2], [4, 4]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
+  // 6-15: Heavy Guests at the Door: 6-11's tide with the heavy ones: bulwark knights, shell turtles and puddle divers. Frenzy.
+  { world:6, level:15, theme:5, name:'Heavy Guests at the Door', pattern:4, graves:0, total:18, interval:3.4, spMul:0.95, boss:null, bossForm:1, gust:{ every:22, dirs:['left', 'right'] }, frenzy:true,
+    pool:[['bulwark', 3], ['turtle', 3], ['diver', 4]], sea:true, shore:4,
+    gravesLayout:[[2, 0], [2, 6]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
+  // 6-16: two pairs of Twin Tides at once (owner): each pair revives on its own; when the first pair goes down the jukebox drops.
+  // First form, full health; minions from the Drowned Marsh. The finale of Release 2.
+  { world:6, level:16, theme:5, name:'Double Tide', pattern:0, graves:0, total:20, interval:3.2, spMul:0.95, boss:'twintides', boss2:'twintides', bossForm:1, bossGap:2.0, gust:{ every:22, dirs:['left', 'right'] },
+    frenzy:true, frenzyAfterBoss:true, sea:true, shore:2,
+    pool:[['sailor', 4], ['slime', 3], ['diver', 3]],
+    gravesLayout:[[1, 0], [1, 6], [3, 0], [3, 6]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
 ];
 
 /** Releases (docs/RELEASES.md, owner 2026-11-02): 6-1 to 6-16 ship in Release 2, 6-17 to 6-20 in Release 3. */

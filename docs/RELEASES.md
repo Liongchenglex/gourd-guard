@@ -17,7 +17,7 @@ The owner builds many ideas ahead of the stores and wants to see all of them on 
 | Release | Content | Status |
 |---|---|---|
 | 1 | Worlds 1–5 | In the stores (branch `r1-ground-rules`) |
-| 2 | Hallow's End 6-1 to 6-16 | 6-1 to 6-12 built on `dev` |
+| 2 | Hallow's End 6-1 to 6-16 | Built on `dev` (2026-11-02); owner playtesting |
 | 3 | Hallow's End 6-17 to 6-20 (the Hollow King) | Not started |
 | 4 | Beige pumpkin | Idea |
 | 5 | Nightmare Pumpkin Patch | Idea (maps in `docs/archive/nightmare-worlds/`) |

@@ -400,6 +400,49 @@ def check_release(browser, url, on):
     page.close()
 
 
+def check_6_13_to_16(browser, url, on):
+    if not on: return
+    page, errors = open_page(browser, url)
+    set_stars(page, {n: 3 for n in range(1, 116)})
+    defs = page.evaluate("() => window.__gg.WORLD_LEVELS[5].slice(12, 16).map(d => ({ name:d.name, pool:d.pool.map(e => e[0]).sort(), frenzy:!!d.frenzy, fogCols:d.fogCols || [], shore:d.shore || 0, shoreFrac:d.shoreFrac || 0, castles:(d.castlesLayout || []).length, gust:!!d.gust, boss:d.boss || null, boss2:d.boss2 || null, after:!!d.frenzyAfterBoss }))")
+    if len(defs) < 4:
+        ok(False, f'6-13 to 6-16 exist ({len(defs)} found)'); page.close(); return
+    a, b, c, d = defs
+    ok(a['name'] == 'Blind Night' and a['pool'] == ['fogwalker', 'sailor', 'wisp', 'wraith'] and a['frenzy'] and a['fogCols'] == [1, 5] and a['gust'], f'6-13 Blind Night {a}')
+    ok(b['name'] == 'Turncoat Tide 2' and b['pool'] == ['chameleon', 'diver'] and b['frenzy'] and 0.4 <= b['shoreFrac'] < 0.5 and b['castles'] == 7 and b['fogCols'] == [0, 6], f'6-14 Turncoat Tide 2 {b}')
+    ok(c['name'] == 'Heavy Guests at the Door' and c['pool'] == ['bulwark', 'diver', 'turtle'] and c['frenzy'] and c['shore'] == 4, f'6-15 Heavy Guests at the Door {c}')
+    ok(d['boss'] == 'twintides' and d['boss2'] == 'twintides' and d['after'] and d['pool'] == ['diver', 'sailor', 'slime'], f'6-16: two pairs of Twin Tides, jukebox after the first pair {d}')
+    start(page, 116)
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }"); time.sleep(0.8)
+    tw = page.evaluate(f"() => {{ const b = {BOSSES}; return [b.length, b.every(m => m.kind === 'twintides' && m.twin && m.twin.twin === m), new Set(b.map(m => m.lane)).size]; }}")
+    ok(tw == [4, True, 4], f'6-16 brings two linked pairs of Twin Tides in four different lanes {tw}')
+    ok(page.evaluate(f"() => !{JB}.length"), 'no jukebox while both pairs are up')
+    w = page.evaluate("() => parseFloat(document.querySelector('#prog').style.width)")
+    ok(9 <= w <= 12, f'with all four serpents at full health the boss bar starts at 10% ({w:.0f}%)')
+    page.evaluate(f"() => {{ const m = {BOSSES}[0], o = m.twin; for (const x of [m, o]) {{ x.lastHit = 0; window.__gg.damage(x, 999); }} }}"); time.sleep(0.6)
+    ok(page.evaluate(f"() => {BOSSES}.length") == 2 and not page.evaluate("() => window.__gg.G.bossDead"), 'felling one pair leaves the other pair up')
+    ok(page.evaluate(f"() => {JB}.length") == 1, 'the jukebox drops when the first pair goes down')
+    c2 = page.evaluate("() => window.__gg.continueState()")
+    page.evaluate("(c) => window.__gg.continueNight(c)", c2); time.sleep(0.4)
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = Math.max(G.spawned, Math.ceil(G.def.total * 0.4)); G.spawnTimer = 0; }"); time.sleep(0.8)
+    ok(page.evaluate(f"() => {BOSSES}.length") == 2, f"a continued night brings back only the pair still up ({page.evaluate(f'() => {BOSSES}.length')} serpents)")
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_book_king(browser, url, on):
+    page, errors = open_page(browser, url)
+    set_stars(page, {n: 3 for n in range(1, 101)})
+    page.evaluate("() => window.__gg.openBook(%d)" % (5 if on else 0)); time.sleep(0.8)
+    cap = page.evaluate("() => { const s = document.querySelector('#bkBoss span'); return s && s.textContent; }")
+    ok(cap == ('???' if on else 'The Gravekeeper'), f"the book's boss page shows {cap!r} ({'the Hollow King as a shadow' if on else 'world 1 unchanged'})")
+    if on:
+        dark = page.evaluate("() => { const c = document.querySelector('#bkBoss canvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 200) n++; return n; }")
+        ok(dark > 3000, f'his silhouette is drawn ({dark} solid pixels)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 def check_owner_1031(browser, url, on):
     if not on: return
     page, errors = open_page(browser, url)
@@ -418,7 +461,7 @@ def check_owner_1031(browser, url, on):
 
 
 CHECKS = {
-    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst, 'check_6_5_to_7': check_6_5_to_7, 'check_double_boss': check_double_boss, 'check_emergency': check_emergency, 'check_6_9_to_12': check_6_9_to_12, 'check_wind': check_wind, 'check_divers_hide': check_divers_hide, 'check_release': check_release,
+    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst, 'check_6_5_to_7': check_6_5_to_7, 'check_double_boss': check_double_boss, 'check_emergency': check_emergency, 'check_6_9_to_12': check_6_9_to_12, 'check_wind': check_wind, 'check_divers_hide': check_divers_hide, 'check_release': check_release, 'check_6_13_to_16': check_6_13_to_16, 'check_book_king': check_book_king,
 }
 
 

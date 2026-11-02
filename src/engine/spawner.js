@@ -50,14 +50,18 @@ export function storySpawn(dt){
     G.spawnTimer = d.interval * gap * (keepComing && d.bossGap ? d.bossGap : 1) * rnd(0.6, 1.4);   // bossGap: slower spawns while the boss is up (tuning, 2026-10-01)
     if (Math.random() < (keepComing && d.bossGap ? burst / 2 : burst)) G.spawnTimer *= 0.3;
   }
-  if (d.frenzy && !G.jukebox && !G.jukeboxDone && G.spawned >= Math.floor(d.total * (d.frenzyAt || 0.8))) dropJukebox();
+  if (d.frenzy && !d.frenzyAfterBoss && !G.jukebox && !G.jukeboxDone && G.spawned >= Math.floor(d.total * (d.frenzyAt || 0.8))) dropJukebox();
   if (d.boss2 && !G.bossSpawned && (G.spawned >= Math.floor(d.total * 0.4) || (G.bossHp && G.bossHp.length))){   // two bosses at once (World 6)
     G.bossSpawned = true;
-    const kinds = [d.boss, d.boss2].filter(k => !G.bossKinds || G.bossKinds.includes(k));   // a continued night brings back only those still standing
-    kinds.forEach(k => { const m = spawnMonster('boss:' + k); if (G.bossHp && G.bossKinds){ const i = G.bossKinds.indexOf(k); if (i >= 0) m.hp = Math.min(m.maxHp, G.bossHp[i]); } });
-    G.bossMax = [d.boss, d.boss2].reduce((a, k) => a + (d.bossForm === 2 ? TYPES[k].form2.hp : TYPES[k].hp), 0);   // the boss bar spans both, even when one is already down
+    const left = {}, hps = {};   // a continued night brings back only those still standing (a Twin Tides pair counts as two)
+    if (G.bossKinds) G.bossKinds.forEach((k, i) => { left[k] = (left[k] || 0) + 1; (hps[k] = hps[k] || []).push(G.bossHp[i]); });
+    const kinds = [d.boss, d.boss2].filter(k => { const per = k === 'twintides' ? 2 : 1; if (!G.bossKinds) return true; if ((left[k] || 0) < per) return false; left[k] -= per; return true; });
+    kinds.forEach(k => { const m = spawnMonster('boss:' + k); for (const b of m.twin ? [m, m.twin] : [m]) if (hps[k] && hps[k].length) b.hp = Math.min(b.maxHp, hps[k].shift()); });
+    G.bossMax = [d.boss, d.boss2].reduce((a, k) => a + (d.bossForm === 2 ? TYPES[k].form2.hp : TYPES[k].hp) * (k === 'twintides' ? 2 : 1), 0);   // the boss bar spans both (a Twin Tides pair counts twice), even when one is already down
     G.bossHp = null; G.bossKinds = null;
-    banner(`${BOSS_NAMES[d.boss]} and ${BOSS_NAMES[d.boss2]}!`, 'Two bosses at once. Monsters keep coming until both fall.', 3); SFX.bossAlert();
+    if (d.boss === d.boss2) banner(`Two pairs of ${BOSS_NAMES[d.boss].replace(/^The /, '')}!`, 'Each pair rises again on its own. Monsters keep coming until all fall.', 3);
+    else banner(`${BOSS_NAMES[d.boss]} and ${BOSS_NAMES[d.boss2]}!`, 'Two bosses at once. Monsters keep coming until both fall.', 3);
+    SFX.bossAlert();
     setTimeout(() => { for (const k of kinds) SFX.bossSfx(k, 'arrive'); }, 900); setTimeout(() => { if (G && !G.over && G.mode === 'story') musicStart('boss'); }, 1600);
   } else if (d.boss && !G.bossSpawned && (G.spawned >= Math.floor(d.total * 0.4) || (G.bossHp && G.bossHp.length))){   // a continued night brings its hurt boss straight back
     const b = spawnMonster('boss'); G.bossSpawned = true;

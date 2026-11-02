@@ -524,6 +524,53 @@ def check_6_17_18(browser, url, on):
 CHECKS.update({'check_r3_absent': check_r3_absent, 'check_6_17_18': check_6_17_18})
 
 
+def marks(page):
+    return page.evaluate("() => [...document.querySelectorAll('.jbMark')].map(e => [Math.round(parseFloat(e.style.left)), e.classList.contains('live'), e.classList.contains('done')])")
+
+
+def check_two_jukebox(browser, url, on):
+    if not R3:
+        return
+    page, errors = open_page(browser, url)
+    set_stars(page, {n: 3 for n in range(1, 119)})
+    start(page, 104)
+    ok(marks(page) == [], f'6-4 (Release 2) shows no jukebox marks {marks(page)}')
+    start(page, 119)
+    d = page.evaluate("() => { const d = window.__gg.G.def, d4 = window.__gg.WORLD_LEVELS[5][3]; return { label:d.label, at:d.frenzyAt, pool:JSON.stringify(d.pool), pool4:JSON.stringify(d4.pool), name:d.name }; }")
+    ok(d['label'] == '6-19' and d['name'] == 'A Revisit 2', f"6-19 A Revisit 2 exists {d['label']} {d['name']}")
+    ok(d['at'] == [0.5, 1], f"two jukebox drops at 50% and 100% {d['at']}")
+    ok(d['pool'] == d['pool4'], "6-19 has 6-4's monsters")
+    ok(grave_cells(page) == sorted(FACE), f'6-19 graves are a jack-o\'-lantern face {grave_cells(page)}')
+    time.sleep(0.4)
+    ok(marks(page) == [[50, False, False], [100, False, False]], f'the spawn bar shows marks at 50% and 100% {marks(page)}')
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = 12; G.spawnTimer = 0; }"); time.sleep(0.6)
+    ok(page.evaluate(f"() => {JB}.length") == 1, 'the first jukebox drops halfway')
+    time.sleep(0.4)
+    ok(marks(page)[0][1], f'its mark is live while it stands {marks(page)}')
+    s = page.evaluate("() => window.__gg.G.spawned")
+    time.sleep(2.5)
+    ok(page.evaluate("() => window.__gg.G.spawned") == s, f'Frenzy monsters do not count toward the night ({s})')
+    ok(page.evaluate("() => window.__gg.G.monsters.some(m => !m.dead && m.minion && m.type !== 'jukebox')"), 'the Frenzy brings bonus monsters')
+    c = page.evaluate(f"() => {{ {JB}[0].hp = 9; return window.__gg.continueState(); }}")
+    ok(c['jukebox'] == {'next': 1, 'hp': 9}, f"the continue snapshot keeps the halfway jukebox {c['jukebox']}")
+    page.evaluate("(c) => window.__gg.continueNight(c)", c); time.sleep(0.6)
+    ok(page.evaluate(f"() => {JB}.map(m => m.hp)") == [9], 'a continued night brings the halfway jukebox back')
+    page.evaluate(f"() => {{ const m = {JB}[0]; m.lastHit = 0; window.__gg.damage(m, 999); }}"); time.sleep(0.4)
+    ok(page.evaluate("() => window.__gg.G.jukeboxDone === false && window.__gg.G.jukebox === null"), 'after the first jukebox the Frenzy is not over')
+    ok(marks(page)[0][2] and not marks(page)[0][1], f'its mark shows done {marks(page)}')
+    s = page.evaluate("() => { window.__gg.G.spawnTimer = 0; return window.__gg.G.spawned; }"); time.sleep(0.5)
+    ok(page.evaluate("() => window.__gg.G.spawned") > s, 'normal spawning resumes and counts again')
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = G.def.total; G.spawnTimer = 0; }"); time.sleep(0.6)
+    ok(page.evaluate(f"() => {JB}.length") == 1, 'the second jukebox drops at the end')
+    page.evaluate(f"() => {{ const m = {JB}[0]; m.lastHit = 0; window.__gg.damage(m, 999); }}"); time.sleep(0.3)
+    ok(page.evaluate("() => window.__gg.G.jukeboxDone === true"), 'smashing the second ends the Frenzy')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_two_jukebox': check_two_jukebox})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

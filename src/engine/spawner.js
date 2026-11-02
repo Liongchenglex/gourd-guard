@@ -20,8 +20,13 @@ export function pickFrom(pool){
 }
 
 /** Frenzy (World 6, owner 2026-10-31): the jukebox drops near the end of the night; its song plays until pumpkins smash it. */
+/** The night's jukebox drop points as fractions of its total: `frenzyAt` is one number (default 0.8) or, from Release 3, a list (6-19: [0.5, 1]). */
+export const jukeboxPoints = d => __RELEASE__ >= 3 && Array.isArray(d.frenzyAt) ? d.frenzyAt : [d.frenzyAt || 0.8];
+/** A standing jukebox that is not the night's last: the monsters it brings are a bonus and do not count toward the total (Release 3). */
+const midJukebox = () => __RELEASE__ >= 3 && G.jukebox && !G.jukebox.dead && G.jbNext < jukeboxPoints(G.def).length;
 export function dropJukebox(hp){
   G.jukebox = spawnJukebox(hp);
+  if (hp == null) G.jbNext = (G.jbNext || 0) + 1;   // a fresh drop uses up one drop point (a continued night's jukebox was counted already)
   if (hp == null){ G.burstLeft = FRENZY_BURST[0] + Math.floor(Math.random() * (FRENZY_BURST[1] - FRENZY_BURST[0] + 1)); G.burstT = 0; }   // a fresh drop brings a burst (not a continued night's)
   banner('Frenzy!', 'Smash the jukebox to stop the monsters.', 2.4); SFX.bossAlert(); musicStart('frenzy');
 }
@@ -31,7 +36,8 @@ function spawnOne(d){
   const counts = G.spawnCounts = G.spawnCounts || {};
   const pool = d.caps ? d.pool.filter(([t]) => (counts[t] || 0) < (d.caps[t] == null ? Infinity : d.caps[t])) : d.pool;   // per-type caps (owner: "only 2 haulers")
   const t = G.spawned >= 1 && G.introQueue.length ? G.introQueue.shift() : pickFrom(pool.length ? pool : d.pool);
-  counts[t] = (counts[t] || 0) + 1; spawnMonster(t);
+  counts[t] = (counts[t] || 0) + 1; const m = spawnMonster(t);
+  if (midJukebox()){ m.minion = true; return; }   // 6-19: the halfway Frenzy's monsters are extra; the bar waits at the mark
   G.spawned++;
 }
 
@@ -50,7 +56,10 @@ export function storySpawn(dt){
     G.spawnTimer = d.interval * gap * (keepComing && d.bossGap ? d.bossGap : 1) * rnd(0.6, 1.4);   // bossGap: slower spawns while the boss is up (tuning, 2026-10-01)
     if (Math.random() < (keepComing && d.bossGap ? burst / 2 : burst)) G.spawnTimer *= 0.3;
   }
-  if (d.frenzy && !d.frenzyAfterBoss && !G.jukebox && !G.jukeboxDone && G.spawned >= Math.floor(d.total * (d.frenzyAt || 0.8))) dropJukebox();
+  if (d.frenzy && !d.frenzyAfterBoss && !G.jukebox && !G.jukeboxDone){
+    const pts = jukeboxPoints(d), i = G.jbNext || 0;
+    if (i < pts.length && G.spawned >= Math.floor(d.total * pts[i])) dropJukebox();
+  }
   if (d.boss2 && !G.bossSpawned && (G.spawned >= Math.floor(d.total * 0.4) || (G.bossHp && G.bossHp.length))){   // two bosses at once (World 6)
     G.bossSpawned = true;
     const left = {}, hps = {};   // a continued night brings back only those still standing (a Twin Tides pair counts as two)

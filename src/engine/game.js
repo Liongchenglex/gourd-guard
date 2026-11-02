@@ -16,7 +16,7 @@ import { takeSack, addChest } from './loot.js';
 import { bgWorld, buildBg } from './render/sprites.js';
 import { poolKey, prebake } from './render/anim.js';
 import { atlasKey } from './render/chars.js';
-import { endlessSpawn, storySpawn, dropJukebox } from './spawner.js';
+import { endlessSpawn, storySpawn, dropJukebox, jukeboxPoints } from './spawner.js';
 import { COLS, CS, FENCE_Y, FIELD_TOP, G, GY, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, setG, setGest, state, walls, GX, FIELD_BOT, HOLD_TIME_QUICK } from './state.js';
 import { rnd, shuffle, clamp, TAU } from './util.js';
 import { initWalls, damageWall } from './walls.js';
@@ -83,7 +83,7 @@ export function startGame(mode, n, loadout){
     monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], groups:{},
     t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
-    loot:{ chests:0, seeds:0 }, chestDropped:false, continued:false, sackT:0, jukebox:null, jukeboxDone:false,
+    loot:{ chests:0, seeds:0 }, chestDropped:false, continued:false, sackT:0, jukebox:null, jukeboxDone:false, jbNext:0,
   });
   if (mode === 'story' && takeSack()) G.sackT = SACK.spawnAt;
   if (def) prebake([...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), 'ghoul']);   // bake this level's sprite strips now, not on first sight
@@ -469,7 +469,7 @@ export function continueState(){
   const remaining = alive + Math.max(0, g.def.total - g.spawned);
   const living = g.monsters.filter(m => !m.dead && m.type === 'boss'), bosses = living.map(m => Math.max(1, Math.ceil(m.hp)));
   return { n:g.n, loadout:g.loadout.slice(), q:JSON.parse(JSON.stringify(g.q)), remaining, bossSpawned:g.bossSpawned, bossDead:g.bossDead, bossHp:bosses, bossKinds:g.def.boss2 ? living.map(m => m.kind) : null,
-    jukebox:{ done:g.jukeboxDone, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null } };   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
+    jukebox:{ next:g.jbNext || 0, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null } };   // next: drop points already used (one per jukebox dropped)   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
 export function continueNight(c){
@@ -477,6 +477,10 @@ export function continueNight(c){
   G.continued = true; if (c.q) G.q = c.q;   // quest progress carries into the continued night
   G.spawned = G.resolved = Math.max(0, G.def.total - c.remaining);   // the progress bar picks up where the lost night left off
   if (c.bossSpawned){ G.bossDead = c.bossDead; G.bossHp = c.bossHp.slice(); G.bossKinds = c.bossKinds ? c.bossKinds.slice() : null; if (c.bossDead) G.bossSpawned = true; }
-  if (c.jukebox){ G.jukeboxDone = c.jukebox.done; if (c.jukebox.hp != null) dropJukebox(c.jukebox.hp); }
+  if (c.jukebox){
+    const next = c.jukebox.next != null ? c.jukebox.next : c.jukebox.done ? 1 : 0;   // an older snapshot said only "done"
+    G.jbNext = next; G.jukeboxDone = c.jukebox.hp == null && next >= jukeboxPoints(G.def).length;
+    if (c.jukebox.hp != null) dropJukebox(c.jukebox.hp);
+  }
   banner('Night continues', `${c.remaining} monster${c.remaining === 1 ? '' : 's'} left${c.bossSpawned && !c.bossDead ? ', and the boss is still hurt' : ''}. Hold the walls!`, 3);
 }

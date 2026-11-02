@@ -43,7 +43,8 @@
  * @property {string} [boss2]          a second boss on the same night (World 6, 6-8): both arrive together; monsters keep coming until both fall
  * @property {boolean} [frenzy]         a Frenzy jukebox drops near the end; monsters keep coming until pumpkins smash it (World 6)
  * @property {boolean} [frenzyAfterBoss]  boss levels with `frenzy`: the jukebox drops when the first boss (or Twin Tides pair) falls, not at `frenzyAt`
- * @property {number} [frenzyAt]        fraction of `total` spawned when the jukebox drops (default 0.8)
+ * @property {number|number[]} [frenzyAt]  fraction of `total` spawned when the jukebox drops (default 0.8); from Release 3 a list of drop points
+ *   (6-19: [0.5, 1]): every jukebox but the last brings extra monsters that do not count toward `total`, and the spawn bar shows a mark per point
  * @property {number} [frenzyHp]        jukebox health (default: the Loot Sack's rule for the world)
  */
 

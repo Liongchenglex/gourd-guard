@@ -13,7 +13,7 @@ import { addChest, addSeeds, grant, toolSet } from './loot.js';
 import { GEAR } from '../data/shop.js';
 import { toolsForNight, highestOpen } from '../data/worlds/index.js';
 import { banner } from '../ui/hud.js';
-import { dropJukebox } from './spawner.js';
+import { dropJukebox, jukeboxPoints } from './spawner.js';
 
 export function launchGroup(ref){
   if (!ref || !ref.lit || !G || G.over) return;
@@ -191,9 +191,10 @@ export function kill(m){
   else if (reward === 'weapon') dropWeapon(m);
   SFX.monsterDie(m.type);
   if (m.type === 'jukebox' && G.jukebox === m){   // the Frenzy is over: no more monsters past the night's total, the night's song comes back
-    G.jukebox = null; G.jukeboxDone = true; G.shake = 0.8;
+    const more = __RELEASE__ >= 3 && (G.jbNext || 0) < jukeboxPoints(G.def).length;   // 6-19: a halfway jukebox; another comes at the end
+    G.jukebox = null; G.jukeboxDone = !more; G.shake = 0.8;
     const bossUp = G.monsters.some(o => o.type === 'boss' && !o.dead);
-    banner('The music stops!', bossUp ? 'Now the boss.' : 'Finish the stragglers.', 2); musicStart(bossUp ? 'boss' : MUSIC['w' + G.def.worldNo] ? 'w' + G.def.worldNo : 'play');   // back to the boss track if a boss is still up
+    banner('The music stops!', more ? 'The night goes on.' : bossUp ? 'Now the boss.' : 'Finish the stragglers.', 2); musicStart(bossUp ? 'boss' : MUSIC['w' + G.def.worldNo] ? 'w' + G.def.worldNo : 'play');   // back to the boss track if a boss is still up
   }
   if (m.type === 'slime'){   // splits into blobs
     for (let i = 0; i < TYPES.slime.splits; i++){ const l = Math.max(0, Math.min(COLS - 1, m.lane + (i ? 1 : -1))); const bl = spawnMonster('blob', l, true, Math.max(0, m.p - 0.02)); bl.age = 0.2; }

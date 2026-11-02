@@ -21,6 +21,16 @@ export function banner(big, sub, dur){
 
 export let hudSig = '';
 
+/** 6-19 (Release 3): a jukebox mark on the spawn bar at each drop point; it glows while that jukebox stands and dims once smashed. */
+let marksFor = null;
+function jukeboxMarks(){
+  const bar = $('#prog').parentNode, d = G.mode === 'story' && G.def, pts = d && d.frenzy && Array.isArray(d.frenzyAt) ? d.frenzyAt : null;
+  if (marksFor !== G){ marksFor = G; for (const e of bar.querySelectorAll('.jbMark')) e.remove(); if (pts) pts.forEach(f => { const e = document.createElement('b'); e.className = 'jbMark'; e.style.left = f * 100 + '%'; e.setAttribute('aria-hidden', 'true'); bar.appendChild(e); }); }
+  if (!pts) return;
+  const used = G.jbNext || 0, standing = G.jukebox && !G.jukebox.dead;
+  bar.querySelectorAll('.jbMark').forEach((e, i) => { e.classList.toggle('live', standing && i === used - 1); e.classList.toggle('done', i < used && !(standing && i === used - 1)); });
+}
+
 export function updateHud(force){
   if (!G || G.mode === 'demo') return;
   const coins = save.coins + G.coins;
@@ -41,6 +51,7 @@ export function updateHud(force){
     qHtml = questsFor(G.def).slice(1).map(q => { const L = questLive(q); return `<span class="qt${L.done ? ' ok' : L.failed ? ' bad' : ''}"><b>${L.txt}</b> ${questShort(q)}</span>`; }).join('');
   }
   const sig = [questOn ? qHtml : '', wf, coins, seeds, Math.round(prog * 100), label, save.fw, save.repair, save.buster, save.lantern, save.mine, save.bomb, save.scarecrow, save.emergency, G.aim, tools.join(','), Math.round(G.fogClear || 0)].join('|');
+  if (__RELEASE__ >= 3) jukeboxMarks();   // cheap: rebuilt once per night, two class toggles otherwise
   if (sig === hudSig && !force) return;
   const coinsChanged = hudSig && hudSig.split('|')[1] !== String(coins);
   hudSig = sig;

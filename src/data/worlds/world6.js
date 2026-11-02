@@ -100,6 +100,12 @@ export default [
     { world:6, level:18, theme:5, name:'Bad Medicine', pattern:2, graves:0, total:22, interval:3.0, spMul:0.95, boss:null, bossForm:1, gust:{ every:22, dirs:['left', 'right'] }, frenzy:true,
       pool:[['doctor', 5], ['vampire', 4]], fog:[[0, 0.8]], castles:{ n:21, hp:8 }, castlesLayout:[...ROW(0.3), ...ROW(0.5), ...ROW(0.7)],
       gravesLayout:DIAMOND, quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
+    // 6-19: A Revisit 2 (owner): 6-4's level-16 monsters, castle row, puddles and wind, with two Frenzy rounds: a jukebox halfway
+    // (its monsters are extra; the spawn bar waits at the mark until it is smashed) and another at the end. Graves: a jack-o'-lantern grin.
+    { world:6, level:19, theme:5, name:'A Revisit 2', pattern:3, graves:0, total:24, interval:3.0, spMul:0.95, boss:null, bossForm:1, frenzy:true, frenzyAt:[0.5, 1],
+      pool:[['firemummy', 3], ['fogwalker', 3], ['witch', 3], ['bulwark', 2], ['turtle', 3]], puddles:3,
+      castles:{ n:7, hp:8 }, castlesLayout:ROW(0.5), gust:{ every:22, dirs:['left', 'right'] },
+      gravesLayout:FACE, quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
   ] : []),
 ];
 

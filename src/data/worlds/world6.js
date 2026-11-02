@@ -13,9 +13,9 @@ export default [
     pool:[['knight', 5], ['archer', 4], ['diver', 5], ['turtle', 2]], fog:[[0.2, 0.8]], puddlesLayout:[[1, 0.45], [3, 0.6], [5, 0.4]],
     castles:{ n:7, hp:12 }, castlesLayout:ROW(0.9), gravesLayout:[[1, 2], [1, 3], [1, 4], [2, 2], [2, 4], [3, 2], [3, 4]],
     quests:[['noTools'], ['wallMin', 50]], unlockPumpkins:[], unlockGear:[], intro:[] },
-  // 6-2: the sea covers the top half; fogwalkers, witches, mirror sprites and knights surface at the shoreline.
+  // 6-2: the sea covers the top half; fogwalkers, mirror sprites and knights surface at the shoreline, puddle divers lurk in the sea (owner: divers, not witches).
   { world:6, level: 2, theme:5, name:'Timing!', pattern:1, graves:0, total:24, interval:2.85, spMul:1.0, boss:null, bossForm:1,
-    pool:[['fogwalker', 3], ['witch', 3], ['mirror', 4], ['knight', 5]], sea:true, shoreFrac:0.5, gravesLayout:PILLARS,
+    pool:[['fogwalker', 3], ['diver', 3], ['mirror', 4], ['knight', 5]], sea:true, shoreFrac:0.5, gravesLayout:PILLARS,
     quests:[['noTools'], ['bunch5', 2]], unlockPumpkins:[], unlockGear:[], intro:[] },
   // 6-3: mummies and flaming mummies (Fire and Ice both locked in); fog over all but the two rows by the fence, a castle row
   // hidden in it, and witch wind. Same graves as 6-2.

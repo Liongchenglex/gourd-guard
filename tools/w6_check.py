@@ -380,6 +380,8 @@ def check_divers_hide(browser, url, on):
     if not on: return
     page, errors = open_page(browser, url)
     start(page, 110)
+    pool62 = page.evaluate("() => window.__gg.WORLD_LEVELS[5][1].pool.map(e => e[0]).sort()")
+    ok(pool62 == ['diver', 'fogwalker', 'knight', 'mirror'], f'6-2 has Puddle Divers in place of Witches {pool62}')
     walkers = page.evaluate("() => { let n = 0; for (let i = 0; i < 20; i++){ const m = window.__gg.spawnMonster('diver'); if (m.walker) n++; } return n; }")
     ok(walkers == 0, f'on 6-10 every Puddle Diver hides in the sea, none walk ({walkers} of 20 walked)')
     ok(not errors, f'no page errors {errors[:2]}')

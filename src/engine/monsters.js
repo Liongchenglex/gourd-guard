@@ -2,7 +2,8 @@ import { endGame, shoreP } from './game.js';
 import { SACK } from '../data/economy.js';
 import { resolveMatches } from './board.js';
 import { TYPES, MODS, VARIANTS } from '../data/monsters.js';
-import { BURN_EVERY, RAINBOW } from '../data/pumpkins.js';
+import { BURN_EVERY, RAINBOW, GLUE_SLOW } from '../data/pumpkins.js';
+import { glueStep } from './glue.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
 import { PTYPES } from '../data/pumpkins.js';
@@ -168,6 +169,10 @@ export function updateMonster(m, dt){
   let sp = m.sp;
   if (m.frozenT > 0){ m.frozenT -= dt; sp = 0; }
   else if (m.slowT > 0){ m.slowT -= dt; sp *= 0.5; }
+  if (__RELEASE__ >= 3 && G.glue && G.glue.length){   // Beige glue: half speed (not on top of Ice) and a bite every second
+    const gs = glueStep(m, dt); if (gs < 0) return;
+    if (gs > 0 && m.frozenT <= 0 && m.slowT <= 0) sp *= GLUE_SLOW;
+  }
   if ((m.frozenT > 0 || m.slowT > 0) && Math.random() < dt * 5) G.parts.push({ x:m.x + rnd(-m.r, m.r), y:mY(m) + rnd(-m.r, m.r), vx:0, vy:20, t:0, life:0.8, size:2.5, color:'#bfefff', kind:'dot', grav:0 });
   if (m.burnLeft > 0){
     m.burnTick -= dt;

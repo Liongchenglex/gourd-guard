@@ -1,5 +1,6 @@
 import { TYPES, BOSS_NAMES } from '../data/monsters.js';
-import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW, TURQUOISE, BROWN, TURQ_FRAC, BROWN_KB, BROWN_SIZE_MULT, PAINT } from '../data/pumpkins.js';
+import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW, TURQUOISE, BROWN, TURQ_FRAC, BROWN_KB, BROWN_SIZE_MULT, PAINT, BEIGE } from '../data/pumpkins.js';
+import { layGlue } from './glue.js';
 import { SFX, musicStart } from './audio.js';
 import { MUSIC } from '../data/music.js';
 import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches, brownSize, paintPull, paintInherit } from './board.js';
@@ -275,6 +276,7 @@ function hitMonsterNow(pr, m){
     for (const w of G.castles) if (!w.dead && Math.abs(w.lane - m.lane) <= 1 && Math.abs(castleY(w) - y) < reach) damageCastle(w, POWER[i] * frac);
   }
   if (kb && !m.dead) knockback(m);
+  if (__RELEASE__ >= 3 && m.dead && pr.type === BEIGE) layGlue(m.lane, m.p, pr.lv);   // Beige: its kill leaves glue (owner, 2026-11-02)
   if (m.dead && pr.type === 5 && Math.random() < SPAWN_P[i]) purpleSpawn(m, y, i);   // Purple: extra spawn per kill
   SFX.pumpkinHit(pr.type, pr.size, pr.vis === RAINBOW);   // pumpkin layer
   if (m.type === 'boss') SFX.bossSfx(m.kind, 'hit'); else SFX.monsterHit(m.type);   // monster layer

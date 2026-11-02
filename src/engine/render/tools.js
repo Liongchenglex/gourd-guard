@@ -232,3 +232,17 @@ export function drawToolFx(g, v, t){
       break; }
   }
 }
+
+/** Beige glue on one field tile (Release 3): a flat glossy splat, baked once and blitted. */
+export function glueSprite(){
+  return sprite('glue', CS, CS * 0.7, CS / 2, CS * 0.35, g => {
+    const R = CS * 0.44;
+    g.fillStyle = 'rgba(120,92,48,.35)'; g.beginPath(); g.ellipse(0, 3, R, R * 0.5, 0, 0, Math.PI * 2); g.fill();   // the shadow under the goo
+    g.fillStyle = '#e6d1a0'; g.beginPath();
+    for (let i = 0; i <= 14; i++){ const a = i / 14 * Math.PI * 2, rr = R * (0.82 + 0.16 * Math.sin(i * 2.7)); g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.48); }
+    g.closePath(); g.fill();
+    g.fillStyle = '#f6e9c8'; g.beginPath(); g.ellipse(-R * 0.1, -R * 0.06, R * 0.6, R * 0.24, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.8)'; g.beginPath(); g.ellipse(-R * 0.3, -R * 0.14, R * 0.16, R * 0.06, -0.2, 0, Math.PI * 2); g.fill();
+    for (const [x, y, r] of [[R * 0.9, R * 0.1, R * 0.12], [-R * 0.95, R * 0.16, R * 0.09], [R * 0.4, R * 0.42, R * 0.08]]){ g.fillStyle = '#e6d1a0'; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+  });
+}

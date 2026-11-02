@@ -17,6 +17,7 @@ import { bgWorld, buildBg } from './render/sprites.js';
 import { poolKey, prebake } from './render/anim.js';
 import { atlasKey } from './render/chars.js';
 import { endlessSpawn, storySpawn, dropJukebox, jukeboxPoints } from './spawner.js';
+import { updateGlue } from './glue.js';
 import { COLS, CS, FENCE_Y, FIELD_TOP, G, GY, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, setG, setGest, state, walls, GX, FIELD_BOT, HOLD_TIME_QUICK } from './state.js';
 import { rnd, shuffle, clamp, TAU } from './util.js';
 import { initWalls, damageWall } from './walls.js';
@@ -29,7 +30,7 @@ import { startCoach, coachHolds, coachUpdate } from './coach.js';
 // ---------- Flow ----------
 
 export function makeDemo(){
-  setG({ q:newQuestCounters(), mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], gustT:0, gustDir:null });
+  setG({ q:newQuestCounters(), mode:'demo', world:0, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], glue:[], gustT:0, gustDir:null });
   initBoard(1, 2);
   [[4,0],[4,1],[4,2],[3,1]].forEach(([r, c]) => { if (grid[r][c]) grid[r][c].c = 0; });
   resolveMatches();
@@ -43,7 +44,7 @@ export function makeDemo(){
 /** The night's own map behind the level preview (owner): the field, walls, graves, castles, puddles, shore and fog of level n, no monsters. */
 export function makePreview(n){
   const def = levelFor(n);
-  setG({ q:newQuestCounters(), mode:'demo', preview:true, n, def, world:def.world, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], gustT:0, gustDir:null, sproutT:0, aim:null, over:false, spawned:0, bossSpawned:false, hint:null, hintT:0 });
+  setG({ q:newQuestCounters(), mode:'demo', preview:true, n, def, world:def.world, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], glue:[], gustT:0, gustDir:null, sproutT:0, aim:null, over:false, spawned:0, bossSpawned:false, hint:null, hintT:0 });
   if (def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
   else if (def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def.puddles) placePuddles(def.puddles);
@@ -81,7 +82,7 @@ export function startGame(mode, n, loadout){
     total:def ? def.total + (def.boss ? 1 : 0) : 0,
     spawned:0, spawnTimer:2.6, bossSpawned:false, bossTimer:100, diff:1, sproutT:0,
     monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], groups:{},
-    t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[],
+    t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], glue:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
     loot:{ chests:0, seeds:0 }, chestDropped:false, continued:false, sackT:0, jukebox:null, jukeboxDone:false, jbNext:0,
   });
@@ -312,6 +313,7 @@ export function update(dt){
     g.sproutT += dt * (low ? 2 : 1);
     if (!coachHolds() && g.sproutT >= sproutEvery()){ if (spawnSprouts()) g.sproutT = 0; else g.sproutT = sproutEvery(); }
   }
+  if (__RELEASE__ >= 3) updateGlue(dt);
   for (const m of g.monsters) if (!m.dead && !g.over) updateMonster(m, dt);
   for (const pr of g.projs){
     pr.y += pr.vy * dt; pr.rot += dt * pr.spin;

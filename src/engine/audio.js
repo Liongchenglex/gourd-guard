@@ -267,6 +267,7 @@ export const SFX = {
       case 'chain': if (gate('chain', 30)) S('zap', 0.4, { rate: 1.3 }) || noise(0.08, 0.14, 2600, 1.2, 0, 900); break;
       case 'splash': if (gate('splash', 30)) S('splash', 0.5) || tone(60, 0.2, 'sine', 0.1, 35); break;
       case 'pierce': break;   // no extra sound: each pierced monster just gets the normal pumpkin hit (owner)
+      case 'glue': if (gate('glue', 60)) S('slime', 0.35, { rate: 0.8 }); break;   // Beige glue lands (Release 3)
       case 'spawn': S('warp', 0.4) || (tone(700, 0.08, 'sine', 0.07, 1100), sparkle(0.08)); break;
       case 'return': S('whooshlong', 0.5, { rate: 1.1 }) || (woosh(true, 0.18), tone(400, 0.12, 'sine', 0.05, 300, 0.3)); break;
       case 'miss': if (gate('miss', 80)) S('reverse', 0.35) || noise(0.35, 0.08, 1400, 1, 0, 400); break;

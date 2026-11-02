@@ -11,7 +11,7 @@ import { drawMonster } from './monsters.js';
 import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
-import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon } from './tools.js';
+import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite } from './tools.js';
 import { castleSprite, coinSprite, discSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
@@ -44,6 +44,7 @@ export function render(){
   drawPreview(t);
   if ((g.def && g.def.sea) || g.sea) drawSea(t);
   drawPuddles(t);
+  if (__RELEASE__ >= 3) drawGlue();
   for (const m of g.monsters) if (m.type === 'doctor' && !m.dead && m.p > 0) drawHealZone(m, t);
   for (const m of g.monsters) if (m.type === 'bulwark' && !m.dead && m.p > 0) drawBulwarkZone(m, t);
   drawHexZones(t);
@@ -216,6 +217,17 @@ export function drawFog(t, bands, cleared){   // layered drifting mist (render/f
     const y0 = H0 + a * (H1 - H0), y1 = H0 + b * (H1 - H0);
     drawMist(ctx, K, 0, y0 - FR, W, y1 - y0 + FR * 2, t, cleared, i++, false, FR);
   }
+}
+/** Beige glue tiles (Release 3): the baked splat, fading out over its last half second. */
+export function drawGlue(){
+  const gl = G.glue; if (!gl || !gl.length) return;
+  const sp = glueSprite();
+  for (const t of gl){
+    const x = LANE(t.lane), y = FIELD_TOP + (t.row + 0.5) * CS;
+    ctx.globalAlpha = Math.min(1, (t.dur - t.t) / 0.5, t.t / 0.12);
+    ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h);
+  }
+  ctx.globalAlpha = 1;
 }
 /** Puddles (world 5): baked glossy pools (render/fx.js) with two slow live ripples each. */
 export function drawPuddles(t){

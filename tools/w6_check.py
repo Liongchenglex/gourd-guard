@@ -616,6 +616,66 @@ def check_beige_save(browser, url, on):
 CHECKS.update({'check_beige_shop': check_beige_shop, 'check_beige_save': check_beige_save})
 
 
+BEIGE_HIT = """(lv, m) => { const g = window.__gg, B = g.BEIGE; g.hitMonster({ type:B, vis:B, lv, size:1, lane:m.lane, x:m.x, y:0, hit:new Set(), grp:null, guar:false, trail:[] }, m); }"""
+
+
+def glue_ghoul(page, lane, p, hp=1):
+    return f"(() => {{ const m = window.__gg.spawnMonster('ghoul', {lane}, true, {p}); m.hp = m.maxHp = {hp}; m.sp = 0.05; return m; }})()"
+
+
+def check_glue(browser, url, on):
+    if not R3:
+        return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { window.__gg.save.beigeOwned = true; }")
+    page.evaluate("([lo]) => window.__gg.startGame('story', 101, lo)", [[0, 1, 2, 3, page.evaluate("() => window.__gg.BEIGE")]]); time.sleep(0.3)
+    page.evaluate("() => { window.__gg.G.spawnTimer = 999; window.__gg.G.monsters.length = 0; }")
+    tp = page.evaluate("() => window.__gg.TILE_P()")
+    row = int(0.4 / tp)
+    page.evaluate(f"() => ({BEIGE_HIT})(1, {glue_ghoul(page, 3, 0.4)})")
+    gl = page.evaluate("() => window.__gg.G.glue.map(t => [t.lane, t.row, t.dur])")
+    ok(gl == [[3, row, 1]], f'a level-1 Beige kill leaves one glue tile where it died for 1 s {gl} (row {row})')
+    time.sleep(1.3)
+    ok(page.evaluate("() => window.__gg.G.glue.length") == 0, 'the level-1 glue is gone after a second')
+    page.evaluate(f"() => ({BEIGE_HIT})(3, {glue_ghoul(page, 3, 0.4)})")
+    gl = sorted(page.evaluate("() => window.__gg.G.glue.map(t => [t.lane, t.row])"))
+    ok(gl == [[2, row], [3, row], [4, row]], f'level 3: three tiles across {gl}')
+    page.evaluate("() => { window.__gg.G.glue.length = 0; }")
+    page.evaluate(f"() => ({BEIGE_HIT})(3, {glue_ghoul(page, 0, 0.4)})")
+    ok(sorted(page.evaluate("() => window.__gg.G.glue.map(t => t.lane)")) == [0, 1], 'at the edge the tile off the field is dropped')
+    page.evaluate("() => { window.__gg.G.glue.length = 0; }")
+    page.evaluate(f"() => ({BEIGE_HIT})(5, {glue_ghoul(page, 3, 0.4)})")
+    gl = sorted(page.evaluate("() => window.__gg.G.glue.map(t => [t.lane, t.row, t.dur])"))
+    ok(gl == sorted([[3, row, 5], [2, row, 5], [4, row, 5], [3, row - 1, 5], [3, row + 1, 5]]), f'level 5: a plus of five tiles for 5 s {gl}')
+    time.sleep(0.6)
+    t0 = page.evaluate(f"() => window.__gg.G.glue.find(t => t.lane === 3 && t.row === {row}).t")
+    page.evaluate(f"() => ({BEIGE_HIT})(5, {glue_ghoul(page, 3, 0.4)})")
+    d = page.evaluate(f"() => [window.__gg.G.glue.length, window.__gg.G.glue.find(t => t.lane === 3 && t.row === {row}).t]")
+    ok(d[0] == 5 and d[1] >= t0, f'no stacking: a kill on glue adds nothing and does not refresh it {d} (t was {t0:.2f})')
+    # a monster standing in glue: half speed and 0.3 a second
+    page.evaluate("() => { const G = window.__gg.G; G.glue.length = 0; G.monsters.length = 0; }")
+    page.evaluate(f"() => {{ const G = window.__gg.G; G.glue.push({{ lane:3, row:{row}, t:0, dur:30 }}); window.__a = {glue_ghoul(page, 3, (row + 0.5) * tp, 5)}; window.__b = {glue_ghoul(page, 5, (row + 0.5) * tp, 5)}; window.__a.sp = window.__b.sp = 0.004; }}")
+    time.sleep(1.15)
+    hp1 = page.evaluate("() => window.__a.hp")
+    time.sleep(1.0)
+    d = page.evaluate(f"() => [window.__a.hp, window.__b.hp, window.__a.p - {(row + 0.5) * tp}, window.__b.p - {(row + 0.5) * tp}]")
+    ok(abs(hp1 - 4.7) < 0.01 and abs(d[0] - 4.4) < 0.01 and d[1] == 5, f'in glue it loses 0.3 each second ({hp1}, {d[0]}; outside {d[1]})')
+    ok(0.3 < d[2] / d[3] < 0.7, f'in glue it walks at half speed ({d[2]:.4f} vs {d[3]:.4f})')
+    for t in ('mummy', 'firemummy'):
+        r = page.evaluate(f"() => {{ const m = window.__gg.spawnMonster('{t}', 3, true, {(row + 0.5) * tp}); m.hp = 0.3; m.sp = 0; return new Promise(res => setTimeout(() => res([m.dead, m.rise > 0]), 1300)); }}")
+        ok(r == [False, True], f'glue cannot finish a {t}: it goes down and rises {r}')
+    page.evaluate("() => { const G = window.__gg.G; G.monsters.length = 0; G.glue.length = 0; G.glue.push({ lane:3, row:%d, t:0, dur:30 }); window.__c = %s; window.__c.hp = 0.3; window.__c.sp = 0; }" % (row, glue_ghoul(page, 3, (row + 0.5) * tp)))
+    time.sleep(1.3)
+    ok(page.evaluate("() => window.__c.dead && window.__gg.G.glue.length === 1"), 'a glue kill lays no new glue')
+    start(page, 101)
+    ok(page.evaluate("() => window.__gg.G.glue.length") == 0, 'a new night starts with no glue')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_glue': check_glue})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

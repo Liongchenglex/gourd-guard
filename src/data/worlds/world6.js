@@ -79,7 +79,7 @@ export default [
     gravesLayout:[[2, 0], [2, 6]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
   // 6-16: two pairs of Twin Tides at once (owner): each pair revives on its own; when the first pair goes down the jukebox drops.
   // First form, full health; minions from the Drowned Marsh. The finale of Release 2.
-  { world:6, level:16, theme:5, name:'Double Tide', pattern:0, graves:0, total:20, interval:3.2, spMul:0.95, boss:'twintides', boss2:'twintides', bossForm:1, bossGap:2.0, gust:{ every:22, dirs:['left', 'right'] },
+  { world:6, level:16, theme:5, name:'Four Serpents', pattern:0, graves:0, total:20, interval:3.2, spMul:0.95, boss:'twintides', boss2:'twintides', bossForm:1, bossGap:2.0, gust:{ every:22, dirs:['left', 'right'] },
     frenzy:true, frenzyAfterBoss:true, sea:true, shore:2,
     pool:[['sailor', 4], ['slime', 3], ['diver', 3]],
     gravesLayout:[[1, 0], [1, 6], [3, 0], [3, 6]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },

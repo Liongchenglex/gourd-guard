@@ -1,12 +1,16 @@
 """Release checks for branch dev (docs/RELEASES.md), against a build served by tools/serve_dist.py.
   Store build:     npm run build          then  .venv/bin/python tools/w6_check.py --url http://127.0.0.1:4173/ --expect off
   Playtest build:  npm run build:playtest then .venv/bin/python tools/w6_check.py --url http://127.0.0.1:4173/ --expect on
+  Release 2 build: VITE_RELEASE=2 npx vite build then  ... --expect r2   (World 6 to 6-16, nothing from Release 3)
+  Checks take `on` (World 6 present: on or r2); Release 3 checks read the global R3 (on only).
 Exits 1 on any failure. --only runs one check by name."""
-import argparse, pathlib, sys, time
+import argparse, json, pathlib, sys, time
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 FAILS = []
+R3 = False   # set by --expect: the build holds Release 3 (playtest)
+MODE = 'on'
 
 
 def ok(cond, msg):
@@ -391,7 +395,8 @@ def check_divers_hide(browser, url, on):
 def check_release(browser, url, on):
     page, errors = open_page(browser, url)
     r = page.evaluate("() => window.__gg.RELEASE")
-    ok(r == (999 if on else 1), f'the build is release {r} (playtest = all, store = 1)')
+    want = {'on': 999, 'r2': 2, 'off': 1}[MODE]
+    ok(r == want, f'the build is release {r} (playtest = all, r2 = 2, store = 1)')
     bad = page.evaluate("() => window.__gg.WORLD_LEVELS.flat().filter(d => (d.release || 1) > window.__gg.RELEASE).map(d => d.world + '-' + d.level)")
     ok(not bad, f'no level from a later release is in the build {bad}')
     if on:
@@ -436,7 +441,8 @@ def check_book_king(browser, url, on):
     set_stars(page, {n: 3 for n in range(1, 101)})
     page.evaluate("() => window.__gg.openBook(%d)" % (5 if on else 0)); time.sleep(0.8)
     cap = page.evaluate("() => { const s = document.querySelector('#bkBoss span'); return s && s.textContent; }")
-    ok(cap == ('???' if on else 'The Gravekeeper'), f"the book's boss page shows {cap!r} ({'the Hollow King as a shadow' if on else 'world 1 unchanged'})")
+    want = 'The Hollow King' if R3 else '???' if on else 'The Gravekeeper'
+    ok(cap == want, f"the book's boss page shows {cap!r} (want {want!r})")
     if on:
         dark = page.evaluate("() => { const c = document.querySelector('#bkBoss canvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 200) n++; return n; }")
         ok(dark > 3000, f'his silhouette is drawn ({dark} solid pixels)')
@@ -466,13 +472,67 @@ CHECKS = {
 }
 
 
+# ---------- Release 3 (docs/superpowers/plans/2026-11-02-release-3.md) ----------
+CRESCENT = [[0, 3], [0, 4], [1, 2], [2, 2], [3, 2], [4, 3], [4, 4]]
+DIAMOND = [[0, 3], [1, 2], [1, 4], [2, 1], [2, 5], [3, 2], [3, 4], [4, 3]]
+FACE = [[1, 1], [1, 5], [2, 3], [3, 1], [3, 5], [4, 2], [4, 3], [4, 4]]
+CROWN = [[0, 1], [0, 3], [0, 5], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]]
+
+
+def bundle_js():
+    return ''.join(p.read_text(errors='ignore') for p in (ROOT / 'dist/assets').glob('*.js'))
+
+
+def check_r3_absent(browser, url, on):
+    js = bundle_js()
+    for s in ('Knights in the Mist',):
+        ok((s in js) == R3, f"{s!r} {'in' if R3 else 'not in'} the bundle")
+
+
+def w6_layouts(page, upto):
+    return page.evaluate("(n) => window.__gg.WORLD_LEVELS[5].slice(0, n).map(d => JSON.stringify((d.gravesLayout || []).map(([r, c]) => [r, c]).sort()))", upto)
+
+
+def check_6_17_18(browser, url, on):
+    page, errors = open_page(browser, url)
+    set_stars(page, {n: 3 for n in range(1, 117)})
+    if not R3:
+        n = page.evaluate("() => (window.__gg.WORLD_LEVELS[5] || []).length")
+        ok(n == (16 if on else 0), f'no Release 3 levels in this build ({n} World 6 levels)')
+        ok(not page.evaluate("() => window.__gg.isOpen(117)"), '6-17 is not open')
+        page.close(); return
+    old = set(w6_layouts(page, 16))
+    start(page, 117)
+    d = page.evaluate("() => { const d = window.__gg.G.def; return { label:d.label, pool:d.pool.map(e => e[0]).sort(), fog:JSON.stringify(d.fog), shore:d.shoreFrac, sea:!!d.sea, frenzy:!!d.frenzy, gust:d.gust && d.gust.every }; }")
+    ok(d['label'] == '6-17', f"6-17 exists ({d['label']})")
+    ok(d['pool'] == ['diver', 'knight', 'mirror'], f"6-17: knights, mirror sprites, divers {d['pool']}")
+    ok(d['fog'] == '[[0,0.8]]' and d['shore'] == 0.5 and d['sea'], f"6-17: 80% fog, tide at half {d}")
+    ok(d['frenzy'] and d['gust'] == 22, '6-17: Frenzy and wind')
+    g = grave_cells(page)
+    ok(g == sorted(CRESCENT) and json.dumps(g).replace(' ', '') not in old, f'6-17 graves are a crescent, new to Hallow\'s End {g}')
+    start(page, 118)
+    d = page.evaluate("() => { const G = window.__gg.G, d = G.def; return { label:d.label, pool:d.pool.map(e => e[0]).sort(), fog:JSON.stringify(d.fog), cas:G.castles.length, ps:[...new Set(G.castles.map(c => c.p))].sort() }; }")
+    ok(d['label'] == '6-18' and d['pool'] == ['doctor', 'vampire'], f"6-18: doctors and vampires {d['pool']}")
+    ok(d['fog'] == '[[0,0.8]]', '6-18: 80% fog')
+    ok(d['cas'] == 21 and d['ps'] == [0.3, 0.5, 0.7], f"6-18: three castle rows {d['cas']} {d['ps']}")
+    g = grave_cells(page)
+    ok(g == sorted(DIAMOND) and json.dumps(g).replace(' ', '') not in old, f'6-18 graves are a diamond {g}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_r3_absent': check_r3_absent, 'check_6_17_18': check_6_17_18})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)
-    ap.add_argument('--expect', choices=['on', 'off'], required=True)
+    ap.add_argument('--expect', choices=['on', 'r2', 'off'], required=True)
     ap.add_argument('--only', default=None)
     a = ap.parse_args()
-    on = a.expect == 'on'
+    global R3, MODE
+    MODE = a.expect; R3 = a.expect == 'on'
+    on = a.expect in ('on', 'r2')
     with sync_playwright() as p:
         browser = p.chromium.launch()
         for name, fn in CHECKS.items():

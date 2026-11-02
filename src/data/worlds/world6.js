@@ -4,6 +4,11 @@
 // Schema: ../levels.js.
 const ROW = p => [0, 1, 2, 3, 4, 5, 6].map(lane => [lane, p]);   // a castle wall in every lane at height p
 const PILLARS = [[1, 1], [2, 1], [3, 1], [1, 5], [2, 5], [3, 5]];
+// Release 3 grave shapes (owner: "get creative with the grave arrangements"); [row, col] on the 5×7 patch
+const CRESCENT = [[0, 3], [0, 4], [1, 2], [2, 2], [3, 2], [4, 3], [4, 4]];   // a crescent moon
+const DIAMOND = [[0, 3], [1, 2], [1, 4], [2, 1], [2, 5], [3, 2], [3, 4], [4, 3]];   // a diamond ring
+export const FACE = [[1, 1], [1, 5], [2, 3], [3, 1], [3, 5], [4, 2], [4, 3], [4, 4]];   // a jack-o'-lantern grin
+export const CROWN = [[0, 1], [0, 3], [0, 5], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]];   // the Hollow King's crown
 const FLANKS = [[0, 0.3], [0, 0.5], [0, 0.7], [6, 0.3], [6, 0.5], [6, 0.7]];   // castle walls down both outer lanes
 
 export default [
@@ -83,6 +88,19 @@ export default [
     frenzy:true, frenzyAfterBoss:true, sea:true, shore:2,
     pool:[['sailor', 4], ['slime', 3], ['diver', 3], ['turtle', 2]],   // turtles rise from the sea (no puddles)
     gravesLayout:[[1, 0], [1, 6], [3, 0], [3, 6]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
+  // ---------- Release 3 (spec docs/superpowers/specs/2026-11-02-release-3-design.md): gated so a Release 2 build drops the data ----------
+  ...(__RELEASE__ >= 3 ? [
+    // 6-17: Knights in the Mist: fog over the top 80% and the sea over the top half; Puddle Divers lurk unseen in the water and the
+    // puddles, Shield Knights and Mirror Sprites (the owner's "fairies") march out of the fog. Frenzy, witch wind.
+    { world:6, level:17, theme:5, name:'Knights in the Mist', pattern:1, graves:0, total:24, interval:3.0, spMul:0.95, boss:null, bossForm:1, gust:{ every:22, dirs:['left', 'right'] }, frenzy:true,
+      pool:[['knight', 5], ['mirror', 4], ['diver', 5]], fog:[[0, 0.8]], sea:true, shoreFrac:0.5, puddles:2,
+      gravesLayout:CRESCENT, quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
+    // 6-18: Bad Medicine: both monsters heal (owner): Plague Doctors mend their column, Vampires regenerate. Fog over the top 80%
+    // and a full map of castle walls (three rows). Frenzy, witch wind.
+    { world:6, level:18, theme:5, name:'Bad Medicine', pattern:2, graves:0, total:22, interval:3.0, spMul:0.95, boss:null, bossForm:1, gust:{ every:22, dirs:['left', 'right'] }, frenzy:true,
+      pool:[['doctor', 5], ['vampire', 4]], fog:[[0, 0.8]], castles:{ n:21, hp:8 }, castlesLayout:[...ROW(0.3), ...ROW(0.5), ...ROW(0.7)],
+      gravesLayout:DIAMOND, quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
+  ] : []),
 ];
 
 /** Releases (docs/RELEASES.md, owner 2026-11-02): 6-1 to 6-16 ship in Release 2, 6-17 to 6-20 in Release 3. */

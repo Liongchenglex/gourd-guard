@@ -485,7 +485,7 @@ def bundle_js():
 
 def check_r3_absent(browser, url, on):
     js = bundle_js()
-    for s in ('Knights in the Mist',):
+    for s in ('Knights in the Mist', 'Beige'):
         ok((s in js) == R3, f"{s!r} {'in' if R3 else 'not in'} the bundle")
 
 
@@ -569,6 +569,51 @@ def check_two_jukebox(browser, url, on):
 
 
 CHECKS.update({'check_two_jukebox': check_two_jukebox})
+
+
+def shop_beige(page):
+    page.evaluate("() => { window.__gg.openShop(); document.querySelector('#tabPumpkins').click(); }"); time.sleep(0.5)
+    page.evaluate("() => { const t = [...document.querySelectorAll('#shopPumpkins .tile')].find(b => b.querySelector('.tn').textContent === 'Beige'); if (t) t.click(); }"); time.sleep(0.3)
+    return page.evaluate("() => ({ tile:[...document.querySelectorAll('#shopPumpkins .tile .tn')].some(e => e.textContent === 'Beige'), text:document.querySelector('#pDetail').textContent, btn:document.querySelector('#pDetail .dAct button').textContent, dis:document.querySelector('#pDetail .dAct button').disabled })")
+
+
+def check_beige_shop(browser, url, on):
+    page, errors = open_page(browser, url)
+    has = page.evaluate("() => !!window.__gg.PTYPES && window.__gg.PTYPES.some(p => p.key === 'beige')")
+    if not R3:
+        ok(not has, 'no Beige pumpkin in this build')
+        page.close(); return
+    ok(has, 'the Beige pumpkin exists')
+    d = page.evaluate("() => { const g = window.__gg, i = g.PTYPES.findIndex(p => p.key === 'beige'); return { i, B:g.BEIGE, R:g.RAINBOW, rb:!!g.PTYPES[g.RAINBOW].rainbow, costs:[1, 2, 3, 4].map(L => g.upgradeCost('beige', L)), s5:g.lvStats(i, 5).special, s3:g.lvStats(i, 3).special, p5:g.lvStats(i, 5).power }; }")
+    ok(d['i'] == d['B'] == d['R'] - 1 and d['rb'], f"Beige sits just before Rainbow {d['i']} {d['B']} {d['R']}")
+    ok(d['costs'] == [{'coins': 5000}, {'coins': 10000}, {'seeds': 50}, {'seeds': 75}], f"upgrades cost 5,000 / 10,000 coins, 50 / 75 seeds {d['costs']}")
+    ok('plus' in d['s5'] and '5 s' in d['s5'] and '3 across' in d['s3'] and d['p5'] == '2', f"level stats describe the glue {d['s3']!r} / {d['s5']!r}")
+    set_stars(page, {n: 3 for n in range(1, 116)}); page.evaluate("() => { window.__gg.save.seeds = 60; }")
+    b = shop_beige(page)
+    ok(b['tile'] and '6-16' in b['text'] and b['dis'], f"before 6-16 it shows, locked, saying how to get it {b['text'][:90]!r}")
+    set_stars(page, {n: 3 for n in range(1, 117)})
+    b = shop_beige(page)
+    ok('50' in b['btn'] and not b['dis'], f"after 6-16 it can be bought for 50 seeds ({b['btn']!r})")
+    page.evaluate("() => document.querySelector('#pDetail .dAct button').click()"); time.sleep(0.3)
+    sv = page.evaluate("() => { const s = window.__gg.save; return [s.beigeOwned, s.seeds, s.lv.beige]; }")
+    ok(sv == [True, 10, 1], f'buying it spends 50 seeds and owns it at level 1 {sv}')
+    ok(page.evaluate("() => window.__gg.typesForNight(5).includes(window.__gg.BEIGE)"), 'once bought it can be taken into any level')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_beige_save(browser, url, on):
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const s = window.__gg.save; s.loadout = [0, 1, 2, 3, 4]; s.wardrobe.skins = { 1:'candycorn' }; }")
+    start(page, 9)
+    r = page.evaluate("() => { const g = window.__gg, R = g.RAINBOW, old = Math.random; Math.random = () => 0; const c = g.randSprout(); Math.random = old; return [c === R, !!g.PTYPES[c].rainbow, g.PTYPES.length - 1 === R]; }")
+    ok(r == [True, True, True], f'Rainbow still comes up as the rainbow pumpkin {r}')
+    time.sleep(1)
+    ok(not errors, f'an existing save plays with no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_beige_shop': check_beige_shop, 'check_beige_save': check_beige_save})
 
 
 def main():

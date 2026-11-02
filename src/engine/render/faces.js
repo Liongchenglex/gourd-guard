@@ -22,6 +22,11 @@ const brow = (g, R, x1, y1, x2, y2, w = .07) => { g.lineWidth = R * w; g.beginPa
 const nose = (g, R) => { g.beginPath(); g.moveTo(-R * .06, R * .12); g.lineTo(R * .06, R * .12); g.lineTo(0, R * .02); g.closePath(); g.fill(); };
 /** One carved expression per pumpkin key. */
 export const LIT_FACES = {
+  // Beige (Release 3): a sticky, satisfied grin, eyes squeezed half shut, a drop of glue on the lip
+  ...(__RELEASE__ >= 3 ? { beige(g, R){ glow(g, R, '#fffbe8', '#ffc861', '#ffd98a'); const ey = -R * .1; for (const s of [-1, 1]) almond(g, s * R * .3, ey, R * .2, R * .09); nose(g, R);
+    g.beginPath(); g.moveTo(-R * .32, R * .24); g.quadraticCurveTo(0, R * .52, R * .32, R * .24); g.quadraticCurveTo(0, R * .32, -R * .32, R * .24); g.fill();
+    g.beginPath(); g.ellipse(R * .12, R * .46, R * .045, R * .07, 0, 0, TAU); g.fill();
+    dark(g, () => { for (const s of [-1, 1]){ const x = s * R * .3; pup(g, x, ey + R * .01, R * .05); brow(g, R, x - R * .15, ey - R * .2, x + R * .15, ey - R * .2); } }); } } : {}),
   // Green: the classic jack-o'-lantern, triangle eyes and a toothy grin
   green(g, R){ glow(g, R, '#fff6c0', '#ff9a1a', '#ffb020'); const ey = -R * .1; tri(g, -R * .33, ey, R * .17, R * .28); tri(g, R * .33, ey, R * .17, R * .28); tri(g, 0, R * .06, R * .08, R * .12); zig(g, R, R * .24, .25, 6); },
   // Yellow: greedy excitement, wide eyes looking up at the prize, a big toothy grin

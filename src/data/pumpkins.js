@@ -14,10 +14,15 @@ export const PTYPES = [
   { key:'turquoise', name:'Turquoise', role:'launches in bunches of just 2, at half power', base:'#2ab0a8', light:'#8af0e8', dark:'#0f5a58', spark:'#a0fff8' },
   { key:'brown',  name:'Brown',  role:'grows while it sits on the patch: small, medium, then big and twice as strong', base:'#8a5a2a', light:'#c9945a', dark:'#4a2e12', spark:'#e0b070' },
   { key:'paint',  name:'Paint',  role:'pulls touching pumpkins of any colour into its bunch, and they launch together', base:'#c9b6f0', light:'#ece2ff', dark:'#7a62b0', spark:'#ffb59a', patches:['#7fe0c3', '#ffb59a', '#ffe27a', '#6aaeff'] },   // post-game, bought with seeds (owner, 2026-10-08)
+  // Beige (Release 3, owner 2026-11-02): bought with seeds after 6-16; a kill leaves glue that slows and hurts (src/engine/glue.js)
+  ...(__RELEASE__ >= 3 ? [{ key:'beige', name:'Beige', role:'leaves sticky glue where it kills: monsters in it slow down and take damage', base:'#c4a46c', light:'#e8d2a2', dark:'#76592e', spark:'#fff0c8', drips:true }] : []),
   { key:'rainbow',name:'Rainbow',role:'joins any bunch as any color', rainbow:true, spark:'#fff3a0' },
 ];
 
-export const RAINBOW = 13, NTYPES = 13;   // type indices: 0 Green, 1 Yellow, 2 Ice, 3 Fire, 4 Grey, 5 Purple, 6 White, 7 Black, 8 Deep Blue, 9 Pink, 10 Turquoise, 11 Brown, 12 Paint, 13 Rainbow
+export const RAINBOW = __RELEASE__ >= 3 ? 14 : 13, NTYPES = RAINBOW;   // type indices: 0 Green, 1 Yellow, 2 Ice, 3 Fire, 4 Grey, 5 Purple, 6 White, 7 Black, 8 Deep Blue, 9 Pink, 10 Turquoise, 11 Brown, 12 Paint, 13 Rainbow
+export const BEIGE = __RELEASE__ >= 3 ? 13 : -1;   // Release 3; -1 (never a type) in earlier builds
+// Beige glue (owner, 2026-11-02): laid on a Beige kill; tiles by level: one, one, 3 across, 3 across, a plus
+export const GLUE_T = [1, 2, 3, 4, 5], GLUE_SHAPE = ['one', 'one', 'row', 'row', 'plus'], GLUE_DMG = 0.3, GLUE_EVERY = 1, GLUE_SLOW = 0.5;
 export const YELLOW = 1, BLUE = 8, PINK = 9, WHITE = 6, BLACK = 7, TURQUOISE = 10, BROWN = 11, PAINT = 12;
 export const PAINT_PULL = [2, 3, 4, 5, Infinity];   // Paint (owner, 2026-10-08): touching pumpkins pulled into a lit Paint bunch, by level (5 = every one)
 export const TURQ_FRAC = 0.5;                          // Turquoise: power as a fraction of Green's; bunches of 2 launch
@@ -61,6 +66,7 @@ export function pct(v){ return Math.round(v * 100) + '%'; }
 export function lvStats(t, L){
   const i = L - 1, kb = v => v ? pct(v) : 'none';
   let power = String(t === 10 ? POWER[i] * TURQ_FRAC : POWER[i]), knock = kb(KB_CHANCE[i]), special = 'none';
+  if (__RELEASE__ >= 3 && t === BEIGE) special = `a kill leaves glue on ${['1 tile', '1 tile', '3 across', '3 across', 'a plus of 5 tiles'][i]} for ${GLUE_T[i]} s: monsters in it walk at half speed and lose ${GLUE_DMG} a second`;
   switch (t){
     case 1: special = `kills always pay coins, ×${COIN_MULT[i]}`; break;
     case 2: knock = 'none'; special = `slows monsters for ${SLOW_T[i]} s${FREEZE_P[i] ? `, ${pct(FREEZE_P[i])} chance to freeze them solid` : ''}`; break;

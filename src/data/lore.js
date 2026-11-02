@@ -38,6 +38,7 @@ export const PUMPKIN_LORE = {
   turquoise:'Small, quick and impatient. Two is enough for a throw, half as hard.',
   brown:'A slow grower with a temper. Leave it in the patch and it comes back twice the size.',
   paint:'Grown in the old painter\u2019s garden, where every bucket was spilled at least once. It never goes anywhere alone.',
+  ...(__RELEASE__ >= 3 ? { beige:'Boiled down from the sap of the hollow oak on All Hallows\u2019 Eve. Where it bursts, nothing walks away quickly.' } : {}),   // Release 3
   rainbow:'Nobody plants these. They simply appear when a patch has been looked after well.',
 };
 

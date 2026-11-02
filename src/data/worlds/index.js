@@ -2,6 +2,7 @@ import { expandLevel } from '../levels.js';
 import { PTYPES, NTYPES } from '../pumpkins.js';
 import { save } from '../../save.js';
 import { GEAR } from '../shop.js';
+import { BUY_PUMPKIN } from '../economy.js';
 import world1 from './world1.js';
 import world2 from './world2.js';
 import world3 from './world3.js';
@@ -75,7 +76,7 @@ export function toolsForNight(n){
 
 /** Pumpkin type indices available on night n: the starting pair plus every type unlocked by a level ≤ n. */
 export function typesForNight(n){
-  return [...Array(NTYPES).keys()].filter(t => t < 1 || unlockNightOf(PTYPES[t].key) <= n || (PTYPES[t].key === 'paint' && save.paintOwned));   // Paint: once bought, in every level (owner)   // only Green from the start; Yellow unlocks at 1-2 (owner)
+  return [...Array(NTYPES).keys()].filter(t => t < 1 || unlockNightOf(PTYPES[t].key) <= n || (BUY_PUMPKIN[PTYPES[t].key] && save[BUY_PUMPKIN[PTYPES[t].key].flag]));   // Paint: once bought, in every level (owner)   // only Green from the start; Yellow unlocks at 1-2 (owner)
 }
 
 /** Is story night n open to play? Level 1 of a world opens when the previous world's level 10 has been beaten

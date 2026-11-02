@@ -2,6 +2,7 @@ import { save } from '../save.js';
 import { BANK } from '../data/sfxbank.js';
 import { MUSIC } from '../data/music.js';
 import { MUSIC_W6 } from '../data/music_w6.js';
+import { BEIGE } from '../data/pumpkins.js';
 const W6_MUSIC = __RELEASE__ >= 2 ? MUSIC_W6 : {};   // World 6 beta tracks (the Frenzy jukebox); dropped from store builds
 
 // ---------- Audio ----------
@@ -245,6 +246,7 @@ export const SFX = {
     layer(1, 0.05, () => this._phit(type, size, rainbow));
   },
   _phit(type, size, rainbow){
+    if (__RELEASE__ >= 3 && type === BEIGE){ S('slime', 0.5, { rate: 0.9 }) || thump(); return; }   // Beige: a sticky splat
     switch (type){
       case 1: S('thud', 0.6) || thump(); S('coin', 0.45, { delay: 0.02 }) || coinChime(0.02); break;                       // Yellow
       case 2: S('ice', 0.55) || (tone(1800, 0.14, 'sine', 0.05, 2600), noise(0.12, 0.16, 4000, 2, 0.02, 2000)); break;    // Ice

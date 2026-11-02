@@ -26,3 +26,16 @@ export function paintPatches(g, R, paints){
   g.fillStyle = paints[0]; g.beginPath(); g.moveTo(R * .36, R * .44); g.lineTo(R * .34, R * .66); g.arc(R * .4, R * .66, R * .06, Math.PI, 0, true); g.lineTo(R * .44, R * .44); g.closePath(); g.fill();   // a drip
   g.restore();
 }
+
+/** Beige (Release 3): glossy glue running down from the stem; drawn into the baked pumpkin sprite only. */
+export function glueDrips(g, R){
+  g.save(); rind(g, R); g.clip();
+  const goo = '#f7ecd0', edge = 'rgba(120,90,40,.45)';
+  g.fillStyle = goo; g.beginPath(); g.ellipse(0, -R * .8, R * .5, R * .2, 0, 0, Math.PI * 2); g.fill();   // the cap of glue over the top
+  for (const [x, len, w] of [[-R * .34, .26, .1], [R * .02, .4, .12], [R * .36, .2, .09]]){
+    g.beginPath(); g.moveTo(x - R * w, -R * .7); g.lineTo(x - R * w * .8, -R * .7 + R * len); g.arc(x, -R * .7 + R * len, R * w * .95, Math.PI, 0, true); g.lineTo(x + R * w, -R * .7); g.closePath(); g.fill();
+    g.strokeStyle = edge; g.lineWidth = R * .025; g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.ellipse(x - R * w * .35, -R * .7 + R * len - R * w * .2, R * w * .25, R * w * .35, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = goo;
+  }
+  g.restore();
+}

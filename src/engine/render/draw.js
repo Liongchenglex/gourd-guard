@@ -49,7 +49,7 @@ export function render(){
   drawHexZones(t);
   const ms = g.monsters.slice().sort((a, b) => a.p - b.p);
   const walkerBands = g.monsters.filter(m => m.type === 'fogwalker' && !m.dead && m.p > 0).map(m => [m.p - TYPES.fogwalker.band, m.p + TYPES.fogwalker.band]);
-  const mapDef = g.def && !g.preview ? g.def : null;   // the level preview shows the map without its fog: castles and puddles stay visible until the night starts (owner, 2026-10-31)
+  const mapDef = g.def && !(g.preview && __RELEASE__ >= 2) ? g.def : null;   // Release 2: the level preview shows the map without its fog, so castles and puddles stay visible until the night starts (owner, 2026-10-31)
   const rowBands = ((mapDef && mapDef.fogRows) || []).map(r => [r * TILE_P(), (r + 1) * TILE_P()]);
   const bands = [...((mapDef && mapDef.fog) || []), ...rowBands, ...walkerBands];
   const fogCols = (mapDef && mapDef.fogCols) || [];

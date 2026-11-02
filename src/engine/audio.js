@@ -2,7 +2,7 @@ import { save } from '../save.js';
 import { BANK } from '../data/sfxbank.js';
 import { MUSIC } from '../data/music.js';
 import { MUSIC_W6 } from '../data/music_w6.js';
-const W6_MUSIC = import.meta.env.VITE_W6 ? MUSIC_W6 : {};   // World 6 beta tracks (the Frenzy jukebox); dropped from store builds
+const W6_MUSIC = __RELEASE__ >= 2 ? MUSIC_W6 : {};   // World 6 beta tracks (the Frenzy jukebox); dropped from store builds
 
 // ---------- Audio ----------
 // Two layers: recorded CC0 samples (src/data/sfxbank.js, built by tools/sfx_build.py from assets/sfx) for the organic,

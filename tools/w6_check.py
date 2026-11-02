@@ -388,6 +388,18 @@ def check_divers_hide(browser, url, on):
     page.close()
 
 
+def check_release(browser, url, on):
+    page, errors = open_page(browser, url)
+    r = page.evaluate("() => window.__gg.RELEASE")
+    ok(r == (999 if on else 1), f'the build is release {r} (playtest = all, store = 1)')
+    bad = page.evaluate("() => window.__gg.WORLD_LEVELS.flat().filter(d => (d.release || 1) > window.__gg.RELEASE).map(d => d.world + '-' + d.level)")
+    ok(not bad, f'no level from a later release is in the build {bad}')
+    if on:
+        tags = page.evaluate("() => window.__gg.WORLD_LEVELS[5].map(d => d.release)")
+        ok(all(t == 2 for t in tags[:16]), f'Hallow\'s End 6-1 to 6-16 are tagged Release 2 {tags}')
+    page.close()
+
+
 def check_owner_1031(browser, url, on):
     if not on: return
     page, errors = open_page(browser, url)
@@ -406,7 +418,7 @@ def check_owner_1031(browser, url, on):
 
 
 CHECKS = {
-    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst, 'check_6_5_to_7': check_6_5_to_7, 'check_double_boss': check_double_boss, 'check_emergency': check_emergency, 'check_6_9_to_12': check_6_9_to_12, 'check_wind': check_wind, 'check_divers_hide': check_divers_hide,
+    'check_flag': check_flag, 'check_shelf': check_shelf, 'check_bundle': check_bundle, 'check_open': check_open, 'check_levels': check_levels, 'check_jukebox': check_jukebox, 'check_jukebox_more': check_jukebox_more, 'check_owner_1031': check_owner_1031, 'check_frenzy_burst': check_frenzy_burst, 'check_6_5_to_7': check_6_5_to_7, 'check_double_boss': check_double_boss, 'check_emergency': check_emergency, 'check_6_9_to_12': check_6_9_to_12, 'check_wind': check_wind, 'check_divers_hide': check_divers_hide, 'check_release': check_release,
 }
 
 

@@ -7,7 +7,7 @@ import world2 from './world2.js';
 import world3 from './world3.js';
 import world4 from './world4.js';
 import world5 from './world5.js';
-import world6 from './world6.js';
+import world6, { releaseOf as w6Release } from './world6.js';
 
 // Background themes (index = LevelDef.theme). Drawn by buildBg() in src/engine/render/sprites.js.
 //   sky: [top, middle, horizon] gradient    ground: [field top, field bottom]    grass: tuft / reed colour
@@ -33,11 +33,13 @@ export const WORLDS = [
 /** Display names for the six worlds (docs/WORLDS.md §3). Worlds without levels yet show as "coming soon". */
 export const WORLD_NAMES = ['Pumpkin Patch', 'Foggy Hollow', 'Witchwood', 'Crumbling Keep', 'Drowned Marsh', "Hallow's End"];   // order changed by the owner 2026-09-25
 
-/** World 6 (Hallow's End) is a beta for the private playtest only: it exists in builds made with VITE_W6=1 and never in the
- *  store builds (docs/WORLD6_BRIEFING.md). With the flag off the expression below is constant and world6.js is dropped. */
-export const W6 = !!import.meta.env.VITE_W6;
+/** Releases (docs/RELEASES.md): __RELEASE__ is set at build time by vite.config.js (store = STORE_RELEASE, playtest = all = 999).
+ *  A level ships in its `release` (default 1). Hallow's End starts in Release 2; below that the expression is constant and world6.js is dropped. */
+export const RELEASE = __RELEASE__;
+const inRelease = d => (d.release || 1) <= __RELEASE__;
+export const W6 = __RELEASE__ >= 2;
 
-export const WORLD_LEVELS = import.meta.env.VITE_W6 ? [world1, world2, world3, world4, world5, world6] : [world1, world2, world3, world4, world5];
+export const WORLD_LEVELS = __RELEASE__ >= 2 ? [world1, world2, world3, world4, world5, world6.map(d => ({ release:w6Release(d), ...d })).filter(inRelease)] : [world1, world2, world3, world4, world5];
 
 // Flat list of every level in play order. Story night n (1-based) is ALL_LEVELS[n - 1].
 export const ALL_LEVELS = WORLD_LEVELS.flat();

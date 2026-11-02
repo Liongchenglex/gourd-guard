@@ -1,4 +1,4 @@
-// World 6: Hallow's End (beta, VITE_W6 builds only; spec docs/superpowers/specs/2026-10-31-hallows-end-first-levels-design.md).
+// World 6: Hallow's End (Releases 2 and 3; until then only in the playtest build; spec docs/superpowers/specs/2026-10-31-hallows-end-first-levels-design.md).
 // Every level is hand-designed by the owner around a cross-world monster mix; no shared pool, no pumpkin unlocks (full choice).
 // Rows are fractions of the field (0 = top, 1 = fence) so every phone sees the same map. Numbers are bot-tuned (GAME_DESIGN.md).
 // Schema: ../levels.js.
@@ -65,3 +65,6 @@ export default [
     pool:[['witch', 2], ['rchameleon', 3], ['mirror', 2], ['vampire', 2], ['knight', 3], ['archer', 2], ['bulwark', 1]],
     gravesLayout:[[0, 0], [0, 6], [4, 0], [4, 6]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
 ];
+
+/** Releases (docs/RELEASES.md, owner 2026-11-02): 6-1 to 6-16 ship in Release 2, 6-17 to 6-20 in Release 3. */
+export const releaseOf = d => d.level <= 16 ? 2 : 3;

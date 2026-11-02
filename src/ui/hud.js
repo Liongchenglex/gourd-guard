@@ -7,8 +7,8 @@ import { save } from '../save.js';
 import { toolIcon } from '../engine/render/tools.js';
 import { QUEST_START, questsFor, questLive, questShort } from '../data/quests.js';
 
-// The tool tray, in order. Emergency Pumpkins is a World 6 tool, so its button exists only in VITE_W6 builds.
-const TRAY = [['#rpBtn', 'repair'], ['#fwBtn', 'fw'], ['#gbBtn', 'buster'], ['#lnBtn', 'lantern'], ['#lmBtn', 'mine'], ['#bmBtn', 'bomb'], ['#scBtn', 'scarecrow'], ...(import.meta.env.VITE_W6 ? [['#epBtn', 'emergency']] : [])];
+// The tool tray, in order. Emergency Pumpkins is a World 6 tool, so its button exists only from Release 2 (docs/RELEASES.md).
+const TRAY = [['#rpBtn', 'repair'], ['#fwBtn', 'fw'], ['#gbBtn', 'buster'], ['#lnBtn', 'lantern'], ['#lmBtn', 'mine'], ['#bmBtn', 'bomb'], ['#scBtn', 'scarecrow'], ...(__RELEASE__ >= 2 ? [['#epBtn', 'emergency']] : [])];
 import { HOUR_SECONDS as E_HOUR } from '../data/endless.js';
 let trayDrawn = false;
 let qNext = -1, qHtml = '', qFor = null;   // quest trackers, rebuilt 4 times a second rather than every frame
@@ -60,7 +60,7 @@ export function updateHud(force){
   $('#gbCount').textContent = save.buster; $('#gbBtn').disabled = save.buster <= 0; $('#gbBtn').classList.toggle('aim', G.aim === 'buster');
   $('#lnCount').textContent = save.lantern; $('#lnBtn').disabled = save.lantern <= 0 || (G.fogClear || 0) > 0;
   $('#bmCount').textContent = save.bomb; $('#bmBtn').disabled = save.bomb <= 0; $('#bmBtn').classList.toggle('aim', G.aim === 'bomb');
-  if (import.meta.env.VITE_W6){ $('#epCount').textContent = save.emergency || 0; $('#epBtn').disabled = !(save.emergency > 0); }
+  if (__RELEASE__ >= 2){ $('#epCount').textContent = save.emergency || 0; $('#epBtn').disabled = !(save.emergency > 0); }
   $('#scCount').textContent = save.scarecrow; $('#scBtn').disabled = save.scarecrow <= 0; $('#scBtn').classList.toggle('aim', G.aim === 'scarecrow');
   $('#lmCount').textContent = save.mine; $('#lmBtn').disabled = save.mine <= 0; $('#lmBtn').classList.toggle('aim', G.aim === 'mine');
   for (const [btn, key] of TRAY){

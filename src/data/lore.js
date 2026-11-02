@@ -20,7 +20,7 @@ export const BOOKS = [
     blurb:'Puddles and the sea spawn monsters. Sailors, slimes and the Twin Tides.' },
   { cover:'#26202e', edge:'#cfc6d6', ink:'#1a1420',
     lore:'On the last night of October every door between the worlds stands open at once.',
-    blurb:import.meta.env.VITE_W6 ? 'Every monster returns, and the jukebox starts the Frenzy.' : 'Coming in a future release.' },   // World 6 beta: VITE_W6 builds only
+    blurb:__RELEASE__ >= 2 ? 'Every monster returns, and the jukebox starts the Frenzy.' : 'Coming in a future release.' },   // Release 2 (Hallow's End)
 ];
 
 // A line of story per pumpkin for the picking screen (owner, 2026-09-27). Keys match PTYPES[].key.

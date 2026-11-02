@@ -408,10 +408,11 @@ def check_6_13_to_16(browser, url, on):
     if len(defs) < 4:
         ok(False, f'6-13 to 6-16 exist ({len(defs)} found)'); page.close(); return
     a, b, c, d = defs
-    ok(a['name'] == 'Blind Night' and a['pool'] == ['fogwalker', 'sailor', 'wisp', 'wraith'] and a['frenzy'] and a['fogCols'] == [1, 5] and a['gust'], f'6-13 Blind Night {a}')
+    fog13 = page.evaluate("() => JSON.stringify(window.__gg.WORLD_LEVELS[5][12].fog || [])")
+    ok(a['name'] == 'Blind Night' and a['pool'] == ['sailor', 'wisp', 'wraith'] and a['frenzy'] and a['fogCols'] == [] and fog13 == '[[0,1]]' and a['gust'], f'6-13 Blind Night: fog over the whole field, no fogwalkers {a} {fog13}')
     ok(b['name'] == 'Turncoat Tide 2' and b['pool'] == ['chameleon', 'diver'] and b['frenzy'] and 0.4 <= b['shoreFrac'] < 0.5 and b['castles'] == 7 and b['fogCols'] == [0, 6], f'6-14 Turncoat Tide 2 {b}')
     ok(c['name'] == 'Heavy Guests at the Door' and c['pool'] == ['bulwark', 'diver', 'turtle'] and c['frenzy'] and c['shore'] == 4, f'6-15 Heavy Guests at the Door {c}')
-    ok(d['boss'] == 'twintides' and d['boss2'] == 'twintides' and d['after'] and d['pool'] == ['diver', 'sailor', 'slime'], f'6-16: two pairs of Twin Tides, jukebox after the first pair {d}')
+    ok(d['boss'] == 'twintides' and d['boss2'] == 'twintides' and d['after'] and d['pool'] == ['diver', 'sailor', 'slime', 'turtle'], f'6-16: two pairs of Twin Tides, jukebox after the first pair {d}')
     start(page, 116)
     page.evaluate("() => { const G = window.__gg.G; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }"); time.sleep(0.8)
     tw = page.evaluate(f"() => {{ const b = {BOSSES}; return [b.length, b.every(m => m.kind === 'twintides' && m.twin && m.twin.twin === m), new Set(b.map(m => m.lane)).size]; }}")

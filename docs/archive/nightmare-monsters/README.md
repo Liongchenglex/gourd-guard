@@ -8,7 +8,7 @@ New monsters the owner asked for, for the nightmare levels. Open `index.html` (r
 | `vampires-doctor/` | Blood Glutton, Bat Bride (vampire variants); Rot Doctor (plague doctor variant) | "2 different versions of the current vampire, 1 different version of the plague doctor" |
 | `witches-mirror/` | Ash Crone, Blood Coven Witch (witch variants); Triptych Sprite with a baked 3-lane reflect barrier | "2 different versions of the witch; enhanced mirror sprite: a barrier that reflects 3 columns instead of 1" |
 | `kraken-pirate/` | The Kraken (body, tentacle, cursed-anchor projectile), Drowned Pirate | "a kraken: surfaces and dives in intervals; when it dives its tentacles are up and throw projectiles; pirate monster" |
-| `riders/` | Wisp Rider 2 (Comet Rider: imp on a long ghostfire serpent that dashes), Turtle Rider (imp on a saddled Shell Turtle that hides) | "wisp rider 2 rides a long wisp that shoots down the lane with the imp; an imp riding on a turtle" |
+| `riders/` | Wisp Rider 2 (Comet Rider: imp on a long ghostfire serpent that dashes), Turtle Rider (imp on a saddled Shell Turtle that hides; the imp throws rotten pumpkins, with a separate fly/splat sprite) | "wisp rider 2 rides a long wisp that shoots down the lane with the imp; an imp riding on a turtle" |
 | `coffin/` | Casket Jack (walking pumpkin-wood coffin that summons mummies) and its field coffin | "a monster that summons mummies, fitting for pumpkin patch, something to do with coffins" |
 | `slime-patch/` | Blood Splitter Slime and its Bloodlet, Hayrick (hay monster) and Burning Hayrick, Cinder Rooster, Corn Husker and Burning Corn Husker | "blood splitter slime; more pumpkin patch monsters, like a hay monster" (rooster and husker are design proposals) |
 

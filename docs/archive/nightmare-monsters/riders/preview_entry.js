@@ -11,10 +11,10 @@ const h = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e
 const GAME = {
   rider: { name:'Wisp Rider (game)', ...W2.rider }, wisp: { name:'Wisp (game)', ...W2.wisp }, imp: { name:'Imp (game)', ...W1.imp }, turtle: { name:'Shell Turtle (game)', ...W5.turtle },
 };
-const KEYS = ['comet', 'turtle'], SPECIAL = { comet:'dash', turtle:'hide' };
+const KEYS = ['comet', 'turtle'], SPECIAL = { comet:['dash'], turtle:['hide', 'throw'] }, ALL = [...KEYS, 'rotten'];
 const IDEA = {
   comet: 'Gameplay idea: cruises at walk pace, then every few seconds stretches out and streaks about a cell and a half down its lane (the dash clip). The first hit breaks the long wisp, which bursts into a plain Wisp in the same lane, and the imp drops to a walk, so one kill leaves two foes.',
-  turtle: 'Gameplay idea: plods head first, slow and tough (shell hp like the Shell Turtle, the imp 2 hp on top). After every hit the turtle hides in its shell for 2 s (hide clip, held, then played backwards) and only Grey (pierce) or lightning hurts it; the imp\'s goad makes it bite the wall twice as hard.',
+  turtle: 'Gameplay idea: plods head first, slow and tough (shell hp like the Shell Turtle, the imp 2 hp on top). After every hit the turtle hides in its shell for 2 s (hide clip, held, then played backwards) and only Grey (pierce) or lightning hurts it. Every few seconds the imp pulls a rotten pumpkin from the net on the shell and hurls it down the lane (throw clip); it flies as its own sprite and splats on the wall (what the splat does is the owner\'s call).',
 };
 
 /** A canvas showing entry `en`'s box at `scale` CSS px per drawing unit. */
@@ -35,12 +35,13 @@ const frameOf = (en, clip, i) => { const cl = en.clips[clip]; if (!cl.once){ con
 for (const key of KEYS){
   const en = CLIPS[key], s = sec(en.name, IDEA[key]);
   const row = h('div', 'row'); s.appendChild(row);
-  for (const clip of ['walk', 'chew', SPECIAL[key]]){ const c = cell(en, key === 'comet' ? 1.5 : 1.9, `${clip}`); row.appendChild(c.el); anims.push([c, en, clip]); }
+  for (const clip of ['walk', 'chew', ...SPECIAL[key]]){ const c = cell(en, key === 'comet' ? 1.5 : 1.9, `${clip}`); row.appendChild(c.el); anims.push([c, en, clip]); }
   const orig = key === 'comet' ? [[GAME.rider, 'ride'], [GAME.wisp, 'walk'], [GAME.imp, 'walk']] : [[GAME.turtle, 'walk'], [GAME.imp, 'walk']];
+  if (key === 'turtle') for (const clip of ['fly', 'splat']){ const c = cell(CLIPS.rotten, 1.9, `rotten pumpkin: ${clip}`); row.appendChild(c.el); anims.push([c, CLIPS.rotten, clip]); }
   for (const [o, clip] of orig){ const c = cell(o, 1.5, o.name); row.appendChild(c.el); anims.push([c, o, clip]); }
 }
 // 2. strips
-for (const key of KEYS){
+for (const key of ALL){
   const en = CLIPS[key], s = sec(`${en.name}: every clip`, 'Once clips use t = i / (n - 1), loops t = i / n. Frames are the registry box.');
   for (const [name, cl] of Object.entries(en.clips)){
     s.appendChild(h('h3', null, `${name} (${cl.n} frames, ${cl.fps} fps${cl.once ? ', once' : ''})`)); const row = h('div', 'row strip'); s.appendChild(row);
@@ -53,7 +54,7 @@ for (const key of KEYS){
   const row = h('div', 'row game'); s.appendChild(row);
   const base = 60 / 120 / GAME.rider.scale;   // px per game unit: the riding Wisp Rider is about 120 drawing units tall
   for (const [o, clip, lbl] of [[GAME.rider, 'ride', 'Wisp Rider'], [GAME.imp, 'walk', 'Imp'], [GAME.turtle, 'walk', 'Shell Turtle']]){ const c = cell(o, base * o.scale, lbl); row.appendChild(c.el); anims.push([c, o, clip]); }
-  for (const key of KEYS){ const en = CLIPS[key]; for (const clip of Object.keys(en.clips)){ const c = cell(en, base * en.scale, clip); row.appendChild(c.el); anims.push([c, en, clip]); } }
+  for (const key of ALL){ const en = CLIPS[key]; for (const clip of Object.keys(en.clips)){ const c = cell(en, base * en.scale, clip); row.appendChild(c.el); anims.push([c, en, clip]); } }
 }
 
 const t0 = performance.now();
@@ -61,7 +62,7 @@ function tick(now){ const ph = (now - t0) / 1000; for (const [c, en, clip] of an
 requestAnimationFrame(tick);
 // test hooks: freeze every animated cell on one frame; measure how close any frame comes to its box edges (drawing units)
 window.__freeze = (frame = 0) => { for (const [c, en, clip] of anims) c.draw(frameOf(en, clip, frame)); };
-window.__edges = () => { const out = {}; for (const key of KEYS){ const en = CLIPS[key], B = en.box, sc = 2, c = document.createElement('canvas'); c.width = Math.ceil(B.w * sc); c.height = Math.ceil(B.h * sc); const g = c.getContext('2d');
+window.__edges = () => { const out = {}; for (const key of ALL){ const en = CLIPS[key], B = en.box, sc = 2, c = document.createElement('canvas'); c.width = Math.ceil(B.w * sc); c.height = Math.ceil(B.h * sc); const g = c.getContext('2d');
   for (const [name, cl] of Object.entries(en.clips)) for (let i = 0; i < cl.n; i++){ g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); g.save(); g.scale(sc, sc); g.translate(-B.x, -B.y); en.draw(g, cl.pose(cl.once ? i / (cl.n - 1) : i / cl.n)); g.restore();
     const d = g.getImageData(0, 0, c.width, c.height).data; let x0 = c.width, x1 = 0, y0 = c.height, y1 = 0;
     for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3] > 8){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }

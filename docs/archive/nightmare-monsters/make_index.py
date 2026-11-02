@@ -26,7 +26,7 @@ GROUPS = [
     ('Burning Corn Husker', 'A husk cloak on fire, ember hair and popping kernels. Its burning husk lands in the neighbouring lanes when shed, leaving a charred cob studded with glowing kernels.')]),
   dict(key='riders', title='Imp riders', world='Foggy Hollow and Drowned Marsh', done=True, monsters=[
     ('Wisp Rider 2 (Comet Rider)', 'The goggled imp rides a long serpent of ghostfire. It cruises, then stretches straight and streaks down its lane with the imp crouched low. The first hit breaks it into a plain Wisp and a walking imp.'),
-    ('Turtle Rider', 'The imp sits on a saddled, spiked Shell Turtle with reins and an iron goad. After every hit the turtle hides in its shell for a moment while the imp ducks behind the rim.')]),
+    ('Turtle Rider', 'The imp sits on a saddled, spiked Shell Turtle with reins and an iron goad. After every hit the turtle hides in its shell for a moment while the imp ducks behind the rim. The imp keeps a net of rotten pumpkins on the shell and hurls them down the lane, where they splat on the wall in a cloud of green stink.')]),
   dict(key='coffin', title='Casket Jack, the mummy summoner', world='Pumpkin Patch', done=True, monsters=[
     ('Casket Jack', 'A walking pumpkin-wood coffin from the farm graveyard, with a glowing jack-o-lantern face carved in the lid, a pumpkin stem on top, root legs, vine arms and a rusty spade. Every few seconds it stops, its lid creaks open and a mummy steps out into its lane.'),
     ('Field coffin', 'When Casket Jack dies it falls into a coffin on the field that bursts open with one last mummy a few seconds later, unless a pumpkin smashes it first.')]),

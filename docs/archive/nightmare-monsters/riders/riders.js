@@ -5,6 +5,8 @@
 //            leads, the body streams up the lane behind it in an S. It cruises, then stretches out and streaks down the lane.
 //   turtle — the Turtle Rider: the red imp perched on the back of a big Shell Turtle (the w5 look: domed shell with raised scutes,
 //            barnacles, moss) walking head first, steered with reins and a goad. When hit the turtle can pull into its shell.
+//            The imp carries a net of rotten pumpkins on the shell and throws them down the lane (owner: "it will throw rotten
+//            pumpkin"): the throw clip, then the separate rotten sprite (fly, splat).
 // The imp is the world 1 imp (red skin, peach belly, cream horns, pointed ears, fangs) promoted to a rider: brass flying goggles,
 // little bat wings and a scarf. Seen from the front like every monster: the mount's head leads at the bottom (toward the wall),
 // what trails behind goes up the lane.
@@ -169,8 +171,75 @@ function goad(g, x, y, a, len = 62){ const ca = Math.cos(a), sa = Math.sin(a), b
   S.tube(g, SO([[bx, by], [tx, ty]]), WOOD, 3.6);
   S.part(g, PL([[tx - sa * 3.4, ty + ca * 3.4], [tx + ca * 13, ty + sa * 13], [tx + sa * 3.4, ty - ca * 3.4]]), IRON, { x:tx + ca * 4, y:ty + sa * 4, r:8 }, { flat:true, mat:'metal', lw:1.1 });
   S.part(g, E(tx, ty, 3.6, 3.6), BRASS, { x:tx, y:ty, r:3.6 }, { flat:true, mat:'metal', lw:.9 }); }
+// ---------- the rotten pumpkin the Turtle Rider's imp throws ----------
+const ROT = pal('#cf7a2c'), ROTG = pal('#7d8a34'), ROTD = pal('#5e4222'), DSTEM = pal('#3a3424'), NET = pal('#8a7550'), MOULD = '#d6e6b8', STINK = '#9ac25a';
+/** A slumped, bruised pumpkin gone bad: lopsided ribs, brown rot, white mould, a wilted stem and X eyes. Centre (x, y), radius R. */
+function rotten(g, x, y, R, spin = 0){
+  g.save(); g.translate(x, y); g.rotate(spin);
+  const ribs = [[-.6, .42, .64], [.58, .44, .7], [-.22, .5, .74], [.2, .5, .78]];
+  const union = g2 => { g2.beginPath(); for (const [ox, rw, rh] of ribs) g2.ellipse(ox * R * .9, R * .06, rw * R * 1.1, R * rh, 0, 0, TAU); };
+  for (const [ox, rw, rh] of ribs){ const cx = ox * R * .9; S.part(g, E(cx, R * .06, rw * R * 1.1, R * rh), ROT, { x:cx, y:0, r:R * .8 }, { flat:Math.abs(ox) > .4, mat:'pumpkin', hx:cx - R * .12, hy:-R * .5 }); }
+  g.save(); union(g); g.clip();
+  for (const xx of [-.42, 0, .4]){ g.beginPath(); g.moveTo(xx * R, -R * .55); g.quadraticCurveTo(xx * R * 1.35, 0, xx * R, R * .6); g.strokeStyle = rgba(ROTD.deep, .4); g.lineWidth = R * .07; g.lineCap = 'round'; g.stroke(); }
+  S.dot(g, SM([[R * .12, -R * .12], [R * .5, -R * .32], [R * .74, R * .1], [R * .44, R * .44], [R * .08, R * .26]], .8), ROTG.base, .9);   // green rot patch
+  S.dot(g, E(R * .4, R * .08, R * .17, R * .12), ROTD.deep, .75);                                                                      // caved-in bruise
+  S.dot(g, E(-R * .48, R * .4, R * .24, R * .14), ROTG.dark, .7);
+  for (const [mx, my, mr] of [[-.42, -.36, .1], [-.3, -.26, .07], [.58, .34, .08], [-.08, .5, .06], [.64, -.08, .06], [.5, .2, .045]]) S.dot(g, E(mx * R, my * R, mr * R, mr * R), MOULD, .9);   // mould fuzz
+  g.restore();
+  S.ln(g, [[R * .18, -R * .46], [R * .3, -R * .24], [R * .2, -R * .04], [R * .34, R * .16]], ROTD, R * .06, .9);                       // a split oozing
+  S.tube(g, SO([[R * .02, -R * .6], [-R * .04, -R * .88], [-R * .28, -R * 1.0], [-R * .46, -R * .86]]), DSTEM, R * .14);               // wilted stem, flopped over
+  // X eyes and a wobbly frown: a pumpkin that has gone over to the other side
+  const ey = -R * .12, ex = R * .32, e = R * .11;
+  for (const sx of [-ex, ex]){ S.ln(g, [[sx - e, ey - e], [sx + e, ey + e]], ROTD, R * .07, .95); S.ln(g, [[sx + e, ey - e], [sx - e, ey + e]], ROTD, R * .07, .95); }
+  S.ln(g, [[-R * .26, R * .3], [-R * .12, R * .24], [0, R * .3], [R * .12, R * .24], [R * .26, R * .3]], ROTD, R * .06, .9);
+  g.restore();
+}
+/** Green stink curls trailing up the lane behind a rotten pumpkin (phase ph 0..1). */
+function stink(g, x, y, R, ph, a = 1){
+  g.save(); g.globalAlpha *= a; g.lineCap = 'round';
+  for (const [dx, k] of [[-.45, 0], [0, .33], [.45, .66]]){ const u = (ph + k) % 1, yy = y - R * (1.1 + u * 1.4), xx = x + dx * R, w = R * .18;
+    g.strokeStyle = rgba(STINK, .75 * (1 - u)); g.lineWidth = R * .1; g.beginPath(); g.moveTo(xx, yy + R * .5);
+    g.bezierCurveTo(xx + w * 2, yy + R * .3, xx - w * 2, yy + R * .15, xx + w * .5, yy - R * .1); g.stroke(); }
+  g.restore();
+}
+/** The thrown pumpkin as its own sprite: fly (spins, stink trailing up the lane) and splat (bursts on the wall). */
+function rottenShot(g, P = {}){
+  if (P.splat == null){ const t = P.fly ?? 0; S.shadow(g, 0, 50, 14, 4); stink(g, 0, 0, 18, t); rotten(g, 0, 0, 18, t * TAU); return; }
+  const t = P.splat, sq = clamp(t / .25), burst = clamp((t - .15) / .85), fade = 1 - .75 * clamp((t - .6) / .4);
+  // the puddle of rot spreading where it hit
+  g.save(); g.globalAlpha *= fade; S.dot(g, SM([[-30, 34], [-18, 26], [0, 30], [16, 24], [32, 32], [24, 42], [0, 44], [-22, 42]].map(([x, y]) => [x * (.4 + burst * .6), 34 + (y - 34) * (.4 + burst * .6)]), .8), ROTD.base, .9);
+  S.dot(g, E(-6, 33, 10 * burst, 3.5 * burst), ROT.base, .9); g.restore();
+  // the pumpkin squashing flat, then gone
+  if (t < .35){ g.save(); g.translate(0, 18 + sq * 14); g.scale(1 + sq * .5, 1 - sq * .55); rotten(g, 0, 0, 18); g.restore(); }
+  // chunks and mould flying out
+  g.save(); g.globalAlpha *= fade;
+  for (const [a, d, r, c] of [[-2.7, 34, 4.5, ROT], [-2.1, 30, 3.5, ROTD], [-1.3, 36, 4, ROT], [-.6, 32, 3.2, ROTD], [-.2, 26, 4, ROT], [-3.0, 22, 3, ROTD], [-1.7, 20, 2.6, ROT]]){
+    const x = Math.cos(a) * d * burst, y = 30 + Math.sin(a) * d * burst + burst * burst * 18; S.part(g, E(x, y, r, r * .8), c, { x, y, r }, { flat:true, mat:'pumpkin', noEdge:true }); }
+  for (const [a, d] of [[-2.4, 24], [-.9, 28], [-1.6, 30]]){ const x = Math.cos(a) * d * burst, y = 30 + Math.sin(a) * d * burst; S.dot(g, E(x, y, 2.2, 2.2), MOULD, .9); }
+  g.restore();
+  // a green stink cloud rising
+  g.save(); g.globalAlpha *= fade * clamp(t / .3);
+  for (const [x, y, r] of [[-14, 18, 12], [10, 14, 14], [0, 2, 11], [-4, -12 - burst * 8, 9]]) puff(g, x, y - burst * 10, r * (.6 + burst * .5), .55, STINK);
+  g.restore();
+}
+/** The net of spare rotten pumpkins tied on the shell's right flank, by the saddle. */
+function netBag(g, n = 2){
+  S.ln(g, [[22, -38], [36, -42]], NET, 2.2, .9);
+  if (n > 1) rotten(g, 47, -26, 12, .2);
+  rotten(g, 34, -38, 12.5, -.15);
+  g.save(); g.lineCap = 'round'; g.strokeStyle = rgba(NET.dark, .9); g.lineWidth = 1.1;
+  for (const k of [-1, 0, 1]){ g.beginPath(); g.moveTo(30 + k * 9, -50); g.quadraticCurveTo(42 + k * 6, -32, 40 + k * 10, -20); g.stroke(); }
+  for (const yy of [-40, -31, -24]){ g.beginPath(); g.moveTo(28, yy); g.quadraticCurveTo(44, yy + 4, 58, yy + 2); g.stroke(); }
+  g.restore();
+}
+const lerp2 = (a, b, u) => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+/** Throw clip, right hand path in drawing units: rest → into the net → wound up over the head → hurled down the lane → follow-through. */
+const THROW_KEYS = [[0, [22, -46]], [.28, [40, -40]], [.52, [32, -94]], [.66, [20, -58]], [.8, [10, -34]], [1, [22, -46]]];
+function throwHand(t){ for (let i = 1; i < THROW_KEYS.length; i++){ const [t0, a] = THROW_KEYS[i - 1], [t1, b] = THROW_KEYS[i]; if (t <= t1) return lerp2(a, b, ease((t - t0) / (t1 - t0))); } return THROW_KEYS[THROW_KEYS.length - 1][1]; }
+const RELEASE = .63;
+
 function turtleRider(g, P = {}){
-  const w = P.walk, ch = P.chew, hd = P.hide, ph = (w ?? ch ?? 0) * TAU, sw = w == null ? 0 : Math.sin(ph), cs = ch == null ? 0 : Math.sin(ch * TAU);
+  const w = P.walk, ch = P.chew, hd = P.hide, th = P.throw, ph = (w ?? ch ?? 0) * TAU, sw = w == null ? 0 : Math.sin(ph), cs = ch == null ? 0 : Math.sin(ch * TAU);
   const k = hd == null ? 0 : ease(clamp(hd)), kHead = ease(clamp(hd == null ? 0 : hd * 1.6)), kImp = ease(clamp(hd == null ? 0 : (hd - .2) / .8));
   const rock = sw * .04 + cs * .025, bob = w != null ? -Math.abs(sw) * 2.2 : cs * 1.5, sink = k * 7, bite = ch == null ? 0 : .5 + .5 * cs;
   S.shadow(g, 0, 50, 60 - k * 6, 8);
@@ -181,8 +250,9 @@ function turtleRider(g, P = {}){
   g.save(); g.translate(0, 10 + bob + sink); g.rotate(rock); g.translate(0, -10);
   // 1. the imp: behind the crest of the dome, so the shell hides his lower half; ducks down to peek over it when the turtle hides
   const iy = -60 + kImp * 17 + (w != null ? Math.abs(sw) * 2.2 : 0) + bite * 2, is = .7;
-  g.save(); g.translate(0, iy); g.scale(is, is); g.rotate(ch != null ? -.04 + bite * .08 : sw * .05);
-  impBody(g, { jaw:ch != null ? bite * .8 : kImp * .3, gog:kImp, wind:0, flap:hd != null ? -.5 * kImp : Math.sin(ph * 2) * .8, ph });
+  g.save(); g.translate(0, iy); g.scale(is, is); const wind = th == null ? 0 : Math.sin(clamp((th - .25) / .35) * Math.PI / 2) * (th < RELEASE ? 1 : 0), hurl = th == null ? 0 : Math.sin(clamp((th - .5) / .4) * Math.PI);
+  g.rotate(th != null ? -wind * .14 + hurl * .12 : ch != null ? -.04 + bite * .08 : sw * .05);
+  impBody(g, { jaw:th != null ? .2 + hurl * .9 : ch != null ? bite * .8 : kImp * .3, gog:kImp, wind:0, flap:hd != null ? -.5 * kImp : Math.sin(ph * 2) * .8, ph });
   g.restore();
   // 2. the dome, seen from the front and above: big raised scutes, a keel, horn spikes, a crimson saddle cloth by the crest
   const shell = SM([[-56, 18], [-58, -2], [-50, -24], [-30, -40], [0, -46], [30, -40], [50, -24], [58, -2], [56, 18], [36, 28], [0, 32], [-36, 28]]);
@@ -201,11 +271,25 @@ function turtleRider(g, P = {}){
   for (const [x, y, a] of [[-30, -18, -2.1], [30, -18, -1.04], [-34, 8, -2.6], [34, 8, -.54], [0, -6, -Math.PI / 2]]) if (x !== 0) spike(g, x, y - 3, a, 9, 3.4);
   barnacle(g, -50, 20, 4); barnacle(g, 46, 24, 3.5); barnacle(g, 52, 4, 3);
   wet(g, shell, { x:0, y:-4, r:56 });
+  netBag(g);
   // 3. the imp's hands grip the crest when he ducks; otherwise reins in the left, the goad in the right
   g.save(); g.translate(0, iy); g.scale(is, is);
   const toL = (x, y) => [x / is, (y - iy) / is];
   if (hd != null && kImp > .5){ const [ax, ay] = toL(-16, -44), [bx, by] = toL(16, -44); impArm(g, -1, ax, ay, Math.PI / 2 + .3); impArm(g, 1, bx, by, Math.PI / 2 - .3);
     const [gx, gy] = toL(30, -40); goad(g, gx, gy, -Math.PI / 2 - .5, 40); }
+  else if (th != null){
+    // left fist keeps the reins and stands the goad up; the right arm takes a rotten pumpkin from the net and hurls it down the lane
+    const [lx, ly] = toL(-18, -38); impArm(g, -1, lx, ly, Math.PI / 2 + .6); goad(g, lx, ly, -Math.PI / 2 - .35, 46);
+    const [hxD, hyD] = throwHand(th), [hx, hy] = toL(hxD, hyD), sx = 18, sy = 14, ex = (sx + hx) / 2 + 14, ey = Math.min(sy, hy) + (Math.max(sy, hy) - Math.min(sy, hy)) * .45;
+    const holding = th >= .26 && th < RELEASE;
+    S.tube(g, SO([[sx, sy], [ex, ey], [hx, hy]]), IMP, 6);
+    if (holding) rotten(g, hx, hy - 8 / is, 13 / is, -wind * .6);
+    S.hand(g, hx, hy, IMP, hy < sy ? -Math.PI / 2 : Math.PI / 2, 3, 4.6);
+    g.restore(); g.save();
+    const hyb = 38 + bob * .2;
+    for (const s of [-1, 1]){ const fx = -18, fy = -38, ex2 = s * 16, ey2 = hyb - 2, pp = crSample([[fx, fy], [(fx + ex2) / 2 + s * 12, (fy + ey2) / 2 + 6], [ex2, ey2]], 6);
+      S.ln(g, pp, LEATH, 3.4, .95); }
+  }
   else {
     const jab = ch != null ? bite : 0, [rx, ry] = toL(22 - jab * 2, -46 + jab * 12 + (w != null ? sw * 2 : 0)), [lx, ly] = toL(-18, -38);
     impArm(g, -1, lx, ly, Math.PI / 2 + .6);
@@ -250,6 +334,10 @@ function turtleRider(g, P = {}){
   // in the shell: two wary eyes glinting in the dark front notch
   if (kHead > .7){ g.save(); g.translate(0, 10 + bob + sink); g.rotate(rock); g.translate(0, -10); g.globalAlpha *= clamp((kHead - .7) / .3);
     S.dot(g, SM([[-16, 26], [0, 22], [16, 26], [12, 32], [-12, 32]], .8), '#14201a', .9); for (const s of [-1, 1]) S.glow(g, s * 6, 27, 1.8, '#f0c040'); g.restore(); }
+  // the thrown pumpkin flying off down the lane (toward the wall), growing as it comes forward; the game takes over with the rotten sprite
+  if (th != null && th >= RELEASE){ const u = (th - RELEASE) / (1 - RELEASE), [x0, y0] = throwHand(RELEASE);
+    g.save(); g.globalAlpha *= 1 - clamp((u - .75) / .25); const x = x0 + u * 6, y = y0 - 8 + u * 86 - Math.sin(u * Math.PI) * 10, r = 13 * (1 + u * .35);
+    stink(g, x, y, r, u, .8); rotten(g, x, y, r, u * 5); g.restore(); }
 }
 
 // ---------- clips (registry-style) ----------
@@ -257,6 +345,8 @@ function turtleRider(g, P = {}){
 export const CLIPS = {
   comet: { name:'Wisp Rider 2 (Comet Rider)', draw:comet, scale:.5, box:{ x:-70, y:-190, w:120, h:252 },
     clips:{ walk:{ n:8, fps:10, pose:t => ({ walk:t }) }, chew:{ n:4, fps:8, pose:t => ({ chew:t }) }, dash:{ n:8, fps:16, pose:t => ({ dash:t }) } } },
-  turtle: { name:'Turtle Rider', draw:turtleRider, scale:.56, box:{ x:-70, y:-106, w:140, h:178 },
-    clips:{ walk:{ n:8, fps:6, pose:t => ({ walk:t }) }, chew:{ n:4, fps:6, pose:t => ({ chew:t }) }, hide:{ n:6, fps:12, once:true, pose:t => ({ hide:t }) } } },
+  turtle: { name:'Turtle Rider', draw:turtleRider, scale:.56, box:{ x:-70, y:-118, w:140, h:190 },
+    clips:{ walk:{ n:8, fps:6, pose:t => ({ walk:t }) }, chew:{ n:4, fps:6, pose:t => ({ chew:t }) }, hide:{ n:6, fps:12, once:true, pose:t => ({ hide:t }) }, throw:{ n:10, fps:14, once:true, pose:t => ({ throw:t }) } } },
+  rotten: { name:'Rotten pumpkin (thrown)', draw:rottenShot, scale:.56, box:{ x:-44, y:-56, w:88, h:110 },
+    clips:{ fly:{ n:6, fps:12, pose:t => ({ fly:t }) }, splat:{ n:7, fps:14, once:true, pose:t => ({ splat:t }) } } },
 };

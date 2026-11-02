@@ -1,6 +1,6 @@
-"""World 6 (Hallow's End) checks for the w6-hallows-end branch, against a build served by tools/serve_dist.py.
+"""Release checks for branch dev (docs/RELEASES.md), against a build served by tools/serve_dist.py.
   Store build:     npm run build          then  .venv/bin/python tools/w6_check.py --url http://127.0.0.1:4173/ --expect off
-  Playtest build:  VITE_W6=1 npm run build then .venv/bin/python tools/w6_check.py --url http://127.0.0.1:4173/ --expect on
+  Playtest build:  npm run build:playtest then .venv/bin/python tools/w6_check.py --url http://127.0.0.1:4173/ --expect on
 Exits 1 on any failure. --only runs one check by name."""
 import argparse, pathlib, sys, time
 from playwright.sync_api import sync_playwright

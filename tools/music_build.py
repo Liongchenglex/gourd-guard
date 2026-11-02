@@ -21,8 +21,8 @@ SRC, ENC = ROOT / 'assets/music', ROOT / 'assets/music/enc'
 #         Then rotated (owner: "the weird start"): the file starts at 9.63 s, the silent breath after the opening bridge, so the bridge plays
 #         last and leads back into the start; the wrap falls in that breath.
 TRACKS = { 'play': 'w1_patch_clarinet.mp3', 'w1': 'w1_patch_clarinet.mp3', 'w2': 'w2_hollow_harp.mp3', 'w3': 'w3_witchwood_duet.mp3', 'w4': 'w4_keep_bassoon.mp3', 'w5': 'w5_marsh_underwater_harp.mp3', 'boss': 'boss_upright_rising_loud.mp3', 'menu': 'menu_lobby.mp3', 'nightmare': 'nightmare4_book.mp3' }   # back on the original lobby until the owner's new lobby piece arrives (menu_to_staccato.mp3 kept as a record)
-# World 6 beta (VITE_W6 builds only, owner 2026-10-31): the Frenzy jukebox plays the owner's frenzy.mp3 from 0:00. Written to its own
-# module so src/data/music.js and the store bundle stay unchanged; audio.js reads it only when VITE_W6 is set.
+# Release 2 (World 6, owner 2026-10-31): the Frenzy jukebox plays the owner's frenzy.mp3 from 0:00. Written to its own
+# module so src/data/music.js and the store bundle stay unchanged; audio.js reads it only when __RELEASE__ >= 2 (docs/RELEASES.md).
 TRACKS_W6 = { 'frenzy': 'frenzy.mp3' }
 def build(tracks, out, name):
     ENC.mkdir(exist_ok=True); uris, keys = {}, {}

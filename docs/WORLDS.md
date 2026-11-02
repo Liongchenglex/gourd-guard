@@ -401,7 +401,7 @@ Not in R1. Kept here so they are not lost. Owner ideas unless marked 💡.
 
 | Date | Change |
 |---|---|
-| 2026-10-31 | Owner: World 6 redesigned as hand-built levels with cross-world mixes and the Frenzy jukebox from 6-4; opens after 5-20; beta behind `VITE_W6` on branch `w6-hallows-end`. 6-1 to 6-4 built. |
+| 2026-10-31 | Owner: World 6 redesigned as hand-built levels with cross-world mixes and the Frenzy jukebox from 6-4; opens after 5-20; beta behind `VITE_W6` on branch `w6-hallows-end` (now Releases 2–3 on `dev`, `docs/RELEASES.md`). 6-1 to 6-4 built. |
 | 2026-10-11 | Owner: a full-screen ad after every Endless Night run of 60 s or more, before the result card. |
 | 2026-10-11 | Launch prep: testing links removed, saves mirrored to native storage, chest odds shown, AdMob rewarded ads and RevenueCat seed packs wired (test keys), Android app added. Checklist: `docs/LAUNCH.md`. |
 | 2026-10-09 | Owner: an inheriting Paint pumpkin counts as both Paint and the inherited colour for chameleon colour locks and immunities. |

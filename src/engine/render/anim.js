@@ -35,6 +35,8 @@ export function atlas(akey){ return atlases.get(akey) || bake(akey); }
 export function poolKey(k, VARIANTS){ const v = VARIANTS[k]; return v ? atlasKey(v.base, k) : k; }
 /** Bake every character a level can spawn so nothing hitches on first sight. keys are atlas keys (see poolKey). */
 export const isBaked = k => atlases.has(k);   // test hook
+/** Forget one baked atlas (the Hollow King's spent world boss forms: their frames are large). */
+export function dropAtlas(akey){ atlases.delete(akey); }
 export function prebake(keys){ for (const k of keys) if (CHARS[k.split('|')[0]] && !atlases.has(k)) bake(k); }
 /** Same, spread over idle time (used while the level card is open so Start does not hitch). */
 export function prebakeAsync(keys){ const todo = keys.filter(k => CHARS[k.split('|')[0]] && !atlases.has(k)); const step = () => { const k = todo.shift(); if (!k) return; if (!atlases.has(k)) bake(k); (window.requestIdleCallback || (f => setTimeout(f, 16)))(step); }; step(); }

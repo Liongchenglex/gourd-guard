@@ -485,7 +485,7 @@ def bundle_js():
 
 def check_r3_absent(browser, url, on):
     js = bundle_js()
-    for s in ('Knights in the Mist', 'Beige'):
+    for s in ('Knights in the Mist', 'Beige', 'Hollow King'):
         ok((s in js) == R3, f"{s!r} {'in' if R3 else 'not in'} the bundle")
 
 
@@ -674,6 +674,44 @@ def check_glue(browser, url, on):
 
 
 CHECKS.update({'check_glue': check_glue})
+
+
+KING = "window.__gg.G.monsters.find(m => m.kind === 'hollowking' && !m.dead)"
+
+
+def spawn_king(page, n=104):
+    start(page, n)
+    page.evaluate("() => { const G = window.__gg.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; window.__gg.spawnMonster('boss:hollowking', 3, false, 0.3, 2); }")
+    time.sleep(0.2)
+
+
+def check_hk_powers(browser, url, on):
+    page, errors = open_page(browser, url)
+    has = page.evaluate("() => !!(window.__gg.BOSS_NAMES || {}).hollowking")
+    if not R3:
+        ok(not has, 'no Hollow King in this build'); page.close(); return
+    spawn_king(page)
+    d = page.evaluate(f"() => {{ const k = {KING}; return [k.maxHp, window.__gg.BOSS_NAMES.hollowking, k.form]; }}")
+    ok(d == [60, 'The Hollow King', 2], f'the Hollow King arrives in his full form with 60 health {d}')
+    page.evaluate(f"() => {{ const k = {KING}; k.powerI = 0; k.powerT = 0; }}"); time.sleep(0.2)
+    col = page.evaluate("() => window.__gg.G.hkTell && window.__gg.G.hkTell.col")
+    ok(col is not None, f'the column wipe glows a column first ({col})')
+    before = page.evaluate("(c) => window.__gg.grid.filter(r => r[c] && !r[c].fly).length", col if col is not None else 0)
+    time.sleep(1.3)
+    after = page.evaluate("(c) => window.__gg.grid.filter(r => r[c] && !r[c].fly).length", col if col is not None else 0)
+    ok(before > 0 and after == 0, f'then every pumpkin in that column is destroyed ({before} -> {after})')
+    r = []
+    for hp in (10, 3, 1):
+        r.append(page.evaluate(f"() => {{ const w = window.__gg.walls[3]; w.max = 10; w.hp = {hp}; const k = {KING}; k.powerI = 1; k.powerT = 0; return new Promise(res => setTimeout(() => res(w.hp), 200)); }}"))
+    ok(r == [5, 1, 1], f'the fence smash takes half his lane\'s fence, never below 1 (10, 3, 1 -> {r})')
+    d = page.evaluate(f"""() => {{ const G = window.__gg.G, k = {KING}, n0 = G.monsters.length, s0 = G.spawned, pool = G.def.pool.map(e => e[0]); k.powerI = 2; k.powerT = 0;
+      return new Promise(res => setTimeout(() => {{ const nw = G.monsters.slice(n0).filter(m => !m.dead); res([nw.length, nw.every(m => m.minion), nw.every(m => pool.includes(m.vkey || m.type)), G.spawned === s0]); }}, 200)); }}""")
+    ok(4 <= d[0] <= 6 and all(d[1:]), f'the summon brings 4-6 of the night\'s monsters as extras {d}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_hk_powers': check_hk_powers})
 
 
 def main():

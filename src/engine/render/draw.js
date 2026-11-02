@@ -79,6 +79,7 @@ export function render(){
   if (G.aim === 'repair') drawAimWalls(t);
   updatePaintPull(t);   // marks borrowed pumpkins so drawGrid lights them
   drawGrid(t);
+  if (__RELEASE__ >= 3 && G.hkTell) drawHkTell(t);
   drawPaintPull(t);
   drawSproutBar();
   drawHintArrow(t);
@@ -217,6 +218,14 @@ export function drawFog(t, bands, cleared){   // layered drifting mist (render/f
     const y0 = H0 + a * (H1 - H0), y1 = H0 + b * (H1 - H0);
     drawMist(ctx, K, 0, y0 - FR, W, y1 - y0 + FR * 2, t, cleared, i++, false, FR);
   }
+}
+/** The Hollow King's column wipe warning (Release 3): a baked ember glow over the patch column, pulsing until it lands. */
+let tellSp = null;
+function drawHkTell(t){
+  if (!tellSp){ const c = document.createElement('canvas'); c.width = 32; c.height = 256; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256);
+    gr.addColorStop(0, 'rgba(255,140,42,0)'); gr.addColorStop(.2, 'rgba(255,120,30,.8)'); gr.addColorStop(1, 'rgba(255,60,10,.95)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 256); tellSp = c; }
+  const k = G.hkTell, x = LANE(k.col) - CS / 2;
+  ctx.globalAlpha = 0.75 + 0.25 * Math.sin(t * 18); ctx.drawImage(tellSp, x, GY - CS * 0.5, CS, CS * (ROWS + 0.5)); ctx.globalAlpha = 1;
 }
 /** Beige glue tiles (Release 3): the baked splat, fading out over its last half second. */
 export function drawGlue(){

@@ -11,11 +11,12 @@ import { W3 } from './w3.js';
 import { W4 } from './w4.js';
 import { W5 } from './w5.js';
 import { EXTRA } from './extra.js';
+import { HOLLOWKING } from './hollowking.js';
 
-export const CHARS = { ...W1, ...W2, ...W3, ...W4, ...W5, ...EXTRA };
+export const CHARS = { ...W1, ...W2, ...W3, ...W4, ...W5, ...EXTRA, ...(__RELEASE__ >= 3 ? HOLLOWKING : {}) };   // the Hollow King fights from Release 3
 export { pumpkin };
 /** The type or boss kind a monster is drawn as, or null when it still uses the old vector drawing. */
-export function charKey(m){ const k = m.type === 'boss' ? m.kind : m.type; return CHARS[k] ? k : null; }
+export function charKey(m){ const k = m.look || (m.type === 'boss' ? m.kind : m.type); return CHARS[k] ? k : null; }   // look: a world boss form drawn as the Hollow King
 /** Atlas key: a variant with its own costume gets its own strips. */
 export function atlasKey(k, vkey){ const C = CHARS[k]; return C && C.variants && vkey && C.variants[vkey] ? k + '|' + vkey : k; }
 /** The variant key a live monster draws with: its VARIANTS key, or one the character derives from state (chameleon colour). */

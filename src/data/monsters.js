@@ -70,6 +70,11 @@ export const TYPES = {
   // The Hexwitch: drifts between lanes, conjures chameleons; form 2 also hexes monsters already on the field into chameleons.
   hexwitch: { boss:true, hp:22, r:32, sp:0.03, coins:50, eat:0, pts:320, drop:6, hold:0.25, driftEvery:6, hexEvery:9, hexCount:[2, 3], chameleonChance:0.25,   // form 2: 25% chameleon / 75% reverse (owner); form 1 is reverse only
               zoneEvery:14, zoneLast:10, zoneRise:4, zones:1, shapes:['box'], form2:{ hp:40, zones:2, shapes:['box', 'col', 'row'], hexEvery:7 } },
+  // The Hollow King (6-20, Release 3; owner 2026-11-02, src/engine/hollowking.js): five phases; each splits off a world boss form (him in
+  // that boss's colour, with its level-10 kit and health) and he takes no damage until it falls. Every `powerEvery` s, in turn: wipe a
+  // patch column (after `wipeTell` s), smash his lane's fence by half (never below 1), summon `summonN` of the night's monsters.
+  ...(__RELEASE__ >= 3 ? { hollowking: { boss:true, hp:60, r:36, sp:0.03, coins:80, eat:0, pts:500, drop:8, hold:0.3, powerEvery:12, wipeTell:1, summonN:[4, 6],
+    forms:['gravekeeper', 'poltergeist', 'hexwitch', 'vampirecount', 'twintides'], noItems:true, form2:{ hp:60 } } } : {}),
 };
 
 /** Modifiers (docs/WORLDS.md §6): data-only stat tweaks any monster can carry. */
@@ -99,12 +104,13 @@ export const VARIANTS = {
   owlBat:       { base:'bat',   mod:'stubborn', name:'Owl-bat',       tint:'#a07a4a', intro:'Owl-bats shrug off knockback.' },
 };
 
-export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch' };
+export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch', ...(__RELEASE__ >= 3 ? { hollowking:'The Hollow King' } : {}) };
 export const BOSS_NAME = BOSS_NAMES.gravekeeper;   // legacy alias used by endless mode
 
 export const MNAME = { sack:'Loot Sack', jukebox:'Jukebox', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss' };
 
 export const BOSS_INTRO = {
+  ...(__RELEASE__ >= 3 ? { hollowking: { 2:'Five times he splits off a world boss in his own colours. While it stands, nothing hurts him: beat it first. He wipes a column of your patch, smashes a fence and calls monsters. They keep coming until he falls.' } } : {}),
   gravekeeper: { 1:'It stops a third of the way down and never reaches the wall, but it teleports between lanes and raises ghouls. Monsters keep coming until it falls.',
                  2:'Its full form: more health, faster summons, and every few seconds it drags a monster forward. Monsters keep coming until it falls.' },
   poltergeist: { 1:'A ghost that drifts between lanes a quarter of the way down. Every few seconds it swaps two of your pumpkins. Monsters keep coming until it falls.',

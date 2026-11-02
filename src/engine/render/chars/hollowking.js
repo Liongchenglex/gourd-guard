@@ -292,4 +292,8 @@ export function hollowking(g, P = {}){
 // 34 below the centre: 50 × .74 − 3 = 34); box holds the 15% taller antlered full form with its wings and halo, the raised sceptre of a
 // cast and the summon roots (shared atlas box). `walk` is the engine's idle name; `idle` is listed too for tools that ask for it by name.
 const clips = { idle:{ n:8, fps:6, pose:t => ({ idle:t }) }, cast:{ n:8, fps:12, once:true, pose:t => ({ cast:t }) }, summon:{ n:8, fps:12, once:true, pose:t => ({ summon:t }) }, hurt:{ n:4, fps:12, once:true, pose:t => ({ hurt:t }) }, die:{ n:10, fps:8, once:true, pose:t => ({ die:t }) } };
-export const HOLLOWKING = { hollowking: { draw:hollowking, scale:.74, dy:-3, box:{ x:-180, y:-280, w:360, h:360 }, variants:{ form2:true, fallen:true }, clips:{ walk:clips.idle, ...clips }, still:{} } };
+// World boss forms (6-20, Release 3): the first form in a stage colour, one atlas per form, keyed by the boss kind it borrows.
+const STAGE_OF = { gravekeeper:0, poltergeist:1, vampirecount:2, twintides:3, hexwitch:4 };
+const drawKing = (g, P) => hollowking(g, P.variant && STAGE_OF[P.variant] != null ? { ...P, variant:null, stage:STAGE_OF[P.variant] } : P);
+export const HOLLOWKING = { hollowking: { draw:drawKing, scale:.74, dy:-3, box:{ x:-180, y:-280, w:360, h:360 }, variants:{ form2:true, fallen:true, gravekeeper:true, poltergeist:true, vampirecount:true, twintides:true, hexwitch:true },
+  vkeyOf:m => m.look === 'hollowking' ? m.kind : null, clips:{ walk:clips.idle, ...clips }, still:{} } };

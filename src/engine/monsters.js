@@ -4,6 +4,7 @@ import { resolveMatches } from './board.js';
 import { TYPES, MODS, VARIANTS } from '../data/monsters.js';
 import { BURN_EVERY, RAINBOW, GLUE_SLOW } from '../data/pumpkins.js';
 import { glueStep } from './glue.js';
+import { initHollowKing, updateHollowKing } from './hollowking.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
 import { PTYPES } from '../data/pumpkins.js';
@@ -48,7 +49,7 @@ export function resolveMonster(key){
   if (v) return { type:v.base, kind:v.base, T:TYPES[v.base], variant:v };
   return { type:key, kind:key, T:TYPES[key], variant:null };
 }
-export function spawnMonster(key, lane, minion, p){
+export function spawnMonster(key, lane, minion, p, formArg){
   const { type, kind, T, variant } = resolveMonster(key);
   const mod = variant ? MODS[variant.mod] : null;
   if (type === 'boss' && kind === 'twintides' && !minion){   // the twins spawn as a pair on the sea row
@@ -68,7 +69,7 @@ export function spawnMonster(key, lane, minion, p){
   }
   if (p == null && type !== 'boss' && G.def && (G.def.shore || G.def.shoreFrac)) p = seaEdge - 0.02;   // shoreline levels: everything else surfaces at the water's edge
   let hp = T.hp + (type === 'imp' || type === 'brute' || type === 'wisp' ? hpExtra() : 0) + (mod && mod.hp ? mod.hp : 0);
-  const form = type === 'boss' ? (G.mode === 'story' ? (G.def.bossForm || 1) : (G.endForm || 1)) : 1;
+  const form = type === 'boss' ? (formArg || (G.mode === 'story' ? (G.def.bossForm || 1) : (G.endForm || 1))) : 1;   // formArg: the Hollow King's world boss forms are form 1 on a form-2 night
   if (type === 'boss') hp = form === 2 ? T.form2.hp : T.hp;
   if (lane == null) lane = pickLane();
   const x = LANE(lane);
@@ -106,6 +107,7 @@ export function spawnMonster(key, lane, minion, p){
     const spots = [[lane - 1, 0], [lane + 1, 0], [lane, 0.06], [lane, -0.06]];
     for (const [l, dp] of spots.slice(0, T.bats)) spawnMonster('bat', Math.max(0, Math.min(COLS - 1, l)), true, Math.max(-0.02, m.p + dp));
   }
+  if (__RELEASE__ >= 3 && type === 'boss' && kind === 'hollowking') initHollowKing(m);
   G.monsters.push(m);
   return m;
 }
@@ -318,6 +320,7 @@ export function updateMonster(m, dt){
         break;
       }
       case 'boss': {
+        if (__RELEASE__ >= 3 && m.kind === 'hollowking'){ updateHollowKing(m, dt); if (m.p >= m.hold) sp = 0; break; }
         if (m.kind === 'poltergeist'){ updatePoltergeist(m, dt); if (m.p >= m.hold) sp = 0; break; }
         if (m.kind === 'vampirecount'){ if (updateVampireCount(m, dt) || m.p >= m.hold) sp = 0; break; }
         if (m.kind === 'hexwitch'){ updateHexwitch(m, dt); if (m.p >= m.hold) sp = 0; break; }

@@ -6,7 +6,7 @@
 
 import { E, PL, RR, S, SM, SO, ell, mix, pal, rgba, rng } from '../paint.js';
 import { TAU } from '../../util.js';
-import { PTYPES } from '../../../data/pumpkins.js';
+import { PTYPES, RAINBOW } from '../../../data/pumpkins.js';
 
 const TONGUE = pal('#ee6a8a'), CLAWC = '#f4ead0',
   FACE = pal('#8fbf5a'), FACED = pal('#5f8a38'), HAT = pal('#2f2040'), BAND = pal('#c9584a'), BUCKLE = pal('#e0b04a'), DRESS = pal('#5a3a7a'), CLOAK = pal('#3a2652'), BOOT = pal('#3a2a2e'),
@@ -302,7 +302,7 @@ export function hexwitch(g, P = {}){
 // ---------- registry ----------
 // scale/dy fit the drawing to the in-game footprint (feet at about r × 0.95 below the monster's centre):
 // chameleons r 21 → 20, mirror r 19 → 18, witch r 22 → 21, hexwitch r 32 → 30.
-const CHAM_VARIANTS = {}; for (let i = 0; i < 12; i++) CHAM_VARIANTS['c' + i] = true;
+const CHAM_VARIANTS = {}; for (let i = 0; i < RAINBOW; i++) CHAM_VARIANTS['c' + i] = true;   // every colour but Rainbow (Paint and, from Release 3, Beige included)
 const chamClips = { walk:{ n:8, fps:9, pose:t => ({ walk:t }) }, chew:{ n:4, fps:8, pose:t => ({ chew:t }) } };
 const chamVkey = m => 'c' + (m.colourLock ?? m.colourImmune ?? 0);
 export const W3 = {

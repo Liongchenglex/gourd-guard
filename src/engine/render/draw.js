@@ -407,7 +407,7 @@ export function drawGrid(t){
   for (const [r, c, cell] of flying) drawCell(r, c, cell, t, hg);
 }
 
-const LIT_HALO = [[140, 255, 90], [255, 214, 70], [140, 220, 255], [255, 110, 50], [225, 230, 245], [200, 120, 255], [235, 242, 255], [255, 140, 50], [120, 160, 255], [255, 130, 200], [90, 240, 225], [240, 170, 80], [205, 170, 255], [255, 230, 140]];   // ... Brown, Paint (lilac), Rainbow
+export const LIT_HALO = [[140, 255, 90], [255, 214, 70], [140, 220, 255], [255, 110, 50], [225, 230, 245], [200, 120, 255], [235, 242, 255], [255, 140, 50], [120, 160, 255], [255, 130, 200], [90, 240, 225], [240, 170, 80], [205, 170, 255], ...(__RELEASE__ >= 3 ? [[245, 220, 160]] : []), [255, 230, 140]];   // Beige (Release 3) sits before Rainbow   // ... Brown, Paint (lilac), Rainbow
 export function drawCell(r, c, cell, t, hg){
   const held = hg != null && cell.lit && cell.gids.includes(hg);
   let x = LANE(c) + cell.ox, y = GY + r * CS + CS / 2 + cell.oy;

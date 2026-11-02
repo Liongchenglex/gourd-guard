@@ -1,7 +1,7 @@
 import { TYPES, BOSS_NAMES } from '../data/monsters.js';
 import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW, TURQUOISE, BROWN, TURQ_FRAC, BROWN_KB, BROWN_SIZE_MULT, PAINT, BEIGE } from '../data/pumpkins.js';
 import { layGlue } from './glue.js';
-import { hkGate, hkAfterHit, onHkFormDown } from './hollowking.js';
+import { hkGate, hkAfterHit, onHkFormDown, onKingDown } from './hollowking.js';
 import { SFX, musicStart } from './audio.js';
 import { MUSIC } from '../data/music.js';
 import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches, brownSize, paintPull, paintInherit } from './board.js';
@@ -205,6 +205,7 @@ export function kill(m){
     addFloat('Split!', m.x, y - 30, '#7fe0a0', 16, 0.9); SFX.monsterAct('slime', 'split');
   }
   if (__RELEASE__ >= 3 && m.hkClone) onHkFormDown(m);
+  if (__RELEASE__ >= 3 && m.kind === 'hollowking' && !m.hkClone) onKingDown();
   if (m.type === 'boss'){
     const twinAlive = G.monsters.some(o => o !== m && o.type === 'boss' && !o.dead);   // the other Twin Tide, or the other boss of a two-boss night
     if (!twinAlive && G.mode === 'story' && G.def && (G.def.levelNo === 10 || G.def.levelNo === 20)){ const itemOf = TYPES[m.kind].noItems ? null : m.kind;   // no costume for the Hollow King yet: boss items become coins

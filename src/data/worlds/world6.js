@@ -106,9 +106,9 @@ export default [
       pool:[['firemummy', 3], ['fogwalker', 3], ['witch', 3], ['bulwark', 2], ['turtle', 3]], puddles:3,
       castles:{ n:7, hp:8 }, castlesLayout:ROW(0.5), gust:{ every:22, dirs:['left', 'right'] },
       gravesLayout:FACE, quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
-    // 6-20: The Hollow King (owner): five phases, each splitting off a world boss form in his colours; he takes no damage while it
+    // 6-20: The Hollow King (owner): his first form (the full form is saved for later, owner 2026-11-02); five phases, each splitting off a world boss form in his colours; he takes no damage while it
     // stands. His minions are the revisit monsters. No fog, no jukebox; witch wind; graves in a crown. A 50% chance of a second boss chest.
-    { world:6, level:20, theme:5, name:'The Hollow King', pattern:0, graves:0, total:24, interval:3.0, spMul:0.95, boss:'hollowking', bossForm:2, bossGap:1.4, gust:{ every:22, dirs:['left', 'right'] },
+    { world:6, level:20, theme:5, name:'The Hollow King', pattern:0, graves:0, total:24, interval:3.0, spMul:0.95, boss:'hollowking', bossForm:1, bossGap:1.4, gust:{ every:22, dirs:['left', 'right'] },
       pool:[['firemummy', 3], ['fogwalker', 3], ['witch', 3], ['bulwark', 2], ['turtle', 3]], puddles:2, extraChestP:0.5,
       gravesLayout:CROWN, quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
   ] : []),

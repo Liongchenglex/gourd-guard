@@ -463,7 +463,7 @@ export function openBook(wi, animate){
   $('#bkLore').textContent = bk.lore;
   const sc = worldScene(levels[0].theme, 456, 120), cv = $('#bkScene'); cv.width = sc.width; cv.height = sc.height; cv.getContext('2d').drawImage(sc, 0, 0);
   const bossKey = (levels.find(d => d.boss) || {}).boss, bossBox = $('#bkBoss'); bossBox.innerHTML = '';
-  if (__RELEASE__ >= 3 && wi === 5){ bossBox.appendChild(monsterIcon('hollowking', 192, 2)); const cap = document.createElement('span'); cap.textContent = BOSS_NAMES.hollowking; bossBox.appendChild(cap); }   // Release 3: he steps out of the shadow
+  if (__RELEASE__ >= 3 && wi === 5){ bossBox.appendChild(monsterIcon('hollowking', 192, 1)); const cap = document.createElement('span'); cap.textContent = BOSS_NAMES.hollowking; bossBox.appendChild(cap); }   // Release 3: he steps out of the shadow
   else if (__RELEASE__ >= 2 && wi === 5){ bossBox.appendChild(hollowSilhouette(192)); const cap = document.createElement('span'); cap.textContent = '???'; bossBox.appendChild(cap); }   // Hallow's End: the Hollow King, still a shadow (owner)
   else if (bossKey){ bossBox.appendChild(monsterIcon(bossKey, 192, 1)); const cap = document.createElement('span'); cap.textContent = BOSS_NAMES[bossKey]; bossBox.appendChild(cap); }
   const grid = $('#bkLevels'); grid.innerHTML = '';
@@ -473,7 +473,7 @@ export function openBook(wi, animate){
     if (!locked && !st && nextN == null) nextN = n;
     const b = document.createElement('button'); b.className = 'pg' + (d.boss ? ' boss' : '') + (st ? ' done' : '') + (d.boss && st && pendingStamp !== n ? ' stamped' : ''); b.disabled = locked;   // a beaten boss keeps its stamp (owner)
     b.setAttribute('aria-label', locked ? `Level ${d.world}-${d.level}, locked` : `Level ${d.world}-${d.level}${d.name ? ', ' + d.name : ''}, ${st} of 3 stars`);
-    if (d.boss && d.world === 6) b.appendChild(devilStamp());   // World 6 boss nights: a purple wax stamp with the bookmark's devil (owner)
+    if (d.boss && d.world === 6 && !(__RELEASE__ >= 3 && d.boss === 'hollowking')) b.appendChild(devilStamp());   // World 6 boss nights: a purple wax stamp with the bookmark's devil (owner); 6-20 shows the Hollow King himself (owner, Release 3)
     else if (d.boss) b.appendChild(monsterIcon(d.boss, 88, d.bossForm)); else b.textContent = d.level;
     if (!locked){ const sp = document.createElement('span'); sp.className = 'st'; sp.innerHTML = '★'.repeat(st) + '<span class="off">' + '★'.repeat(3 - st) + '</span>'; b.appendChild(sp); }
     b.onclick = () => { SFX.ui('level'); withHelp(() => openPreview(n)); };

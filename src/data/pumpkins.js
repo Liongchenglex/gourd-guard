@@ -15,7 +15,7 @@ export const PTYPES = [
   { key:'brown',  name:'Brown',  role:'grows while it sits on the patch: small, medium, then big and twice as strong', base:'#8a5a2a', light:'#c9945a', dark:'#4a2e12', spark:'#e0b070' },
   { key:'paint',  name:'Paint',  role:'pulls touching pumpkins of any colour into its bunch, and they launch together', base:'#c9b6f0', light:'#ece2ff', dark:'#7a62b0', spark:'#ffb59a', patches:['#7fe0c3', '#ffb59a', '#ffe27a', '#6aaeff'] },   // post-game, bought with seeds (owner, 2026-10-08)
   // Beige (Release 3, owner 2026-11-02): bought with seeds after 6-16; a kill leaves glue that slows and hurts (src/engine/glue.js)
-  ...(__RELEASE__ >= 3 ? [{ key:'beige', name:'Beige', role:'leaves sticky glue where it kills: monsters in it slow down and take damage', base:'#c4a46c', light:'#e8d2a2', dark:'#76592e', spark:'#fff0c8', drips:true }] : []),
+  ...(__RELEASE__ >= 3 ? [{ key:'beige', name:'Beige', role:'leaves sticky glue where it kills: monsters in it slow down and take damage', base:'#dca883', light:'#f2cfb0', dark:'#9a6646', spark:'#fff0e0', drips:true }] : []),
   { key:'rainbow',name:'Rainbow',role:'joins any bunch as any color', rainbow:true, spark:'#fff3a0' },
 ];
 

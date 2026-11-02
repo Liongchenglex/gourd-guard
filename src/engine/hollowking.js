@@ -70,8 +70,8 @@ export function updateHollowKing(m, dt){
   if (!m.hkStarted && m.p > 0.05){   // arrival: the first split (or a continued night's phase)
     m.hkStarted = true;
     const r = G.hkRestore; G.hkRestore = null;
-    if (r && r.formHp == null) m.hkPhase = r.phase;
-    else { if (r) m.hkPhase = r.phase - 1; const f = hkSplit(m); if (r && f) f.hp = Math.min(f.maxHp, r.formHp); }
+    if (r && r.formHp == null && r.phase > 0) m.hkPhase = r.phase;   // a continued night between forms (phase 0: not yet split, so split now)
+    else { if (r && r.formHp != null) m.hkPhase = r.phase - 1; const f = hkSplit(m); if (r && r.formHp != null && f) f.hp = Math.min(f.maxHp, r.formHp); }
   }
   if (G.hkDrop && G.hkDrop.length) for (let i = G.hkDrop.length - 1; i >= 0; i--) if ((G.hkDrop[i].t -= dt) <= 0){ dropAtlas(G.hkDrop[i].key); G.hkDrop.splice(i, 1); }
   if (G.hkTell){ G.hkTell.t -= dt; if (G.hkTell.t <= 0){ const c = G.hkTell.col; G.hkTell = null; wipeColumn(c); } }
@@ -111,12 +111,15 @@ export function hkSplit(k){
 
 /** How much of a hit the king takes: none while his form stands, and never past the current band's floor. */
 export function hkGate(k, amt){
-  if (k.hkForm && !k.hkForm.dead){
+  if (!k.hkStarted || (k.hkForm && !k.hkForm.dead)){   // not yet arrived (review fix: no early damage), or his form stands
     k.flash = 0.06;
     if (!(G.t - (k.immuneT || -9) < 0.35)){ k.immuneT = G.t; addFloat('No damage', k.x, mY(k) - k.r - 24, '#c8c2b8', 16, 0.7); SFX.bossSfx('hollowking', 'immune'); }
     return 0;
   }
-  if (k.hkPhase < 5 && k.hkStarted) return Math.min(amt, Math.max(0, k.hp - floorOf(k)));
+  if (k.hkPhase < 5){
+    if (k.hp <= floorOf(k) + 1e-6){ k.hp = Math.min(k.hp, floorOf(k)); hkSplit(k); return 0; }   // already at the floor with no form up: split, never lock up
+    return Math.min(amt, k.hp - floorOf(k));
+  }
   return amt;
 }
 
@@ -139,3 +142,9 @@ export function hkState(){
   const f = k.hkForm && !k.hkForm.dead ? k.hkForm : null;
   return { phase:k.hkPhase, hp:Math.max(1, Math.ceil(k.hp)), formHp:f ? Math.max(1, Math.ceil(f.hp)) : null };
 }
+
+/** A new night: forget every world boss form's frames (they are large, and a lost night can leave two baked). */
+export function forgetForms(){ for (const kind of TYPES.hollowking.forms) dropAtlas('hollowking|' + kind); }
+
+/** He fell: his pending wipe goes with him. */
+export function onKingDown(){ G.hkTell = null; }

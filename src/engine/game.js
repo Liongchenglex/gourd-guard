@@ -18,7 +18,7 @@ import { poolKey, prebake } from './render/anim.js';
 import { atlasKey } from './render/chars.js';
 import { endlessSpawn, storySpawn, dropJukebox, jukeboxPoints } from './spawner.js';
 import { updateGlue } from './glue.js';
-import { hkState } from './hollowking.js';
+import { hkState, forgetForms } from './hollowking.js';
 import { COLS, CS, FENCE_Y, FIELD_TOP, G, GY, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, setG, setGest, state, walls, GX, FIELD_BOT, HOLD_TIME_QUICK } from './state.js';
 import { rnd, shuffle, clamp, TAU } from './util.js';
 import { initWalls, damageWall } from './walls.js';
@@ -75,6 +75,7 @@ export function beginEndless(){
 }
 
 export function startGame(mode, n, loadout){
+  if (__RELEASE__ >= 3) forgetForms();   // the Hollow King's spent forms do not outlive their night
   ensureAudio();
   const def = mode === 'story' ? levelFor(n) : null;
   setG({

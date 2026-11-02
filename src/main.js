@@ -7,7 +7,8 @@ import { attachInput } from './engine/input.js';
 import { spawnMonster, lanesOf, TILE_P } from './engine/monsters.js';
 import { measureCoin, resize } from './engine/render/canvas.js';
 import { isBaked } from './engine/render/anim.js';
-import { render } from './engine/render/draw.js';
+import { render, LIT_HALO } from './engine/render/draw.js';
+import { CHARS } from './engine/render/chars.js';
 import { G, LANE, bannerTimer, graves, grid, setBannerTimer, state, walls } from './engine/state.js';
 import { $ } from './engine/util.js';
 import { persist, save } from './save.js';
@@ -69,5 +70,5 @@ requestAnimationFrame(frame);
 
 if (new URLSearchParams(location.search).has('test')){
   window.__gg = { get G(){ return G; }, get grid(){ return grid; }, get graves(){ return graves; }, get walls(){ return walls; }, get state(){ return state; },
-    startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair, openPreview, openBook, LEVELS, isOpen, WORLD_LEVELS, damage, lanesOf, continueState, continueNight, isBaked, openShop, RELEASE, PTYPES, RAINBOW, BEIGE, upgradeCost, lvStats, typesForNight, randSprout, hitMonster, TILE_P, BOSS_NAMES };
+    startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair, openPreview, openBook, LEVELS, isOpen, WORLD_LEVELS, damage, lanesOf, continueState, continueNight, isBaked, openShop, RELEASE, PTYPES, RAINBOW, BEIGE, upgradeCost, lvStats, typesForNight, randSprout, hitMonster, TILE_P, BOSS_NAMES, LIT_HALO, CHARS };
 }

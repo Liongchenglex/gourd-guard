@@ -681,7 +681,7 @@ KING = "window.__gg.G.monsters.find(m => m.kind === 'hollowking' && !m.dead)"
 
 def spawn_king(page, n=104):
     start(page, n)
-    page.evaluate("() => { const G = window.__gg.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.def.boss = 'hollowking'; G.bossSpawned = true; window.__gg.spawnMonster('boss:hollowking', 3, false, 0.3, 2); }")
+    page.evaluate("() => { const G = window.__gg.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.def.boss = 'hollowking'; G.bossSpawned = true; window.__gg.spawnMonster('boss:hollowking', 3, false, 0.3, 1); }")
     time.sleep(0.2)
 
 
@@ -692,7 +692,7 @@ def check_hk_powers(browser, url, on):
         ok(not has, 'no Hollow King in this build'); page.close(); return
     spawn_king(page)
     d = page.evaluate(f"() => {{ const k = {KING}; return [k.maxHp, window.__gg.BOSS_NAMES.hollowking, k.form]; }}")
-    ok(d == [60, 'The Hollow King', 2], f'the Hollow King arrives in his full form with 60 health {d}')
+    ok(d == [60, 'The Hollow King', 1], f'the Hollow King arrives in his first form (owner: the full form is for later) with 60 health {d}')
     page.evaluate(f"() => {{ const k = {KING}; k.powerI = 0; k.powerT = 0; }}"); time.sleep(0.2)
     col = page.evaluate("() => window.__gg.G.hkTell && window.__gg.G.hkTell.col")
     ok(col is not None, f'the column wipe glows a column first ({col})')
@@ -803,11 +803,11 @@ def check_6_20(browser, url, on):
     set_stars(page, {n: 3 for n in range(1, 120)})
     start(page, 120)
     d = page.evaluate("() => { const d = window.__gg.G.def; return { label:d.label, name:d.name, boss:d.boss, form:d.bossForm, frenzy:!!d.frenzy, fog:(d.fog || []).length, xc:d.extraChestP, pool:d.pool.map(e => e[0]).sort() }; }")
-    ok(d['label'] == '6-20' and d['name'] == 'The Hollow King' and d['boss'] == 'hollowking' and d['form'] == 2, f'6-20 is the Hollow King, full form {d}')
+    ok(d['label'] == '6-20' and d['name'] == 'The Hollow King' and d['boss'] == 'hollowking' and d['form'] == 1, f'6-20 is the Hollow King, first form {d}')
     ok(not d['frenzy'] and d['fog'] == 0 and d['xc'] == 0.5, f'no jukebox, no fog, a 50% second chest {d}')
     ok(d['pool'] == sorted(['firemummy', 'fogwalker', 'witch', 'bulwark', 'turtle']), f"his minions are the revisit monsters {d['pool']}")
     ok(grave_cells(page) == sorted(CROWN), f'graves in a crown {grave_cells(page)}')
-    ok(page.evaluate("() => ['hollowking|form2', 'hollowking|gravekeeper'].every(k => window.__gg.isBaked(k))"), 'his frames and the first form are baked before the night')
+    ok(page.evaluate("() => ['hollowking', 'hollowking|gravekeeper'].every(k => window.__gg.isBaked(k)) && !window.__gg.isBaked('hollowking|form2')"), 'his first-form frames and the first world boss form are baked before the night, not the full form')
     page.evaluate("() => { const G = window.__gg.G; G.sproutT = -999; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }"); time.sleep(0.5)
     ok(page.evaluate(f"() => !!{KING} && {KING}.maxHp === 60"), 'he arrives with 60 health')
     got = beat_king(page, 0.1)
@@ -829,6 +829,49 @@ def check_6_20(browser, url, on):
 
 
 CHECKS.update({'check_6_20': check_6_20})
+
+
+def check_review_fixes(browser, url, on):
+    """Final review (2026-11-02): the king is immune until he arrives; a phase-0 continue splits; a king below his floor still splits;
+    spent form frames go with the night; the wipe glow goes with him; Rainbow keeps its glow; a Beige-locked chameleon is drawn beige."""
+    if not R3:
+        return
+    page, errors = open_page(browser, url)
+    start(page, 104)
+    page.evaluate("() => { const G = window.__gg.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.def.boss = 'hollowking'; G.bossSpawned = true; window.__gg.spawnMonster('boss:hollowking', 3, false, undefined, 1); }")
+    hp = hk_hit(page, KING, 999)
+    ok(hp == 60, f'before he arrives the king takes no damage ({hp})')
+    page.evaluate(f"() => {{ {KING}.p = 0.3; }}"); time.sleep(0.3)
+    ok(page.evaluate(f"() => !!{FORM}"), 'on arrival he splits off his first form')
+    hk_hit(page, FORM, 999); time.sleep(0.1)
+    page.evaluate(f"() => {{ {KING}.hp = 40; }}")   # below the phase-1 floor with no form standing (any stray path)
+    hk_hit(page, KING, 1); time.sleep(0.2)
+    ok(page.evaluate(f"() => !!{FORM} && {FORM}.kind === 'poltergeist'"), 'a king already below his floor splits on the next hit instead of locking up')
+    page.evaluate("() => { window.__gg.G.hkTell = { col:2, t:5, dur:1 }; }")
+    for _ in range(4):
+        hk_hit(page, FORM, 999); time.sleep(0.1); hk_hit(page, KING, 999); time.sleep(0.2)
+    hk_hit(page, KING, 999); time.sleep(0.2)
+    ok(page.evaluate("() => window.__gg.G.bossDead && !window.__gg.G.hkTell"), 'when he dies his wipe warning goes with him')
+    # a continued night saved before he arrived (phase 0)
+    start(page, 104)
+    page.evaluate("() => { const G = window.__gg.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.def.boss = 'hollowking'; G.bossSpawned = true; G.hkRestore = { phase:0, hp:60, formHp:null }; window.__gg.spawnMonster('boss:hollowking', 3, false, 0.3, 1); }")
+    time.sleep(0.3)
+    ok(page.evaluate(f"() => !!{FORM} && {KING}.hkPhase === 1"), 'a night continued from before his arrival still starts with a split')
+    time.sleep(0.5)
+    start(page, 104); time.sleep(0.3)
+    baked = page.evaluate("(ks) => ks.filter(k => window.__gg.isBaked('hollowking|' + k))", HKF)
+    ok(baked == [], f'a new night forgets the forms baked for the last one {baked}')
+    d = page.evaluate("() => { const g = window.__gg; return [g.LIT_HALO.length === g.PTYPES.length, JSON.stringify(g.LIT_HALO[g.RAINBOW]), !!g.CHARS.chameleon.variants['c' + g.BEIGE], !!g.CHARS.rchameleon.variants['c' + g.BEIGE]]; }")
+    ok(d == [True, '[255,230,140]', True, True], f'Rainbow keeps its glow and chameleons can wear Beige {d}')
+    set_stars(page, {n: 3 for n in range(1, 121)})
+    page.evaluate("() => window.__gg.openBook(5)"); time.sleep(0.8)
+    t = page.evaluate("() => { const b = [...document.querySelectorAll('#bkLevels .pg')]; const f = n => b[n - 1] && [!!b[n - 1].querySelector('.devilStamp'), !!b[n - 1].querySelector('canvas')]; return [f(8), f(20)]; }")
+    ok(t == [[True, False], [False, True]], f'6-20 shows the Hollow King stamp, the other boss nights keep the devil {t}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_review_fixes': check_review_fixes})
 
 
 def main():

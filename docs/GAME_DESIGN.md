@@ -476,6 +476,16 @@ The owner found 6-1 to 6-3 easy (playing with the Paint pumpkin, which the bot d
 
 Below the bot's target by design: the owner asked for harder nights and tunes from their own play. (6-1's crawlers became Puddle Divers right after this run.)
 
+### Release 3 first bot runs (2026-11-02, `--repeats 3`, profile level 5 / fence 3, offset 0 and −1)
+| Night | Wins (0 / −1) | Mean walls % (0 / −1) | Resolved at the loss (offset 0) |
+|---|---|---|---|
+| 6-17 Knights in the Mist | 0 / 0 | 46 / 45 | 8–17 of 24 |
+| 6-18 Bad Medicine | 0 / 0 | 46 / 45 | 0 of 22 (2–11 throws a night, lost at about 45 s) |
+| 6-19 A Revisit 2 | 0 / 0 | 45 / 48 | 1–6 of 24 |
+| 6-20 The Hollow King | 0 / 0 | 68 / 58 | 17–22 of 25 (the king reached his late phases) |
+
+Reading: no numbers changed. The bot loses every World 6 night from 6-5 on, so these are reference only; the owner tunes World 6 from their own play (Paint and Beige, which the bot does not use). The bot only throws at monsters it can see, so under 80% fog it barely throws: on 6-18, with three castle rows to break as well, it threw 2–11 pumpkins and killed almost nothing before the doctors and vampires reached the fence. **Watch 6-18 in the owner's play**: it is the most likely to need softening (fewer castle rows, less fog or a lower total).
+
 ### 5-20 slightly easier (owner, 2026-10-09)
 
 38 → 35 monsters, average spawn gap 2.4 → 2.55 s, burst chance 18% → 15%; speed, mix and the Twin Tides unchanged. Bot, 3 runs each on the old and new numbers side by side: 0/3 and 0/3 (walls 41% and 41% on average). The bot cannot finish the Twin Tides, so this was judged by the owner's play, not the bot.

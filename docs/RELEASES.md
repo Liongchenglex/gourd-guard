@@ -18,7 +18,7 @@ The owner builds many ideas ahead of the stores and wants to see all of them on 
 |---|---|---|
 | 1 | Worlds 1–5 | In the stores (branch `r1-ground-rules`) |
 | 2 | Hallow's End 6-1 to 6-16 | Content complete on `dev` (owner: "a wrap", 2026-11-02); not yet shipped (cut `release/2` when the owner says) |
-| 3 | Hallow's End 6-17 to 6-20 (the Hollow King) **and** the Beige pumpkin | Not started (owner merged the old R3 and R4 on 2026-11-02) |
+| 3 | Hallow's End 6-17 to 6-20 (the Hollow King) **and** the Beige pumpkin | Built on `dev` (2026-11-02; spec `docs/superpowers/specs/2026-11-02-release-3-design.md`), awaiting the owner's play; not shipped. (The owner merged the old R3 and R4 on 2026-11-02.) |
 | 4 | Nightmare Pumpkin Patch | Idea (maps in `docs/archive/nightmare-worlds/`) |
 | 5 | Nightmare Foggy Hollow | Idea |
 | … | further nightmare worlds, one per release | Owner to order |
@@ -44,6 +44,7 @@ The owner may reorder or regroup releases at any time. When they do, update this
   - Use the comparison directly in the expression: wrapping it in a function call stops the bundler from dropping the code.
   - Keep gated data out of top-level calls such as `.map()` in modules that might be dropped.
   - Examples today (Release 2): the World 6 book blurb (`lore.js`), the Frenzy song (`audio.js` / `src/data/music_w6.js`), Emergency Pumpkins (`shop.js`, `hud.js` tray), and the fog-free preview map (`render/draw.js`).
+  - Release 3: the 6-17 to 6-20 entries themselves (an inline `...(__RELEASE__ >= 3 ? [...] : [])` in `world6.js`, because the runtime release filter alone leaves their names in a Release 2 bundle), the Beige pumpkin (`PTYPES`, `BEIGE`/`RAINBOW` indices, `BUY_PUMPKIN`, `UPGRADE_COST`, lore, face), glue (`src/engine/glue.js`), the Hollow King (`TYPES`, `BOSS_NAMES`, `BOSS_INTRO`, `CHARS`, `src/engine/hollowking.js`, bestiary, book page), the jukebox marks and the second chest.
 - **Changes to things already in the stores** (not just new content) need a release tag too. Anything untagged ships with the next store build.
 
 ## Checks for every release
@@ -52,7 +53,8 @@ Run these after any change:
 
 1. **Playtest build:** `npm run build:playtest`, then `.venv/bin/python tools/w6_check.py --url http://127.0.0.1:4173/ --expect on` and `tools/smoke_test.py`.
 2. **Store build:** `npm run build`, then `w6_check.py --expect off` and the smoke test. It must contain nothing from a later release: no World 6 level names, book, song or tool.
-3. **Before shipping release N:** also build `VITE_RELEASE=N` and check that it contains exactly that release's content. `check_release` verifies that every level in a build has `release` ≤ the build's number. Extend `w6_check.py` with each release's own presence/absence checks.
+3. **Release 2 build:** `VITE_RELEASE=2 npx vite build`, then `w6_check.py --expect r2`: World 6 to 6-16 and nothing from Release 3 (no "Beige", "Hollow King" or "Knights in the Mist" in the bundle).
+4. **Before shipping release N:** also build `VITE_RELEASE=N` and check that it contains exactly that release's content. `check_release` verifies that every level in a build has `release` ≤ the build's number. Extend `w6_check.py` with each release's own presence/absence checks.
 
 ## The playtest link
 

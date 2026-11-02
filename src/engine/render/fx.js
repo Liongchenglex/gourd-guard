@@ -93,32 +93,43 @@ function zoneBase(g, x, y, w, h, col, a, t){
   for (const [cx, cy, sx, sy] of [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]]){ g.beginPath(); g.moveTo(cx, cy + sy * L); g.lineTo(cx, cy); g.lineTo(cx + sx * L, cy); g.stroke(); }
 }
 function motes(g, x, y, w, h, n, t, seed, fn){ const R = rng(seed); for (let i = 0; i < n; i++){ const ph = R(), sx = x + 10 + R() * (w - 20), sp = .12 + R() * .1, f = (t * sp + ph) % 1, my = y + h - 8 - f * (h - 16), a = Math.sin(f * Math.PI); fn(sx + Math.sin(t * 2 + i) * 4, my, a, i); } }
+// Zone backdrops are baked once per size and scale, then blitted with a pulsing alpha; only the cheap moving bits stay live.
+// (2026-11-03: the Bulwark aura drew ~300 strokes and 8 painter rivets per Bulwark per frame, and 6-20 lagged on the owner's phone.)
+function zoneSprite(kind, w, h, k, fn){
+  const pad = 4, key = 'zone:' + kind + ':' + Math.round(w) + 'x' + Math.round(h) + ':' + bakeK(k).toFixed(2);
+  return bake(key, w + pad * 2, h + pad * 2, pad, pad, bakeK(k), g => fn(g, 0, 0, w, h));
+}
+const blitZone = (g, sp, x, y, a) => { g.save(); g.globalAlpha = a; g.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h); g.restore(); };
 /** Plague Doctor: green, a slow rune ring at the centre, rising crosses. */
-export function drawHealZoneFx(g, x, y, w, h, t){
+export function drawHealZoneFx(g, x, y, w, h, t, k){
   const pulse = .5 + .5 * Math.sin(t * 3), col = '#8ee88a', cx = x + w / 2, cy = y + h / 2;
-  zoneBase(g, x, y, w, h, col, .8 + .2 * pulse, t);
+  blitZone(g, zoneSprite('heal', w, h, k, (z, zx, zy, zw, zh) => zoneBase(z, zx, zy, zw, zh, col, 1, 0)), x, y, .8 + .2 * pulse);
   g.save(); g.globalAlpha = .45 + .25 * pulse; g.strokeStyle = col; g.lineWidth = 1.5; g.beginPath(); g.arc(cx, cy, CS * .95, 0, TAU); g.stroke();
   g.translate(cx, cy); g.rotate(t * .6); g.fillStyle = col;
   for (let i = 0; i < 8; i++){ const ang = i * TAU / 8, px = Math.cos(ang) * CS * .95, py = Math.sin(ang) * CS * .95; g.fillRect(px - 4, py - 1.2, 8, 2.4); g.fillRect(px - 1.2, py - 4, 2.4, 8); }
   g.restore();
   g.save(); motes(g, x, y, w, h, 7, t, 91, (mx, my, a) => { g.globalAlpha = a * .8; g.fillStyle = '#c8ffc0'; g.fillRect(mx - 4, my - 1.3, 8, 2.6); g.fillRect(mx - 1.3, my - 4, 2.6, 8); }); g.restore();
 }
-/** Bulwark Knight: steel plates, a riveted rim, a pulse ring. */
-export function drawBulwarkZoneFx(g, x, y, w, h, t){
-  const pulse = .5 + .5 * Math.sin(t * 2.5), col = '#9fb4dc', cx = x + w / 2, cy = y + h / 2;
-  zoneBase(g, x, y, w, h, col, .7 + .3 * pulse, t);
+/** Bulwark Knight: steel plates, a riveted rim (baked), a live pulse ring. */
+function bulwarkBack(g, x, y, w, h){
+  const col = '#9fb4dc', cx = x + w / 2, cy = y + h / 2;
+  zoneBase(g, x, y, w, h, col, 1, 0);
   g.save(); g.beginPath(); g.roundRect(x, y, w, h, 14); g.clip(); g.strokeStyle = rgba(col, .16); g.lineWidth = 1;
   const s = 16; for (let r = 0; r < h / (s * 1.5) + 1; r++) for (let c = 0; c < w / (s * 1.75) + 1; c++){ const hx = x + c * s * 1.75 + (r % 2 ? s * .87 : 0), hy = y + r * s * 1.5; g.beginPath(); for (let i = 0; i < 6; i++){ const ang = i * TAU / 6 + Math.PI / 6; g.lineTo(hx + Math.cos(ang) * s * .5, hy + Math.sin(ang) * s * .5); } g.closePath(); g.stroke(); }
   g.restore();
-  g.save(); g.strokeStyle = rgba('#dfe8f8', .6 + .3 * pulse); g.lineWidth = 3; g.beginPath(); g.roundRect(x + 3, y + 3, w - 6, h - 6, 12); g.stroke();
+  g.save(); g.strokeStyle = rgba('#dfe8f8', .8); g.lineWidth = 3; g.beginPath(); g.roundRect(x + 3, y + 3, w - 6, h - 6, 12); g.stroke();
   const ST = pal('#aab3c4'); for (const [rx, ry] of [[x + 12, y + 12], [x + w - 12, y + 12], [x + 12, y + h - 12], [x + w - 12, y + h - 12], [cx, y + 8], [cx, y + h - 8], [x + 8, cy], [x + w - 8, cy]]) S.rivet(g, rx, ry, 3.2, ST);
-  const q = (t * .8) % 1, pr = 10 + q * CS * 1.4; g.globalAlpha = (1 - q) * .6; g.strokeStyle = '#cfe0ff'; g.lineWidth = 2; g.beginPath(); g.arc(cx, cy, pr, 0, TAU); g.stroke();
   g.restore();
 }
+export function drawBulwarkZoneFx(g, x, y, w, h, t, k){
+  const pulse = .5 + .5 * Math.sin(t * 2.5), cx = x + w / 2, cy = y + h / 2;
+  blitZone(g, zoneSprite('bulwark', w, h, k, bulwarkBack), x, y, .75 + .25 * pulse);
+  const q = (t * .8) % 1, pr = 10 + q * CS * 1.4; g.save(); g.globalAlpha = (1 - q) * .6; g.strokeStyle = '#cfe0ff'; g.lineWidth = 2; g.beginPath(); g.arc(cx, cy, pr, 0, TAU); g.stroke(); g.restore();
+}
 /** Hexwitch zones: purple, a spinning sigil every couple of tiles, ghostly skull motes drifting up. */
-export function drawHexZoneFx(g, x, y, w, h, t, a){
+export function drawHexZoneFx(g, x, y, w, h, t, a, k){
   const pulse = .5 + .5 * Math.sin(t * 3), col = '#c07cff';
-  zoneBase(g, x, y, w, h, col, a * (.8 + .2 * pulse), t);
+  blitZone(g, zoneSprite('hex', w, h, k, (z, zx, zy, zw, zh) => zoneBase(z, zx, zy, zw, zh, col, 1, 0)), x, y, a * (.8 + .2 * pulse));
   g.save(); g.strokeStyle = rgba(col, a * (.5 + .3 * pulse)); g.lineWidth = 2; g.setLineDash([6, 6]); g.lineDashOffset = t * 24; g.beginPath(); g.roundRect(x + 2, y + 2, w - 4, h - 4, 12); g.stroke(); g.setLineDash([]);
   const nx = Math.max(1, Math.round(w / (CS * 2.2))), ny = Math.max(1, Math.round(h / (CS * 2.2)));
   for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++){ const cx = x + (i + .5) * w / nx, cy = y + (j + .5) * h / ny, r = Math.min(CS * .8, w / nx * .4, h / ny * .4);

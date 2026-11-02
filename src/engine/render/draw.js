@@ -306,7 +306,7 @@ export function drawCastles(t){
 /** Bulwark Knight's aura: 3 lanes × 3 tile heights, steel blue. */
 export function drawBulwarkZone(m, t){
   const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
-  drawBulwarkZoneFx(ctx, x, y, w, h, t);
+  drawBulwarkZoneFx(ctx, x, y, w, h, t, K);
 }
 /** Hexwitch zones: purple; box (3×3), a whole column, or a row across the field. */
 export function drawHexZones(t){
@@ -316,13 +316,13 @@ export function drawHexZones(t){
     if (z.shape === 'col'){ x = LANE(z.lane) - CS * 0.49; y = FIELD_TOP; w = CS * 0.98; h = FIELD_BOT - FIELD_TOP; }
     else if (z.shape === 'row'){ x = GX; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 0.5; w = CS * COLS; h = CS; }
     else { x = LANE(z.lane) - CS * 1.5 * 0.98; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 1.5; w = CS * 3 * 0.98; h = CS * 3; }
-    drawHexZoneFx(ctx, x, y, w, h, t, a);
+    drawHexZoneFx(ctx, x, y, w, h, t, a, K);
   }
 }
 /** Plague Doctor's healing zone: 3 lanes × 3 tile heights, pulsing green. */
 export function drawHealZone(m, t){
   const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
-  drawHealZoneFx(ctx, x, y, w, h, t);
+  drawHealZoneFx(ctx, x, y, w, h, t, K);
 }
 /** Scarecrows (world 5 tool): a post with a straw figure and a health bar. */
 export function drawScarecrows(t){ drawScarecrowsFx(ctx, G.scarecrows || [], t, sc => G.monsters.some(m => !m.dead && m.chewing === sc)); }

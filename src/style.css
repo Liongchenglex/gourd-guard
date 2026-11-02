@@ -47,6 +47,9 @@ canvas#cv{ position:absolute; inset:0; width:100%; height:100%; display:block; t
 .jbMark.live{ animation:jbPulse .6s ease-in-out infinite alternate; opacity:1; }
 .jbMark.done{ background:#5a4a4a; box-shadow:none; opacity:.6; }
 @keyframes jbPulse{ from{ transform:scale(1); } to{ transform:scale(1.35); background:#ffd35a; } }
+.hkMark{ position:absolute; top:0; bottom:0; width:calc(var(--u)*7px); margin-left:calc(var(--u)*-3.5px); border-radius:99px; box-shadow:0 0 0 calc(var(--u)*1.2px) rgba(20,8,30,.8); opacity:.85; }
+.hkMark.live{ animation:jbPulse .5s ease-in-out infinite alternate; opacity:1; }
+.hkMark.done{ background:#4a3a4a !important; opacity:.55; }
 .bar i{ display:block; height:100%; width:0; background:linear-gradient(90deg,var(--pumpkin),var(--candle)); border-radius:99px; transition:width .25s; }
 #coinBox{ font-weight:600; font-size:calc(var(--u)*16px); display:flex; align-items:center; gap:calc(var(--u)*4px); text-shadow:0 1px 3px #000; transition:transform .12s; }
 #coinBox.bump{ transform:scale(1.18); }

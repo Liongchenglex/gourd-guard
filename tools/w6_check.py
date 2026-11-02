@@ -721,7 +721,7 @@ CHECKS.update({'check_hk_powers': check_hk_powers})
 
 FORM = "window.__gg.G.monsters.find(m => m.hkClone && !m.dead)"
 HKF = ['gravekeeper', 'poltergeist', 'hexwitch', 'vampirecount', 'twintides']
-HKF_HP = [15, 20, 22, 24, 14]
+HKF_HP = [15, 20, 22, 24, 28]   # the Twin Tides form has both serpents' health (owner, 2026-11-03)
 
 
 def hk_hit(page, who, amt, last=0):
@@ -895,6 +895,59 @@ def check_hk_memory(browser, url, on):
 
 
 CHECKS.update({'check_hk_memory': check_hk_memory})
+
+
+def hk_marks(page):
+    return page.evaluate("() => [...document.querySelectorAll('.hkMark')].map(e => [Math.round(parseFloat(e.style.left)), e.classList.contains('live'), e.classList.contains('done')])")
+
+
+def check_hk_bar(browser, url, on):
+    """Owner (2026-11-03): during the fight the spawn bar shows the king's health with a marker per phase; each form's marker glows while it stands.
+    Also: his scary sounds play without errors."""
+    if not R3:
+        return
+    page, errors = open_page(browser, url)
+    set_stars(page, {n: 3 for n in range(1, 120)})
+    start(page, 120)
+    page.evaluate("() => { const G = window.__gg.G; G.sproutT = -999; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }"); time.sleep(0.4)
+    page.evaluate(f"() => {{ {KING}.p = 0.3; window.__gg.G.spawnTimer = 999; }}"); time.sleep(0.5)
+    m = hk_marks(page)
+    ok([x for x, _, _ in m] == [10, 28, 46, 64, 82] and m[0][1], f'five phase markers on the bar, the first glowing while its form stands {m}')
+    hk_hit(page, FORM, 999); time.sleep(0.4)
+    m = hk_marks(page)
+    ok(m[0][2] and not m[0][1], f'a beaten form\'s marker dims {m}')
+    hk_hit(page, KING, 6); time.sleep(0.4)
+    w = page.evaluate("() => parseFloat(document.querySelector('#prog').style.width)")
+    ok(abs(w - (10 + 90 * 6 / 60)) < 1, f'the bar shows the king\'s health lost ({w:.1f}%)')
+    hk_hit(page, KING, 999); time.sleep(0.4)
+    m = hk_marks(page)
+    ok(m[1][1], f'the next form\'s marker glows when it appears {m}')
+    page.evaluate("() => { window.__gg.ensureAudio(); for (const e of ['arrive', 'die', 'tell', 'smash', 'summon', 'split', 'hit', 'immune', 'wipe']) window.__gg.SFX.bossSfx('hollowking', e); }"); time.sleep(0.5)
+    ok(not errors, f'no page errors (sounds included) {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_hk_bar': check_hk_bar})
+
+
+def check_draw_budget(browser, url, on):
+    """6-20 lagged on the owner's phone (2026-11-03): Bulwark, Doctor and Hexwitch zones must be baked, not drawn line by line every frame.
+    Counts canvas calls on the main canvas over 30 frames with six Bulwarks and two Doctors on 4-16 and an empty patch (lit bunches glow with their own gradients), in every build."""
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script("""(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+      for (const k of ['stroke', 'createRadialGradient']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; } })();""")
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    start(page, 76); time.sleep(2.5)
+    page.evaluate("() => { const G = window.__gg.G, g = window.__gg; G.spawnTimer = 999; G.sproutT = -999; g.grid.forEach(r => r.fill(null)); for (let i = 0; i < 6; i++){ const m = g.spawnMonster('bulwark', i, true, 0.25 + (i % 3) * 0.15); m.sp = 0; } for (let i = 0; i < 2; i++){ const m = g.spawnMonster('doctor', 2 + i * 2, true, 0.5); m.sp = 0; } }"); time.sleep(1.5)
+    r = page.evaluate("() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 30) requestAnimationFrame(tick); else { window.__ccOn = false; res([Math.round((window.__cc.stroke || 0) / 30), Math.round((window.__cc.createRadialGradient || 0) / 30)]); } }; requestAnimationFrame(tick); })")
+    ok(r[0] <= 40 and r[1] <= 2, f'zones are baked: {r[0]} strokes and {r[1]} new gradients per frame with 6 Bulwarks and 2 Doctors (limits 40 / 2)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_draw_budget': check_draw_budget})
 
 
 def main():

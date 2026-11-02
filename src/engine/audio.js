@@ -396,15 +396,16 @@ export const SFX = {
       case 'twintides:revive': S('bubbles', 0.65) || noise(0.6, 0.2, 300, 0.8, 0, 900); S('seabark', 0.6, { delay: 0.4 }); break;
       case 'twintides:hit': S('seabark', 0.6) || (noise(0.1, 0.18, 500, 0.8, 0, 250), tone(110, 0.15, 'sawtooth', 0.05, 80)); S('splash', 0.3, { delay: 0.03 }); break;
       case 'twintides:die': S('seabig', 0.8, { rate: 0.8 }) || (tone(90, 0.7, 'sawtooth', 0.1, 50), tone(120, 0.7, 'sawtooth', 0.08, 70, 0.15)); S('splash', 0.7, { delay: 0.3 }); S('bubbles', 0.5, { delay: 0.8 }) || noise(1.2, 0.25, 500, 0.6, 0.3, 150); break;
-      case 'hollowking:arrive': S('roarbig', 0.9, { rate: 0.8 }); S('darkcast', 0.6, { delay: 0.3 }); break;   // Release 3
-      case 'hollowking:hit': S('roar', 0.55, { rate: 0.75 }); break;
-      case 'hollowking:immune': S('clank', 0.5) || tone(300, 0.08, 'square', 0.05); break;
-      case 'hollowking:tell': S('darkcast', 0.6); break;
-      case 'hollowking:wipe': S('stonecrash', 0.8) || noise(0.4, 0.3, 300, 0.7); break;
-      case 'hollowking:smash': S('hammer', 0.8); S('boom', 0.5, { delay: 0.05 }); break;
-      case 'hollowking:summon': S('dig', 0.6); S('roar', 0.6, { rate: 0.8, delay: 0.05 }); break;
-      case 'hollowking:split': S('teleport', 0.7, { rate: 0.8 }); S('roarfar', 0.6, { delay: 0.2 }); break;
-      case 'hollowking:die': S('roarbig', 1, { rate: 0.7 }); S('stonebreak', 0.8, { delay: 0.5 }); break;
+      // The Hollow King (Release 3; owner 2026-11-03: scary): slowed growls, a deep bell toll and a low drone under every big moment
+      case 'hollowking:arrive': bell(55, 0, 0.12); bell(55, 1.1, 0.1); tone(41, 2.4, 'sawtooth', 0.05, 30); S('roarbig', 1, { rate: 0.6, delay: 0.2 }); S('reverse', 0.6, { rate: 0.7 }); S('darkcast', 0.6, { rate: 0.8, delay: 0.9 }); S('scream', 0.35, { rate: 0.55, delay: 1.3 }); break;
+      case 'hollowking:hit': S('roar', 0.55, { rate: 0.7 }); break;
+      case 'hollowking:immune': S('clank', 0.5, { rate: 0.8 }) || tone(300, 0.08, 'square', 0.05); break;
+      case 'hollowking:tell': S('darkcast', 0.8, { rate: 0.7 }); S('witchlong', 0.45, { rate: 0.6 }); tone(55, 0.9, 'sawtooth', 0.05, 110); break;
+      case 'hollowking:wipe': S('stonecrash', 0.9, { rate: 0.8 }) || noise(0.4, 0.3, 300, 0.7); S('roar', 0.5, { rate: 0.6 }); break;
+      case 'hollowking:smash': S('hammer', 0.9, { rate: 0.7 }); S('boom', 0.6, { delay: 0.05 }); S('roarbig', 0.6, { rate: 0.65, delay: 0.1 }); break;
+      case 'hollowking:summon': S('darkcast', 0.7, { rate: 0.75 }); S('dig', 0.6); S('roar', 0.6, { rate: 0.65, delay: 0.1 }); tone(48, 1, 'sawtooth', 0.05, 36); break;
+      case 'hollowking:split': bell(65, 0, 0.12); S('reverse', 0.6, { rate: 0.6 }); S('teleport', 0.7, { rate: 0.6, delay: 0.15 }); S('roarfar', 0.7, { rate: 0.7, delay: 0.35 }); break;
+      case 'hollowking:die': S('scream', 0.6, { rate: 0.6 }); S('roarbig', 1, { rate: 0.5, delay: 0.1 }); bell(49, 0.4, 0.13); bell(49, 1.6, 0.1); S('stonebreak', 0.9, { delay: 0.8 }); tone(60, 2.5, 'sawtooth', 0.06, 25, 0.3); break;
       default: SFX.boss();
     }
   },

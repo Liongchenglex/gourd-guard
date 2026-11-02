@@ -4,6 +4,7 @@ import { FIELD_BOT, FIELD_TOP, G, setBannerTimer } from '../engine/state.js';
 import { $, clamp } from '../engine/util.js';
 import { wallFrac } from '../engine/walls.js';
 import { save } from '../save.js';
+import { TYPES } from '../data/monsters.js';
 import { toolIcon } from '../engine/render/tools.js';
 import { QUEST_START, questsFor, questLive, questShort } from '../data/quests.js';
 
@@ -20,6 +21,18 @@ export function banner(big, sub, dur){
 }
 
 export let hudSig = '';
+
+/** 6-20 (Release 3, owner 2026-11-03): the bar shows the Hollow King's health with a marker where each world boss form splits off,
+ *  in that form's colour; it pulses while the form stands and dims once beaten. */
+const HK_COLOURS = { gravekeeper:'#7fd35a', poltergeist:'#9fd8ff', hexwitch:'#b07aff', vampirecount:'#e0384a', twintides:'#3ac8c0' };
+let hkFor = null;
+function hkMarks(){
+  const bar = $('#prog').parentNode, on = G.mode === 'story' && G.def && G.def.boss === 'hollowking';
+  if (hkFor !== G){ hkFor = G; for (const e of bar.querySelectorAll('.hkMark')) e.remove(); if (on) TYPES.hollowking.forms.forEach((k, i) => { const e = document.createElement('b'); e.className = 'hkMark'; e.style.left = (10 + 90 * i / 5) + '%'; e.style.background = HK_COLOURS[k]; e.setAttribute('aria-hidden', 'true'); bar.appendChild(e); }); }
+  if (!on) return;
+  const k = G.monsters.find(m => m.kind === 'hollowking' && !m.dead && !m.hkClone), ph = k ? k.hkPhase : G.bossDead ? 5 : 0, up = !!(k && k.hkForm && !k.hkForm.dead);
+  bar.querySelectorAll('.hkMark').forEach((e, i) => { e.classList.toggle('live', up && i === ph - 1); e.classList.toggle('done', i < ph - (up ? 1 : 0)); });
+}
 
 /** 6-19 (Release 3): a jukebox mark on the spawn bar at each drop point; it glows while that jukebox stands and dims once smashed. */
 let marksFor = null;
@@ -52,7 +65,7 @@ export function updateHud(force){
     qHtml = questsFor(G.def).slice(1).map(q => { const L = questLive(q); return `<span class="qt${L.done ? ' ok' : L.failed ? ' bad' : ''}"><b>${L.txt}</b> ${questShort(q)}</span>`; }).join('');
   }
   const sig = [questOn ? qHtml : '', wf, coins, seeds, Math.round(prog * 100), label, save.fw, save.repair, save.buster, save.lantern, save.mine, save.bomb, save.scarecrow, save.emergency, G.aim, tools.join(','), Math.round(G.fogClear || 0)].join('|');
-  if (__RELEASE__ >= 3) jukeboxMarks();   // cheap: rebuilt once per night, two class toggles otherwise
+  if (__RELEASE__ >= 3){ hkMarks(); jukeboxMarks(); }   // cheap: rebuilt once per night, two class toggles otherwise
   if (sig === hudSig && !force) return;
   const coinsChanged = hudSig && hudSig.split('|')[1] !== String(coins);
   hudSig = sig;

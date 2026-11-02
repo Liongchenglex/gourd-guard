@@ -100,6 +100,7 @@ export function hkSplit(k){
   const free = [...Array(COLS).keys()].filter(l => !taken.includes(l)), lane = free.length ? free[Math.floor(Math.random() * free.length)] : (k.lane + 3) % COLS;
   const f = spawnMonster('boss:' + kind, lane, true, k.p, 1);   // minion while spawning keeps a Twin Tides form a single body
   f.minion = false; f.look = 'hollowking'; f.hkClone = true; f.king = k;
+  const fh = TYPES.hollowking.formHp && TYPES.hollowking.formHp[kind]; if (fh){ f.hp = f.maxHp = fh; }
   k.hkForm = f; k.hkPhase++;
   if (forms[k.hkPhase]) prebakeAsync(['hollowking|' + forms[k.hkPhase]]);
   ring(f.x, mY(f), 60, 'rgba(255,140,42,.9)'); ring(k.x, mY(k), 60, 'rgba(255,140,42,.9)');
@@ -133,6 +134,7 @@ export function hkAfterHit(k){
 export function onHkFormDown(f){
   (G.hkDrop = G.hkDrop || []).push({ key:'hollowking|' + f.kind, t:0.45 });   // its frames are large: forget them once its death pop has played
   if (!f.king || f.king.dead) return;
+  SFX.bossSfx(f.kind, 'die');   // the borrowed boss's own death cry
   banner('The Hollow King can be hurt!', f.king.hkPhase >= 5 ? 'His last form is gone. Bring him down!' : 'Hit him before he splits again.', 2.2);
 }
 

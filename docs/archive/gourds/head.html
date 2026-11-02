@@ -1,0 +1,76 @@
+<title>Gourd Guard Gourds</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Creepster&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap">
+<style>
+/* Layout: one night-sky column; a lineup scene, five gourd cards, then the 3x3 zone. Single dark look, like the game. */
+:root{ color-scheme:dark; --bg:#110a1a; --panel:#1e1529; --panel2:#281c37; --ink:#f6ebdd; --muted:#bfaec6; --gold:#ffcf6a; --line:rgba(255,207,106,.2); --glow:#ffcf6a;
+  --display:Creepster, fantasy; --head:Fredoka, system-ui, sans-serif; --body:Nunito, system-ui, sans-serif; }
+html{ background:var(--bg); }
+body{ background:radial-gradient(ellipse at 50% -10%, #2a1a42, var(--bg) 60%) fixed var(--bg); color:var(--ink); font-family:var(--body); }
+.wrap{ max-width:1000px; margin:0 auto; padding-block:28px 64px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); display:grid; gap:22px; }
+h1{ font-family:var(--display); font-weight:400; color:var(--gold); font-size:clamp(42px, 8vw, 70px); margin:0; letter-spacing:1px; text-shadow:0 0 24px rgba(255,207,106,.4); text-wrap:balance; line-height:1; }
+h2{ font-family:var(--head); font-weight:700; font-size:22px; margin:0; text-wrap:balance; }
+.lede{ color:var(--muted); max-width:66ch; margin:8px 0 0; line-height:1.55; }
+.lede b{ color:var(--ink); }
+#tabs{ display:flex; flex-wrap:wrap; gap:8px; }
+#tabs button{ font:600 15px var(--head); color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:10px 16px; min-height:44px; cursor:pointer; }
+#tabs button.on{ background:var(--glow); color:#1a0a06; border-color:transparent; box-shadow:0 0 18px color-mix(in srgb, var(--glow) 55%, transparent); }
+button:focus-visible{ outline:2px solid var(--gold); outline-offset:3px; }
+.world{ display:grid; gap:6px; }
+.world .eyebrow{ font:700 12px var(--head); letter-spacing:.12em; text-transform:uppercase; color:var(--glow); }
+.world p{ margin:0; color:var(--muted); max-width:70ch; line-height:1.5; }
+canvas.hero{ display:block; width:100%; max-width:100%; border-radius:16px; border:1px solid var(--line); }
+#cards{ display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:12px; }
+.card{ text-align:left; display:flex; flex-direction:column; gap:4px; background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:16px; padding:10px 12px 14px; cursor:pointer; font:inherit; min-width:0; }
+.card.on{ border-color:var(--glow); background:var(--panel2); box-shadow:0 0 20px color-mix(in srgb, var(--glow) 25%, transparent); }
+.card canvas{ width:100%; max-width:200px; align-self:center; display:block; }
+.card .shape{ font:700 11px var(--head); letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+.card h3{ font:700 18px var(--head); margin:0; }
+.card p{ margin:2px 0 0; font-size:13.5px; line-height:1.45; color:var(--muted); }
+.sw{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:8px; font-size:12px; color:var(--muted); }
+.sw i{ width:16px; height:16px; border-radius:50%; border:1px solid rgba(255,255,255,.3); }
+.sw{ margin-top:auto; padding-top:8px; }
+.pw{ font-size:12px; color:var(--muted); }
+.pw b{ font:700 11px var(--head); letter-spacing:.1em; text-transform:uppercase; color:var(--gold); margin-right:4px; }
+.split{ display:grid; grid-template-columns:minmax(0, 420px) minmax(0, 1fr); gap:20px; align-items:center; }
+
+canvas.zone{ display:block; width:100%; max-width:420px; border-radius:16px; border:1px solid var(--line); }
+canvas.map{ display:block; width:100%; max-width:380px; border-radius:22px; border:1px solid var(--line); }
+.split.map{ grid-template-columns:minmax(0, 380px) minmax(0, 1fr); }
+@media (max-width:720px){ .split, .split.map{ grid-template-columns:minmax(0, 1fr); } }
+.rules p{ margin:0; color:var(--muted); line-height:1.55; max-width:60ch; }
+.rules{ display:grid; gap:10px; min-width:0; }
+.rules ul{ margin:0; padding-left:20px; color:var(--muted); line-height:1.5; display:grid; gap:6px; }
+.rules li b{ color:var(--ink); }
+.note{ font-size:13px; color:var(--muted); }
+</style>
+<div class="wrap">
+  <header>
+    <h1>Gourds</h1>
+    <p class="lede">Five gourds for the nightmare worlds, cute like the pumpkins they help. A gourd sits on the patch and <b>powers up every pumpkin flicked from the 3×3 square around it</b>. Each gourd has its own shape, its own colour and its own power. The powers are still to be decided. Tap a gourd to see it on the patch.</p>
+  </header>
+  <div id="heroSlot"></div>
+  <section id="cards" aria-label="The five gourds"></section>
+  <section class="split map">
+    <div id="mapSlot"></div>
+    <div class="rules">
+      <h2 id="mapTitle"></h2>
+      <p>A real frame from the game: night 1-4 in the Pumpkin Patch, with the middle cell cleared and a gourd placed there at the game's own cell size. Its 3×3 square glows. The pumpkins around it show no face until they bunch, so the gourd's face makes it easy to spot.</p>
+      <p class="note">Tap a gourd card above to swap which one stands in the patch.</p>
+    </div>
+  </section>
+  <section class="split">
+    <div id="zoneSlot"></div>
+    <div class="rules">
+      <h2 id="zoneTitle"></h2>
+      <ul>
+        <li><b>The rule:</b> each pumpkin flicked from inside the glowing 3×3 square gets the gourd's power.</li>
+        <li><b>The gourd stays put.</b> It is never slid or flicked, so the player builds bunches next to it.</li>
+        <li><b>On an edge or corner</b> the square is cut off by the patch, so a gourd there covers five or three cells instead of eight.</li>
+        <li><b>Shape tells them apart.</b> Each gourd has a silhouette you can read at a glance, so it never looks like a pumpkin of the same colour.</li>
+      </ul>
+      <p class="note">These three points are design guesses for the owner to confirm. Only the 3×3 power rule is the owner's.</p>
+    </div>
+  </section>
+</div>
+<script>

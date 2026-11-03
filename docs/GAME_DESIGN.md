@@ -123,7 +123,7 @@ Details:
 | Fire, Ice, White, Pink, Purple, Turquoise | 100 coins | 500 coins | 3,000 coins | 5,000 coins (owner, 2026-10-08; was 50 seeds) |
 | Grey, Black, Deep Blue, Brown | 1,000 coins | 2,500 coins | 5,000 coins (was 50 seeds) | 50 seeds (was 100; owner, 2026-10-08) |
 | Paint (unlock 100 seeds after 5-20) | 30 seeds | 50 seeds | 80 seeds | 120 seeds |
-| Beige (unlock 50 seeds after 6-16; Release 3) | 5,000 coins | 10,000 coins | 50 seeds | 75 seeds |
+| Beige (unlock 50 seeds after 6-16; Release 3; owner, 2026-11-03: was 5,000 / 10,000 coins, 50 / 75 seeds) | 3,000 coins | 5,000 coins | 10,000 coins | 50 seeds |
 
 The balance bot's expected upgrade profile has not been re-checked against these prices yet.
 

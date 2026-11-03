@@ -13,7 +13,7 @@ export const BUY_PUMPKIN = {
   paint:{ ...PAINT_UNLOCK, flag:'paintOwned', blurb:'When 3 light up, the pumpkins touching the bunch launch with it, each with its own colour and power.', how:'Beat 5-20, the Twin Tides\u2019 last stand, to unlock it with seeds.' },
   ...(__RELEASE__ >= 3 ? { beige:{ seeds:50, night:116, flag:'beigeOwned', blurb:'When it kills, it leaves sticky glue behind: monsters stuck in it slow down and keep losing health.', how:'Beat 6-16, Four Serpents, to unlock it with seeds.' } } : {}),   // owner, 2026-11-02
 };
-const BG = [{ coins:5000 }, { coins:10000 }, { seeds:50 }, { seeds:75 }];        // Beige (owner, 2026-11-02; Release 3)
+const BG = [{ coins:3000 }, { coins:5000 }, { coins:10000 }, { seeds:50 }];        // Beige (owner, 2026-11-03: cheaper, it is not that strong; was 5,000 / 10,000 / 50 / 75 seeds; Release 3)
 export const UPGRADE_COST = { green:A, yellow:A, fire:B, ice:B, white:B, pink:B, purple:B, turquoise:B, grey:C, black:C, blue:C, brown:C, paint:P, ...(__RELEASE__ >= 3 ? { beige:BG } : {}) };
 export const upgradeCost = (key, lv) => (UPGRADE_COST[key] || A)[lv - 1] || null;
 

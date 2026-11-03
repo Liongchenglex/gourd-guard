@@ -20,7 +20,7 @@ const POWERS = ['wipe', 'smash', 'summon'];
 
 export function initHollowKing(m){
   const T = TYPES.hollowking;
-  m.powerT = T.powerEvery; m.powerI = 0;
+  m.powerT = T.powerEvery; m.powerI = 0; m.driftT = T.driftEvery;
   m.hkPhase = 0; m.hkForm = null;
 }
 
@@ -66,6 +66,15 @@ function summon(m){
   SFX.bossSfx('hollowking', 'summon');
 }
 
+/** One or two lanes left or right, never onto a lane another boss stands in (his form). */
+function drift(m){
+  m.driftT = TYPES.hollowking.driftEvery;
+  const taken = G.monsters.filter(o => o !== m && o.type === 'boss' && !o.dead).map(o => o.lane);
+  const opts = [-2, -1, 1, 2].map(d => m.lane + d).filter(l => l >= 0 && l < COLS && !taken.includes(l));
+  if (!opts.length) return;
+  m.lane = opts[Math.floor(Math.random() * opts.length)]; m.tx = LANE(m.lane);
+}
+
 export function updateHollowKing(m, dt){
   if (!m.hkStarted && m.p > 0.05){   // arrival: the first split (or a continued night's phase)
     m.hkStarted = true;
@@ -74,6 +83,8 @@ export function updateHollowKing(m, dt){
     else { if (r && r.formHp != null) m.hkPhase = r.phase - 1; const f = hkSplit(m); if (r && r.formHp != null && f) f.hp = Math.min(f.maxHp, r.formHp); }
   }
   if (G.hkDrop && G.hkDrop.length) for (let i = G.hkDrop.length - 1; i >= 0; i--) if ((G.hkDrop[i].t -= dt) <= 0){ dropAtlas(G.hkDrop[i].key); G.hkDrop.splice(i, 1); }
+  m.x += (m.tx - m.x) * Math.min(1, dt * 2);   // glides to his lane (owner, 2026-11-03: he should move around)
+  if (m.p > 0.05 && (m.driftT -= dt) <= 0) drift(m);
   if (G.hkTell){ G.hkTell.t -= dt; if (G.hkTell.t <= 0){ const c = G.hkTell.col; G.hkTell = null; wipeColumn(c); } }
   if (m.p <= 0.05) return;
   m.powerT -= dt;

@@ -73,7 +73,7 @@ export const TYPES = {
   // The Hollow King (6-20, Release 3; owner 2026-11-02, src/engine/hollowking.js): five phases; each splits off a world boss form (him in
   // that boss's colour, with its level-10 kit and health) and he takes no damage until it falls. Every `powerEvery` s, in turn: wipe a
   // patch column (after `wipeTell` s), smash his lane's fence by half (never below 1), summon `summonN` of the night's monsters.
-  ...(__RELEASE__ >= 3 ? { hollowking: { boss:true, hp:60, r:36, sp:0.03, coins:80, eat:0, pts:500, drop:8, hold:0.3, powerEvery:12, wipeTell:1, summonN:[4, 6],
+  ...(__RELEASE__ >= 3 ? { hollowking: { boss:true, hp:60, r:36, sp:0.03, coins:80, eat:0, pts:500, drop:8, hold:0.3, powerEvery:12, wipeTell:1, summonN:[4, 6], driftEvery:6,
     forms:['gravekeeper', 'poltergeist', 'hexwitch', 'vampirecount', 'twintides'], formHp:{ twintides:28 }, noItems:true, form2:{ hp:60 } } } : {}),   // formHp: the Twin Tides form fights alone, so it has both serpents' health (owner, 2026-11-03)
 };
 

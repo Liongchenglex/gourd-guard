@@ -950,6 +950,31 @@ def check_draw_budget(browser, url, on):
 CHECKS.update({'check_draw_budget': check_draw_budget})
 
 
+def check_hk_moves(browser, url, on):
+    """Owner (2026-11-03): the Hollow King glides between lanes instead of standing still, never onto his form's lane."""
+    if not R3:
+        return
+    page, errors = open_page(browser, url)
+    spawn_king(page); time.sleep(0.3)
+    seen = set()
+    for _ in range(6):
+        page.evaluate(f"() => {{ {KING}.driftT = 0; }}"); time.sleep(0.25)
+        d = page.evaluate(f"() => {{ const k = {KING}, f = {FORM}; return [k.lane, f ? f.lane : -1]; }}")
+        seen.add(d[0])
+        if d[0] == d[1]: ok(False, f'he never glides onto his form\'s lane {d}'); break
+    ok(len(seen) >= 2, f'he moves between lanes {sorted(seen)}')
+    page.evaluate(f"() => {{ {KING}.driftT = 99; }}")
+    try: page.wait_for_function(f"() => Math.abs({KING}.x - {KING}.tx) < 3", timeout=6000)
+    except Exception: pass
+    gap = page.evaluate(f"() => {{ const k = {KING}; return Math.abs(k.x - k.tx); }}")
+    ok(gap < 3, f'he glides onto his new lane ({gap:.1f} px off)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_hk_moves': check_hk_moves})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

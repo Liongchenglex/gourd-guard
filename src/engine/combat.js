@@ -283,8 +283,8 @@ function hitMonsterNow(pr, m){
     for (const o of G.monsters.slice()) if (o !== m && !o.dead && !o.hidden && o.rise <= 0 && Math.abs(o.lane - m.lane) <= 1 && Math.abs(mY(o) - y) < reach){ o.lastHit = 7; o.lastHitLv = pr.lv; damage(o, POWER[i] * frac, '#ff9a3a', true); SFX.extra('splash'); if (i >= 4 && !o.dead) knockback(o); }
     for (const w of G.castles) if (!w.dead && Math.abs(w.lane - m.lane) <= 1 && Math.abs(castleY(w) - y) < reach) damageCastle(w, POWER[i] * frac);
   }
+  if (__RELEASE__ >= 3 && pr.type === BEIGE) layGlue(m.lane, m.p, pr.lv);   // Beige: every hit leaves glue where it lands (owner, 2026-11-03; was kills only)
   if (kb && !m.dead) knockback(m);
-  if (__RELEASE__ >= 3 && m.dead && pr.type === BEIGE) layGlue(m.lane, m.p, pr.lv);   // Beige: its kill leaves glue (owner, 2026-11-02)
   if (m.dead && pr.type === 5 && Math.random() < SPAWN_P[i]) purpleSpawn(m, y, i);   // Purple: extra spawn per kill
   SFX.pumpkinHit(pr.type, pr.size, pr.vis === RAINBOW);   // pumpkin layer
   if (m.type === 'boss') SFX.bossSfx(m.kind, 'hit'); else SFX.monsterHit(m.type);   // monster layer

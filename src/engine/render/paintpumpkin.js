@@ -30,7 +30,7 @@ export function paintPatches(g, R, paints){
 /** Beige (Release 3): glossy glue running down from the stem; drawn into the baked pumpkin sprite only. */
 export function glueDrips(g, R){
   g.save(); rind(g, R); g.clip();
-  const goo = '#f7ecd0', edge = 'rgba(120,90,40,.45)';
+  const goo = '#f8dcc6', edge = 'rgba(154,102,70,.45)';   // pinkish skin-beige glue (owner, 2026-11-03)
   g.fillStyle = goo; g.beginPath(); g.ellipse(0, -R * .8, R * .5, R * .2, 0, 0, Math.PI * 2); g.fill();   // the cap of glue over the top
   for (const [x, len, w] of [[-R * .34, .26, .1], [R * .02, .4, .12], [R * .36, .2, .09]]){
     g.beginPath(); g.moveTo(x - R * w, -R * .7); g.lineTo(x - R * w * .8, -R * .7 + R * len); g.arc(x, -R * .7 + R * len, R * w * .95, Math.PI, 0, true); g.lineTo(x + R * w, -R * .7); g.closePath(); g.fill();

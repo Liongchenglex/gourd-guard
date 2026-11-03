@@ -8,6 +8,7 @@ import { drawBlast } from './fx.js';
 import { CS, FENCE_Y } from '../state.js';
 import { K } from './canvas.js';
 import { TAU } from '../util.js';
+import { PTYPES, BEIGE } from '../../data/pumpkins.js';
 
 const WOOD = pal('#b48a58'), WOODD = pal('#6b4526'), STEEL = pal('#aab3c4'), IRON = pal('#4c505c'), RED = pal('#d8323c'), BRASS = pal('#d9a53a'),
   STRAW = pal('#d9b455'), STRAWD = pal('#a8843a'), SACK = pal('#c9a57a'), HAT = pal('#3a2a1a'), COAT = pal('#5a4a7a'), SHIRT = pal('#8a3a3a'),
@@ -233,16 +234,17 @@ export function drawToolFx(g, v, t){
   }
 }
 
-/** Beige glue on one field tile (Release 3): a flat glossy splat, baked once and blitted. */
+/** Beige glue on one field tile (Release 3): a flat glossy splat in the Beige pumpkin's own skin beige, baked once and blitted. */
 export function glueSprite(){
   return sprite('glue', CS, CS * 0.7, CS / 2, CS * 0.35, g => {
-    const R = CS * 0.44;
-    g.fillStyle = 'rgba(120,92,48,.35)'; g.beginPath(); g.ellipse(0, 3, R, R * 0.5, 0, 0, Math.PI * 2); g.fill();   // the shadow under the goo
-    g.fillStyle = '#e6d1a0'; g.beginPath();
+    const R = CS * 0.44, B = PTYPES[BEIGE], body = B.light, edge = B.base;   // owner, 2026-11-03: the glue looked brown-tan; use the pinkish pumpkin colours
+    g.fillStyle = 'rgba(154,102,70,.3)'; g.beginPath(); g.ellipse(0, 3, R, R * 0.5, 0, 0, Math.PI * 2); g.fill();   // the shadow under the goo
+    g.fillStyle = edge; g.beginPath();
     for (let i = 0; i <= 14; i++){ const a = i / 14 * Math.PI * 2, rr = R * (0.82 + 0.16 * Math.sin(i * 2.7)); g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.48); }
     g.closePath(); g.fill();
-    g.fillStyle = '#f6e9c8'; g.beginPath(); g.ellipse(-R * 0.1, -R * 0.06, R * 0.6, R * 0.24, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.8)'; g.beginPath(); g.ellipse(-R * 0.3, -R * 0.14, R * 0.16, R * 0.06, -0.2, 0, Math.PI * 2); g.fill();
-    for (const [x, y, r] of [[R * 0.9, R * 0.1, R * 0.12], [-R * 0.95, R * 0.16, R * 0.09], [R * 0.4, R * 0.42, R * 0.08]]){ g.fillStyle = '#e6d1a0'; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = body; g.beginPath(); g.ellipse(-R * 0.04, -R * 0.03, R * 0.72, R * 0.3, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = B.spark; g.beginPath(); g.ellipse(-R * 0.14, -R * 0.08, R * 0.42, R * 0.15, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath(); g.ellipse(-R * 0.3, -R * 0.14, R * 0.16, R * 0.06, -0.2, 0, Math.PI * 2); g.fill();
+    for (const [x, y, r] of [[R * 0.9, R * 0.1, R * 0.12], [-R * 0.95, R * 0.16, R * 0.09], [R * 0.4, R * 0.42, R * 0.08]]){ g.fillStyle = edge; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
   });
 }

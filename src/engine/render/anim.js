@@ -13,9 +13,10 @@ let scratch = null;
 
 /** Set the bake scale (device pixels per world unit). Drops every atlas when it changes. */
 const bakeKNow = () => bakeK;
-export function setBakeScale(k){ k = Math.min(2.5, Math.max(0.5, k)); if (k !== bakeK){ bakeK = k; atlases = new Map(); } }
+export function setBakeScale(k){ k = Math.min(2.5, Math.max(0.5, k)); if (k !== bakeK){ bakeK = k; atlases = new Map(); pending.clear(); } }
 
-function bake(akey){
+/** Bake one atlas as a generator that yields after every frame, so a big one (the Hollow King's forms) can be spread over idle time. */
+function* bakeSteps(akey){
   const [key, vkey] = akey.split('|'), C = CHARS[key], { scale } = C;
   // optional per-character limits (the Hollow King, 2026-11-02: his frames froze a phone): a box and a clip set per variant, a bake-scale cap
   const box = C.boxFor ? C.boxFor(vkey || null) : C.box, clipSet = C.clipsFor ? C.clipsFor(vkey || null) : C.clips, bakeK = Math.min(bakeKNow(), C.maxK || Infinity);
@@ -27,12 +28,19 @@ function bake(akey){
       const t = cl.once ? i / (cl.n - 1) : i / cl.n;
       g.save(); g.translate(i * fw, 0); g.scale(scale * bakeK, scale * bakeK); g.translate(-box.x, -box.y);
       C.draw(g, { ...cl.pose(t), variant:vkey || null }); g.restore();
+      yield;
     }
     clips[name] = { c, n:cl.n, fps:cl.fps, once:!!cl.once, fw, fh };
   }
   const a = { clips, fw, fh, dx:box.x * scale, dy:box.y * scale + C.dy, dw:box.w * scale, dh:box.h * scale };
-  atlases.set(akey, a);
   return a;
+}
+const pending = new Map();   // atlas key -> a bakeSteps generator part way through (prebakeAsync)
+function bake(akey){
+  const it = pending.get(akey) || bakeSteps(akey); pending.delete(akey);   // finish a background bake rather than start over
+  let r; do r = it.next(); while (!r.done);
+  atlases.set(akey, r.value);
+  return r.value;
 }
 export function atlas(akey){ return atlases.get(akey) || bake(akey); }
 /** Atlas keys for a level pool entry: a plain type, or 'type|variantKey' for a costumed variant. */
@@ -42,10 +50,27 @@ export const isBaked = k => atlases.has(k);   // test hook
 /** Test hook: bytes held by baked atlases whose key starts with `pre`. */
 export const atlasBytes = pre => [...atlases].filter(([k]) => k.startsWith(pre)).reduce((a, [, A]) => a + Object.values(A.clips).reduce((b, c) => b + c.c.width * c.c.height * 4, 0), 0);
 /** Forget one baked atlas (the Hollow King's spent world boss forms: their frames are large). */
-export function dropAtlas(akey){ atlases.delete(akey); }
+export function dropAtlas(akey){ atlases.delete(akey); pending.delete(akey); }
 export function prebake(keys){ for (const k of keys) if (CHARS[k.split('|')[0]] && !atlases.has(k)) bake(k); }
-/** Same, spread over idle time (used while the level card is open so Start does not hitch). */
-export function prebakeAsync(keys){ const todo = keys.filter(k => CHARS[k.split('|')[0]] && !atlases.has(k)); const step = () => { const k = todo.shift(); if (!k) return; if (!atlases.has(k)) bake(k); (window.requestIdleCallback || (f => setTimeout(f, 16)))(step); }; step(); }
+/** Same, spread over idle time a frame at a time and never in the caller's own frame (used while the level card is open so Start does
+ *  not hitch, and for the Hollow King's next form: baking one whole form at its split froze the game ~100 ms, owner 2026-11-03). */
+export function prebakeAsync(keys){
+  const todo = keys.filter(k => CHARS[k.split('|')[0]] && !atlases.has(k));
+  const later = window.requestIdleCallback ? f => window.requestIdleCallback(f, { timeout:500 }) : f => setTimeout(() => f(null), 16);
+  const step = dl => {
+    const until = performance.now() + Math.min(8, dl && dl.timeRemaining ? Math.max(2, dl.timeRemaining()) : 6);
+    while (todo.length){
+      const k = todo[0];
+      if (atlases.has(k)){ todo.shift(); pending.delete(k); continue; }
+      let it = pending.get(k); if (!it){ it = bakeSteps(k); pending.set(k, it); }
+      const r = it.next();
+      if (r.done){ pending.delete(k); atlases.set(k, r.value); todo.shift(); }
+      if (performance.now() >= until) break;
+    }
+    if (todo.length) later(step);
+  };
+  later(step);
+}
 
 /** Which clip and frame a monster shows right now. */
 export function pickFrame(m, key){

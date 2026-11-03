@@ -86,7 +86,7 @@ export function spawnMonster(key, lane, minion, p, formArg){
     colourLock:null, colourImmune:null, reflecting:false, mirrorT:T.open || 0, hexT:T.hexEvery || 0, zoneT:T.zoneEvery || 0, bulk:1 };
   if (T.noKnockback) m.noKnockback = true;
   if (form === 2 && T.form2 && T.form2.hold != null) m.hold = T.form2.hold;
-  if (G.def && G.def.hexAll && type !== 'boss' && type !== 'sack' && type !== 'jukebox' && type !== 'chameleon' && type !== 'rchameleon') hexMonster(m, G.def.hexAll === 'reverse', true);
+  if (G.def && G.def.hexAll && hexable(m)) hexMonster(m, G.def.hexAll === 'reverse', true);
   if (type === 'turtle' && !puddle && G.puddles && G.puddles.length && p == null){ const pd = G.puddles[Math.floor(Math.random() * G.puddles.length)]; m.lane = pd.lane; m.x = m.tx = LANE(pd.lane); m.p = pd.p; }
   if (type === 'chameleon' || type === 'rchameleon'){   // takes one of the player's colours
     const pool = (G.loadout || [0, 1]).filter(t => t !== RAINBOW);
@@ -286,7 +286,7 @@ export function updateMonster(m, dt){
         m.hexT -= dt;
         if (m.hexT <= 0 && m.p > 0.05){
           m.hexT = TYPES.witch.hexEvery;
-          const pick = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'sack' && o.type !== 'jukebox' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.type !== 'mummy' && o.type !== 'firemummy' && o.rise <= 0 && o.p > 0);   // anything but bosses, true chameleons and mummies (owner, 2026-10-19: a hexed mummy's colour immunity could leave nothing able to finish it); may re-hex an already hexed monster; witches hex each other (owner)
+          const pick = G.monsters.filter(o => o !== m && hexable(o) && o.rise <= 0 && o.p > 0);   // anything but bosses, true chameleons and mummies (owner, 2026-10-19: a hexed mummy's colour immunity could leave nothing able to finish it); may re-hex an already hexed monster; witches hex each other (owner)
           if (pick.length){ const o = pick[Math.floor(Math.random() * pick.length)]; hexBolt(m, o); hexMonster(o, Math.random() >= TYPES.witch.chameleonChance); SFX.monsterAct('witch', 'hex'); m.anim = { clip:'hex', t:0, dur:0.5 }; }
         }
         m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
@@ -478,6 +478,11 @@ function updateVampireCount(m, dt){
   return false;
 }
 
+/** Who a hex may land on (witch, Hexwitch and its Hollow King form, hexAll levels): never a boss, the Loot Sack, the jukebox, a true
+ *  chameleon, or a mummy of either kind: a mummy only goes down to its own colour, so a hex could leave nothing able to finish it (owner, 2026-10-19 and 2026-11-03). */
+const NO_HEX = new Set(['boss', 'sack', 'jukebox', 'chameleon', 'rchameleon', 'mummy', 'firemummy']);
+export function hexable(o){ return !o.dead && !NO_HEX.has(o.type); }
+
 /** A crackling purple bolt from a witch to the monster it hexes (owner: hexes should zap and show lightning). */
 function hexBolt(from, o){
   if (G.vfx) G.vfx.push({ kind:'hexbolt', x1:from.x, y1:mY(from), x2:o.x, y2:mY(o), t:0, dur:0.4, seed:Math.floor(Math.random() * 1e6) });   // arcane zap (render/fx.js)
@@ -506,7 +511,7 @@ function updateHexwitch(m, dt){
   m.hexT -= dt;
   if (m.hexT <= 0){
     m.hexT = m.form === 2 ? T.form2.hexEvery : T.hexEvery;
-    const pick = shuffle(G.monsters.filter(o => o !== m && !o.dead && o.type !== 'boss' && o.type !== 'sack' && o.type !== 'jukebox' && o.type !== 'chameleon' && o.type !== 'rchameleon' && o.rise <= 0 && o.p > 0));   // same targets as a witch (never the Loot Sack or the Frenzy jukebox)
+    const pick = shuffle(G.monsters.filter(o => o !== m && hexable(o) && o.rise <= 0 && o.p > 0));   // same targets as a witch: never a mummy (owner, 2026-11-03: a hexed Flaming Mummy could not be finished)
     const n = T.hexCount[0] + Math.floor(Math.random() * (T.hexCount[1] - T.hexCount[0] + 1));
     for (const o of pick.slice(0, n)){ hexBolt(m, o); hexMonster(o, m.form === 2 ? Math.random() >= T.chameleonChance : true); }   // form 1: reverse only (owner); form 2: 25% chameleon, 75% reverse
     if (pick.length){ SFX.bossSfx('hexwitch', 'hex'); m.anim = { clip:'hex', t:0, dur:0.73 }; }

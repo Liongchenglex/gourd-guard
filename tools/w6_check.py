@@ -975,6 +975,61 @@ def check_hk_moves(browser, url, on):
 CHECKS.update({'check_hk_moves': check_hk_moves})
 
 
+def check_hex_mummies(browser, url, on):
+    """Owner, 2026-11-03: a Flaming Mummy got hexed (the Hexwitch, and the Hollow King's Hexwitch form). No hex ever lands on a mummy."""
+    page, errors = open_page(browser, url)
+    start(page, 50)
+    r = page.evaluate("""() => { const g = window.__gg, G = g.G; G.spawnTimer = 999; G.monsters.length = 0;
+      const w = g.spawnMonster('boss:hexwitch', 3, false, 0.3, 1);
+      const ms = ['mummy', 'firemummy', 'mummy', 'firemummy'].map((t, i) => { const m = g.spawnMonster(t, [0, 1, 5, 6][i], true, 0.3); m.sp = 0; return m; });
+      const hexed = () => ms.some(m => m.colourImmune != null || m.colourLock != null);
+      for (let k = 0; k < 12; k++){ w.hexT = 0; w.p = 0.3; g.G.monsters.forEach(m => { if (m !== w) m.p = 0.3; }); }
+      return new Promise(res => { let n = 0; const id = setInterval(() => { w.hexT = 0; if (++n > 15){ clearInterval(id); res(hexed()); } }, 60); }); }""")
+    ok(r is False, 'the Hexwitch never hexes a Mummy or a Flaming Mummy')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_glue_on_hit(browser, url, on):
+    """Owner, 2026-11-03: Beige lays glue on every hit, not only on a kill."""
+    if not R3:
+        return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { window.__gg.save.beigeOwned = true; }")
+    page.evaluate("([lo]) => window.__gg.startGame('story', 101, lo)", [[0, 1, 2, 3, page.evaluate("() => window.__gg.BEIGE")]]); time.sleep(0.3)
+    page.evaluate("() => { window.__gg.G.spawnTimer = 999; window.__gg.G.monsters.length = 0; }")
+    tp = page.evaluate("() => window.__gg.TILE_P()")
+    row = int(0.4 / tp)
+    r = page.evaluate(f"() => {{ const m = {glue_ghoul(page, 3, 0.4, 50)}; ({BEIGE_HIT})(1, m); return [m.dead, window.__gg.G.glue.map(t => [t.lane, t.row, t.dur])]; }}")
+    ok(r == [False, [[3, row, 2]]], f'a Beige hit that does not kill still leaves glue {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_split_no_hitch(browser, url, on):
+    """Owner, 2026-11-03: each new form lagged. The next form's frames were baked whole in the split's own frame (~100 ms on a desktop)."""
+    if not R3:
+        return
+    page, errors = open_page(browser, url)
+    spawn_king(page); time.sleep(0.4)
+    page.evaluate(f"() => {{ const f = {FORM}; f.lastHit = 0; window.__gg.damage(f, 999); }}"); time.sleep(0.8)
+    r = page.evaluate(f"() => {{ const g = window.__gg, k = {KING}; k.lastHit = 0; const t0 = performance.now(); g.damage(k, 999); return [performance.now() - t0, g.isBaked('hollowking|hexwitch'), ({FORM} || {{}}).kind]; }}")
+    ok(r[2] == 'poltergeist' and not r[1], f'the split does not bake the next form in the same frame {r}')
+    ok(r[0] < 40, f'the split itself takes under 40 ms ({r[0]:.0f} ms)')
+    page.wait_for_function("() => window.__gg.isBaked('hollowking|hexwitch')", timeout=8000)
+    ok(True, 'the next form is baked in the background soon after')
+    page.evaluate("() => { window.__gaps = []; let last = performance.now(); const f = now => { window.__gaps.push(now - last); last = now; if (window.__gaps.length < 400) requestAnimationFrame(f); }; requestAnimationFrame(f); }")
+    page.evaluate(f"() => {{ const f = {FORM}; f.lastHit = 0; window.__gg.damage(f, 999); }}"); time.sleep(0.8)
+    page.evaluate(f"() => {{ const k = {KING}; k.lastHit = 0; window.__gg.damage(k, 999); }}"); time.sleep(1.5)
+    worst = page.evaluate("() => Math.max(...window.__gaps)")
+    ok(worst < 60, f'no long frame around a split ({worst:.0f} ms)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_hex_mummies': check_hex_mummies, 'check_glue_on_hit': check_glue_on_hit, 'check_split_no_hitch': check_split_no_hitch})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

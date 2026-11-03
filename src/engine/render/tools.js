@@ -238,7 +238,7 @@ export function drawToolFx(g, v, t){
 export function glueSprite(){
   return sprite('glue', CS, CS * 0.7, CS / 2, CS * 0.35, g => {
     const R = CS * 0.44, B = PTYPES[BEIGE], body = B.light, edge = B.base;   // owner, 2026-11-03: the glue looked brown-tan; use the pinkish pumpkin colours
-    g.fillStyle = 'rgba(154,102,70,.3)'; g.beginPath(); g.ellipse(0, 3, R, R * 0.5, 0, 0, Math.PI * 2); g.fill();   // the shadow under the goo
+    g.fillStyle = 'rgba(165,104,93,.3)'; g.beginPath(); g.ellipse(0, 3, R, R * 0.5, 0, 0, Math.PI * 2); g.fill();   // the shadow under the goo
     g.fillStyle = edge; g.beginPath();
     for (let i = 0; i <= 14; i++){ const a = i / 14 * Math.PI * 2, rr = R * (0.82 + 0.16 * Math.sin(i * 2.7)); g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.48); }
     g.closePath(); g.fill();

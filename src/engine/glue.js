@@ -50,7 +50,7 @@ export function glueStep(m, dt){
   m.glueTick -= dt;
   if (m.glueTick <= 0){
     m.glueTick += GLUE_EVERY;
-    m.lastHit = -1; damage(m, GLUE_DMG, '#f2cfb0', true);   // neither Fire nor Ice: mummies only go down
+    m.lastHit = -1; damage(m, GLUE_DMG, '#f8d3ca', true);   // neither Fire nor Ice: mummies only go down
     if (m.dead) return -1;
   }
   return 1;

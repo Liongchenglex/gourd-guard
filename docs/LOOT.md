@@ -44,7 +44,7 @@ Where it comes from: every level-20 boss.
 | Any kill on a normal (non-boss) night | 1% chance of a treasure chest, at most one per night. It lands on the field and must be tapped within 10 s; one still there when the night is won is kept. |
 | Level-10 boss | A treasure chest, given at once |
 | Level-20 boss | A boss chest, given at once |
-| The Hollow King (6-20, Release 3) | A boss chest, plus a 50% chance of a second boss chest; boss-item prizes in them pay coins (no Hollow King costume yet) |
+| The Hollow King (6-20, Release 3) | Two boss chests, plus a 50% chance of a third (owner, 2026-11-03; was one plus a 50% second); boss-item prizes in them pay coins (no Hollow King costume yet) |
 | Any boss kill in the story | Also a 5% chance of 1–3 seeds |
 | A boss beaten in Endless Night | A 50% chance of 1–2 seeds (no chest; owner, 2026-10-20, was 1–3) |
 | Loot Sack (an ad on the level card summons it) | A treasure chest 50% (tap to pick up), a set of 5 tools 25%, or 80–160 coins 25%; plus a 50% chance of 1 seed. In endless, a Loot Sack comes every other hour. |

@@ -44,7 +44,7 @@ The owner may reorder or regroup releases at any time. When they do, update this
   - Use the comparison directly in the expression: wrapping it in a function call stops the bundler from dropping the code.
   - Keep gated data out of top-level calls such as `.map()` in modules that might be dropped.
   - Examples today (Release 2): the World 6 book blurb (`lore.js`), the Frenzy song (`audio.js` / `src/data/music_w6.js`), Emergency Pumpkins (`shop.js`, `hud.js` tray), and the fog-free preview map (`render/draw.js`).
-  - Release 3: the 6-17 to 6-20 entries themselves (an inline `...(__RELEASE__ >= 3 ? [...] : [])` in `world6.js`, because the runtime release filter alone leaves their names in a Release 2 bundle), the Beige pumpkin (`PTYPES`, `BEIGE`/`RAINBOW` indices, `BUY_PUMPKIN`, `UPGRADE_COST`, lore, face), glue (`src/engine/glue.js`), the Hollow King (`TYPES`, `BOSS_NAMES`, `BOSS_INTRO`, `CHARS`, `src/engine/hollowking.js`, bestiary, book page), the jukebox marks and the second chest.
+  - Release 3: the 6-17 to 6-20 entries themselves (an inline `...(__RELEASE__ >= 3 ? [...] : [])` in `world6.js`, because the runtime release filter alone leaves their names in a Release 2 bundle), the Beige pumpkin (`PTYPES`, `BEIGE`/`RAINBOW` indices, `BUY_PUMPKIN`, `UPGRADE_COST`, lore, face), glue (`src/engine/glue.js`), the Hollow King (`TYPES`, `BOSS_NAMES`, `BOSS_INTRO`, `CHARS`, `src/engine/hollowking.js`, bestiary, book page), the jukebox marks and the extra boss chests.
 - **Changes to things already in the stores** (not just new content) need a release tag too. Anything untagged ships with the next store build.
 
 ## Checks for every release

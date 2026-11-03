@@ -70,9 +70,9 @@ export default [
     pool:[['witch', 2], ['rchameleon', 3], ['mirror', 2], ['vampire', 2], ['knight', 3], ['archer', 2], ['bulwark', 1]],
     gravesLayout:[[0, 0], [0, 6], [4, 0], [4, 6]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
   // 6-13: Blind Night: fog over the whole field (owner), and everything in it is hard to aim at: wraiths fade, wisps drift, sailors
-  // stagger. Witch wind, Frenzy. A Lantern clears the fog for a while.
+  // stagger, divers lurk in the tide at the top. Witch wind, Frenzy. A Lantern clears the fog for a while.
   { world:6, level:13, theme:5, name:'Blind Night', pattern:2, graves:0, total:22, interval:3.0, spMul:0.95, boss:null, bossForm:1, gust:{ every:22, dirs:['left', 'right'] }, frenzy:true,
-    pool:[['wraith', 4], ['wisp', 4], ['sailor', 4]], fog:[[0, 1]], castles:{ n:7, hp:8 }, castlesLayout:ROW(0.5),   // a castle row hidden in the fog (owner)
+    pool:[['wraith', 4], ['wisp', 4], ['sailor', 4], ['diver', 4]], fog:[[0, 1]], sea:true, shoreFrac:0.2, castles:{ n:7, hp:8 }, castlesLayout:ROW(0.5),   // a castle row hidden in the fog (owner); puddle divers in a tide over the top 20%, so it is truly blind (owner, 2026-11-03)
     gravesLayout:[[0, 3], [2, 1], [2, 5], [4, 3]], quests:[['noTools'], ['wallMin', 40]], unlockPumpkins:[], unlockGear:[], intro:[] },
   // 6-14: Turncoat Tide 2: 6-10 with true chameleons (only their colour hurts) in place of the reverse ones, and puddle divers. Frenzy.
   { world:6, level:14, theme:5, name:'Turncoat Tide 2', pattern:3, graves:0, total:22, interval:3.0, spMul:0.95, boss:null, bossForm:1, gust:{ every:22, dirs:['left', 'right'] }, frenzy:true,

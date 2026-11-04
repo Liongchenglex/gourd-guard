@@ -10,6 +10,7 @@ import { clamp, shuffle } from './util.js';
 import { persist, save, lvOf } from '../save.js';
 import { addChest } from './loot.js';
 import { banner, updateHud } from '../ui/hud.js';
+import { destroyGourd, gourdSlot } from './gourd.js';
 
 export function newCell(c){ return { c, lit:false, gids:[], bsize:0, ox:0, oy:0, pop:0, grow:1, fly:0, wig:0, t:Math.random() * 10, age:0 }; }
 /** Smallest bunch that lights up for a colour: Turquoise launches at 2, everything else at 3. */
@@ -64,7 +65,7 @@ export function initBoard(pi, nGraves){
 
 export function computeGroups(gr){
   const groups = [], present = new Set();
-  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){ const x = gr[r][c]; if (x && !x.fly && x.c !== RAINBOW) present.add(x.c); }
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){ const x = gr[r][c]; if (x && !x.fly && x.c !== RAINBOW && !(__RELEASE__ >= 4 && x.gourd)) present.add(x.c); }   // the Grave Gourd (Release 4) has no colour: it never starts or joins a bunch
   const used = new Set();
   for (const k of present){
     const seen = new Set();
@@ -78,7 +79,7 @@ export function computeGroups(gr){
           const na = a + dr, nb = b + dc, key = na * COLS + nb;
           if (!inside(na, nb) || seen.has(key)) continue;
           const n = gr[na][nb];
-          if (n && !n.fly && (n.c === k || n.c === RAINBOW)){ seen.add(key); q.push([na, nb]); }
+          if (n && !n.fly && !(__RELEASE__ >= 4 && n.gourd) && (n.c === k || n.c === RAINBOW)){ seen.add(key); q.push([na, nb]); }
         }
       }
       if (cells.length >= minBunch(k)){ groups.push({ color:k, cells }); cells.forEach(([a, b]) => used.add(a * COLS + b)); }
@@ -95,7 +96,7 @@ export function computeGroups(gr){
         const na = a + dr, nb = b + dc, key = na * COLS + nb;
         if (!inside(na, nb) || seenR.has(key)) continue;
         const n = gr[na][nb];
-        if (n && !n.fly && n.c === RAINBOW){ seenR.add(key); q.push([na, nb]); }
+        if (n && !n.fly && n.c === RAINBOW && !(__RELEASE__ >= 4 && n.gourd)){ seenR.add(key); q.push([na, nb]); }
       }
     }
     if (cells.length >= 3 && !cells.some(([a, b]) => used.has(a * COLS + b))) groups.push({ color:0, cells });
@@ -219,7 +220,10 @@ export function spawnPumpkin(){
 export function spawnSprouts(){
   let placed = 0;
   const n = SPROUT_COUNT + (perkOn('triple') && Math.random() < 0.5 ? 1 : 0);   // 3-20 perk: half the sprouts bring three
-  for (let i = 0; i < n; i++) if (spawnPumpkin()) placed++;
+  for (let i = 0; i < n; i++){
+    if (__RELEASE__ >= 4 && i === 0 && G.def && G.def.gourd){ placed += gourdSlot(spawnPumpkin); continue; }   // the Grave Gourd's slot: it comes back if destroyed, else fills its 3×3, else one normal sprout
+    if (spawnPumpkin()) placed++;
+  }
   if (placed) SFX.sprout(placed);   // one soft pop per pumpkin that came in
   return placed > 0;
 }
@@ -240,7 +244,7 @@ export function landingNear(x, colour){
   let best = null, bd = Infinity;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
     if (grid[r][c] || graves[r][c]) continue;
-    const near = [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].some(([a, b]) => inside(a, b) && grid[a][b] && !grid[a][b].fly && (grid[a][b].c === colour || grid[a][b].c === RAINBOW || colour === RAINBOW));
+    const near = [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].some(([a, b]) => inside(a, b) && grid[a][b] && !grid[a][b].fly && !(__RELEASE__ >= 4 && grid[a][b].gourd) && (grid[a][b].c === colour || grid[a][b].c === RAINBOW || colour === RAINBOW));
     if (!near) continue;
     const d = Math.abs(c - c0) * 10 + (ROWS - r);
     if (d < bd){ bd = d; best = [r, c]; }
@@ -271,6 +275,7 @@ export function collectDrop(d){
 }
 
 export function smash(ref){
+  if (__RELEASE__ >= 4 && ref && ref.gourd){ destroyGourd(ref); return; }   // holding the Grave Gourd breaks it and clears the graves around it
   const pos = findCell(ref); if (!pos) return;
   grid[pos.r][pos.c] = null; G.smashes = (G.smashes || 0) + 1;   // counted for the 1-1 coach
   const x = LANE(pos.c), y = GY + pos.r * CS + CS / 2;
@@ -295,8 +300,8 @@ export function boardScore(gr, threat){
   let sc = 0;
   for (const g of computeGroups(gr)) for (const [, c] of g.cells) sc += 1 + threat[c] * 2;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
-    const a = gr[r][c]; if (!a) continue;
-    const same = b => b && (b.c === a.c || b.c === RAINBOW || a.c === RAINBOW);
+    const a = gr[r][c]; if (!a || (__RELEASE__ >= 4 && a.gourd)) continue;
+    const same = b => b && !(__RELEASE__ >= 4 && b.gourd) && (b.c === a.c || b.c === RAINBOW || a.c === RAINBOW);
     if (c + 1 < COLS && same(gr[r][c + 1])) sc += 0.2;
     if (r + 1 < ROWS && same(gr[r + 1][c])) sc += 0.2;
   }
@@ -309,6 +314,7 @@ export function bestMove(){
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
     const cell = grid[r][c]; if (!cell || cell.fly) continue;
     if (__RELEASE__ >= 4 && cell.pinned > 0) continue;   // pinned: it cannot be slid
+    if (__RELEASE__ >= 4 && cell.gourd) continue;   // the Grave Gourd never makes a bunch, so the hint never slides it
     for (const dir of ['up', 'left', 'right', 'down']){
       if (cell.lit && dir === 'up') continue;
       const moves = planMove(r, c, dir); if (!moves) continue;
@@ -341,7 +347,7 @@ export function paintPull(gid){
   const own = groupCells(gid), mine = new Set(own.map(o => o.cell)), seen = new Set(), out = [];
   for (const { r, c } of own) for (const [dr, dc] of [[1,0],[-1,0],[0,1],[0,-1]]){
     const a = r + dr, b = c + dc; if (a < 0 || a >= ROWS || b < 0 || b >= COLS) continue;
-    const n = grid[a][b]; if (!n || n.fly || mine.has(n) || seen.has(n)) continue;
+    const n = grid[a][b]; if (!n || n.fly || mine.has(n) || seen.has(n) || (__RELEASE__ >= 4 && n.gourd)) continue;   // Paint never pulls the Grave Gourd
     seen.add(n); out.push({ r:a, c:b, cell:n });
   }
   const threat = laneThreat(), cap = PAINT_PULL[lvOf(PAINT) - 1];

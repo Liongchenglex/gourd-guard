@@ -2,7 +2,9 @@
 
 Five gourds for the nightmare worlds. Open `preview.html` to see them animated: a lineup, a card per gourd, the gourd on a real frame of night 1-4, and its 3×3 square on the patch. Nothing here is in the game.
 
-## The rules (owner, 2026-11-02)
+> **The rules changed (Release 4, 2026-11-04).** The first gourd is built: the Calabash is **the Grave Gourd** of the nightmare track. It is not the gourd described below: it **moves** (slides and is pushed like a pumpkin), it is **broken by holding it** (which clears the graves in its 3×3), it comes back on the next sprout, and its power is **sprouting around it**, not powering up flicked pumpkins. The rules in force are in `docs/GAME_DESIGN.md` §5 and §6 and the Release 4 spec (`docs/superpowers/specs/2026-11-04-release-4-nightmare-patch-design.md`, Part 3); the game's art is `src/engine/render/gourd.js`. The other four gourds and their powers are still open.
+
+## The rules (owner, 2026-11-02; superseded for the Grave Gourd, see above)
 - Gourds arrive with the nightmare worlds.
 - A gourd sits on the patch and **powers up every pumpkin flicked from the 3×3 square around it**.
 - Each of the five gourds has a **different power**. The powers are not decided yet.

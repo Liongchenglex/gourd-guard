@@ -35,6 +35,8 @@ import { QUEST_START, questsFor, questText, questBits, countBits, settleQuests, 
 import { sceneCrop, sceneFull, nightmareKey } from '../engine/render/nightmare/scenes.js';
 import { coachEnd } from '../engine/coach.js';
 import * as EN from '../data/endless.js';
+import { GOURDS } from '../data/gourds.js';
+import { gourdIcon } from '../engine/render/gourd.js';
 
 export function showResult(win){
   const g = G, box = $('#rBtns'); box.innerHTML = '';
@@ -55,6 +57,7 @@ export function showResult(win){
       title = g.n === LEVELS ? 'Dawn at last' : 'Night saved';
       msg = g.n === LEVELS ? 'Every night is safe. The patch thanks you.' : g.n < QUEST_START ? 'All three stars!' : st === 3 ? (gained ? 'Every quest done: all three stars!' : 'All three stars already earned here.') : gained ? `+${gained} star${gained > 1 ? 's' : ''}. Come back for the quests you missed.` : 'No new stars this time. Try the other quests.';
       const rq = $('#rQuests'); rq.hidden = g.n < QUEST_START; if (g.n >= QUEST_START) questRows(rq, g.def, qs.total, { fresh:qs.now, before:qs.before });
+      if (__RELEASE__ >= 4) for (const k of g.def.unlockGourds || []) if (GOURDS[k] && !save.gourds[k]){ save.gourds[k] = true; msg += ` New: the ${GOURDS[k].name}! It stands on your patch from the next night.`; }   // a gourd unlocked by this win (N1-4: the Grave Gourd)
       const nk = !nm && ALL_LEVELS[g.n] && (ALL_LEVELS[g.n].unlockPumpkins || [])[0], nextP = nk && PTYPES.find(p => p.key === nk);
       if (nextP && g.n < LEVELS) msg += ` Next night unlocks the ${nextP.name} pumpkin.`;
       if (celebrate){   // owner: beating the level-10 boss is a celebration: a world-unlock card, then back to the menu
@@ -540,7 +543,8 @@ function closeBook(){ curBook = null; bookNightmare = false; nightmareBg(null); 
 
 let loadoutFocus = null;
 /** Pumpkin picking (owner, 2026-09-27): pumpkins in unlock order, a detail card for the focused one (level, ability, lore), then the trophies. */
-export function openLoadout(avail, next, required){
+export function openLoadout(avail, next, required, gourds){
+  if (__RELEASE__ >= 4) renderGourds(gourds || []);   // the Gourds section: the night's gourds, picked and locked (not one of the pumpkins)
   loadoutAvail = avail; loadoutNext = next; loadoutMust = (required || []).map(m => m.t); loadoutWhy = required || [];
   const pref = [...loadoutMust, ...(save.loadout || []).filter(t => avail.includes(t) && !loadoutMust.includes(t))];
   for (const t of avail) if (pref.length < (perkOn('pick4') ? 4 : 5) && !pref.includes(t)) pref.push(t);
@@ -577,8 +581,32 @@ function backToLoadout(){
   for (const b of $('#picks').querySelectorAll('.pick')){ const t = +b.dataset.t, lv = b.querySelector('.lv'); if (lv) lv.textContent = `Lv ${lvOf(t)}`; b.setAttribute('aria-label', `${PTYPES[t].name}, level ${lvOf(t)}`); }
   syncLoadout(); setState('loadout');
 }
+/** The Gourds section of the picker (Release 4): one tile per gourd standing on the patch tonight, shown picked and locked. With one
+ *  gourd there is nothing to choose (our call); it does not count toward the pumpkin team. Hidden on nights without a gourd. */
+function renderGourds(keys){
+  let sec = $('#loGourdSec');
+  if (!sec){ sec = document.createElement('section'); sec.className = 'loSec'; sec.id = 'loGourdSec'; sec.innerHTML = '<h3>Gourds</h3><div class="picks" id="loGourds"></div>'; $('#loScroll').appendChild(sec); }
+  const box = sec.querySelector('.picks'); box.innerHTML = '';
+  sec.hidden = !keys.length;
+  for (const k of keys){
+    const G0 = GOURDS[k]; if (!G0) continue;
+    const b = document.createElement('button'); b.className = 'pick must'; b.dataset.gourd = k; b.setAttribute('aria-pressed', 'true');
+    b.appendChild(gourdIcon(96));
+    const nm = document.createElement('b'); nm.textContent = G0.name; b.appendChild(nm);
+    const tag = document.createElement('span'); tag.className = 'tag info'; tag.textContent = 'i'; tag.title = 'Stands on the patch tonight'; b.appendChild(tag);
+    b.setAttribute('aria-label', `${G0.name}, on the patch tonight`);
+    b.onclick = () => { loadoutFocus = 'gourd:' + k; SFX.ui('locked'); renderDetail(); };
+    box.appendChild(b);
+  }
+}
 function renderDetail(){
   const t = loadoutFocus, d = $('#loDetail'); if (t == null){ d.innerHTML = ''; return; }
+  if (__RELEASE__ >= 4 && typeof t === 'string' && t.startsWith('gourd:')){   // a gourd's card (Release 4)
+    const G0 = GOURDS[t.slice(6)]; d.innerHTML = ''; if (!G0) return;
+    d.appendChild(gourdIcon(96));
+    const tx = document.createElement('div'); tx.innerHTML = `<b>${G0.name}</b><small>On the patch tonight \u00b7 not one of your pumpkins</small><p class="ab"><span class="k">Power:</span> ${G0.power}</p><p class="lo">${G0.lore}</p>`;
+    d.appendChild(tx); return;
+  }
   const P = PTYPES[t], L = lvOf(t), un = t < 2 ? 1 : unlockNightOf(P.key), where = un === 1 ? 'from the start' : un === Infinity ? '' : `unlocked at ${levelFor(un).label}`;
   d.innerHTML = '';
   d.appendChild(pumpkinIcon(t, true));

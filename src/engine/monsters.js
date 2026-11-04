@@ -441,7 +441,7 @@ function updatePoltergeist(m, dt){
       if (m.recolourT <= 0){
         m.recolourT = T.form2.recolourEvery;
         const cells = [];
-        for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){ const x = grid[r][c]; if (x && !x.fly && x.c !== RAINBOW) cells.push(x); }
+        for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){ const x = grid[r][c]; if (x && !x.fly && x.c !== RAINBOW && !(__RELEASE__ >= 4 && x.gourd)) cells.push(x); }   // a Grave Gourd (Release 4) has no colour to repaint
         if (cells.length && G.loadout.length > 1){
           for (const cell of shuffle(cells.slice()).slice(0, 3)){   // three repaints in form 2 (owner)
             const others = G.loadout.filter(t => t !== cell.c);

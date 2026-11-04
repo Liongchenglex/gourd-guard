@@ -29,6 +29,8 @@ import { SPROUT_EVERY, FIREWORK_TARGETS, FIREWORK_DAMAGE, EMERGENCY_N } from '..
 import { startCoach, coachHolds, coachUpdate } from './coach.js';
 import { lightFire, lightRandomFires, fireAhead, burnPumpkin, updateFires } from './fire.js';
 import { prebakeFire } from './render/fire.js';
+import { placeGourdAtStart, gourdSnapshot, restoreGourd } from './gourd.js';
+import { prebakeGourd } from './render/gourd.js';
 
 // ---------- Flow ----------
 
@@ -55,6 +57,7 @@ export function makePreview(n){
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def.pattern, def.graves);
   if (def.gravesLayout) applyGravesLayout(def.gravesLayout);
+  if (__RELEASE__ >= 4 && def.gourd) placeGourdAtStart();   // the preview shows the Grave Gourd where the night starts it
   initWalls();
   resolveMatches();
   setGest(null);
@@ -68,7 +71,7 @@ export function beginNight(n){
   if (hasMummies && !must.some(m => m.t === 3)) must.push({ t:3, why:'Mummies only die to Fire' });   // owner: Fire is auto-selected and locked on mummy levels
   if (def.pool.some(([k]) => ICE_ONLY.has(k)) && !must.some(m => m.t === 2)) must.push({ t:2, why:'Flaming mummies only die to Ice' });
   if (__RELEASE__ >= 4 && (def.fireStart > 0 || (def.fireLayout && def.fireLayout.length) || (def.fireMarks && def.fireMarks.length)) && !must.some(m => m.t === 2)) must.push({ t:2, why:'Only Ice puts out fire and kills burning monsters' });   // fire tiles light burning monsters
-  if (av.length > 5) openLoadout(av, lo => startGame('story', n, lo), must);
+  if (av.length > 5) openLoadout(av, lo => startGame('story', n, lo), must, __RELEASE__ >= 4 && def.gourd ? ['grave'] : null);   // the night's Grave Gourd shows in the picker's Gourds section (Release 4)
   else startGame('story', n, av);
 }
 
@@ -91,7 +94,7 @@ export function startGame(mode, n, loadout){
     t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], glue:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
     loot:{ chests:0, seeds:0 }, chestDropped:false, continued:false, sackT:0, jukebox:null, jukeboxDone:false, jbNext:0,
-    ...(__RELEASE__ >= 4 ? { fires:[], fmNext:0, fmT:-99, fireBurst:0, fireBurstT:0, burstMinion:false } : {}),   // fire tiles and fire marks (src/engine/fire.js)
+    ...(__RELEASE__ >= 4 ? { fires:[], fmNext:0, fmT:-99, fireBurst:0, fireBurstT:0, burstMinion:false, gourdDue:false } : {}),   // fire tiles and fire marks (src/engine/fire.js); gourdDue: a destroyed Grave Gourd waits for the next sprout tick (src/engine/gourd.js)
   });
   if (mode === 'story' && takeSack()) G.sackT = SACK.spawnAt;
   if (def) prebake([...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...[...def.pool.map(([k]) => k), def.boss].flatMap(k => (__RELEASE__ >= 4 && k && ALSO_BAKE[k]) || []), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), ...(__RELEASE__ >= 3 && def.boss === 'hollowking' ? ['hollowking|' + TYPES.hollowking.forms[0]] : []), 'ghoul']);   // bake this level's sprite strips now, not on first sight
@@ -102,6 +105,7 @@ export function startGame(mode, n, loadout){
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def ? def.pattern : Math.floor(Math.random() * PATTERNS.length), def ? def.graves : 2);
   if (def && def.gravesLayout) applyGravesLayout(def.gravesLayout);   // after the board exists: explicit graves replace pumpkins
+  if (__RELEASE__ >= 4 && def && def.gourd){ prebakeGourd(); placeGourdAtStart(); }   // the Grave Gourd: centre cell, or the nearest without a grave (after the graves)
   initWalls();
   resolveMatches();
   startCoach();   // first 1-1 only: a hand shows the slide and the flick (owner)
@@ -169,12 +173,15 @@ export function useBuster(){
   if (G.aim) SFX.tool('aim');
   updateHud(true);
 }
-export function bustGrave(r, c){
-  if (!graves[r][c] || save.buster <= 0) return false;
-  graves[r][c] = false; save.buster--; persist(); G.q.tools++;
+/** Dig up the grave at (r, c). `free` (Release 4: the Grave Gourd breaking) costs no Grave buster and leaves the tool, its sound and its aim alone. */
+export function bustGrave(r, c, free){
+  if (!graves[r][c] || (!free && save.buster <= 0)) return false;
+  graves[r][c] = false;
   const x = LANE(c), y = GY + r * CS + CS / 2;
   for (let i = 0; i < 18; i++) chunk(x, y, i % 2 ? '#8a8d96' : '#3b2a1c', 220);
   ring(x, y, 40, 'rgba(255,220,150,.9)');
+  if (__RELEASE__ >= 4 && free) return true;
+  save.buster--; persist(); G.q.tools++;
   if (G.vfx) G.vfx.push({ kind:'dynamite', x, y, t:0, dur:1.0 });
   SFX.tool('buster'); G.shake = 0.4; G.aim = null;
   updateHud(true);
@@ -494,7 +501,7 @@ export function continueState(){
   return { n:g.n, loadout:g.loadout.slice(), q:JSON.parse(JSON.stringify(g.q)), remaining, bossSpawned:g.bossSpawned, bossDead:g.bossDead, bossHp:bosses, bossKinds:g.def.boss2 ? living.map(m => m.kind) : null,
     hk:__RELEASE__ >= 3 ? hkState() : null,   // the Hollow King's phase and his standing form (Release 3)
     jukebox:{ next:g.jbNext || 0, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null },   // next: drop points already used (one per jukebox dropped)   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
-    ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0, bossPhase2:living.map(m => !!m.phase2) } : {}) };   // the burning tiles and the fire marks already passed, and whether each boss is in phase 2 (a Strawlord torn off its post; Release 4)
+    ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0, bossPhase2:living.map(m => !!m.phase2), gourd:g.def.gourd ? gourdSnapshot() : null } : {}) };   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and the Grave Gourd's cell or that it is due back (Release 4)
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
 export function continueNight(c){
@@ -503,6 +510,7 @@ export function continueNight(c){
   G.spawned = G.resolved = Math.max(0, G.def.total - c.remaining);   // the progress bar picks up where the lost night left off
   if (__RELEASE__ >= 3) G.hkRestore = c.hk || null;
   if (__RELEASE__ >= 4 && c.fires){ G.fires = []; for (const [lane, p] of c.fires) lightFire(lane, p, true); G.fmNext = c.fmNext || 0; }   // the same tiles burn (not the level's start fires again)
+  if (__RELEASE__ >= 4 && c.gourd) restoreGourd(c.gourd);   // the gourd stands where it stood, or comes back on the first sprout
   if (__RELEASE__ >= 4 && c.bossSpawned && c.bossPhase2) G.bossPhase2 = c.bossPhase2.slice();   // spawner.js puts each returning boss back in its phase
   if (c.bossSpawned){ G.bossDead = c.bossDead; G.bossHp = c.bossHp.slice(); G.bossKinds = c.bossKinds ? c.bossKinds.slice() : null; if (c.bossDead) G.bossSpawned = true; }
   if (c.jukebox){

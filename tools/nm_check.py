@@ -25,7 +25,7 @@ def story_done(upto=20):
 # ---------- Task 1: the track, the book page and the release checks ----------
 def check_r4_absent(browser, url):
     js = bundle_js()
-    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord'):
+    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord', 'Grave Gourd'):
         ok((s in js) == R4, f"{s!r} {'in' if R4 else 'not in'} the bundle")
 
 
@@ -699,6 +699,200 @@ def check_strawlord_baked(browser, url):
 
 
 CHECKS.update({'check_strawlord': check_strawlord, 'check_strawlord_returns': check_strawlord_returns, 'check_strawlord_continue': check_strawlord_continue, 'check_strawlord_baked': check_strawlord_baked})
+
+# ---------- Task 8: the Grave Gourd ----------
+GP = "() => { const p = window.__gg.gourdPos(); return p ? [p.r, p.c] : null; }"
+# Quiet the night and empty the patch, keeping the gourd where it stands: no spawns, no sprouts, no monsters, no graves.
+GQUIET = """() => { const g = window.__gg, G = g.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.projs.length = 0; G.drops.length = 0;
+  if (G.fires) G.fires.length = 0; G.fmNext = 99; g.graves.forEach(r => r.fill(false));
+  g.grid.forEach(row => row.forEach((c, i) => { if (!(c && c.gourd)) row[i] = null; })); g.resolveMatches(); }"""
+# Move the gourd to (r, c) on an otherwise unchanged patch.
+GMOVE = """([r, c]) => { const g = window.__gg, p = g.gourdPos(), cell = g.grid[p.r][p.c]; g.grid[p.r][p.c] = null; g.grid[r][c] = cell; cell.ox = cell.oy = 0; g.resolveMatches(); }"""
+# Fill every empty cell in a checkerboard of two colours (no bunches).
+GFILL = "() => { const g = window.__gg; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) if (!g.grid[r][c] && !g.graves[r][c]) g.grid[r][c] = g.newCell((r + c) % 2); g.resolveMatches(); }"
+COUNT = "(cells) => cells.filter(([r, c]) => { const x = window.__gg.grid[r][c]; return x && !x.gourd; }).length"
+
+
+def gourd_night(page, k=5):
+    nm_start(page, k)
+    page.evaluate(GQUIET)
+
+
+def square(r, c):
+    return [[a, b] for a in range(r - 1, r + 2) for b in range(c - 1, c + 2) if 0 <= a < 5 and 0 <= b < 7 and (a, b) != (r, c)]
+
+
+def outside(r, c):
+    sq = square(r, c)
+    return [[a, b] for a in range(5) for b in range(7) if [a, b] not in sq and (a, b) != (r, c)]
+
+
+def check_gourd_basic(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    nm_start(page, 5)
+    ok(page.evaluate(GP) == [2, 3], f'on a gourd:true night the gourd starts in the centre cell (2, 3) ({page.evaluate(GP)})')
+    d = page.evaluate("() => { const g = window.__gg, x = g.grid[2][3]; return x ? [x.c, !!x.gourd, g.GOURD, g.isGourd(x), Object.keys(g.newCell(0)).every(k => k in x)] : null; }")
+    ok(d == [-1, True, -1, True, True], f'its cell has c = GOURD (-1), gourd:true and the shape of newCell {d}')
+    ok(page.evaluate("() => window.__gg.grid.flat().filter(x => x && x.gourd).length") == 1, 'exactly one gourd on the patch')
+    time.sleep(1.0)   # draws a few frames with the gourd on the patch
+    page.evaluate(GQUIET)
+    ok(page.evaluate("() => window.__gg.slideOne(window.__gg.grid[2][3], 'left')") is True and page.evaluate(GP) == [2, 0], f'slideOne moves it like a pumpkin, to the edge ({page.evaluate(GP)})')
+    page.evaluate("() => { const g = window.__gg; g.grid[2][1] = g.newCell(1); }")
+    ok(page.evaluate("() => window.__gg.slideOne(window.__gg.grid[2][0], 'right')") is True, 'sliding it into a pumpkin pushes the line')
+    ok(page.evaluate(GP) == [2, 5] and page.evaluate("() => { const x = window.__gg.grid[2][6]; return !!x && x.c === 1; }"), f'a push line that holds it moves together: gourd (2, 5), the pumpkin (2, 6) ({page.evaluate(GP)})')
+    page.evaluate("() => { const g = window.__gg; g.grid[2][6] = null; g.grid[1][4] = g.newCell(0); g.grid[1][3] = g.newCell(0); g.grid[2][4] = g.newCell(0); g.grid[3][5] = g.newCell(0); g.grid[1][5] = g.newCell(0); g.resolveMatches(); }")
+    gr = page.evaluate("() => { const g = window.__gg, G = g.G, ids = Object.keys(G.groups); return [ids.length, g.grid.flat().filter(x => x && x.lit).length, g.grid[2][5].lit, g.grid[2][5].gids.length]; }")
+    ok(gr == [1, 4, False, 0], f'it is never in G.groups: the four touching Greens form one bunch, the gourd stays unlit {gr}')
+    ok(page.evaluate("() => window.__gg.groupCells(+Object.keys(window.__gg.G.groups)[0]).every(o => !o.cell.gourd)"), 'no bunch cell is the gourd')
+    time.sleep(0.5)
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_gourd_edges(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    set_stars(page, {})   # no level-20 powers
+    gourd_night(page)
+    # Rainbow: never a bunch with the gourd
+    page.evaluate("() => { const g = window.__gg, R = g.RAINBOW; g.grid[2][4] = g.newCell(R); g.grid[2][5] = g.newCell(0); g.grid[2][6] = g.newCell(0); g.resolveMatches(); }")
+    gr = page.evaluate("() => { const g = window.__gg, G = g.G; return Object.keys(G.groups).map(id => g.groupCells(+id).map(o => [o.r, o.c]).sort()); }")
+    ok(gr == [[[2, 4], [2, 5], [2, 6]]], f'a Rainbow and two Greens next to it: the bunch is only the Greens and the Rainbow {gr}')
+    page.evaluate(GQUIET)
+    page.evaluate("() => { const g = window.__gg, R = g.RAINBOW; g.grid[1][3] = g.newCell(R); g.grid[0][3] = g.newCell(R); g.resolveMatches(); }")
+    ok(page.evaluate("() => Object.keys(window.__gg.G.groups).length") == 0, 'two Rainbows touching the gourd make no bunch')
+    sc = page.evaluate("() => { const g = window.__gg; return g.boardScore(g.grid, Array(7).fill(0)); }")
+    ok(abs(sc - 0.2) < 1e-6, f'boardScore pairs the two Rainbows only, never the gourd ({sc})')
+    # Paint: does not pull it
+    page.evaluate(GQUIET)
+    page.evaluate("() => { const g = window.__gg, P = g.PTYPES.findIndex(p => p.key === 'paint'); g.save.lv.paint = 5; g.grid[2][0] = g.newCell(P); g.grid[2][1] = g.newCell(P); g.grid[2][2] = g.newCell(P); g.grid[1][2] = g.newCell(1); g.resolveMatches(); }")
+    pull = page.evaluate("() => { const g = window.__gg, id = +Object.keys(g.G.groups)[0]; return g.paintPull(id).map(o => [o.r, o.c, !!o.cell.gourd]); }")
+    ok(pull == [[1, 2, False]], f'a Paint bunch touching it pulls the Yellow beside it but not the gourd {pull}')
+    # destroying clears the graves in its square and leaves the pumpkins
+    page.evaluate(GQUIET); page.evaluate(GMOVE, [2, 3])
+    ok(page.evaluate("() => window.__gg.destroyGourd(null) === false && window.__gg.destroyGourd(window.__gg.newCell(0)) === false && !window.__gg.G.gourdDue"), 'destroyGourd ignores anything that is not the gourd')
+    page.evaluate("() => { const g = window.__gg; g.save.buster = 2; for (const [r, c] of [[1, 2], [3, 4], [2, 4], [0, 0], [2, 1]]) g.graves[r][c] = true; g.grid[1][3] = g.newCell(0); g.grid[3][3] = g.newCell(1); g.G.gourdDue = false; g.destroyGourd(g.grid[2][3]); }")
+    d = page.evaluate("() => { const g = window.__gg; return [g.graves[1][2], g.graves[3][4], g.graves[2][4], g.graves[0][0], g.graves[2][1], !!g.grid[1][3], !!g.grid[3][3], !!g.grid[2][3], g.G.gourdDue, g.save.buster]; }")
+    ok(d == [False, False, False, True, True, True, True, False, True, 2], f'destroying it clears the graves in its 3x3 (not outside), leaves the pumpkins, frees its cell, sets gourdDue, and costs no Grave buster {d}')
+    # full patch: destroy, then the next tick puts the gourd in the freed cell
+    page.evaluate(GQUIET)
+    page.evaluate("() => { const g = window.__gg; g.grid[2][3] = g.newGourd(); g.G.gourdDue = false; }")
+    page.evaluate(GMOVE, [4, 6]); page.evaluate(GFILL)
+    ok(page.evaluate("() => window.__gg.emptyCells().length") == 0, 'the patch is full')
+    ok(page.evaluate("() => window.__gg.spawnSprouts()") is False, 'a full patch: nothing sprouts and the fill does nothing')
+    page.evaluate("() => { const g = window.__gg; g.destroyGourd(g.grid[4][6]); }")
+    page.evaluate("() => window.__gg.spawnSprouts()")
+    ok(page.evaluate(GP) == [4, 6] and page.evaluate("() => window.__gg.G.gourdDue") is False, f'the next tick brings it back in the freed cell (4, 6) ({page.evaluate(GP)})')
+    page.evaluate("() => { const g = window.__gg; g.destroyGourd(g.grid[4][6]); g.grid[4][6] = g.newCell(0); }")
+    page.evaluate("() => window.__gg.spawnSprouts()")
+    ok(page.evaluate(GP) is None and page.evaluate("() => window.__gg.G.gourdDue") is True, 'with no free cell the respawn waits (gourdDue stays set)')
+    page.evaluate("() => { window.__gg.grid[0][0] = null; window.__gg.spawnSprouts(); }")
+    ok(page.evaluate(GP) == [0, 0], f'the first tick with a free cell brings it back there ({page.evaluate(GP)})')
+    # fill sizes: centre 8, edge 5, corner 3
+    for cell, want in (([2, 3], 8), ([0, 3], 5), ([0, 0], 3), ([4, 6], 3)):
+        page.evaluate(GQUIET); page.evaluate(GMOVE, cell)
+        n = page.evaluate("() => window.__gg.gourdFill()")
+        filled = page.evaluate(COUNT, square(*cell))
+        ok(n == want and filled == want, f'a gourd at {tuple(cell)} fills {want} cells ({n} returned, {filled} filled)')
+    # one sprout tick: one slot fills the square, the other slots sprout elsewhere
+    for triple, extra in ((False, 1), (True, 2)):
+        page.evaluate(GQUIET); page.evaluate(GMOVE, [2, 3])
+        set_stars(page, {60: 3} if triple else {})
+        page.evaluate("(t) => { const g = window.__gg, R = Math.random; if (t) Math.random = () => 0.1; try { g.spawnSprouts(); } finally { Math.random = R; } }", triple)
+        ins, out = page.evaluate(COUNT, square(2, 3)), page.evaluate(COUNT, outside(2, 3))
+        ok(ins == 8 and out == extra, f"{'the 3-sprout power' if triple else 'a plain tick'}: 1 fill of the square (8) plus {extra} elsewhere ({ins} in the square, {out} elsewhere)")
+    set_stars(page, {})
+    page.evaluate(GQUIET); page.evaluate(GMOVE, [2, 3])
+    page.evaluate("(cells) => { const g = window.__gg; for (const [r, c] of cells) g.grid[r][c] = g.newCell((r + c) % 2); }", square(2, 3))
+    page.evaluate("() => window.__gg.spawnSprouts()")
+    out = page.evaluate(COUNT, outside(2, 3))
+    ok(out == 2, f'a tick whose square is full sprouts one normal pumpkin for the gourd slot, plus the other slot: 2 elsewhere ({out})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def hold_gourd(page, secs):
+    """Press the mouse on the gourd's cell, hold still for secs, release; True if the gourd was destroyed during the hold."""
+    pos = page.evaluate(GP)
+    box = page.query_selector('#cv').bounding_box(); sc = box['width'] / 540; gy = box['height'] / sc - 26 - 5 * 74
+    x = box['x'] + (page.evaluate("(c) => window.__gg.LANE(c)", pos[1])) * sc; y = box['y'] + (gy + pos[0] * 74 + 37) * sc
+    page.mouse.move(x, y); page.mouse.down(); time.sleep(secs)
+    gone = page.evaluate(GP) is None
+    page.mouse.up(); time.sleep(0.1)
+    return gone
+
+
+def check_gourd_hold(browser, url):
+    """Holding the gourd destroys it with the same hold as crushing a pumpkin; the 1-20 Quick smash power shortens it."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    set_stars(page, {}); gourd_night(page); time.sleep(0.4)
+    ok(not hold_gourd(page, 0.45), 'without Quick smash a 0.45 s hold does not destroy it')
+    ok(hold_gourd(page, 0.8), 'without Quick smash a 0.8 s hold (over HOLD_TIME 0.6 s) destroys it')
+    page.evaluate("() => { const g = window.__gg; g.G.gourdDue = false; g.grid[2][3] = g.newGourd(); }")
+    set_stars(page, {20: 3}); page.evaluate("() => { window.__gg.save.perksOff = {}; }")
+    ok(hold_gourd(page, 0.5), 'with the Quick smash power a 0.5 s hold (over 0.35 s) destroys it')
+    ok(page.evaluate("() => window.__gg.G.gourdDue") is True, 'a destroyed gourd is due back')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_gourd_unlock(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    set_stars(page, {**story_done(), **{1000 + k: 3 for k in range(1, 4)}})
+    ok(page.evaluate("() => JSON.stringify(window.__gg.save.gourds)") == '{}', f"a save starts with no gourds ({page.evaluate('() => JSON.stringify(window.__gg.save.gourds)')})")
+    ok(page.evaluate("() => window.__gg.NIGHTMARE_LEVELS[0][3].unlockGourds") == ['grave'], 'N1-4 unlocks the Grave Gourd (data)')
+    nm_start(page, 3); page.evaluate("() => window.__gg.endGame(true)"); time.sleep(1.8)
+    ok(not page.evaluate("() => !!window.__gg.save.gourds.grave"), 'winning N1-3 does not unlock it')
+    nm_start(page, 4); page.evaluate("() => window.__gg.endGame(true)"); time.sleep(1.8)
+    ok(page.evaluate("() => window.__gg.save.gourds.grave") is True, 'winning N1-4 sets save.gourds.grave')
+    ok(page.evaluate("() => JSON.parse(localStorage.getItem('gourdguard.v1')).gourds.grave") is True, 'and it is saved')
+    ok(page.evaluate("() => [1005, 1015].every(n => window.__gg.NIGHTMARE_LEVELS[0][n - 1001].gourd) && !window.__gg.NIGHTMARE_LEVELS[0][3].gourd"), 'N1-5 to N1-15 have gourd:true, N1-4 does not')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_gourd_loadout(browser, url):
+    """The pumpkin picker shows a Gourds section with the Grave Gourd picked and locked on gourd nights only; it is not one of the pumpkins."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 6)}})
+    page.evaluate("() => { window.__gg.save.gourds = { grave:true }; window.__gg.save.perksOff = { pick4:true }; window.__gg.beginNight(1005); }"); time.sleep(0.5)
+    st = page.evaluate("""() => { const s = document.querySelector('#loGourdSec'), b = s && s.querySelector('.pick');
+      return [window.__gg.state, !!s && !s.hidden, s ? s.querySelector('h3').textContent : null, b ? [b.textContent.includes('Grave Gourd'), b.getAttribute('aria-pressed'), b.classList.contains('must')] : null,
+        document.querySelectorAll('#loTeam .slot:not(.empty)').length, document.querySelector('#loTitle').textContent]; }""")
+    ok(st[0] == 'loadout' and st[1] and st[2] == 'Gourds', f'N1-5 opens the picker with a Gourds section {st[:3]}')
+    ok(st[3] == [True, 'true', True], f'the Grave Gourd is there, picked and locked {st[3]}')
+    ok(st[4] == 5 and st[5] == 'Pick 5 pumpkins', f'it does not take a pumpkin slot: 5 pumpkins still fill the team {st[4:]}')
+    page.click('#loGourdSec .pick'); time.sleep(0.2)
+    det = page.evaluate("() => document.querySelector('#loDetail').textContent")
+    ok('Grave Gourd' in det, f'tapping it shows its card ({det[:60]!r})')
+    page.evaluate("() => window.__gg.beginNight(1003)"); time.sleep(0.5)
+    hid = page.evaluate("() => { const s = document.querySelector('#loGourdSec'); return [window.__gg.state, !s || s.hidden]; }")
+    ok(hid == ['loadout', True], f'N1-3 (no gourd) shows no Gourds section {hid}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_gourd_continue(browser, url):
+    """check_nm_continue, gourd part: a continued night keeps the gourd's cell, or its pending respawn."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    gourd_night(page)
+    page.evaluate(GMOVE, [1, 5])
+    page.evaluate("() => { const g = window.__gg, c = g.continueState(); g.continueNight(c); }"); time.sleep(0.3)
+    ok(page.evaluate(GP) == [1, 5] and page.evaluate("() => window.__gg.grid.flat().filter(x => x && x.gourd).length") == 1, f'a continued night keeps the gourd in its cell (1, 5) ({page.evaluate(GP)})')
+    page.evaluate("() => { const g = window.__gg; g.G.continued = false; const p = g.gourdPos(); g.destroyGourd(g.grid[p.r][p.c]); const c = g.continueState(); g.continueNight(c); }"); time.sleep(0.3)
+    ok(page.evaluate(GP) is None and page.evaluate("() => window.__gg.G.gourdDue") is True, f'a destroyed gourd stays due on the continued night ({page.evaluate(GP)})')
+    page.evaluate("() => { window.__gg.G.sproutT = -999; window.__gg.spawnSprouts(); }")
+    ok(page.evaluate(GP) is not None, 'and the first sprout brings it back')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_gourd_basic': check_gourd_basic, 'check_gourd_edges': check_gourd_edges, 'check_gourd_hold': check_gourd_hold, 'check_gourd_unlock': check_gourd_unlock, 'check_gourd_loadout': check_gourd_loadout, 'check_gourd_continue': check_gourd_continue})
 
 
 def main():

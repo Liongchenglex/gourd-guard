@@ -37,7 +37,7 @@ function fullestColumn(){
 function wipeColumn(c){
   let n = 0;
   for (let r = 0; r < ROWS; r++){
-    const cell = grid[r][c]; if (!cell || cell.fly) continue;
+    const cell = grid[r][c]; if (!cell || cell.fly || (__RELEASE__ >= 4 && cell.gourd)) continue;   // the wipe never takes a Grave Gourd (none stands on 6-20; guarded so PTYPES is never read for it)
     grid[r][c] = null; n++;
     const x = LANE(c), y = GY + r * CS + CS / 2;
     for (let i = 0; i < 10; i++) chunk(x, y, cell.c === RAINBOW ? '#f0a020' : PTYPES[cell.c].base, 220);

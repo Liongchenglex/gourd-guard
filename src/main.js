@@ -23,6 +23,8 @@ import { BOSS_NAMES, TYPES } from './data/monsters.js';
 import { lightFire, lightRandomFires, fireAt, putOut, fireMarkPoints } from './engine/fire.js';
 import { fieldY } from './engine/game.js';
 import { updateHud } from './ui/hud.js';
+import { GOURD, isGourd, newGourd, gourdPos, destroyGourd, gourdFill, placeGourdAtStart } from './engine/gourd.js';
+import { spawnSprouts, boardScore, paintPull } from './engine/board.js';
 
 // ---------- Loop ----------
 
@@ -74,5 +76,5 @@ requestAnimationFrame(frame);
 if (new URLSearchParams(location.search).has('test')){
   window.__gg = { get G(){ return G; }, get grid(){ return grid; }, get graves(){ return graves; }, get walls(){ return walls; }, get state(){ return state; },
     startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair, openPreview, openBook, LEVELS, isOpen, WORLD_LEVELS, damage, lanesOf, continueState, continueNight, isBaked, openShop, RELEASE, PTYPES, RAINBOW, BEIGE, upgradeCost, lvStats, typesForNight, randSprout, hitMonster, TILE_P, BOSS_NAMES, LIT_HALO, CHARS, atlasBytes, setBakeScale, NM_BASE, nmNight, NIGHTMARE_LEVELS,
-    ...(__RELEASE__ >= 4 ? { lightFire, lightRandomFires, fireAt, putOut, fireMarkPoints, fieldY, updateHud, TYPES, burnMonster, newCell, prebake } : {}) };   // fire tiles (Release 4)
+    ...(__RELEASE__ >= 4 ? { lightFire, lightRandomFires, fireAt, putOut, fireMarkPoints, fieldY, updateHud, TYPES, burnMonster, newCell, prebake, GOURD, isGourd, newGourd, gourdPos, destroyGourd, gourdFill, placeGourdAtStart, spawnSprouts, boardScore, paintPull } : {}) };   // fire tiles, the Grave Gourd (Release 4)
 }

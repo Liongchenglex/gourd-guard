@@ -83,15 +83,31 @@ export function putOut(f){
   if (once('hiss', 60)) sample('hiss', 0.55) || sample('splash', 0.5) || SFX.extra('splash');
 }
 
+/** The fire that would stop a pumpkin, given the lane's reachable fire `best` (or null): none while a monster it can still hit stands in
+ *  front of that fire (nearer the fence, so lower on the screen). Shared by a flying pumpkin (fireAhead) and the bot's look-ahead (fireFirst). */
+const unlessMonsterFirst = (best, targets) => {
+  if (!best) return null;
+  const fy = fireY(best);
+  for (const m of targets) if (mY(m) > fy) return null;
+  return best;
+};
+
 /** The fire a flying pumpkin meets now, or null: the first fire in its lane it has reached (pr.y within 20 px of the tile centre),
  *  unless a monster it can still hit stands in front of that fire (nearer the fence): that monster is hit first. */
 export function fireAhead(pr, targets){
   let best = null;
   for (const f of G.fires) if (f.lane === pr.lane && pr.y <= fireY(f) + 20 && !(pr.passed && pr.passed.has(f)) && (!best || f.p > best.p)) best = f;   // skips a fire lit behind it (lightFire)
-  if (!best) return null;
-  const fy = fireY(best);
-  for (const m of targets) if (mY(m) > fy) return null;
-  return best;
+  return unlessMonsterFirst(best, targets);
+}
+
+/** For the bot (test hook): true when the next thing a pumpkin launched up this lane would reach is a fire, i.e. the lane's lowest fire has
+ *  no monster in front of it that the pumpkin could hit (the same rule as fireAhead, applied from the patch). */
+export function fireFirst(lane){
+  if (!G || !G.fires || !G.fires.length) return false;
+  let best = null;
+  for (const f of G.fires) if (f.lane === lane && (!best || f.p > best.p)) best = f;
+  const x = LANE(lane);
+  return !!unlessMonsterFirst(best, G.monsters.filter(m => !m.dead && !(m.rise > 0) && !m.hidden && Math.abs(x - m.x) < m.hw));
 }
 
 /** A pumpkin reaches a fire: Ice puts it out, every other pumpkin burns up in it with a small flare. Either way it stops there and its on-hit power does not fire. */

@@ -1022,6 +1022,51 @@ def check_grave_riser_baked(browser, url):
 CHECKS.update({'check_grave_riser': check_grave_riser, 'check_grave_riser_baked': check_grave_riser_baked})
 
 
+# ---------- Task 11: the bot learns fire and the gourd ----------
+def check_bot_hooks(browser, url):
+    if not R4: return
+    import balance_bot as bb
+    ok(bb.profile(1001) == (5, 3) and bb.profile(1020, -1) == (4, 2), f'bot profile: a nightmare night is the top profile (5, 3), offset applies ({bb.profile(1001)}, {bb.profile(1020, -1)})')
+    ok([bb.parse_night(x) for x in ('N1-5', 'n1-16', '7', 'N2-3')] == [1005, 1016, 7, 1103], 'bot --nights: N1-5 maps to 1005, plain numbers stay')
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    ok(page.evaluate("() => window.__gg.fireFirst(3)") is False, 'fireFirst: false with no fire')
+    page.evaluate("() => window.__gg.lightFire(3, 0.5)")
+    ok(page.evaluate("() => [window.__gg.fireFirst(3), window.__gg.fireFirst(2)]") == [True, False], 'fireFirst: true in the lane with the fire, false in another')
+    i = ghoul(page, 3, 0.8)   # nearer the fence than the fire: a pumpkin hits it first
+    ok(page.evaluate("() => window.__gg.fireFirst(3)") is False, 'fireFirst: false while a monster stands in front of the fire')
+    page.evaluate("(i) => { window.__gg.G.monsters[i].p = 0.2; }", i)   # beyond the fire
+    ok(page.evaluate("() => window.__gg.fireFirst(3)") is True, 'fireFirst: true again when the monster is behind the fire')
+    page.evaluate("(i) => { window.__gg.G.monsters[i].p = 0.8; window.__gg.G.monsters[i].dead = true; }", i)
+    ok(page.evaluate("() => window.__gg.fireFirst(3)") is True, 'fireFirst: a dead monster in front does not count')
+    # bestLitGroup(avoid): skips bunches with a cell in an avoided lane; no argument keeps the old behaviour
+    page.evaluate(QUIET)
+    page.evaluate("""() => { const g = window.__gg; for (const c of [0, 1, 2]) g.grid[4][c] = g.newCell(0); for (const c of [4, 5, 6]) g.grid[4][c] = g.newCell(1); g.resolveMatches(); }""")
+    plain = page.evaluate("() => { const g = window.__gg, b = g.bestLitGroup(); for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) if (g.grid[r][c] === b) return c; return null; }")
+    ok(plain in (0, 1, 2, 4, 5, 6), f'bestLitGroup() with no argument still returns a bunch ({plain})')
+    left = page.evaluate("() => { const g = window.__gg, b = g.bestLitGroup(l => l >= 3); for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) if (g.grid[r][c] === b) return c; return null; }")
+    right = page.evaluate("() => { const g = window.__gg, b = g.bestLitGroup(l => l < 3); for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) if (g.grid[r][c] === b) return c; return null; }")
+    ok(left in (0, 1, 2) and right in (4, 5, 6), f'bestLitGroup(avoid) skips a bunch with a cell in an avoided lane (avoid right -> {left}, avoid left -> {right})')
+    ok(page.evaluate("() => window.__gg.bestLitGroup(() => true)") is None, 'bestLitGroup(avoid) returns null when every bunch is avoided')
+    # bestGourdMove: the gourd's slide that frees the most cells of its square
+    ok(page.evaluate("() => window.__gg.bestGourdMove()") is None, 'bestGourdMove: null on a night without a gourd')
+    gourd_night(page)
+    ok(page.evaluate(GP) == [2, 3], 'the gourd stands at (2, 3)')
+    ok(page.evaluate("() => window.__gg.bestGourdMove()") is None, 'bestGourdMove: null when the square is already empty and no slide gains')
+    page.evaluate(GFILL)
+    page.evaluate("() => { const g = window.__gg; for (let r = 0; r < 5; r++) for (const c of [0, 1]) g.grid[r][c] = null; g.resolveMatches(); }")
+    mv = page.evaluate("() => window.__gg.bestGourdMove()")
+    ok(mv is not None and mv['dir'] == 'left' and mv['gain'] == 5, f'bestGourdMove: crowded gourd with open columns on the left slides left for +5 cells {mv}')
+    ok(page.evaluate(GP) == [2, 3], 'bestGourdMove changes nothing on the board')
+    page.evaluate("() => { const g = window.__gg; for (let r = 0; r < 5; r++) for (let c = 0; c < 2; c++) g.grid[r][c] = g.newCell((r + c) % 2); g.resolveMatches(); }")
+    ok(page.evaluate("() => window.__gg.bestGourdMove()") is None, 'bestGourdMove: null on a full patch (no slide is possible)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_bot_hooks': check_bot_hooks})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

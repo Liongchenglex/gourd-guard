@@ -5,7 +5,7 @@
 // `__RELEASE__ >= 4`, so lower builds drop this module. Art: render/gourd.js.
 
 import { SFX } from './audio.js';
-import { emptyCells, inside, newCell, randSprout, resolveMatches } from './board.js';
+import { applyMove, emptyCells, inside, newCell, planMove, randSprout, resolveMatches, revertMove } from './board.js';
 import { chunk, ring, spark } from './combat.js';
 import { bustGrave } from './game.js';
 import { COLS, CS, G, GY, LANE, ROWS, graves, grid } from './state.js';
@@ -97,6 +97,24 @@ export function gourdSlot(spawnPumpkin){
   }
   if (gourdPos()){ const n = gourdFill(); if (n) return n; }
   return spawnPumpkin() ? 1 : 0;
+}
+
+/** For the balance bot (test hook): the slide of the gourd itself that leaves the most empty cells (no pumpkin, no grave) in its 3×3, as
+ *  { dir, gain } (gain = empty cells after minus before), or null when no slide gains any. Nothing on the board changes. */
+export function bestGourdMove(){
+  const pos = gourdPos(); if (!pos) return null;
+  const empties = (r, c) => squareAround(r, c).filter(([a, b]) => !grid[a][b] && !graves[a][b]).length;
+  const now = empties(pos.r, pos.c);
+  let best = null;
+  for (const dir of ['left', 'right', 'up', 'down']){
+    const moves = planMove(pos.r, pos.c, dir); if (!moves) continue;
+    const mine = moves.find(m => m[0] === pos.r && m[1] === pos.c);
+    const cells = applyMove(moves, false);
+    const gain = empties(mine[2], mine[3]) - now;
+    revertMove(moves, cells);
+    if (gain > 0 && (!best || gain > best.gain)) best = { dir, gain };
+  }
+  return best;
 }
 
 /** What a continued night needs: the gourd's cell, or that it is due back. */

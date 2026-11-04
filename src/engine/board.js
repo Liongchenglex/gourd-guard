@@ -364,12 +364,14 @@ export function paintInherit(pulled){
   return best;
 }
 
-export function bestLitGroup(){
+/** The lit bunch with the most threatened cells. `avoid(lane) -> boolean` (the balance bot, Release 4): bunches with a cell in an avoided lane are skipped. */
+export function bestLitGroup(avoid){
   if (!G.groups) return null;
   const threat = laneThreat();
   let best = null, bs = -1;
   for (const gid of Object.keys(G.groups)){
     const cells = groupCells(+gid); if (!cells.length) continue;
+    if (avoid && cells.some(o => avoid(o.c))) continue;
     const s = cells.reduce((a, o) => a + threat[o.c], 0);
     if (s > bs){ bs = s; best = (cells.find(o => o.cell.c !== RAINBOW) || cells[0]).cell; }
   }

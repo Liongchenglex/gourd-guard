@@ -168,7 +168,7 @@ export function burnMonster(m){
   return true;
 }
 /** A burning monster sets ordinary monsters of its own family alight within one lane and one tile. */
-function igniteNear(m){
+export function igniteNear(m){
   const from = BURNING_FROM[m.type]; if (!from) return;
   for (const o of G.monsters) if (o.type === from && !o.dead && o.rise <= 0 && Math.abs(o.lane - m.lane) <= 1 && Math.abs(o.p - m.p) < TILE_P()) burnMonster(o);
 }

@@ -3,14 +3,159 @@
 // the registry NM1 is spread into CHARS in index.js behind `__RELEASE__ >= 4`. Glow and shadowBlur are fine here: every clip is baked by
 // render/anim.js and nothing in this file may be painted per frame.
 
-import { E, PL, S, SM, SO, ell, pal, rgba } from '../paint.js';
+import { E, PL, RR, S, SM, SO, ell, pal, rgba, rng } from '../paint.js';
 import { TAU } from '../../util.js';
 
-const cl01 = x => x < 0 ? 0 : x > 1 ? 1 : x, ease = x => { x = cl01(x); return x * x * (3 - 2 * x); };
+const cl01 = x => x < 0 ? 0 : x > 1 ? 1 : x, ease = x => { x = cl01(x); return x * x * (3 - 2 * x); }, lerp = (a, b, t) => a + (b - a) * t;
+const seg = (t, a, b) => ease((t - a) / (b - a));
 
 // ---------- shared helpers ----------
 /** A glowing ember dot. */
 function ember(g, x, y, r, a = 1, col = '#ff8a2a'){ if (a <= 0) return; g.save(); g.globalAlpha *= a; g.shadowColor = col; g.shadowBlur = r * 4; g.fillStyle = col; ell(g, x, y, r, r); g.fill(); g.shadowBlur = 0; g.fillStyle = '#fff2c0'; ell(g, x, y, r * .45, r * .45); g.fill(); g.restore(); }
+
+/** Sparks rising in a loop: ph 0..1 moves every spark along its own seeded path, so looped clips stay seamless. */
+function sparks(g, ph, x, y, n, h, seed){ const R = rng(seed); for (let i = 0; i < n; i++){ const o = R(), dx = (R() - .5) * 16, r = 1 + R() * .8, p = (ph + o) % 1; ember(g, x + dx + Math.sin(p * TAU + o * 6) * 4, y - p * h, r, Math.sin(p * Math.PI) * .95); } }
+/** Soft smoke puffs rising in a loop. */
+function smoke(g, ph, x, y, n, h, seed){ const R = rng(seed); for (let i = 0; i < n; i++){ const o = i / n + R() * .1, jx = (R() - .5) * 6, p = (ph + o) % 1, r = 5 + p * 10, cx = x + p * 12 + jx, cy = y - p * h;
+  g.save(); g.globalAlpha *= .55 * Math.sin(p * Math.PI); const gr = g.createRadialGradient(cx, cy, 0, cx, cy, r); gr.addColorStop(0, 'rgba(70,58,58,1)'); gr.addColorStop(1, 'rgba(70,58,58,0)'); g.fillStyle = gr; ell(g, cx, cy, r, r); g.fill(); g.restore(); } }
+
+// =====================================================================
+// 2. The Hayrick: a living haystack, smouldering from the barn fire, a pitchfork stuck in its shoulder
+// =====================================================================
+const HAY = pal('#e2b24c'), HAYD = pal('#b8822e'), HAYS = ['#f8dc88', '#cf9a3c', '#8e5c1e', '#fff2b8'],
+  HAYB = pal('#8a5a2a'), HAYBD = pal('#5a3a1e'), HAYSB = ['#c08a3a', '#5a3416', '#2e1a0c', '#ffb050'], TWINEB = pal('#4a2a1a'), HOT = pal('#ff5a1a'), HANDLEB = pal('#3a2418'), TWINEC = pal('#8a4a2a'), FORKC = pal('#9aa0ac'), HANDLE = pal('#7a5434'), CROWC = pal('#2e2838'), BEAKY = pal('#e8b030');
+// straw palette for the current drawing: plain or burning (set at the top of hayrick)
+const HT = { hay:HAY, hayd:HAYD, strs:HAYS, loose:['#f8dc88', '#e2b24c'] };
+const setHT = b => { HT.hay = b ? HAYB : HAY; HT.hayd = b ? HAYBD : HAYD; HT.strs = b ? HAYSB : HAYS; HT.loose = b ? ['#ffb050', '#6a4020'] : ['#f8dc88', '#e2b24c']; };
+/** Straw strands clipped to a shape, draping outward from the centre line like hay over a dome. */
+function straw(g, clip, cx, cy, rx, ry, seed, n, len = 12, fan = .7){
+  const R = rng(seed), pa = g.globalAlpha; g.save(); clip(g); g.clip(); g.lineCap = 'round';
+  for (let i = 0; i < n; i++){ const x = cx + (R() * 2 - 1) * rx, y = cy + (R() * 2 - 1) * ry, l = len * (.5 + R() * .8), a = Math.PI / 2 + ((x - cx) / rx) * fan + (R() - .5) * .5, b = (R() - .5) * 4;
+    g.strokeStyle = HT.strs[R() * 4 | 0]; g.globalAlpha = pa * (.35 + R() * .5); g.lineWidth = .7 + R() * .9;
+    g.beginPath(); g.moveTo(x - Math.cos(a) * l * .5, y - Math.sin(a) * l * .5); g.quadraticCurveTo(x + b, y, x + Math.cos(a) * l * .5, y + Math.sin(a) * l * .5); g.stroke(); }
+  g.restore(); }
+/** Loose straws poking out of a silhouette: [x, y, angle] each. */
+function looseStraw(g, pts, seed, len = 8){ const R = rng(seed); for (const [x, y, a] of pts){ const l = len * (.6 + R() * .7), aa = a + (R() - .5) * .5, p = [[x, y], [x + Math.cos(aa) * l * .5 + (R() - .5) * 2, y + Math.sin(aa) * l * .5], [x + Math.cos(aa) * l, y + Math.sin(aa) * l]];
+  S.stroke(g, SO(p), HT.hayd, 2.6, .55); S.stroke(g, SO(p), { deep:HT.loose[R() < .5 ? 0 : 1] }, 1.3, 1); } }
+/** Pitchfork: grip at (x,y), pointing along angle a; vis < 1 hides the tine tips (stuck in the straw). */
+function pitchfork(g, x, y, a, vis = 1, sc = 1, hot = false){
+  const FORK = hot ? HOT : FORKC;
+  g.save(); g.translate(x, y); g.rotate(a); g.scale(sc, sc);
+  S.tube(g, SO([[-30, 0], [12, 0]]), hot ? HANDLEB : HANDLE, 4);
+  if (hot){ g.save(); g.shadowColor = '#ff6a10'; g.shadowBlur = 10; g.strokeStyle = 'rgba(255,120,30,.7)'; g.lineWidth = 6; g.lineCap = 'round'; g.beginPath(); g.moveTo(19, -8); g.lineTo(19 + 20 * vis, -8.8); g.moveTo(19, 0); g.lineTo(19 + 20 * vis, 0); g.moveTo(19, 8); g.lineTo(19 + 20 * vis, 8.8); g.stroke(); g.restore(); }
+  S.part(g, RR(10, -3, 7, 6, 1.5), FORK, { x:13, y:0, r:5 }, { flat:true, mat:'metal', lw:1 });
+  S.tube(g, SO([[19, -8], [16.5, 0], [19, 8]]), FORK, 2.8);
+  const L = 20 * vis;
+  for (const o of [-8, 0, 8]){ S.tube(g, SO([[19, o], [19 + L * .6, o * 1.05], [19 + L, o * 1.1]]), FORK, 2.3);
+    if (vis < 1) S.dot(g, E(19 + L, o * 1.1, 2.4, 2.8), '#2a1608', .9); else S.claw(g, 19 + L, o * 1.1, 0, 4, hot ? '#ffe080' : '#e6eaf0'); }
+  g.restore(); }
+/** A crow perched on top, red-eyed; flap 0..1 raises its wings. */
+function crow(g, x, y, s = 1, flap = 0){
+  g.save(); g.translate(x, y); g.scale(s, s);
+  for (const d of [-1, 1]) S.ln(g, [[d * 2.5, 5], [d * 3, 10]], BEAKY, 1.5, 1);
+  S.part(g, SM([[-6, 2], [-19, 9], [-17, 3], [-21, -1]], .5), CROWC, { x:-12, y:2, r:7 }, { flat:true, mat:'skin' });
+  if (flap > 0) S.part(g, SM([[0, -3], [-6 - flap * 4, -10 - flap * 12], [-16 - flap * 4, -8 - flap * 14], [-12, -2], [-4, 3]], .6), CROWC, { x:-8, y:-6, r:9 }, { flat:true, mat:'skin' });
+  S.part(g, E(0, 0, 9, 7.5), CROWC, { x:0, y:0, r:9 }, { mat:'skin' });
+  if (flap > 0) S.part(g, SM([[2, -3], [10 + flap * 4, -10 - flap * 12], [18 + flap * 4, -8 - flap * 14], [12, -2], [4, 3]], .6), CROWC, { x:8, y:-6, r:9 }, { flat:true, mat:'skin' });
+  else S.part(g, SM([[-8, -3], [4, -3], [3, 5], [-9, 4]], .7), pal('#3c3448'), { x:-2, y:1, r:7 }, { flat:true, mat:'skin', noEdge:true });
+  S.part(g, E(5, -8, 6, 5.5), CROWC, { x:5, y:-8, r:6 }, { mat:'skin' });
+  S.part(g, PL([[9, -10], [17, -7], [9, -5]]), BEAKY, { x:12, y:-7, r:4 }, { flat:true, lw:.8 });
+  S.glow(g, 5.8, -9, 1.7, '#ff3a1a');
+  g.restore(); }
+export function hayrick(g, P = {}){
+  const w = P.walk, ch = P.chew, ts = P.toss, ph = w ?? ch ?? ts ?? 0, B = P.variant === 'burning'; setHT(B);
+  const HAY = HT.hay, HAYD = HT.hayd, TWINE = B ? TWINEB : TWINEC;
+  const sw = w == null ? 0 : Math.sin(w * TAU), cs = ch == null ? 0 : Math.sin(ch * TAU);
+  const rock = w != null ? sw * .06 : cs * .025, bob = w != null ? -Math.abs(sw) * 3 : ch != null ? cs * 2.5 + 2 : 0, lean = ch == null ? 0 : Math.abs(cs);
+  const mouth = ch != null ? .35 + lean * .65 : ts != null ? .3 + seg(ts, .55, .75) * .7 : .25;
+  S.shadow(g, 0, 51, 50, 7);
+  // legs: short straw bundles tied at the ankle, splayed straw for feet
+  for (const s of [-1, 1]){
+    const lp = w == null ? 0 : w * TAU + (s < 0 ? 0 : Math.PI), dx = w == null ? 0 : Math.cos(lp) * 4, dy = w == null ? 0 : -Math.max(0, Math.sin(lp)) * 6;
+    g.save(); g.translate(dx, dy);
+    const leg = SM([[s * 8, 26], [s * 27, 26], [s * 26, 46], [s * 9, 46]], .5);
+    S.part(g, leg, HAYD, { x:s * 17, y:36, r:12 }, { flat:true });
+    straw(g, leg, s * 17, 37, 9, 10, 31 + s, 24, 10, .2);
+    S.tube(g, SO([[s * 8, 41], [s * 17, 42.5], [s * 26.5, 41]]), TWINE, 2.8);
+    looseStraw(g, [[s * 10, 46, 2.3], [s * 14, 47, 1.9], [s * 19, 47, 1.3], [s * 24, 46, .85]], 40 + s, 7);
+    g.restore(); }
+  g.save(); g.translate(0, 44 + bob); g.rotate(rock); g.translate(0, -44);
+  if (B){ smoke(g, ph, 18, -56, 6, 40, 6); smoke(g, ph + .5, -22, -50, 4, 38, 7);
+    // flames behind the crown: their bases hide behind the stack
+    [[-36, -24, 20], [-24, -40, 26], [-8, -46, 30], [8, -47, 28], [24, -38, 26], [38, -20, 20]].forEach(([x, y, h], i) => flame(g, x, y + 6, h * (1 + .2 * Math.sin(ph * TAU * 2 + i * 1.9)), 7, Math.sin(ph * TAU + i * 1.3) * 3)); }
+  else smoke(g, ph, 26, -42, 3, 40, 5);
+  const body = SM([[-40, 40], [-47, 14], [-43, -14], [-31, -36], [-12, -50], [10, -51], [30, -38], [43, -15], [47, 14], [40, 40], [0, 45]], .9), bb = { x:-2, y:-4, r:52 };
+  S.part(g, body, HAY, bb, { hx:-22, hy:-34 });
+  straw(g, body, 0, -2, 48, 48, 77, 280, 14, .8);
+  // scorched: the barn fire caught its hem and right shoulder; ember cracks glow in the char
+  g.save(); body(g); g.clip();
+  let gr = g.createLinearGradient(0, 14, 0, 46); gr.addColorStop(0, 'rgba(40,20,10,0)'); gr.addColorStop(.55, 'rgba(40,20,10,.72)'); gr.addColorStop(1, 'rgba(24,10,4,.96)'); g.fillStyle = gr; g.fillRect(-52, 12, 104, 40);
+  gr = g.createRadialGradient(32, -32, 2, 32, -32, 22); gr.addColorStop(0, 'rgba(30,14,6,.85)'); gr.addColorStop(1, 'rgba(30,14,6,0)'); g.fillStyle = gr; g.fillRect(8, -58, 50, 50);
+  g.shadowColor = '#ff6a10'; g.shadowBlur = 6; g.strokeStyle = '#ffb040'; g.lineWidth = 1.4; g.lineCap = 'round'; g.lineJoin = 'round';
+  for (const pts of [[[-36, 36], [-30, 31], [-25, 37], [-18, 32], [-14, 36]], [[4, 42], [10, 35], [16, 39], [24, 33], [30, 37]], [[26, -40], [31, -33], [28, -27], [34, -22]], [[-8, 40], [-4, 36], [0, 40]]]){
+    g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); }
+  if (B){ g.fillStyle = 'rgba(30,14,6,.35)'; g.fillRect(-52, -60, 104, 110);
+    g.lineWidth = 1.8;
+    for (const pts of [[[-32, -12], [-25, -5], [-29, 3], [-21, 9]], [[20, -4], [27, 2], [23, 9], [31, 15]], [[-12, -40], [-5, -34], [-9, -27]], [[8, 24], [15, 19], [13, 28], [20, 30]], [[-40, 14], [-34, 20], [-38, 26]], [[36, -6], [40, 4], [36, 10]]]){
+      g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); } }
+  g.restore();
+  S.overlay(g, body, HAY, bb, .4);
+  looseStraw(g, [[-30, -36, -2.4], [-14, -49, -1.9], [-4, -51, -1.6], [6, -51, -1.3], [18, -47, -1.0], [-42, -16, -2.8], [44, -12, -.3], [-46, 12, 3.0], [46, 12, .1]], 55, 10);
+  // twine belt with a knot
+  g.save(); body(g); g.clip(); S.tube(g, SO([[-50, 4], [-20, 13], [0, 15], [20, 13], [50, 4]]), TWINE, 4); g.restore();
+  S.tube(g, SO([[4, 17], [2, 23], [4, 28]]), TWINE, 2); S.tube(g, SO([[6, 17], [10, 22], [9, 27]]), TWINE, 2);
+  S.part(g, E(5, 15.5, 4, 3.2), TWINE, { x:5, y:15, r:4 }, { flat:true, lw:1 });
+  // face: a dark hollow in the straw, ember eyes under an angry straw brow, a jagged glowing mouth
+  const fy = -20 + lean * 4;
+  g.save(); body(g); g.clip(); gr = g.createRadialGradient(0, fy + 4, 2, 0, fy + 4, 26); gr.addColorStop(0, 'rgba(30,14,4,.9)'); gr.addColorStop(.6, 'rgba(30,14,4,.6)'); gr.addColorStop(1, 'rgba(30,14,4,0)'); g.fillStyle = gr; ell(g, 0, fy + 4, 26, 20); g.fill(); g.restore();
+  for (const s of [-1, 1]){ S.glow(g, s * 10, fy, 5, '#ff8a1a'); S.dot(g, E(s * 10, fy + .6, 2.4, 2.8), '#fff0a0'); S.dot(g, E(s * 10 + s * .4, fy + 1, 1, 2.2), '#5a1a04', .85); }
+  for (const s of [-1, 1]) S.tube(g, SO([[s * 23, fy - 13], [s * 13, fy - 9], [s * 3, fy - 4]]), HAYD, 5);
+  const my = fy + 12, mh = 3 + mouth * 9;
+  const mp = PL([[-13, my], [-9, my - 2.5], [-5, my + 1], [-1, my - 2.5], [3, my + 1], [7, my - 2.5], [12, my], [9, my + mh * .7], [4, my + mh], [-4, my + mh], [-10, my + mh * .7]]);
+  S.dot(g, mp, '#1c0a04');
+  g.save(); mp(g); g.clip(); gr = g.createRadialGradient(0, my + mh, 0, 0, my + mh, 12); gr.addColorStop(0, 'rgba(255,150,40,.95)'); gr.addColorStop(1, 'rgba(255,80,10,0)'); g.fillStyle = gr; g.fillRect(-14, my - 4, 28, 20); g.restore();
+  // the pitchfork: stuck in the left shoulder, or in the hand during the toss
+  let G = [-38, -52], fa = .9, vis = .55, fsc = 1, falpha = 1, lh = null, rh = null;
+  if (ts != null){
+    const a1 = seg(ts, 0, .28), a2 = seg(ts, .3, .55), a3 = seg(ts, .58, .76), a4 = seg(ts, .76, 1);
+    rh = [lerp(54, 56, a2), lerp(18, -4, a2 - a4)];
+    if (ts <= .3) lh = [lerp(-52, -36, a1), lerp(18, -50, a1)];
+    else {
+      G = [lerp(-38, -14, a2), lerp(-52, -62, a2)]; fa = lerp(.9, -2.1, a2); vis = lerp(.55, 1, Math.min(1, a2 * 3));
+      if (a3 > 0){ G = [lerp(-14, -4, a3), lerp(-62, -18, a3)]; fa = lerp(-2.1, 1.45, a3); fsc = lerp(1, 1.3, a3); }
+      lh = [G[0], G[1]];
+      if (a4 > 0){ G = [lerp(-4, 0, a4), lerp(-18, 4, a4)]; fsc = lerp(1.3, 1.9, a4); falpha = 1 - a4; lh = [lerp(-4, -48, a4), lerp(-18, 14, a4)]; }
+    }
+  }
+  if (falpha > 0){ g.save(); g.globalAlpha *= falpha; pitchfork(g, G[0], G[1], fa, vis, fsc, B); g.restore(); }
+  // arms: straw bundles tied at the wrist with splayed straw hands
+  const arm = (s, hx, hy) => { const sx = s * 38, sy = -10, mx = (sx + hx) / 2 + s * 8, my2 = (sy + hy) / 2 + 2;
+    S.tube(g, SO([[sx, sy], [mx, my2], [hx, hy]]), HAYD, 11);
+    for (const [o, col, a] of B ? [[-3.5, '#c08a3a', .8], [-1.5, '#2e1a0c', .6], [.5, '#ff9a3a', .6], [2.5, '#2e1a0c', .6], [4, '#8a5a2a', .7]] : [[-3.5, '#f6d27a', .8], [-1.5, '#8a5a1c', .55], [.5, '#fff0b0', .6], [2.5, '#8a5a1c', .6], [4, '#e2b24c', .7]]){ const dx = -Math.sin(Math.atan2(hy - sy, hx - sx)) * o, dy = Math.cos(Math.atan2(hy - sy, hx - sx)) * o;
+      S.stroke(g, SO([[sx + dx, sy + dy], [mx + dx * .9, my2 + dy * .9], [hx + dx * .6, hy + dy * .6]]), { deep:col }, .9, a); }
+    for (const t of [.3, .6]){ const bx = lerp(sx, hx, t) + (t < .5 ? s * 4 : s * 3), by = lerp(sy, hy, t) + 1; looseStraw(g, [[bx, by, s > 0 ? .2 : 2.9]], 70 + t * 10 + s, 6); }
+    const a = Math.atan2(hy - my2, hx - mx);
+    for (const d of [-.7, -.25, .25, .7]) S.tube(g, SO([[hx, hy], [hx + Math.cos(a + d) * 6, hy + Math.sin(a + d) * 6], [hx + Math.cos(a + d * 1.2) * 10, hy + Math.sin(a + d * 1.2) * 10]]), HAY, 2.6);
+    S.part(g, E(hx - Math.cos(a) * 2, hy - Math.sin(a) * 2, 4, 6.5, a), TWINE, { x:hx, y:hy, r:6 }, { flat:true, lw:1 }); };
+  for (const s of [-1, 1]){
+    let hx = s * 52, hy = 18;
+    if (w != null){ const sa = Math.sin(w * TAU + (s < 0 ? Math.PI : 0)); hx += sa * 3; hy += sa * 6; }
+    if (ch != null){ hx = s * 32; hy = 4 + Math.sin(ch * TAU + (s < 0 ? 0 : Math.PI)) * 9; }
+    if (s < 0 && lh) [hx, hy] = lh;
+    if (s > 0 && rh) [hx, hy] = rh;
+    arm(s, hx, hy); }
+  if (B){
+    // flames licking up the flanks and hem, in front of the stack
+    [[-45, 10, 14], [-41, 32, 12], [45, 2, 15], [41, 28, 12], [-20, 42, 11], [22, 42, 12], [-16, -44, 13], [14, -45, 14]].forEach(([x, y, h], i) => flame(g, x, y, h * (1 + .25 * Math.sin(ph * TAU * 2 + i * 2.3)), 4.5, Math.sin(ph * TAU + i) * 2));
+    sparks(g, ph, 0, -40, 10, 60, 13); sparks(g, ph + .3, 30, -20, 5, 50, 14);
+    g.restore(); return;   // the crow has flown off
+  }
+  sparks(g, ph, 30, -34, 4, 44, 12);
+  // a crow rides on top; it flaps off its perch when the fork comes up
+  const cf = ts == null ? 0 : Math.sin(seg(ts, .3, .9) * Math.PI);
+  crow(g, 8 + cf * 10, -55 - cf * 14 + (w != null ? Math.abs(sw) * 1.5 : 0), 1, cf);
+  g.restore();
+}
 
 // =====================================================================
 // 3. The Cinder Rooster: a fat black rooster, singed in the barn fire, comb burning
@@ -103,5 +248,9 @@ export function rooster(g, P = {}){
 const C = (n, fps, key, once = false) => ({ n, fps, once, pose:t => ({ [key]:t }) });
 export const NM1 = {
   // small and quick: r 20, so the feet sit at 19 below the centre (50 x .6 - 11); the archive drew it for r 18 at scale .56
+  // a tank like the Mossback: r 26, so the feet sit at 24.6 below the centre (50 x .66 - 10 = 23)
+  hayrick: { draw:hayrick, scale:.66, dy:-10, box:{ x:-72, y:-112, w:144, h:172 }, clips:{ walk:C(8, 6, 'walk'), chew:C(4, 7, 'chew'), toss:C(10, 14, 'toss', true) }, still:{} },
+  // the same drawing in its burning look (the engine turns a hayrick into this when it walks onto fire); it keeps the toss
+  hayrickBurning: { draw:(g, P) => hayrick(g, { ...P, variant:'burning' }), scale:.66, dy:-10, box:{ x:-72, y:-112, w:144, h:172 }, clips:{ walk:C(8, 6, 'walk'), chew:C(4, 7, 'chew'), toss:C(10, 14, 'toss', true) }, still:{} },
   rooster: { draw:rooster, scale:.6, dy:-11, box:{ x:-60, y:-84, w:120, h:142 }, clips:{ walk:C(8, 12, 'walk'), chew:C(4, 10, 'chew'), crow:C(10, 12, 'crow', true) }, still:{} },
 };

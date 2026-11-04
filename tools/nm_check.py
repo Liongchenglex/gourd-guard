@@ -25,7 +25,7 @@ def story_done(upto=20):
 # ---------- Task 1: the track, the book page and the release checks ----------
 def check_r4_absent(browser, url):
     js = bundle_js()
-    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster'):
+    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick'):
         ok((s in js) == R4, f"{s!r} {'in' if R4 else 'not in'} the bundle")
 
 
@@ -278,18 +278,23 @@ def check_burn_walk(browser, url):
     page.close()
 
 
-def check_ice_only(browser, url):
-    if not R4: return
-    page, errors = open_page(browser, url)
-    fire_night(page)
-    page.evaluate("() => { const g = window.__gg; window.__m = g.spawnMonster('firemummy', 3, true, 0.3); window.__m.sp = 0; window.__m.lastHit = 0; g.damage(window.__m, 999, '#8fae78'); }")
+def ice_only_run(page, typ, label):
+    """A burning type is Ice-only: a Green hit for 999 leaves it down for its rise time, it stands up with 1 health, an Ice hit kills it."""
+    page.evaluate(f"() => {{ const g = window.__gg; window.__m = g.spawnMonster('{typ}', 3, true, 0.3); window.__m.sp = 0; window.__m.lastHit = 0; g.damage(window.__m, 999, '#8fae78'); }}")
     r = page.evaluate("() => [window.__m.dead, window.__m.rise, window.__m.hp]")
-    ok(r[0] is False and r[1] > 0, f'a Green hit for 999 leaves a firemummy down (dead {r[0]}, rise {r[1]})')
+    ok(r[0] is False and r[1] > 0, f'a Green hit for 999 leaves a {label} down (dead {r[0]}, rise {r[1]})')
     time.sleep(4.6)
     r = page.evaluate("() => [window.__m.dead, window.__m.rise, window.__m.hp]")
     ok(r == [False, 0, 1], f'it rises with 1 health {r}')
     page.evaluate("() => { const g = window.__gg; window.__m.lastHit = 2; g.damage(window.__m, 999, '#9ad8ff'); }")
     ok(page.evaluate("() => window.__m.dead"), 'an Ice hit kills it')
+
+
+def check_ice_only(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    ice_only_run(page, 'firemummy', 'firemummy')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
@@ -381,6 +386,123 @@ def check_rooster_baked(browser, url):
 
 
 CHECKS.update({'check_rooster': check_rooster, 'check_rooster_frozen': check_rooster_frozen, 'check_rooster_fire': check_rooster_fire, 'check_rooster_baked': check_rooster_baked})
+
+
+# ---------- Task 5: the Hayrick and the Burning Hayrick ----------
+def check_hayrick_pin(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    hasGourd = page.evaluate("() => !!window.__gg.isGourd")
+    ok(page.evaluate("() => { const T = window.__gg.TYPES; return [T.hayrick.hp, T.hayrick.pinT, T.hayrickBurning.rise]; }") == [8, 4, 4], 'hayrick: 8 health, pins for 4 s; hayrickBurning rises after 4 s (data)')
+    page.evaluate("""() => { const g = window.__gg; g.grid[4][2] = g.newCell(0); g.grid[1][2] = g.newCell(1); g.grid[4][5] = g.newCell(0);
+      window.__h = g.spawnMonster('hayrick', 2, true, 0.35); window.__h.sp = 0; }""")
+    t0 = time.time(); t = None
+    while time.time() - t0 < 3:
+        if page.evaluate("() => (window.__gg.grid[4][2].pinned || 0)") > 0: t = time.time() - t0; break
+        time.sleep(0.05)
+    ok(t is not None, f'within 3 s the hayrick pins the lowest pumpkin in its column, (4, 2) ({t})')
+    ok(not (page.evaluate("() => (window.__gg.grid[1][2].pinned || 0)") > 0) and not (page.evaluate("() => (window.__gg.grid[4][5].pinned || 0)") > 0), 'the pumpkin above it and the one in another column are not pinned')
+    ok(page.evaluate("() => window.__h.thrown"), 'the hayrick has thrown (m.thrown)')
+    ref = "() => window.__gg.grid[4][2]"
+    ok(page.evaluate(f"() => window.__gg.slideOne(({ref})(), 'left')") is False, 'slideOne on the pinned pumpkin returns false')
+    ok(page.evaluate(f"() => !!window.__gg.grid[4][2] && !window.__gg.grid[4][1]"), 'it stayed in its cell')
+    # a push whose line holds the pinned pumpkin is refused too, like a push into a grave
+    page.evaluate("() => { const g = window.__gg; g.grid[4][3] = g.newCell(2); }")
+    ok(page.evaluate("() => window.__gg.slideOne(window.__gg.grid[4][3], 'left')") is False, 'a neighbour cannot push the pinned pumpkin')
+    page.evaluate("() => { window.__gg.grid[4][3] = null; }")
+    ok(page.evaluate("() => { const g = window.__gg, c = g.grid[4][2]; return g.bestMove() ? g.bestMove().ref !== c : true; }"), 'bestMove never picks the pinned pumpkin')
+    time.sleep(1.5)
+    ok(page.evaluate("() => window.__gg.slideOne(window.__gg.grid[4][2], 'left')") is False, 'still pinned 1.5 s later')
+    # the pin runs out: 4 s from the throw
+    time.sleep(1.6)
+    left = page.evaluate("() => (window.__gg.grid[4][2].pinned || 0)")
+    ok(0 <= (left or 0) < 1.2, f'the pin counts down in update ({left})')
+    time.sleep(1.2)
+    ok(page.evaluate("() => window.__gg.slideOne(window.__gg.grid[4][2], 'left')") is True, 'after 4.2 s it slides')
+    ok(page.evaluate("() => window.__h.thrown") and page.evaluate("() => !window.__gg.grid.flat().some(c => c && c.pinned > 0)"), 'the hayrick throws once a night: nothing is pinned again')
+    if hasGourd:
+        page.evaluate(QUIET)
+        page.evaluate("""() => { const g = window.__gg; g.grid[4][2] = g.newCell(0); g.grid[4][2].gourd = true; g.grid[3][2] = g.newCell(1);
+          window.__h = g.spawnMonster('hayrick', 2, true, 0.35); window.__h.sp = 0; }""")
+        time.sleep(1.5)
+        ok(page.evaluate("() => !(window.__gg.grid[4][2].pinned > 0) && window.__gg.grid[3][2].pinned > 0"), 'with the gourd at (4, 2) the pin goes to the next pumpkin up')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_hayrick_no_target(browser, url):
+    """A hayrick with nothing to pin keeps its fork until a pumpkin appears in its column, and a frozen one does not throw."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    page.evaluate("() => { const g = window.__gg; window.__h = g.spawnMonster('hayrick', 2, true, 0.35); window.__h.sp = 0; window.__h.frozenT = 2; g.grid[4][2] = g.newCell(0); }")
+    time.sleep(1.0)
+    ok(not page.evaluate("() => window.__h.thrown"), 'a frozen hayrick does not throw')
+    time.sleep(1.6)
+    ok(page.evaluate("() => window.__h.thrown") and page.evaluate("() => (window.__gg.grid[4][2].pinned || 0)") > 0, 'once it thaws it throws')
+    page.evaluate(QUIET)
+    page.evaluate("() => { const g = window.__gg; window.__h = g.spawnMonster('hayrick', 4, true, 0.35); window.__h.sp = 0; }")
+    time.sleep(0.6)
+    ok(not page.evaluate("() => window.__h.thrown"), 'an empty column: it has not used its fork')
+    page.evaluate("() => { const g = window.__gg; g.grid[2][4] = g.newCell(0); }")
+    time.sleep(0.8)
+    ok(page.evaluate("() => window.__h.thrown && window.__gg.grid[2][4].pinned > 0"), 'a pumpkin sprouting in its column is pinned')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_hayrick_far(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    page.evaluate("() => { const g = window.__gg; g.grid[4][2] = g.newCell(0); window.__h = g.spawnMonster('hayrick', 2, true, 0.1); window.__h.sp = 0; }")
+    time.sleep(1.0)
+    ok(not page.evaluate("() => window.__h.thrown") and not (page.evaluate("() => (window.__gg.grid[4][2].pinned || 0)") > 0), 'a hayrick still behind p 0.3 does not throw')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_hayrick_burn(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    page.evaluate("() => window.__gg.lightFire(2, 0.5)")
+    page.evaluate("""() => { const g = window.__gg; window.__m = g.spawnMonster('hayrick', 2, true, 0.4); window.__m.hp = 5; window.__c = g.spawnMonster('hayrick', 4, true, 0.4); }""")
+    t0 = time.time(); t = None
+    while time.time() - t0 < 3:
+        if page.evaluate("() => window.__m.type") == 'hayrickBurning': t = time.time() - t0; break
+        time.sleep(0.05)
+    ok(t is not None, f'a hayrick walking onto a fire tile becomes a hayrickBurning within 3 s ({t})')
+    ok(page.evaluate("() => window.__c.type") == 'hayrick', 'control: a hayrick in a lane with no fire stays a hayrick')
+    ok(page.evaluate("() => window.__m.hp") == 5, 'it keeps its health')
+    # a burning hayrick sets an ordinary one within a lane and a tile alight
+    page.evaluate(QUIET)
+    page.evaluate("""() => { const g = window.__gg; window.__b = g.spawnMonster('hayrickBurning', 3, true, 0.5); window.__b.sp = 0; window.__o = g.spawnMonster('hayrick', 4, true, 0.5); window.__o.sp = 0; window.__f = g.spawnMonster('hayrick', 6, true, 0.5); window.__f.sp = 0; }""")
+    time.sleep(0.5)
+    ok(page.evaluate("() => [window.__o.type, window.__f.type]") == ['hayrickBurning', 'hayrick'], 'a burning hayrick ignites an ordinary one in the next lane, not one three lanes away')
+    # it throws too (its normal ability); no burning pin
+    page.evaluate("() => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); g.grid[3][3] = g.newCell(0); }")
+    time.sleep(1.0)
+    ok(page.evaluate("() => window.__gg.grid[3][3].pinned > 0"), 'a burning hayrick throws its pitchfork too')
+    ice_only_run(page, 'hayrickBurning', 'burning hayrick')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_hayrick_baked(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const d = window.__gg.NIGHTMARE_LEVELS[0][0]; d.pool = [...d.pool, ['hayrick', 3]]; }")
+    nm_start(page, 1)
+    ok(page.evaluate("() => window.__gg.isBaked('hayrick')"), 'the hayrick frames are baked when a night with a hayrick in its pool starts')
+    ok(page.evaluate("() => ['hayrick', 'hayrickBurning'].every(k => { const C = window.__gg.CHARS[k]; return !!C && !!C.clips.toss && !!C.clips.walk && !!C.clips.chew; })"), 'hayrick and hayrickBurning have walk, chew and toss clips')
+    ok(page.evaluate("() => { const g = window.__gg; g.prebake(['hayrickBurning']); return g.isBaked('hayrickBurning'); }"), 'the burning look bakes on its own')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_hayrick_pin': check_hayrick_pin, 'check_hayrick_no_target': check_hayrick_no_target, 'check_hayrick_far': check_hayrick_far, 'check_hayrick_burn': check_hayrick_burn, 'check_hayrick_baked': check_hayrick_baked})
 
 
 def main():

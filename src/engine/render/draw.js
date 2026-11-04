@@ -21,6 +21,7 @@ import { TAU, clamp, mulberry } from '../util.js';
 import { save } from '../../save.js';
 import { drawCoach } from '../coach.js';
 import { drawFires, drawFireFx } from './fire.js';
+import { drawPin } from './pin.js';
 
 // ---------- Render ----------
 
@@ -447,6 +448,7 @@ export function drawCell(r, c, cell, t, hg){
   ctx.drawImage(sprites[cell.c][lit ? 1 : 0], -sz / 2, -sz * .88, sz, sz);
   const wc = save.wardrobe && save.wardrobe.costume; if (wc) drawCostume(ctx, wc, 0, -sz * .88 + sz * (0.5 + 3 / CS), sz * .4, Math.round(CS * K));   // the worn costume, on every pumpkin
   ctx.restore();
+  if (__RELEASE__ >= 4 && cell.pinned > 0) drawPin(ctx, x, y, cell.pinned, cell.pinMax);   // a Hayrick's pitchfork holds it (Release 4)
   if (bsz === 0){ ctx.fillStyle = '#7fd05a'; ell(ctx, x + CS * 0.12, y - CS * 0.3, 6, 3, -0.6); ell(ctx, x + CS * 0.2, y - CS * 0.36, 5, 2.5, 0.5); }   // small brown: a sprout
   if (cell.lit && cell.bsize >= 5){
     ctx.fillStyle = '#ffe27a'; ctx.strokeStyle = 'rgba(60,30,0,.7)'; ctx.lineWidth = 1.5;

@@ -234,6 +234,7 @@ export function gust(dir, only){
   let moved = 0;
   for (const r of rows) for (const c of cols){
     const cell = grid[r][c]; if (!cell || cell.fly) continue;
+    if (__RELEASE__ >= 4 && cell.pinned > 0) continue;   // pinned by a Hayrick: the wind cannot move it
     let nr = r, nc = c;
     while (true){
       const tr = nr + dr, tc = nc + dc;
@@ -443,6 +444,7 @@ export function update(dt){
     if (cell.grow < 1) cell.grow = Math.min(1, cell.grow + dt * 4);
     if (cell.pop > 0) cell.pop = Math.max(0, cell.pop - dt * 3);
     if (cell.wig > 0) cell.wig = Math.max(0, cell.wig - dt * 4);
+    if (__RELEASE__ >= 4 && cell.pinned > 0) cell.pinned = Math.max(0, cell.pinned - dt);   // a Hayrick's pitchfork lets go (engine/nightmare.js)
   }
   if (landed) resolveMatches();
   if (gest && !gest.done && gest.ref && Math.hypot(gest.x - gest.sx, gest.y - gest.sy) < 16 && findCell(gest.ref)){

@@ -27,7 +27,7 @@ export function randSprout(){ if (G.mode === 'story' && G.n < 9) return randColo
 
 export const inside = (a, b) => a >= 0 && a < ROWS && b >= 0 && b < COLS;
 
-export const blocked = (a, b) => !inside(a, b) || !!grid[a][b] || !!graves[a][b];
+export const blocked = (a, b) => !inside(a, b) || !!grid[a][b] || !!graves[a][b];   // a pinned pumpkin (a Hayrick's pitchfork, Release 4) is a cell too, so it blocks like a grave; planMove refuses to move it or push it
 
 export function sameColorSize(gr, r0, c0){
   const col = gr[r0][c0].c, seen = new Set([r0 * COLS + c0]), q = [[r0, c0]];
@@ -154,10 +154,14 @@ export function slideDest(r, c, dir){
 export function planMove(r, c, dir){
   const [dr, dc] = DIRV[dir];
   if (!inside(r + dr, c + dc) || graves[r + dr][c + dc]) return null;
+  if (__RELEASE__ >= 4 && grid[r][c] && grid[r][c].pinned > 0) return null;   // pinned by a Hayrick's pitchfork: it cannot slide
   if (!grid[r + dr][c + dc]){ const [tr, tc] = slideDest(r, c, dir); return [[r, c, tr, tc]]; }
   const line = [[r, c]];
   let a = r + dr, b = c + dc;
-  while (inside(a, b) && grid[a][b]){ line.push([a, b]); a += dr; b += dc; }
+  while (inside(a, b) && grid[a][b]){
+    if (__RELEASE__ >= 4 && grid[a][b].pinned > 0) return null;   // a pinned pumpkin in the line cannot be pushed, so nothing in the line moves (as with a grave at its end)
+    line.push([a, b]); a += dr; b += dc;
+  }
   let k = 0;
   while (!blocked(a, b)){ k++; a += dr; b += dc; }
   if (!k) return null;
@@ -304,6 +308,7 @@ export function bestMove(){
   let best = null, bs = base + 0.05;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
     const cell = grid[r][c]; if (!cell || cell.fly) continue;
+    if (__RELEASE__ >= 4 && cell.pinned > 0) continue;   // pinned: it cannot be slid
     for (const dir of ['up', 'left', 'right', 'down']){
       if (cell.lit && dir === 'up') continue;
       const moves = planMove(r, c, dir); if (!moves) continue;

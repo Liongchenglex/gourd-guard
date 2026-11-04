@@ -288,6 +288,7 @@ export const SFX = {
       case 'bat': S('bat', 0.45, { rate: 1.1 }) || (tone(1800, 0.06, 'square', 0.035, 2400), noise(0.05, 0.08, 2500, 1.5)); break;
       case 'imp': S('imp', 0.4) || tone(700, 0.12, 'sawtooth', 0.05, 1100); break;
       case 'rider': S('imp', 0.35) || tone(700, 0.08, 'sawtooth', 0.03, 900, 0.04); S('cloth', 0.35); break;
+      case (__RELEASE__ >= 4 ? 'hayrick' : ''): case (__RELEASE__ >= 4 ? 'hayrickBurning' : ''): S('cloth', 0.45) || cloth(); S('heavy', 0.25, { rate: 0.9 }); break;
       case 'brute': S('giant', 0.55, { rate: 0.85, jit: 0.06 }) || (tone(80, 0.25, 'sawtooth', 0.09, 60), noise(0.15, 0.2, 150, 1)); S('heavy', 0.3, { rate: 0.9 }); break;   // Mossback: a low grunt over a heavy thud, tough not squeaky (owner)
       case 'hauler': case 'bulwark': S('giant', 0.6) || (tone(80, 0.25, 'sawtooth', 0.09, 60), noise(0.15, 0.2, 150, 1)); break;
       case 'mummy': S('cloth', 0.5) || cloth(); S('groan', 0.35, { rate: 1.1, delay: 0.03 }); break;
@@ -352,6 +353,7 @@ export const SFX = {
       case 'mirror:reflect': S('glassping', 0.5, { rate: 0.8 }) || (tone(3200, 0.12, 'sine', 0.06, 2000), noise(0.06, 0.1, 5000, 2)); S('metallight', 0.3); break;
       case 'witch:hex': S('zap', 0.55, { rate: 0.9 }) || shimmer(); S('witch', 0.3, { delay: 0.12 }) || cackle(2, 620, 0.05, 0.04); break;
       case 'slime:split': S('slime', 0.5, { rate: 1.15 }) || (tone(500, 0.06, 'sine', 0.08, 800), tone(560, 0.06, 'sine', 0.08, 900, 0.09)); break;
+      case (__RELEASE__ >= 4 ? 'hayrick:toss' : ''): S('whoosh', 0.5, { rate: 0.85 }) || noise(0.25, 0.22, 900, 1.2, 0, 2400); S('metallight', 0.3, { delay: 0.35 }); break;   // the pitchfork flies, then bites into the pumpkin (Release 4)
       case 'firemummy:ignite': S('fire', 0.5) || (noise(0.2, 0.2, 700, 0.8, 0, 300), noise(0.05, 0.14, 2600, 3, 0.05)); break;
       case 'mummy:rise': S('dig', 0.45) || noise(0.25, 0.14, 600, 0.6, 0, 250); break;
       case 'rooster:crow': S('scream', 0.3, { rate: 1.7 }) || (tone(700, 0.1, 'sawtooth', 0.06, 1100), tone(1100, 0.28, 'sawtooth', 0.06, 600, 0.1)); S('fire', 0.25, { delay: 0.05 }); break;   // Cinder Rooster (Release 4); no crow in the bank, so a pitched-up scream

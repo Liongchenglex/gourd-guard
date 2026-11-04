@@ -4,7 +4,7 @@ import { GEAR } from '../data/shop.js';
 import { PATTERNS } from '../data/patterns.js';
 import { NTYPES, PTYPES, POWER, PINK } from '../data/pumpkins.js';
 import { newQuestCounters } from '../data/quests.js';
-import { WORLDS, levelFor, typesForNight, highestOpen } from '../data/worlds/index.js';
+import { WORLDS, levelFor, prevLevelFor, progressNight, typesForNight, highestOpen } from '../data/worlds/index.js';
 import { SFX, ensureAudio, musicStart, musicStop } from './audio.js';
 import { MUSIC } from '../data/music.js';
 import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, spawnPumpkin, landingCell, landingNear, flyInto, DIRV } from './board.js';
@@ -58,7 +58,7 @@ export function makePreview(n){
 }
 
 export function beginNight(n){
-  const av = typesForNight(Math.max(n, highestOpen()));   // unlocks are global progress: anything unlocked is usable on any level (owner)
+  const av = typesForNight(progressNight(n));   // unlocks are global progress (a nightmare night uses story progress): anything unlocked is usable on any level (owner)
   const def = levelFor(n);
   const must = def.unlockPumpkins.map(k => ({ t:PTYPES.findIndex(p => p.key === k), why:'New this level' })).filter(m => m.t >= 0);   // this level's new pumpkin(s) are locked into the loadout
   const hasMummies = def.pool.some(([k]) => k === 'mummy' || (VARIANTS[k] && VARIANTS[k].base === 'mummy'));
@@ -100,7 +100,7 @@ export function startGame(mode, n, loadout){
   resolveMatches();
   startCoach();   // first 1-1 only: a hand shows the slide and the flick (owner)
   setGest(null);
-  setState('play'); musicStart(def && MUSIC['w' + def.worldNo] ? 'w' + def.worldNo : 'play');   // one track per world in story order (worldNo; def.world is the visual theme); endless plays the world-1 track
+  setState('play'); musicStart(def && def.nightmare ? 'nightmare' : def && MUSIC['w' + def.worldNo] ? 'w' + def.worldNo : 'play');   // nightmare nights play the nightmare track (Release 4)   // one track per world in story order (worldNo; def.world is the visual theme); endless plays the world-1 track
 
   if (mode === 'story'){
     const parts = [];
@@ -112,13 +112,14 @@ export function startGame(mode, n, loadout){
       parts.push(`New tool: ${g.name}. ${g.desc}`);
     }
     for (const t of def.intro){ const v = VARIANTS[t]; if (v) parts.push(v.intro); else if (MINTRO[t]) parts.push(MINTRO[t]); }
-    if (def.fog.length && !(n > 1 && levelFor(n - 1).fog.length)) parts.push('Fog hides part of the field. A Lantern clears it.');
+    const prev = prevLevelFor(n);
+    if (def.fog.length && !(prev && prev.fog.length)) parts.push('Fog hides part of the field. A Lantern clears it.');
     if (def.boss2 === def.boss) parts.push(`Two pairs of ${BOSS_NAMES[def.boss].replace(/^The /, '')} wait in this night. Each pair rises again on its own. Monsters keep coming until all fall.`);
     else if (def.boss2) parts.push(`${BOSS_NAMES[def.boss]} and ${BOSS_NAMES[def.boss2]} wait in this night. Monsters keep coming until both fall.`);
     else if (def.boss) parts.push(def.boss === 'twintides' ? `${BOSS_NAMES[def.boss]} wait in this night. Monsters keep coming until both fall.` : `${BOSS_NAMES[def.boss]} waits in this night. Monsters keep coming until it falls.`);
-    if (def.graves && def.graves > (n > 1 ? levelFor(n - 1).graves : 0)) parts.push(n === 3 ? 'Graves now appear in your patch. They block slides.' : 'One more grave in the patch.');
+    if (def.graves && def.graves > (prev ? prev.graves : 0)) parts.push(n === 3 ? 'Graves now appear in your patch. They block slides.' : 'One more grave in the patch.');
     if (n === 1) parts.push('Swipe a pumpkin to slide it. Bunch 3 of a color.');
-    banner(`Night ${def.label}`, parts.length ? parts.join(' ') : WORLDS[G.world].name, parts.length > 1 ? 4.2 : 3); SFX.levelStart();
+    banner(def.nightmare ? `Nightmare ${def.worldNo}-${def.levelNo}` : `Night ${def.label}`, parts.length ? parts.join(' ') : WORLDS[G.world].name, parts.length > 1 ? 4.2 : 3); SFX.levelStart();
   } else banner('Endless night', 'How long can the walls hold?', 2.4);
 }
 

@@ -2,14 +2,15 @@
   Store build:     npm run build          then  .venv/bin/python tools/w6_check.py --url http://127.0.0.1:4173/ --expect off
   Playtest build:  npm run build:playtest then .venv/bin/python tools/w6_check.py --url http://127.0.0.1:4173/ --expect on
   Release 2 build: VITE_RELEASE=2 npx vite build then  ... --expect r2   (World 6 to 6-16, nothing from Release 3)
-  Checks take `on` (World 6 present: on or r2); Release 3 checks read the global R3 (on only).
+  Release 3 build: VITE_RELEASE=3 npx vite build then  ... --expect r3   (World 6 complete, nothing from Release 4; tools/nm_check.py --expect r3 too)
+  Checks take `on` (World 6 present: on, r3 or r2); Release 3 checks read the global R3 (on or r3).
 Exits 1 on any failure. --only runs one check by name."""
 import argparse, json, pathlib, sys, time
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 FAILS = []
-R3 = False   # set by --expect: the build holds Release 3 (playtest)
+R3 = False   # set by --expect: the build holds Release 3 (playtest or r3)
 MODE = 'on'
 
 
@@ -395,8 +396,8 @@ def check_divers_hide(browser, url, on):
 def check_release(browser, url, on):
     page, errors = open_page(browser, url)
     r = page.evaluate("() => window.__gg.RELEASE")
-    want = {'on': 999, 'r2': 2, 'off': 1}[MODE]
-    ok(r == want, f'the build is release {r} (playtest = all, r2 = 2, store = 1)')
+    want = {'on': 999, 'r3': 3, 'r2': 2, 'off': 1}[MODE]
+    ok(r == want, f'the build is release {r} (playtest = all, r3 = 3, r2 = 2, store = 1)')
     bad = page.evaluate("() => window.__gg.WORLD_LEVELS.flat().filter(d => (d.release || 1) > window.__gg.RELEASE).map(d => d.world + '-' + d.level)")
     ok(not bad, f'no level from a later release is in the build {bad}')
     if on:
@@ -1033,12 +1034,12 @@ CHECKS.update({'check_hex_mummies': check_hex_mummies, 'check_glue_on_hit': chec
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)
-    ap.add_argument('--expect', choices=['on', 'r2', 'off'], required=True)
+    ap.add_argument('--expect', choices=['on', 'r3', 'r2', 'off'], required=True)
     ap.add_argument('--only', default=None)
     a = ap.parse_args()
     global R3, MODE
-    MODE = a.expect; R3 = a.expect == 'on'
-    on = a.expect in ('on', 'r2')
+    MODE = a.expect; R3 = a.expect in ('on', 'r3')
+    on = a.expect in ('on', 'r3', 'r2')
     with sync_playwright() as p:
         browser = p.chromium.launch()
         for name, fn in CHECKS.items():

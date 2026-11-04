@@ -2,7 +2,7 @@ import { PERKS, perkEarned, perkOn, perkNight, rented, RENT_COST } from '../data
 import { SPAWN_STEPS } from '../data/patterns.js';
 import { NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
-import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, firstNightOf, typesForNight, gearUnlockNightOf } from '../data/worlds/index.js';
+import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, prevLevelFor, firstNightOf, typesForNight, gearUnlockNightOf, NIGHTMARE_LEVELS, NM_BOOK_LEVELS, nmNight } from '../data/worlds/index.js';
 import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO } from '../data/monsters.js';
 import { monsterIcon } from '../engine/render/monsters.js';
 import { poolKey, prebakeAsync } from '../engine/render/anim.js';
@@ -44,23 +44,24 @@ export function showResult(win){
   const wf = wallFrac();
   if (g.mode === 'story'){
     if (win){
-      const nf = g.def.levelNo === 10 ? firstNightOf(g.def.worldNo + 1) : null, bookWasLocked = nf != null && !isOpen(nf);   // read before this win is saved
+      const nm = g.def.nightmare;   // a nightmare night (Release 4): no world unlock, no perk, no story pumpkin notes
+      const nf = !nm && g.def.levelNo === 10 ? firstNightOf(g.def.worldNo + 1) : null, bookWasLocked = nf != null && !isOpen(nf);   // read before this win is saved
       const qs = settleQuests(g.n, g.def);   // stars now come from quests (owner, 2026-09-27)
-      const celebrate = g.def.levelNo === 10 && (bookWasLocked || (nf == null && !qs.before));   // owner: the unlock card and book animation only when the next book was still locked (or the last boss's first defeat)
+      const celebrate = !nm && g.def.levelNo === 10 && (bookWasLocked || (nf == null && !qs.before));   // owner: the unlock card and book animation only when the next book was still locked (or the last boss's first defeat)
       const st = countBits(qs.total), gained = countBits(qs.total) - countBits(qs.before);
-      const bonus = 10 + g.n * 3 + countBits(qs.now) * 5;
+      const bonus = 10 + (nm ? LEVELS : g.n) * 3 + countBits(qs.now) * 5;   // a nightmare night pays like the last story night (placeholder, Release 4)
       save.coins += g.coins + bonus;
       save.unlocked = Math.max(save.unlocked || 1, highestOpen());
       title = g.n === LEVELS ? 'Dawn at last' : 'Night saved';
       msg = g.n === LEVELS ? 'Every night is safe. The patch thanks you.' : g.n < QUEST_START ? 'All three stars!' : st === 3 ? (gained ? 'Every quest done: all three stars!' : 'All three stars already earned here.') : gained ? `+${gained} star${gained > 1 ? 's' : ''}. Come back for the quests you missed.` : 'No new stars this time. Try the other quests.';
       const rq = $('#rQuests'); rq.hidden = g.n < QUEST_START; if (g.n >= QUEST_START) questRows(rq, g.def, qs.total, { fresh:qs.now, before:qs.before });
-      const nk = ALL_LEVELS[g.n] && (ALL_LEVELS[g.n].unlockPumpkins || [])[0], nextP = nk && PTYPES.find(p => p.key === nk);
+      const nk = !nm && ALL_LEVELS[g.n] && (ALL_LEVELS[g.n].unlockPumpkins || [])[0], nextP = nk && PTYPES.find(p => p.key === nk);
       if (nextP && g.n < LEVELS) msg += ` Next night unlocks the ${nextP.name} pumpkin.`;
       if (celebrate){   // owner: beating the level-10 boss is a celebration: a world-unlock card, then back to the menu
         const nextName = WORLD_LEVELS[g.def.worldNo] && WORLD_LEVELS[g.def.worldNo].length ? WORLD_NAMES[g.def.worldNo] : null; title = nextName ? `${nextName} unlocked!` : 'Every boss beaten!';
         msg = `🎉 ${BOSS_NAMES[g.def.boss]} is beaten! The rest of ${WORLD_NAMES[g.def.worldNo - 1]} is open` + (nextName ? `, and ${nextName} awaits.` : '.'); SFX.perk();
       }
-      const perk = PERKS.find(p => perkNight(p) === g.n);
+      const perk = !nm && PERKS.find(p => perkNight(p) === g.n);
       const tw = $('#rTrophy'); tw.hidden = true; tw.innerHTML = ''; tw.classList.remove('show');
       if (perk){   // level 20 (owner): a trophy drops in with rays and sparkles, and the level tile gets stamped when the book reopens
         title = `Trophy earned!`;
@@ -75,9 +76,9 @@ export function showResult(win){
       if (celebrate) addBtn(box, 'Continue', () => { pendingUnlock = g.def.worldNo; curBook = null; openLevels(); });   // worldNo is 1-based story order = the next book's shelf index (def.world is the visual theme, not the order)   // to the shelf, where the next storybook unlocks (owner)
       else if (perk) addBtn(box, 'Continue', () => { const go = () => { pendingStamp = g.n; openBook(g.def.worldNo - 1, true); }; if (g.n === LEVELS) openSoon(go); else go(); });   // after the last boss: the Hallow's End sneak peek first (owner)   // back into the book: the level-20 tile is stamped with a flourish
       else {
-        if (g.n < LEVELS) addBtn(box, 'Next level', () => openPreview(g.n + 1));
+        if (nm ? isOpen(g.n + 1) : g.n < LEVELS) addBtn(box, 'Next level', () => openPreview(g.n + 1));   // nightmare: the next one, once it exists
         addBtn(box, 'Shop', () => openShop('result'), 'alt');
-        addBtn(box, 'Levels', openLevels, 'alt');
+        addBtn(box, 'Levels', () => toBook(g.def), 'alt');
       }
     } else {
       save.coins += g.coins;
@@ -91,7 +92,7 @@ export function showResult(win){
       }
       addBtn(box, 'Try again', () => openPreview(g.n), cont ? 'alt' : '');
       addBtn(box, 'Shop', () => openShop('result'), 'alt');
-      addBtn(box, 'Levels', openLevels, 'alt');
+      addBtn(box, 'Levels', () => toBook(g.def), 'alt');
     }
   } else {
     save.coins += g.coins;
@@ -208,11 +209,11 @@ function renderQuests(n, def){
 }
 export function openPreview(n){
   previewNight = n; syncSack();
-  const def = levelFor(n), prevGraves = n > 1 ? levelFor(n - 1).graves : 0;
+  const def = levelFor(n), place = def.nightmare ? WORLDS[def.world].name : WORLD_NAMES[def.worldNo - 1];
   makePreview(n);   // the night's own map behind the card (owner: not a random background)
-  $('#pvTitle').textContent = `Level ${def.label}`;
+  $('#pvTitle').textContent = def.nightmare ? `Nightmare ${def.worldNo}-${def.levelNo}` : `Level ${def.label}`;
   renderQuests(n, def);
-  $('#pvSub').textContent = WORLD_NAMES[def.worldNo - 1];
+  $('#pvSub').textContent = place;
   const mons = $('#pvMonsters'); mons.innerHTML = '';
   prebakeAsync([...def.pool.map(([t]) => poolKey(t, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), 'ghoul']);   // bake this level's sprite strips while the card is read
   for (const [t] of def.pool){
@@ -257,9 +258,9 @@ export function openPreview(n){
   const info = [];   // no counts here (owner): just what is special
   if (def.boss) info.push(def.boss2 === def.boss ? 'Two pairs of bosses. Monsters keep coming until all fall.' : def.boss2 ? 'Two bosses at once. Monsters keep coming until both fall.' : 'Monsters keep coming until the boss falls.');
   if (def.frenzyAfterBoss) info.push('When the first pair falls, the jukebox drops.');
-  if (def.levelNo === 10){ const nextName = WORLD_NAMES[def.worldNo]; info.push(`🎁 Reward: levels 11–20${nextName && WORLD_LEVELS[def.worldNo] && WORLD_LEVELS[def.worldNo].length ? ` and World ${def.worldNo + 1}: ${nextName}` : ''}.`); }
-  if (def.levelNo === 20){ const perk = PERKS.find(p => perkNight(p) === n); if (perk) info.push(`🎁 Reward: ${perk.name}. ${perk.desc}`); }
-  if (def.name) $('#pvSub').textContent = `${WORLD_NAMES[def.worldNo - 1]} · ${def.name}`;
+  if (!def.nightmare && def.levelNo === 10){ const nextName = WORLD_NAMES[def.worldNo]; info.push(`🎁 Reward: levels 11–20${nextName && WORLD_LEVELS[def.worldNo] && WORLD_LEVELS[def.worldNo].length ? ` and World ${def.worldNo + 1}: ${nextName}` : ''}.`); }
+  if (!def.nightmare && def.levelNo === 20){ const perk = PERKS.find(p => perkNight(p) === n); if (perk) info.push(`🎁 Reward: ${perk.name}. ${perk.desc}`); }
+  if (def.name) $('#pvSub').textContent = `${place} · ${def.name}`;
   if (def.shoreFrac) info.push(`The sea covers ${def.shoreFrac >= 0.5 ? 'half' : 'part'} of the field. Monsters surface at the shoreline.`);
   else if (def.shore) info.push(`The shoreline has moved ${def.shore} rows down the field.`);
   else if (def.sea) info.push('The sea reaches the top of the field.');
@@ -271,7 +272,7 @@ export function openPreview(n){
 let loadoutFromPreview = false, loadoutFromEndless = false;
 function startPreviewedNight(){
   loadoutFromPreview = true; loadoutFromEndless = false;
-  const n = previewNight, def = levelFor(n), prevGraves = n > 1 ? levelFor(n - 1).graves : 0;
+  const n = previewNight, def = levelFor(n), prev = prevLevelFor(n), prevGraves = prev ? prev.graves : 0;
   const cards = [];
   if (n === 1){   // 1-1 (owner): the Green pumpkin, and the whole lesson: bunch three to throw, bunch five to knock back
     cards.push({ key:'p:green', icon:pumpkinIcon(0, true), title:'Green pumpkin', text:'Your everyday pumpkin. Slide it so three of the same colour touch, and the bunch lights up.' });
@@ -290,12 +291,12 @@ function startPreviewedNight(){
     if (g) cards.push({ key:'g:' + key, icon:toolIcon(g.key, 104), title:`New tool: ${g.name}`, text:`${g.desc} You get one to start with. More drop from monsters and sell in the shop.` });
   }
   if (def.graves && !prevGraves) cards.push({ key:'graves', icon:'🪦', title:'Graves', text:GRAVES_INTRO });
-  if (def.fog.length && !(n > 1 && levelFor(n - 1).fog.length)) cards.push({ key:'fog', icon:'🌫️', title:'Fog', text:FOG_INTRO });
-  if (def.castles && !(n > 1 && levelFor(n - 1).castles)) cards.push({ key:'castles', icon:'🏰', title:'Castle walls', text:CASTLE_INTRO });
-  if (def.frenzy && !(n > 1 && levelFor(n - 1).frenzy)) cards.push({ key:'frenzy', icon:'🎵', title:'Frenzy', text:FRENZY_INTRO });
-  if ((def.puddles || def.puddlesLayout) && !(n > 1 && (levelFor(n - 1).puddles || levelFor(n - 1).puddlesLayout))) cards.push({ key:'puddles', icon:'💧', title:'Puddles', text:PUDDLE_INTRO });
-  if (def.sea && !(n > 1 && levelFor(n - 1).sea)) cards.push({ key:'sea', icon:'🌊', title:'The sea row', text:SEA_INTRO });
-  if (def.gust && !(n > 1 && levelFor(n - 1).gust)) cards.push({ key:'wind', icon:'🍂', title:'Wind', text:WIND_INTRO });
+  if (def.fog.length && !(prev && prev.fog.length)) cards.push({ key:'fog', icon:'🌫️', title:'Fog', text:FOG_INTRO });
+  if (def.castles && !(prev && prev.castles)) cards.push({ key:'castles', icon:'🏰', title:'Castle walls', text:CASTLE_INTRO });
+  if (def.frenzy && !(prev && prev.frenzy)) cards.push({ key:'frenzy', icon:'🎵', title:'Frenzy', text:FRENZY_INTRO });
+  if ((def.puddles || def.puddlesLayout) && !(prev && (prev.puddles || prev.puddlesLayout))) cards.push({ key:'puddles', icon:'💧', title:'Puddles', text:PUDDLE_INTRO });
+  if (def.sea && !(prev && prev.sea)) cards.push({ key:'sea', icon:'🌊', title:'The sea row', text:SEA_INTRO });
+  if (def.gust && !(prev && prev.gust)) cards.push({ key:'wind', icon:'🍂', title:'Wind', text:WIND_INTRO });
   for (const t of def.intro) if (!VARIANTS[t]) cards.push({ key:'m:' + t, icon:monsterIcon(t, 160), title:`New monster: ${MNAME[t] || t}`, text:MINTRO[t] || '' });   // returning variants get no card (owner)
   for (const k of [...new Set([def.boss, def.boss2].filter(Boolean))]) cards.push({ key:`b:${k}:${def.bossForm}`, icon:monsterIcon(k, 200, def.bossForm), title:def.bossForm === 2 ? `${BOSS_NAMES[k]}, full form` : `Boss: ${BOSS_NAMES[k]}`, text:BOSS_INTRO[k][def.bossForm] });
   introQueue = cards.filter(c => !save.seenIntro[c.key]);
@@ -407,7 +408,7 @@ export function openEndless(){
 let bookNightmare = false, bgBeforeNm = null;
 /** Swap the full-screen background to the nightmare map (key) or back to the world it replaced (null). */
 function nightmareBg(key){
-  if (key){ if (bgBeforeNm == null) bgBeforeNm = typeof bgWorld === 'number' ? bgWorld : 0; setBg(sceneFull(key), 'nm:' + key); }
+  if (key){ if (bgBeforeNm == null) bgBeforeNm = typeof bgWorld === 'number' && !(WORLDS[bgWorld] && WORLDS[bgWorld].custom === 'nightmare') ? bgWorld : 0; setBg(sceneFull(key), 'nm:' + key); }   // never 'return' to a nightmare night's map
   else if (bgBeforeNm != null){ buildBg(bgBeforeNm); bgBeforeNm = null; }
 }
 /** The Hollow King as a shadow (Hallow's End book page): his archived drawing (render/chars/hollowking.js) filled with one dark tone, painted once per book open. */
@@ -430,10 +431,12 @@ function applyNightmare(wi){
   bm.hidden = !cleared; $('#bookView').classList.toggle('hasMark', cleared); if (!cleared) bookNightmare = false;
   const on = bookNightmare;
   spread.classList.toggle('nightmare', on); bm.setAttribute('aria-pressed', on ? 'true' : 'false'); bm.setAttribute('aria-label', on ? 'Leave nightmare mode' : 'Nightmare mode');
-  $('#bkLevels').hidden = on; $('#bkStars').hidden = on; $('#bkSoon').hidden = !on; $('#bBkFlip').hidden = on;
+  const nmLv = __RELEASE__ >= 4 && on ? NIGHTMARE_LEVELS[wi] : null;   // Release 4: this book's nightmare levels (else "Coming soon")
+  $('#bkLevels').hidden = on && !nmLv; $('#bkStars').hidden = on && !nmLv; $('#bkSoon').hidden = !on || !!nmLv; $('#bBkFlip').hidden = on;
   const theme = levels[0].theme;
   nightmareBg(on ? nightmareKey(theme) : null);
   if (!on) return;
+  if (__RELEASE__ >= 4 && nmLv){ const st = renderStamps(nmLv, nmNight(wi + 1, 1), NM_BOOK_LEVELS); $('#bkStars').innerHTML = `<b>★ ${st}</b> of ${nmLv.length * 3} collected`; }
   $('#bkWorld').textContent = `Nightmare · World ${wi + 1} of 5`;
   $('#bkLore').textContent = NIGHTMARE_LORE[wi];
   const sc = sceneCrop(nightmareKey(theme), 456, 120), cv = $('#bkScene'); cv.width = sc.width; cv.height = sc.height; cv.getContext('2d').drawImage(sc, 0, 0);
@@ -452,6 +455,30 @@ function openSoon(next){
   const sc = sceneCrop('hallow', 456, 150), cv = $('#soonScene'); cv.width = sc.width; cv.height = sc.height; cv.getContext('2d').drawImage(sc, 0, 0);
   setState('soon'); SFX.perk();
 }
+/** The book's level stamps into #bkLevels: one per level from night `start` (story or nightmare numbering), padded to `padTo`
+ *  with disabled "Coming soon" stamps (a nightmare page with levels still to come). Returns the stars collected. */
+function renderStamps(levels, start, padTo = 0){
+  const grid = $('#bkLevels'); grid.innerHTML = '';
+  let stars = 0, nextN = null;
+  levels.forEach((d, i) => {
+    const n = start + i, locked = !isOpen(n), st = save.stars[n] || 0; stars += st;
+    if (!locked && !st && nextN == null) nextN = n;
+    const lab = d.nightmare ? `Nightmare ${d.world}-${d.level}` : `Level ${d.world}-${d.level}`;
+    const b = document.createElement('button'); b.className = 'pg' + (d.boss ? ' boss' : '') + (st ? ' done' : '') + (d.boss && st && pendingStamp !== n ? ' stamped' : ''); b.disabled = locked;   // a beaten boss keeps its stamp (owner)
+    b.setAttribute('aria-label', locked ? `${lab}, locked` : `${lab}${d.name ? ', ' + d.name : ''}, ${st} of 3 stars`);
+    if (d.boss && d.world === 6 && !(__RELEASE__ >= 3 && d.boss === 'hollowking')) b.appendChild(devilStamp());   // World 6 boss nights: a purple wax stamp with the bookmark's devil (owner); 6-20 shows the Hollow King himself (owner, Release 3)
+    else if (d.boss) b.appendChild(monsterIcon(d.boss, 88, d.bossForm)); else b.textContent = d.level;
+    if (!locked){ const sp = document.createElement('span'); sp.className = 'st'; sp.innerHTML = '★'.repeat(st) + '<span class="off">' + '★'.repeat(3 - st) + '</span>'; b.appendChild(sp); }
+    b.onclick = () => { SFX.ui('level'); withHelp(() => openPreview(n)); };
+    if (pendingStamp === n){ pendingStamp = null; setTimeout(() => { b.classList.add('stamping'); SFX.star(); }, 700); setTimeout(() => { b.classList.remove('stamping'); b.classList.add('stamped'); }, 1900); }
+    grid.appendChild(b);
+  });
+  grid.querySelectorAll('.pg').forEach((b, i) => { if (start + i === nextN) b.classList.add('next'); });
+  for (let i = levels.length; i < padTo; i++){ const b = document.createElement('button'); b.className = 'pg soon'; b.disabled = true; b.textContent = 'Coming soon'; b.setAttribute('aria-label', 'Coming soon'); grid.appendChild(b); }
+  return stars;
+}
+/** Back to the level select after a night: a nightmare night returns to its book's nightmare page (Release 4). */
+function toBook(def){ if (def.nightmare){ curBook = def.worldNo - 1; bookNightmare = true; } openLevels(); }
 export function openBook(wi, animate){
   if (curBook !== wi) bookNightmare = false;
   curBook = wi;
@@ -466,21 +493,7 @@ export function openBook(wi, animate){
   if (__RELEASE__ >= 3 && wi === 5){ bossBox.appendChild(monsterIcon('hollowking', 192, 1)); const cap = document.createElement('span'); cap.textContent = BOSS_NAMES.hollowking; bossBox.appendChild(cap); }   // Release 3: he steps out of the shadow
   else if (__RELEASE__ >= 2 && wi === 5){ bossBox.appendChild(hollowSilhouette(192)); const cap = document.createElement('span'); cap.textContent = '???'; bossBox.appendChild(cap); }   // Hallow's End: the Hollow King, still a shadow (owner)
   else if (bossKey){ bossBox.appendChild(monsterIcon(bossKey, 192, 1)); const cap = document.createElement('span'); cap.textContent = BOSS_NAMES[bossKey]; bossBox.appendChild(cap); }
-  const grid = $('#bkLevels'); grid.innerHTML = '';
-  let stars = 0, nextN = null;
-  levels.forEach((d, i) => {
-    const n = start + i, locked = !isOpen(n), st = save.stars[n] || 0; stars += st;
-    if (!locked && !st && nextN == null) nextN = n;
-    const b = document.createElement('button'); b.className = 'pg' + (d.boss ? ' boss' : '') + (st ? ' done' : '') + (d.boss && st && pendingStamp !== n ? ' stamped' : ''); b.disabled = locked;   // a beaten boss keeps its stamp (owner)
-    b.setAttribute('aria-label', locked ? `Level ${d.world}-${d.level}, locked` : `Level ${d.world}-${d.level}${d.name ? ', ' + d.name : ''}, ${st} of 3 stars`);
-    if (d.boss && d.world === 6 && !(__RELEASE__ >= 3 && d.boss === 'hollowking')) b.appendChild(devilStamp());   // World 6 boss nights: a purple wax stamp with the bookmark's devil (owner); 6-20 shows the Hollow King himself (owner, Release 3)
-    else if (d.boss) b.appendChild(monsterIcon(d.boss, 88, d.bossForm)); else b.textContent = d.level;
-    if (!locked){ const sp = document.createElement('span'); sp.className = 'st'; sp.innerHTML = '★'.repeat(st) + '<span class="off">' + '★'.repeat(3 - st) + '</span>'; b.appendChild(sp); }
-    b.onclick = () => { SFX.ui('level'); withHelp(() => openPreview(n)); };
-    if (pendingStamp === n){ pendingStamp = null; setTimeout(() => { b.classList.add('stamping'); SFX.star(); }, 700); setTimeout(() => { b.classList.remove('stamping'); b.classList.add('stamped'); }, 1900); }
-    grid.appendChild(b);
-  });
-  grid.querySelectorAll('.pg').forEach((b, i) => { if (start + i === nextN) b.classList.add('next'); });
+  const stars = renderStamps(levels, start);
   $('#bkStars').innerHTML = `<b>★ ${stars}</b> of ${levels.length * 3} collected`;
   renderBestiary(wi);
   $('#bestiary').hidden = true; $('#spread .pages:not(#bestiary)').hidden = false;
@@ -1027,5 +1040,5 @@ export function wireButtons(){
   $('#bRestart').onclick = () => { save.coins += G.coins; persist(); if (G.mode === 'story') beginNight(G.n); else { if (G.score > save.best) save.best = G.score; persist(); musicStop(); G.over = true; openEndless(); } };   // endless: back to its book to re-pick powers and team (owner, 2026-10-09)   // restart goes through the pumpkin picker (owner)
 
   $('#bQuit').onclick = () => { musicStop(); save.coins += G.coins; if (G.mode === 'endless' && G.score > save.best) save.best = G.score; persist();
-    if (G.mode === 'story'){ curBook = G.def.worldNo - 1; openLevels(); } else setState('title'); };   // owner: quit goes back to the level select (the night's book), not the title menu
+    if (G.mode === 'story'){ curBook = G.def.worldNo - 1; toBook(G.def); } else setState('title'); };   // owner: quit goes back to the level select (the night's book), not the title menu
 }

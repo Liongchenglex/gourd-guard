@@ -9,6 +9,7 @@ import world3 from './world3.js';
 import world4 from './world4.js';
 import world5 from './world5.js';
 import world6, { releaseOf as w6Release } from './world6.js';
+import nightmare1 from './nightmare1.js';
 
 // Background themes (index = LevelDef.theme). Drawn by buildBg() in src/engine/render/sprites.js.
 //   sky: [top, middle, horizon] gradient    ground: [field top, field bottom]    grass: tuft / reed colour
@@ -29,6 +30,10 @@ export const WORLDS = [
   // render/nightmare/scenes.js; `base` is the theme whose field texture it borrows.
   { name:"Hallow's End", sky:['#07030f','#2a0d3c','#d4602a'], ground:['#3a2233','#170b14'], grass:'#331d32',
     moon:'#ff9a2a', halo:'#ff7a1a', sil:['#24102f','#0b0510'], rim:'#ffb060', soil:['#7c4a2a','#4a2a18','#26140a'], mist:null, custom:'hallow', base:0 },
+  // Pumpkin Patch: Nightmare (Release 4): the nightmare book's eclipse and burning barn (docs/archive/nightmare-worlds/), painted by
+  // nightmareSky/nightmareAfter in render/nightmare/scenes.js; the palette matches that file's 'patchN' theme.
+  ...(__RELEASE__ >= 4 ? [{ name:'Pumpkin Patch: Nightmare', sky:['#050204','#2a0806','#c2410f'], ground:['#2e1a16','#120a08'], grass:'#281512',
+    moon:'#1a0808', halo:'#ff7a1a', sil:['#1a0808','#080303'], rim:'#ff8a3a', soil:['#5e3620','#3a1e10','#1a0c06'], mist:null, custom:'nightmare', scene:'patchN', base:0 }] : []),
 ];
 
 /** Display names for the six worlds (docs/WORLDS.md §3). Worlds without levels yet show as "coming soon". */
@@ -47,8 +52,25 @@ export const ALL_LEVELS = WORLD_LEVELS.flat();
 
 export const LEVELS = ALL_LEVELS.length;
 
-/** Runtime level definition for story night n (1-based global index). */
-export function levelFor(n){ return expandLevel(ALL_LEVELS[n - 1], n); }
+/** Nightmare tracks (Release 4, docs/superpowers/specs/2026-11-04-release-4-nightmare-patch-design.md): a separate set of nights,
+ *  numbered from NM_BASE so they never collide with story nights. Nightmare world w, level k is night nmNight(w, k); its stars and
+ *  quests live in save.stars / save.quests under that number. NIGHTMARE_LEVELS[w - 1] is world w's nightmare table. */
+export const NM_BASE = 1000;
+export const NM_BOOK_LEVELS = 16;   // stamps on a nightmare book page; levels not built yet show as "Coming soon"
+export const NIGHTMARE_LEVELS = __RELEASE__ >= 4 ? [nightmare1] : [];
+export const nmNight = (w, k) => NM_BASE + 100 * (w - 1) + k;
+export const isNightmare = n => n > NM_BASE;
+const nmWorld = n => Math.floor((n - NM_BASE - 1) / 100) + 1, nmLevel = n => (n - NM_BASE - 1) % 100 + 1;
+const nmData = n => (NIGHTMARE_LEVELS[nmWorld(n) - 1] || [])[nmLevel(n) - 1];
+
+/** Runtime level definition for night n: a story night (1-based global index) or a nightmare night (nmNight). */
+export function levelFor(n){ return expandLevel(isNightmare(n) ? nmData(n) : ALL_LEVELS[n - 1], n); }
+
+/** The level before night n on its own track (for "new this level" cards), or null on story night 1 and on each nightmare world's level 1. */
+export function prevLevelFor(n){ return isNightmare(n) ? (nmLevel(n) > 1 ? levelFor(n - 1) : null) : n > 1 ? levelFor(n - 1) : null; }
+
+/** The night whose unlocks (pumpkins, tools) apply on night n: story progress, never a nightmare night's number. */
+export const progressNight = n => isNightmare(n) ? highestOpen() : Math.max(n, highestOpen());
 
 /** Global index of the first level of world w (1-based), or null if that world has no levels yet. */
 export function firstNightOf(w){
@@ -83,6 +105,12 @@ export function typesForNight(n){
  *  (or the level its `opensAfter` names: Hallow's End opens after 5-20, owner 2026-10-31);
  *  every other level opens when the level before it has been beaten. */
 export function isOpen(n){
+  if (isNightmare(n)){   // nightmare level 1 opens when that world's level 20 is beaten (owner: no 5-20 gate); each win opens the next
+    if (!nmData(n)) return false;
+    if (save.testUnlock) return true;
+    const w = nmWorld(n), f = firstNightOf(w);
+    return nmLevel(n) === 1 ? f != null && !!save.stars[f + WORLD_LEVELS[w - 1].length - 1] : !!save.stars[n - 1];
+  }
   const d = ALL_LEVELS[n - 1];
   if (!d) return false;
   if (save.testUnlock) return true;   // TESTING ONLY: remove before release

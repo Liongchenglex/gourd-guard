@@ -10,7 +10,7 @@ import { save } from '../../save.js';
 import { E, pal, rng, rgba, mix, SM, SO } from './paint.js';
 import { COLS, CS, FENCE_Y, FIELD_TOP, GX, GY, H, ROWS, W } from '../state.js';
 import { TAU } from '../util.js';
-import { hallowSky, hallowProps } from './nightmare/scenes.js';
+import { hallowSky, hallowProps, nightmareSky, nightmareAfter } from './nightmare/scenes.js';
 
 export let sprites = [], fogSprite = null, bg = null, bgWorld = -1;
 
@@ -443,12 +443,15 @@ export function buildBg(world){
   const g = bg.getContext('2d'); g.scale(K, K);
   const hz = FIELD_TOP - 8, R = rng(t * 91 + 7);
   const mx = [136, 92, 118, 110, 140][t], my = hz - [56, 64, 84, 66, 60][t], mr = [32, 20, 40, 28, 26][t];
+  let nR = null;
   if (w.custom === 'hallow'){ hallowSky(g, w, R, hz); hallowProps(g, w, R, hz); }   // the owner's archived Hallow's End map
+  else if (__RELEASE__ >= 4 && w.custom === 'nightmare') nR = nightmareSky(g, w.scene, hz);   // a nightmare book's scene as the night's map (Release 4)
   else { sky(g, w, R, hz, mx, my, mr, t); PROPS[t](g, w, R, hz, mx, my, mr); }
   // the ground the props stand on
   g.fillStyle = w.sil[1]; g.beginPath(); g.moveTo(0, hz + 8); for (let x = 0; x <= W; x += 20) g.lineTo(x, hz - 2 - Math.sin(x * .02 + t) * 2.5); g.lineTo(W, hz + 30); g.lineTo(0, hz + 30); g.closePath(); g.fill();
   field(g, w, R, hz + 4, t);
   patch(g, w, R);
+  if (__RELEASE__ >= 4 && nR) nightmareAfter(g, w.scene, nR, hz, FIELD_TOP, FENCE_Y);   // embers over the field
 }
 
 /** A cropped painting of a world's sky and horizon (moon and props) for the storybook covers and pop-ups: w × h in css px,

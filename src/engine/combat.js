@@ -13,7 +13,7 @@ import { KILL_REWARD } from '../data/rules.js';
 import { SACK, BOSS_SEED, ENDLESS_BOSS_SEED, CHEST_KILL_CHANCE } from '../data/economy.js';
 import { addChest, addSeeds, grant, toolSet } from './loot.js';
 import { GEAR } from '../data/shop.js';
-import { toolsForNight, highestOpen } from '../data/worlds/index.js';
+import { toolsForNight, highestOpen, progressNight } from '../data/worlds/index.js';
 import { banner } from '../ui/hud.js';
 import { dropJukebox, jukeboxPoints } from './spawner.js';
 
@@ -104,7 +104,7 @@ export function rollReward(){
 }
 /** Tools that can drop right now: introduced by the current night and below their carry limit. */
 function droppableTools(){
-  const open = toolsForNight(G.mode === 'story' ? Math.max(G.n, highestOpen()) : highestOpen());
+  const open = toolsForNight(G.mode === 'story' ? progressNight(G.n) : highestOpen());
   return GEAR.filter(g => g.consumable && open.includes(g.key) && (save[g.key] || 0) < g.max);
 }
 export function dropWeapon(m){
@@ -198,7 +198,7 @@ export function kill(m){
     const more = __RELEASE__ >= 3 && (G.jbNext || 0) < jukeboxPoints(G.def).length;   // 6-19: a halfway jukebox; another comes at the end
     G.jukebox = null; G.jukeboxDone = !more; G.shake = 0.8;
     const bossUp = G.monsters.some(o => o.type === 'boss' && !o.dead);
-    banner('The music stops!', more ? 'The night goes on.' : bossUp ? 'Now the boss.' : 'Finish the stragglers.', 2); musicStart(bossUp ? 'boss' : MUSIC['w' + G.def.worldNo] ? 'w' + G.def.worldNo : 'play');   // back to the boss track if a boss is still up
+    banner('The music stops!', more ? 'The night goes on.' : bossUp ? 'Now the boss.' : 'Finish the stragglers.', 2); musicStart(bossUp ? 'boss' : G.def.nightmare ? 'nightmare' : MUSIC['w' + G.def.worldNo] ? 'w' + G.def.worldNo : 'play');   // back to the boss track if a boss is still up
   }
   if (m.type === 'slime'){   // splits into blobs
     for (let i = 0; i < TYPES.slime.splits; i++){ const l = Math.max(0, Math.min(COLS - 1, m.lane + (i ? 1 : -1))); const bl = spawnMonster('blob', l, true, Math.max(0, m.p - 0.02)); bl.age = 0.2; }
@@ -208,7 +208,7 @@ export function kill(m){
   if (__RELEASE__ >= 3 && m.kind === 'hollowking' && !m.hkClone) onKingDown();
   if (m.type === 'boss'){
     const twinAlive = G.monsters.some(o => o !== m && o.type === 'boss' && !o.dead);   // the other Twin Tide, or the other boss of a two-boss night
-    if (!twinAlive && G.mode === 'story' && G.def && (G.def.levelNo === 10 || G.def.levelNo === 20)){ const itemOf = TYPES[m.kind].noItems ? null : m.kind;   // no costume for the Hollow King yet: boss items become coins
+    if (!twinAlive && G.mode === 'story' && G.def && !G.def.nightmare && (G.def.levelNo === 10 || G.def.levelNo === 20)){ const itemOf = TYPES[m.kind].noItems ? null : m.kind;   // no costume for the Hollow King yet: boss items become coins; story boss chests only (Release 4: not on a nightmare night)
       const ck = G.def.levelNo === 20 ? 'boss' : 'normal';
       const nc = __RELEASE__ >= 3 ? (G.def.bossChests || 1) + (G.def.extraChestP && Math.random() < G.def.extraChestP ? 1 : 0) : 1;   // 6-20: 2 chests, 50% a third (owner, 2026-11-03)
       for (let c = 0; c < nc; c++) addChest(ck, itemOf);

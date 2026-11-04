@@ -1,4 +1,4 @@
-import { toolsForNight, highestOpen } from '../data/worlds/index.js';
+import { toolsForNight, highestOpen, progressNight } from '../data/worlds/index.js';
 import { scale } from '../engine/render/canvas.js';
 import { FIELD_BOT, FIELD_TOP, G, setBannerTimer } from '../engine/state.js';
 import { $, clamp } from '../engine/util.js';
@@ -56,7 +56,7 @@ export function updateHud(force){
   else prog = G.total ? G.resolved / G.total : 0;
   const label = G.mode === 'story' ? `Night ${G.def.label}` : `${G.frenzy ? 'Frenzy' : 'Hour'} ${(G.hour || 0) + 1} · ${G.score.toLocaleString()}`;
   const wf = Math.round(wallFrac() * 100);
-  const tools = toolsForNight(G.mode === 'story' ? Math.max(G.n, highestOpen()) : highestOpen());
+  const tools = toolsForNight(G.mode === 'story' ? progressNight(G.n) : highestOpen());
   if (!trayDrawn){ trayDrawn = true; for (const [btn, key] of TRAY){ const cv = $(btn).querySelector('canvas.ti'); if (!cv) continue; const ic = toolIcon(key, 40); cv.width = ic.width; cv.height = ic.height; cv.getContext('2d').drawImage(ic, 0, 0); } }
   const seeds = save.seeds || 0;
   const questOn = G.mode === 'story' && G.n >= QUEST_START;   // quests replace the wall readout (owner, 2026-09-27)

@@ -142,16 +142,24 @@ export function hallowProps(g, w, R, hz){
   for (let i = 0; i < 8; i++){ const x = 470 - i * 14 + (i % 2) * 6, y = hz + 2 - i * .5, s = 1.4; glow(g, x, y - 5, 8, '#ffb050', .5); g.fillStyle = '#f4e8d0'; g.fillRect(x - s, y - 4, s * 2, 5); g.fillStyle = '#ffd070'; g.beginPath(); g.ellipse(x, y - 6, 1, 2, 0, 0, TAU); g.fill(); }
 }
 
-function build(T){
-  if (!T.w.grass) T.w.grass = mix(T.w.ground[0], T.w.sil[0], .3); if (T.w.mist === undefined) T.w.mist = T.key === 'fogN' ? '#5ac07a' : T.key === 'marshN' ? '#c04040' : null;
-  const c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2; const g = c.getContext('2d'); g.scale(2, 2);
-  const t = T.base, w = T.w, hz = FIELD_TOP - 8, R = rng(t * 91 + 7 + (T.key ? T.key.length * 13 : 0));
+function prep(T){ if (!T.w.grass) T.w.grass = mix(T.w.ground[0], T.w.sil[0], .3); if (T.w.mist === undefined) T.w.mist = T.key === 'fogN' ? '#5ac07a' : T.key === 'marshN' ? '#c04040' : null; }
+/** Sky and props of a non-custom theme above the horizon hz; returns the random stream so after() can continue it. */
+function skyline(T, g, hz){
+  const t = T.base, w = T.w, R = rng(t * 91 + 7 + (T.key ? T.key.length * 13 : 0));
   const mx = T.moonAt ? T.moonAt[0] : MOON.x[t], my = T.moonAt ? T.moonAt[1] : hz - MOON.y[t], mr = T.moonAt ? T.moonAt[2] : MOON.r[t];
+  sky(g, w, R, hz, mx, my, mr, t); pre(T, g, w, R, hz, mx, my, mr); PROPS[t](g, w, R, hz, mx, my, mr); post(T, g, w, R, hz, mx, my, mr);
+  return R;
+}
+function build(T){
+  prep(T);
+  const c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2; const g = c.getContext('2d'); g.scale(2, 2);
+  const t = T.base, w = T.w, hz = FIELD_TOP - 8;
+  let R = rng(t * 91 + 7 + (T.key ? T.key.length * 13 : 0));
   if (T.custom){ hallowSky(g, w, R, hz); hallowProps(g, w, R, hz); }
-  else { sky(g, w, R, hz, mx, my, mr, t); pre(T, g, w, R, hz, mx, my, mr); PROPS[t](g, w, R, hz, mx, my, mr); post(T, g, w, R, hz, mx, my, mr); }
+  else R = skyline(T, g, hz);
   g.fillStyle = w.sil[1]; g.beginPath(); g.moveTo(0, hz + 8); for (let x = 0; x <= W; x += 20) g.lineTo(x, hz - 2 - Math.sin(x * .02 + t) * 2.5); g.lineTo(W, hz + 30); g.lineTo(0, hz + 30); g.closePath(); g.fill();
   field(g, w, R, hz + 4, t); patch(g, w, R);
-  after(T, g, w, R, hz, mx, my, mr);
+  after(T, g, w, R, hz);
   if (T.grey){ const k = document.createElement('canvas'); k.width = c.width; k.height = c.height; const kg = k.getContext('2d'); kg.filter = 'grayscale(1) contrast(1.08)'; kg.drawImage(c, 0, 0); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); g.drawImage(k, 0, 0); g.setTransform(2, 0, 0, 2, 0, 0); greyExtras(g, w, R, hz); }
   return c;
 }
@@ -185,12 +193,12 @@ function post(T, g, w, R, hz, mx, my, mr){
     fin(g, 60, hz - 4, 10, '#140204', '#ff7a60'); fin(g, 210, hz - 8, 7, '#140204', '#ff7a60'); fin(g, 470, hz - 6, 8, '#140204', '#ff7a60');
     glow(g, 507, 42, 44, '#ff1a1a', .6); g.fillStyle = '#ff5a40'; g.beginPath(); g.ellipse(507, 42, 4, 3.4, 0, 0, TAU); g.fill(); const bg2 = g.createLinearGradient(507, 42, 300, 30); bg2.addColorStop(0, 'rgba(255,50,30,.6)'); bg2.addColorStop(1, 'rgba(255,50,30,0)'); g.fillStyle = bg2; g.beginPath(); g.moveTo(507, 39); g.lineTo(300, 6); g.lineTo(300, 56); g.lineTo(507, 45); g.closePath(); g.fill(); }   // the lighthouse burns red
 }
-function after(T, g, w, R, hz){
+function after(T, g, w, R, hz, top = FIELD_TOP, fence = FENCE_Y){
   if (T.key === 'keepN') rain(g, rng(5), 520, .14);
   if (T.key === 'fogN'){ for (let i = 0; i < 6; i++) cloud(g, R() * W, hz + 10 + R() * 30, 160, 14, '#4ac070', .22);
     for (const [x, y, s] of [[60, hz - 18, 2.6], [150, hz - 10, 2], [330, hz - 22, 2.4], [470, hz - 14, 2.2], [250, hz - 40, 1.6], [410, hz - 46, 1.8]]) eyes(g, x, y, s, '#ff2a2a'); }
-  if (T.key === 'patchN'){ vband(g, FIELD_TOP, FENCE_Y, '#ff4a12', .1, .04, 0); for (let i = 0; i < 26; i++) spark(g, R() * W, FIELD_TOP + R() * (FENCE_Y - FIELD_TOP), .7 + R(), '#ffa040', .4 + R() * .4); }
-  if (T.key === 'marshN') vband(g, FIELD_TOP, FIELD_TOP + 120, '#ff2020', .12, .05, 0);
+  if (T.key === 'patchN'){ vband(g, top, fence, '#ff4a12', .1, .04, 0); for (let i = 0; i < 26; i++) spark(g, R() * W, top + R() * (fence - top), .7 + R(), '#ffa040', .4 + R() * .4); }
+  if (T.key === 'marshN') vband(g, top, top + 120, '#ff2020', .12, .05, 0);
 }
 function greyExtras(g, w, R, hz){
   const r2 = rng(33); [[40, 120], [120, 90], [300, 110], [380, 140], [470, 100], [520, 80]].forEach(([x, h]) => deadTree(g, x, hz + 6, h, '#0e0e12', r2, 6));
@@ -225,5 +233,10 @@ export function sceneCrop(key, w, h){
   c.getContext('2d').drawImage(src, sx * kx, sy * kx, sw * kx, sh * kx, 0, 0, c.width, c.height);
   crops.set(ck, c); return c;
 }
+/** A nightmare scene as a night's background (Release 4: WORLDS entries with custom:'nightmare', painted once by buildBg in sprites.js,
+ *  which draws the ground, field and patch at the live screen size in between): nightmareSky paints the sky and props above the horizon hz
+ *  and returns the random stream; nightmareAfter paints the scene's overlay on the field between top and fence. */
+export function nightmareSky(g, key, hz){ const T = THEMES.find(t => t.key === key); prep(T); return skyline(T, g, hz); }
+export function nightmareAfter(g, key, R, hz, top, fence){ const T = THEMES.find(t => t.key === key); after(T, g, T.w, R, hz, top, fence); }
 /** The nightmare scene's one-line description (used as the nightmare book's lore). */
 export const nightmareDesc = theme => (THEMES.find(t => !t.custom && t.base === theme) || THEMES[1]).desc;

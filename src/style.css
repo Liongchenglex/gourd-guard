@@ -264,6 +264,7 @@ h2{ font-family:'Creepster','Chiller',fantasy,cursive; font-weight:400; font-siz
 .pg.next{ box-shadow:0 0 0 calc(var(--u)*3px) var(--candle), 0 0 calc(var(--u)*10px) rgba(255,193,74,.7); animation:pgPulse 1.4s ease-in-out infinite; }
 .pg.boss{ background:radial-gradient(circle at 40% 35%, #b8303a, #6a1018); border-color:#3a0a0e; }
 .pg.boss canvas{ width:86%; height:86%; display:block; }
+.pg.soon{ font-size:calc(var(--u)*9px); line-height:1.05; text-align:center; padding:0 calc(var(--u)*4px); }   /* nightmare pages: levels still to come */
 .pg[disabled]{ border-style:dashed; border-color:#b8a88a; color:#b8a88a; background:transparent; box-shadow:none; cursor:default; }
 .pg[disabled].boss{ background:transparent; }
 .pg[disabled].boss canvas{ opacity:.35; filter:grayscale(1); }

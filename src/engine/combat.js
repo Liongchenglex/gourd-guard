@@ -16,6 +16,7 @@ import { GEAR } from '../data/shop.js';
 import { toolsForNight, highestOpen, progressNight } from '../data/worlds/index.js';
 import { banner } from '../ui/hud.js';
 import { dropJukebox, jukeboxPoints } from './spawner.js';
+import { lightFire } from './fire.js';
 
 export function launchGroup(ref){
   if (!ref || !ref.lit || !G || G.over) return;
@@ -173,6 +174,7 @@ export function kill(m){
     return;
   }
   m.dead = true;
+  if (__RELEASE__ >= 4 && m.type === 'rooster') lightFire(m.lane, m.p);   // a Cinder Rooster leaves a fire tile where it falls, whatever killed it
   if (hitBy){ const b = hitBy.grp; if (b){ b.kills++; if (b.kills > G.q.best) G.q.best = b.kills; } if (hitBy.type === BROWN && hitBy.size === 2) G.q.brown++; }   // quests: kills in one launch, big Brown kills
   G.kills++; if (!m.minion) G.resolved++;
   G.score += m.pts;

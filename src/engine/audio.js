@@ -354,6 +354,7 @@ export const SFX = {
       case 'slime:split': S('slime', 0.5, { rate: 1.15 }) || (tone(500, 0.06, 'sine', 0.08, 800), tone(560, 0.06, 'sine', 0.08, 900, 0.09)); break;
       case 'firemummy:ignite': S('fire', 0.5) || (noise(0.2, 0.2, 700, 0.8, 0, 300), noise(0.05, 0.14, 2600, 3, 0.05)); break;
       case 'mummy:rise': S('dig', 0.45) || noise(0.25, 0.14, 600, 0.6, 0, 250); break;
+      case 'rooster:crow': S('scream', 0.3, { rate: 1.7 }) || (tone(700, 0.1, 'sawtooth', 0.06, 1100), tone(1100, 0.28, 'sawtooth', 0.06, 600, 0.1)); S('fire', 0.25, { delay: 0.05 }); break;   // Cinder Rooster (Release 4); no crow in the bank, so a pitched-up scream
       case 'knight:block': S('clank', 0.55) || clang(); break;
     }
   },

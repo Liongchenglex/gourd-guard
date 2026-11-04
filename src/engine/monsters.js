@@ -5,6 +5,7 @@ import { TYPES, MODS, VARIANTS, BURNS_TO, ICE_ONLY, BURNING_FROM } from '../data
 import { BURN_EVERY, RAINBOW, GLUE_SLOW } from '../data/pumpkins.js';
 import { glueStep } from './glue.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
+import { updateNightmareMonster } from './nightmare.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
 import { PTYPES } from '../data/pumpkins.js';
@@ -173,6 +174,7 @@ function igniteNear(m){
 }
 export function updateMonster(m, dt){
   m.age += dt; m.ph += dt;
+  if (__RELEASE__ >= 4 && m.rush > 0) m.rush -= dt;   // a Cinder Rooster's crow: faster while it lasts (engine/nightmare.js)
   if (m.flash > 0) m.flash -= dt;
   if (m.anim){ m.anim.t += dt; if (m.anim.t >= m.anim.dur) m.anim = null; }   // a skill animation playing over the top (render/anim.js)
   if (m.rise > 0){   // collapsed mummy: lies still, untargetable, then stands back up at full health
@@ -383,9 +385,10 @@ export function updateMonster(m, dt){
         }
         break;
       }
-      default: m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
+      default: if (!(__RELEASE__ >= 4 && updateNightmareMonster(m, dt))) m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
     }
   }
+  if (__RELEASE__ >= 4 && m.rush > 0) sp *= TYPES.rooster.rushMul;
   let np = Math.min(m.p + sp * dt, aheadLimit(m));
   if (m.chewing && !m.chewing.dead) np = Math.min(np, m.chewing.p);   // held at a scarecrow
   if (np > m.p) m.p = np;

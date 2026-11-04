@@ -25,7 +25,7 @@ def story_done(upto=20):
 # ---------- Task 1: the track, the book page and the release checks ----------
 def check_r4_absent(browser, url):
     js = bundle_js()
-    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!'):
+    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster'):
         ok((s in js) == R4, f"{s!r} {'in' if R4 else 'not in'} the bundle")
 
 
@@ -312,6 +312,75 @@ def check_ice_lock(browser, url):
 
 
 CHECKS.update({'check_burn_walk': check_burn_walk, 'check_ice_only': check_ice_only, 'check_ice_lock': check_ice_lock})
+
+
+# ---------- Task 4: the Cinder Rooster ----------
+def check_rooster(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    page.evaluate("""() => { const g = window.__gg;
+      window.__r = g.spawnMonster('rooster', 3, true, 0.3); window.__r.sp = 0;
+      window.__gh = [2, 3, 4, 6].map(l => { const m = g.spawnMonster('ghoul', l, true, 0.5); m.sp = 0; m.hp = m.maxHp = 50; return m; });  }""")
+    ok(page.evaluate("() => window.__gg.TYPES.rooster.crowEvery") == 8, 'the rooster crows every 8 s (data)')
+    time.sleep(8.5)
+    r = page.evaluate("() => window.__gh.map(m => m.rush > 0)")
+    ok(r == [True, True, True, False], f'8.5 s on: ghouls in lanes 2, 3 and 4 are rushing, the one in lane 6 is not {r}')
+    time.sleep(2)
+    ok(page.evaluate("() => window.__gh.every(m => !(m.rush > 0))"), 'the rush wears off after about 2 s')
+    # speed: a rushing ghoul walks 1.6x as fast
+    page.evaluate("() => { const m = window.__gh[1]; m.sp = 0.05; m.p = 0.3; m.rush = 0; window.__p0 = m.p; }")
+    time.sleep(1.0); a = page.evaluate("() => window.__gh[1].p - window.__p0")
+    page.evaluate("() => { const m = window.__gh[1]; m.p = 0.3; m.rush = 5; window.__p0 = m.p; }")
+    time.sleep(1.0); b = page.evaluate("() => window.__gh[1].p - window.__p0")
+    ok(a > 0.02 and 1.4 < b / a < 1.8, f'a rushing ghoul walks about 1.6x as fast (calm {a:.3f}, rushing {b:.3f}, ratio {b / a:.2f})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_rooster_frozen(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    page.evaluate("""() => { const g = window.__gg;
+      window.__r = g.spawnMonster('rooster', 3, true, 0.3); window.__r.sp = 0; window.__r.frozenT = 7.9;
+      window.__gh = [2, 3, 4].map(l => { const m = g.spawnMonster('ghoul', l, true, 0.5); m.sp = 0; m.hp = m.maxHp = 50; return m; }); }""")
+    time.sleep(7.2)
+    ok(page.evaluate("() => window.__gh.every(m => !(m.rush > 0))") and page.evaluate("() => window.__r.frozenT") > 0, 'a rooster frozen for its crow time sets no rush')
+    time.sleep(1.6)
+    ok(page.evaluate("() => window.__gh.every(m => !(m.rush > 0))"), 'its timer did not tick while it was frozen, so it still has not crowed once it thaws')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_rooster_fire(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    r = page.evaluate("""() => { const g = window.__gg, m = g.spawnMonster('rooster', 4, true, 0.45); m.sp = 0; m.lastHit = 0; const p = m.p;
+      g.damage(m, 99, '#8fae78'); return [m.dead, !!g.fireAt(4, p), g.G.fires.length]; }""")
+    ok(r == [True, True, 1], f'a damage(r, 99) kill leaves a fire tile where it stood {r}')
+    r = page.evaluate("""() => { const g = window.__gg, G = g.G; G.fires.length = 0; const m = g.spawnMonster('rooster', 1, true, 0.45); m.sp = 0; m.hp = 1; m.lastHit = 3;
+      g.burnMonster && g.burnMonster(m); const p = m.p; g.damage(m, 99, '#ff9a4a', true); return [m.dead, !!g.fireAt(1, p)]; }""")
+    ok(r == [True, True], f'a rooster that dies to burn damage leaves fire too {r}')
+    r = page.evaluate("""() => { const g = window.__gg, G = g.G; G.fires.length = 0; const m = g.spawnMonster('ghoul', 5, true, 0.45); m.sp = 0; m.lastHit = 0; g.damage(m, 99, '#8fae78'); return [m.dead, G.fires.length]; }""")
+    ok(r == [True, 0], f'control: a ghoul leaves no fire {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_rooster_baked(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const d = window.__gg.NIGHTMARE_LEVELS[0][0]; d.pool = [...d.pool, ['rooster', 3]]; }")
+    nm_start(page, 1)
+    ok(page.evaluate("() => window.__gg.isBaked('rooster')"), 'the rooster frames are baked when a night with a rooster in its pool starts')
+    ok(page.evaluate("() => { const C = window.__gg.CHARS.rooster; return !!C && !!C.clips.crow && !!C.clips.walk && !!C.clips.chew; }"), 'it has walk, chew and crow clips')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_rooster': check_rooster, 'check_rooster_frozen': check_rooster_frozen, 'check_rooster_fire': check_rooster_fire, 'check_rooster_baked': check_rooster_baked})
 
 
 def main():

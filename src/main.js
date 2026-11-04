@@ -4,7 +4,7 @@ import { bestLitGroup, bestMove, collectDrop, emptyCells, groupCells, resolveMat
 import { launchGroup, damage, hitMonster } from './engine/combat.js';
 import { beginNight, demoUpdate, makeDemo, startGame, update, repairWall, placeMine, endGame, useRepair, continueState, continueNight } from './engine/game.js';
 import { attachInput } from './engine/input.js';
-import { spawnMonster, lanesOf, TILE_P } from './engine/monsters.js';
+import { spawnMonster, lanesOf, TILE_P, burnMonster } from './engine/monsters.js';
 import { measureCoin, resize } from './engine/render/canvas.js';
 import { isBaked, atlasBytes, setBakeScale } from './engine/render/anim.js';
 import { render, LIT_HALO } from './engine/render/draw.js';
@@ -19,7 +19,7 @@ import { SEED_PACKS } from './data/economy.js';
 import { LEVELS, isOpen, WORLD_LEVELS, RELEASE, typesForNight, NM_BASE, nmNight, NIGHTMARE_LEVELS } from './data/worlds/index.js';
 import { PTYPES, RAINBOW, BEIGE, lvStats } from './data/pumpkins.js';
 import { upgradeCost } from './data/economy.js';
-import { BOSS_NAMES } from './data/monsters.js';
+import { BOSS_NAMES, TYPES } from './data/monsters.js';
 import { lightFire, lightRandomFires, fireAt, putOut, fireMarkPoints } from './engine/fire.js';
 import { fieldY } from './engine/game.js';
 import { updateHud } from './ui/hud.js';
@@ -74,5 +74,5 @@ requestAnimationFrame(frame);
 if (new URLSearchParams(location.search).has('test')){
   window.__gg = { get G(){ return G; }, get grid(){ return grid; }, get graves(){ return graves; }, get walls(){ return walls; }, get state(){ return state; },
     startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair, openPreview, openBook, LEVELS, isOpen, WORLD_LEVELS, damage, lanesOf, continueState, continueNight, isBaked, openShop, RELEASE, PTYPES, RAINBOW, BEIGE, upgradeCost, lvStats, typesForNight, randSprout, hitMonster, TILE_P, BOSS_NAMES, LIT_HALO, CHARS, atlasBytes, setBakeScale, NM_BASE, nmNight, NIGHTMARE_LEVELS,
-    ...(__RELEASE__ >= 4 ? { lightFire, lightRandomFires, fireAt, putOut, fireMarkPoints, fieldY, updateHud } : {}) };   // fire tiles (Release 4)
+    ...(__RELEASE__ >= 4 ? { lightFire, lightRandomFires, fireAt, putOut, fireMarkPoints, fieldY, updateHud, TYPES, burnMonster } : {}) };   // fire tiles (Release 4)
 }

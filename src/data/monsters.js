@@ -75,6 +75,9 @@ export const TYPES = {
   // patch column (after `wipeTell` s), smash his lane's fence by half (never below 1), summon `summonN` of the night's monsters.
   ...(__RELEASE__ >= 3 ? { hollowking: { boss:true, hp:60, r:36, sp:0.03, coins:80, eat:0, pts:500, drop:8, hold:0.3, powerEvery:12, wipeTell:1, summonN:[4, 6], driftEvery:6,
     forms:['gravekeeper', 'poltergeist', 'hexwitch', 'vampirecount', 'twintides'], formHp:{ twintides:28 }, noItems:true, form2:{ hp:60 } } } : {}),   // formHp: the Twin Tides form fights alone, so it has both serpents' health (owner, 2026-11-03)
+  // Release 4, Nightmare Pumpkin Patch (spec Part 4). The Cinder Rooster crows every `crowEvery` s (not while frozen): every monster in its lane and the
+  // two beside it walks `rushMul` times as fast for `rushT` s. Where it dies, however it dies, a fire tile is left (engine/nightmare.js, combat.js kill()).
+  ...(__RELEASE__ >= 4 ? { rooster: { hp:2, sp:0.05, r:20, coins:6, eat:0.5, pts:20, drop:1, crowEvery:8, rushT:2, rushMul:1.6 } } : {}),
 };
 
 /** Modifiers (docs/WORLDS.md §6): data-only stat tweaks any monster can carry. */
@@ -115,7 +118,7 @@ export const BURNING_FROM = Object.fromEntries(Object.entries(BURNS_TO).map(([a,
 export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch', ...(__RELEASE__ >= 3 ? { hollowking:'The Hollow King' } : {}) };
 export const BOSS_NAME = BOSS_NAMES.gravekeeper;   // legacy alias used by endless mode
 
-export const MNAME = { sack:'Loot Sack', jukebox:'Jukebox', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss' };
+export const MNAME = { sack:'Loot Sack', jukebox:'Jukebox', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss', ...(__RELEASE__ >= 4 ? { rooster:'Cinder Rooster' } : {}) };
 
 export const BOSS_INTRO = {
   ...(__RELEASE__ >= 3 ? { hollowking: { 1:'Five times he splits off a world boss in his own colours. While it stands, nothing hurts him: beat it first. He wipes a column of your patch, smashes a fence and calls monsters. They keep coming until he falls.' } } : {}),
@@ -164,4 +167,5 @@ export const MINTRO = {
   witch:'New foe: witches. Every few seconds one turns a monster into a reverse chameleon, or now and then a true chameleon.',
   bulwark:'New foe: bulwark knights. Everything inside their steel aura has double health. Kill the knight first, or pull the others out of the aura.',
   turtle:'New foe: shell turtles. They rise from puddles and walk backwards, shell towards you, like a slow wall. Grey pierces through; everything else has to chew the shell.',
+  ...(__RELEASE__ >= 4 ? { rooster:'New foe: cinder roosters. Every few seconds one crows, and every monster in its lane and the lanes beside it sprints for a moment. Where it falls it leaves a fire burning.' } : {}),
 };

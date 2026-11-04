@@ -1,7 +1,7 @@
 // Nightmare 1: Pumpkin Patch: Nightmare (Release 4; spec docs/superpowers/specs/2026-11-04-release-4-nightmare-patch-design.md, Part 5).
 // Reached from the demon bookmark on the world 1 book once 1-20 is beaten. Night numbers: nmNight(1, k) = 1000 + k (src/data/worlds/index.js).
-// Endgame content for a player who has beaten 5-20: every level has one idea from the spec's table; the numbers are bot-tuned at the top
-// profile (docs/GAME_DESIGN.md §11). Each level sets spawnGap and spawnBurst itself, so the story rule SPAWN_LATE_FROM never decides nightmare pacing.
+// Endgame content for a player who has beaten 5-20: every level has one idea from the spec's table; the numbers are an untuned
+// first draft, to be tuned with the bot later at the top profile (see docs/GAME_DESIGN.md §11). Each level sets spawnGap and spawnBurst itself, so the story rule SPAWN_LATE_FROM never decides nightmare pacing.
 // Fire: `fireLayout` [lane, p] tiles and `fireStart` random tiles at night start, `fireMarks` [{at, n}] on the spawn bar (a horde arrives with each).
 // N1-16 (the Fallen Gravekeeper) is the owner's to design; until then the book shows it as "Coming soon" (NM_BOOK_LEVELS).
 // Wrapped in the release gate so lower builds carry none of these names. Schema: ../levels.js.

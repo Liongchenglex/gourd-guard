@@ -1,5 +1,5 @@
 import { perkOn, clearRentals } from '../data/perks.js';
-import { MINTRO, TYPES, BOSS_NAMES, VARIANTS, ICE_ONLY } from '../data/monsters.js';
+import { MINTRO, TYPES, BOSS_NAMES, VARIANTS, ICE_ONLY, ALSO_BAKE } from '../data/monsters.js';
 import { GEAR } from '../data/shop.js';
 import { PATTERNS } from '../data/patterns.js';
 import { NTYPES, PTYPES, POWER, PINK } from '../data/pumpkins.js';
@@ -94,7 +94,7 @@ export function startGame(mode, n, loadout){
     ...(__RELEASE__ >= 4 ? { fires:[], fmNext:0, fmT:-99, fireBurst:0, fireBurstT:0, burstMinion:false } : {}),   // fire tiles and fire marks (src/engine/fire.js)
   });
   if (mode === 'story' && takeSack()) G.sackT = SACK.spawnAt;
-  if (def) prebake([...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), ...(__RELEASE__ >= 3 && def.boss === 'hollowking' ? ['hollowking|' + TYPES.hollowking.forms[0]] : []), 'ghoul']);   // bake this level's sprite strips now, not on first sight
+  if (def) prebake([...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...def.pool.flatMap(([k]) => (__RELEASE__ >= 4 && ALSO_BAKE[k]) || []), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), ...(__RELEASE__ >= 3 && def.boss === 'hollowking' ? ['hollowking|' + TYPES.hollowking.forms[0]] : []), 'ghoul']);   // bake this level's sprite strips now, not on first sight
   if (def && def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
   else if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def && def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def && def.puddles) placePuddles(def.puddles);

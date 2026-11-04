@@ -51,6 +51,11 @@ export function updateNightmareMonster(m, dt){
       m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
       return true;
     }
+    case 'huskerBurning': case 'huskerCharred': {   // a burning husker lights ordinary huskers nearby, a charred cob lights bare ones; it keeps its normal walk
+      igniteNear(m);
+      m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
+      return true;
+    }
   }
   return false;
 }

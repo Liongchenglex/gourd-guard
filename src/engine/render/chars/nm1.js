@@ -244,6 +244,109 @@ export function rooster(g, P = {}){
   g.restore(); g.restore();
 }
 
+
+// =====================================================================
+// 4. The Corn Husker: a blood-corn cob on a lanky stalk body, wrapped in a cloak of dry husk
+// =====================================================================
+const HUSKB = pal('#7a5a34'), HUSKBD = pal('#4a3220'), SILKB = pal('#b8481a'), COBCH = pal('#3a1a16'), KERNCH = ['#2a1410', '#3a1a12', '#1e0e0a', '#4a2016'], POP = pal('#fff2d0'),
+  HUSK = pal('#d2b878'), HUSKD = pal('#a88a54'), STALK = pal('#8e9450'), STALKD = pal('#6a6e3a'), COBC0 = pal('#7a1e2c'), SILK0 = pal('#9a5a30'), ROOT = pal('#7a5a3a'),
+  KERN0 = ['#8a1a2c', '#7a1828', '#9a2434', '#6a1424', '#c8962e', '#8a1a2c', '#a8283a', '#5e1830', '#8e1e30', '#7a1828'];
+function leafP(bx, by, tx, ty, wd, curl = 0){ const mx = (bx + tx) / 2, my = (by + ty) / 2, dx = tx - bx, dy = ty - by, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+  return SM([[bx + nx * wd * .5, by + ny * wd * .5], [mx + nx * (wd * .6 + curl), my + ny * (wd * .6 + curl)], [tx, ty, 1], [mx - nx * (wd * .6 - curl), my - ny * (wd * .6 - curl)], [bx - nx * wd * .5, by - ny * wd * .5]], .8); }
+/** One papery husk leaf with veins. */
+function huskLeaf(g, bx, by, tx, ty, wd, curl, c, fire = null){
+  if (fire) c = c === HUSK ? HUSKB : HUSKBD;
+  const p = leafP(bx, by, tx, ty, wd, curl), mx = (bx + tx) / 2, my = (by + ty) / 2, dx = tx - bx, dy = ty - by, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+  S.part(g, p, c, { x:mx, y:my, r:L * .5 }, { flat:true, mat:'cloth', hx:mx - nx * wd * .2, hy:my - L * .2 });
+  g.save(); p(g); g.clip(); g.lineWidth = .8; g.lineCap = 'round';
+  for (const f of [-.3, 0, .3]){ g.strokeStyle = rgba(c.deep, .4); g.beginPath(); g.moveTo(bx + nx * wd * f, by + ny * wd * f); g.quadraticCurveTo(mx + nx * (curl + wd * f * .8), my + ny * (curl + wd * f * .8), tx, ty); g.stroke(); }
+  if (fire){ const gr = g.createRadialGradient(tx, ty, 0, tx, ty, L * .7); gr.addColorStop(0, 'rgba(14,6,2,.95)'); gr.addColorStop(1, 'rgba(14,6,2,0)'); g.fillStyle = gr; g.fillRect(tx - L, ty - L, L * 2, L * 2); }
+  g.restore();
+  if (fire){ g.save(); g.shadowColor = '#ff6a10'; g.shadowBlur = 6; p(g); g.strokeStyle = 'rgba(255,140,40,.85)'; g.lineWidth = 1.2; g.stroke(); g.restore();
+    flame(g, tx, ty + 3, 10 * (1 + .25 * Math.sin(fire.ph * TAU * 2 + fire.i * 1.7)), 3.4, Math.sin(fire.ph * TAU + fire.i) * 2); } }
+/** Kernel-studded blood-corn cob centred on (0,0), about 30 wide and 52 tall, with a face. */
+function cob(g, jaw, eyeR, mode = 0, ph = 0){   // mode 0 plain, 1 burning (kernels popping), 2 charred (glowing kernels)
+  const COBC = mode === 2 ? COBCH : COBC0, KERN = mode === 2 ? KERNCH : KERN0;
+  const head = SM([[0, -26], [11, -22], [15, -8], [15, 8], [12, 20], [0, 26], [-12, 20], [-15, 8], [-15, -8], [-11, -22]], .9);
+  S.part(g, head, COBC, { x:0, y:0, r:24 }, { flat:true });
+  g.save(); head(g); g.clip(); const R = rng(91);
+  for (let r = -7; r <= 7; r++){ const yy = r * 3.9, half = 16 * Math.sqrt(Math.max(0, 1 - (yy / 27) ** 2));
+    for (let c = -5; c <= 5; c++){ const u = (c + (r % 2 ? .5 : 0)) / 5.4; if (Math.abs(u) > 1) continue; const xx = Math.sin(u * 1.35) / Math.sin(1.35) * half, kw = 2.9 * Math.cos(u * 1.35) + .5;
+      const hot = mode && R() < (mode === 2 ? .3 : .08);
+      if (hot){ g.save(); g.shadowColor = '#ff7a1a'; g.shadowBlur = 4; g.fillStyle = R() < .5 ? '#ff8a2a' : '#ffc04a'; g.beginPath(); g.roundRect(xx - kw / 2, yy - 1.75, kw, 3.5, 1.2); g.fill(); g.restore(); continue; }
+      g.fillStyle = KERN[R() * KERN.length | 0]; g.beginPath(); g.roundRect(xx - kw / 2, yy - 1.75, kw, 3.5, 1.2); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.32)'; ell(g, xx - kw * .15, yy - .8, kw * .26, .7); g.fill(); } }
+  g.restore();
+  S.overlay(g, head, COBC, { x:0, y:0, r:22 }, .7);
+  S.dot(g, E(-7, -12, 3.2, 5, .3), '#fff', .22);
+  S.stroke(g, head, COBC, 1.6, .9);
+  // popcorn: kernels bursting in the heat, each puff swelling and shrinking on its own beat
+  if (mode === 1) [[-10, -15], [11, -11], [-12, 6], [12, 3], [4, -22], [-2, 20]].forEach(([x, y], i) => { const k = .65 + .35 * Math.abs(Math.sin(ph * TAU + i * 1.3));
+    for (const [dx, dy, r] of [[0, 0, 2.6], [2.2, -1.4, 2], [-2, -1.2, 1.9], [.6, 1.8, 1.7]]) S.part(g, E(x + dx * k, y + dy * k, r * k, r * k), POP, { x:x + dx * k, y:y + dy * k, r:r * k }, { flat:true, lw:.7 }); });
+  // eyes: sockets where kernels are missing, slanted angry, with sickly glowing pupils
+  for (const s of [-1, 1]){ S.dot(g, SM([[s * 1.5, -4], [s * 11, -10], [s * 12, -1], [s * 6.5, 2]], .8), '#14040c'); S.glow(g, s * 7, -3, 2.4 * eyeR, '#e4ff6a'); }
+  // mouth: a gap of missing kernels with kernel teeth
+  const my = 10, mh = 3 + jaw * 7;
+  S.dot(g, SM([[-9, my], [0, my - 1], [9, my], [7, my + mh], [0, my + mh + 1.5], [-7, my + mh]], .8), '#14040c');
+  for (const x of [-6, -2, 2, 6]){ S.dot(g, RR(x - 1.5, my - .5, 3, 3.2, 1), '#efe2b8'); }
+  for (const x of [-4, 0, 4]){ S.dot(g, RR(x - 1.4, my + mh - 2, 2.8, 3, 1), '#efe2b8'); }
+}
+
+function husker(g, P = {}){
+  const V = P.variant, burn = V === 'burning' || V === 'burnt', w = P.walk, ch = P.chew, sh = P.shed, bare = V === 'bare' || V === 'burnt' || sh != null, ph = w ?? ch ?? sh ?? 0;
+  const SILK = burn ? SILKB : SILK0, fire = i => burn ? { ph, i } : null;
+  const sw = w == null ? 0 : Math.sin(w * TAU), cs = ch == null ? 0 : Math.sin(ch * TAU);
+  const sway = w != null ? sw * .05 : 0, bob = w != null ? -Math.abs(sw) * 3 : ch != null ? 3 + cs * 2 : 0, lean = ch == null ? 0 : .5 + Math.abs(cs) * .5;
+  const jaw = ch != null ? .3 + Math.abs(cs) * .7 : sh != null ? Math.sin(cl01(sh * 1.6) * Math.PI) * .9 + .2 : .2;
+  const flinch = sh == null ? 0 : Math.sin(sh * TAU * 3) * 2.5 * (1 - sh), eyeR = 1 + (sh != null ? Math.sin(cl01(sh * 1.4) * Math.PI) * .6 : 0);
+  // shed: every husk piece flies outward, spins and falls away (the engine would play this on the first hit)
+  const fly = (mx, my, i) => { if (sh == null) return null; const d = Math.hypot(mx, my + 10) || 1, k = ease(sh / .7), out = k * 30, dir = mx >= 0 ? 1 : -1;
+    return { dx:mx / d * out + dir * k * 14, dy:(my + 10) / d * out * .35 + sh * sh * 14, rot:(mx >= 0 ? 1 : -1) * k * (.7 + i * .12), a:1 - cl01((sh - .5) / .5), px:mx, py:my }; };
+  const piece = (f, draw) => { if (!f){ draw(); return; } if (f.a <= 0) return; g.save(); g.globalAlpha *= f.a; g.translate(f.px + f.dx, f.py + f.dy); g.rotate(f.rot); g.translate(-f.px, -f.py); draw(); g.restore(); };
+  S.shadow(g, 0, 51, 32, 6);
+  // legs: stalks with a node at the knee and roots for feet
+  for (const s of [-1, 1]){
+    const lp = w == null ? 0 : w * TAU + (s < 0 ? 0 : Math.PI), lift = w == null ? 0 : Math.max(0, Math.sin(lp)) * 7, dx = w == null ? 0 : Math.cos(lp) * 4;
+    const kx = s * 10 + dx * .5, ky = 36 - lift * .5, ax = s * 9 + dx, ay = 46 - lift;
+    S.tube(g, SO([[s * 5, 22], [kx, ky], [ax, ay]]), STALKD, 6); S.part(g, E(kx, ky, 4, 3), STALKD, { x:kx, y:ky, r:4 }, { flat:true, lw:1 });
+    for (const d of [-1.1, -.4, .3, 1]){ S.tube(g, SO([[ax, ay], [ax + d * 5, ay + 3], [ax + d * 9, ay + 4.5 - Math.abs(d) * 1.5]]), ROOT, 2.2); }
+  }
+  g.save(); g.translate(flinch, 0); g.translate(0, 48 + bob); g.rotate(sway); g.translate(0, -48);
+  const hx = 0, hy = -34 + lean * 6;
+  // husk hood: leaves peeled back behind the cob
+  const HOOD = [[-6, 14, -28, -30, 15, -3, HUSKD], [6, 14, 28, -30, 15, 3, HUSKD], [-8, 18, -34, -6, 14, -2, HUSK], [8, 18, 34, -6, 14, 2, HUSK]];
+  if (!bare || sh != null) HOOD.forEach(([bx, by, tx, ty, wd, curl, c], i) => piece(fly(hx + (bx + tx) / 2, hy + (by + ty) / 2, i), () => huskLeaf(g, hx + bx, hy + by, hx + tx, hy + ty, wd, curl, c, fire(i))));
+  // silk hair behind
+  for (const [x0, x1, y1] of [[-6, -19, -2], [-3, -22, 6], [3, 21, 4], [6, 18, -4], [0, -15, 10], [1, 16, 12]]){ const sx = hx + x0, sy = hy - 24, ex = hx + x1, ey = hy + y1;
+    const sp = SO([[sx, sy], [(sx + ex) / 2 + Math.sign(x1) * 6, sy + 4], [ex, ey]]); S.tube(g, sp, SILK, 1.8);
+    if (burn){ g.save(); g.shadowColor = '#ff7a1a'; g.shadowBlur = 5; sp(g); g.strokeStyle = '#ffb040'; g.lineWidth = .8; g.stroke(); g.restore(); } }
+  // torso: a jointed stalk
+  S.tube(g, SO([[0, hy + 20], [0, 4], [0, 24]]), STALK, bare ? 12 : 10);
+  for (const y of [-2, 12]) S.part(g, E(0, y, bare ? 7.5 : 6.5, 2.8), STALKD, { x:0, y, r:6 }, { flat:true, lw:1 });
+  if (bare) for (const s of [-1, 1]){ S.tube(g, SO([[0, 4], [s * 8, 0], [s * 13, 4]]), STALKD, 2); S.tube(g, SO([[0, 14], [s * 7, 11], [s * 12, 15]]), STALKD, 2); }
+  // arms: long thin stalks, leaf-blade claws
+  for (const s of [-1, 1]){
+    let ex = s * 30, ey = 10, wx = s * 36, wy = 30;
+    if (w != null){ const sa = Math.sin(w * TAU + (s < 0 ? Math.PI : 0)); wx += sa * 4; wy += sa * 5; ex += sa * 2; }
+    if (ch != null){ const sa = Math.sin(ch * TAU + (s < 0 ? 0 : Math.PI)); ex = s * 28; ey = 2; wx = s * 22; wy = 14 + sa * 8; }
+    if (sh != null){ const f = Math.sin(cl01(sh * 1.5) * Math.PI); ex = s * (30 + f * 6); ey = 10 - f * 14; wx = s * (36 + f * 8); wy = 30 - f * 32; }
+    S.tube(g, SO([[s * 9, -6], [ex, ey], [wx, wy]]), STALK, 5); S.part(g, E(ex, ey, 3.6, 3.6), STALKD, { x:ex, y:ey, r:3.6 }, { flat:true, lw:1 });
+    const a = Math.atan2(wy - ey, wx - ex);
+    for (const d of [-.5, 0, .5]){ const L = d ? 11 : 13, tx = wx + Math.cos(a + d) * L, ty = wy + Math.sin(a + d) * L; S.part(g, leafP(wx, wy, tx, ty, 4, d * 2), HUSKD, { x:(wx + tx) / 2, y:(wy + ty) / 2, r:6 }, { flat:true, lw:1 }); }
+  }
+  // husk cloak hanging from the shoulders
+  const CLOAK = [[-6, -9, -24, 6, 13, -2, HUSKD], [6, -9, 24, 6, 13, 2, HUSKD], [-9, -6, -24, 34, 14, -3, HUSK], [9, -6, 24, 34, 14, 3, HUSK], [-4, -4, -11, 39, 13, -1, HUSKD], [4, -4, 11, 39, 13, 1, HUSKD], [0, -4, 0, 36, 12, 0, HUSK]];
+  const order = [2, 3, 4, 5, 6, 0, 1];
+  if (!bare || sh != null) order.forEach(i => { const [bx, by, tx, ty, wd, curl, c] = CLOAK[i]; piece(fly((bx + tx) / 2, (by + ty) / 2, i + 4), () => huskLeaf(g, bx, by, tx, ty, wd, curl, c, fire(i + 4))); });
+  if (bare && sh == null) for (const s of [-1, 1]) huskLeaf(g, s * 6, -9, s * 16, 0, 9, s, HUSKD, burn ? { ph, i:s + 2 } : null);
+  // the cob head
+  g.save(); g.translate(hx, hy); cob(g, jaw, eyeR, burn ? (bare ? 2 : 1) : 0, ph); g.restore();
+  // a few silk strands falling over the crown in front
+  for (const [x0, x1, y1] of [[-2, -10, -16], [2, 9, -18], [0, -4, -20]]) S.tube(g, SO([[hx + x0, hy - 26], [hx + (x0 + x1) / 2, hy - 24], [hx + x1, hy + y1]]), SILK, 1.5);
+  if (burn){ smoke(g, ph, -4, hy - 30, 4, 18, 3); sparks(g, ph, 0, hy - 14, 7, 36, 4); }
+  g.restore();
+}
+
 // ---------- registry ----------
 const C = (n, fps, key, once = false) => ({ n, fps, once, pose:t => ({ [key]:t }) });
 export const NM1 = {
@@ -252,5 +355,11 @@ export const NM1 = {
   hayrick: { draw:hayrick, scale:.66, dy:-10, box:{ x:-72, y:-112, w:144, h:172 }, clips:{ walk:C(8, 6, 'walk'), chew:C(4, 7, 'chew'), toss:C(10, 14, 'toss', true) }, still:{} },
   // the same drawing in its burning look (the engine turns a hayrick into this when it walks onto fire); it keeps the toss
   hayrickBurning: { draw:(g, P) => hayrick(g, { ...P, variant:'burning' }), scale:.66, dy:-10, box:{ x:-72, y:-112, w:144, h:172 }, clips:{ walk:C(8, 6, 'walk'), chew:C(4, 7, 'chew'), toss:C(10, 14, 'toss', true) }, still:{} },
+  // r 22, so the feet sit at 21 below the centre (50 x .64 - 11). The engine turns a husker into huskerBare on the first hit (and plays shed there); fire makes
+  // huskerBurning, and huskerBare on fire becomes huskerCharred. The looks a strip leaves behind (bare, charred) carry the shed clip: the husk pieces fly off.
+  husker: { draw:husker, scale:.64, dy:-11, box:{ x:-84, y:-90, w:168, h:148 }, clips:{ walk:C(8, 8, 'walk'), chew:C(4, 8, 'chew') }, still:{} },
+  huskerBare: { draw:(g, P) => husker(g, { ...P, variant:'bare' }), scale:.64, dy:-11, box:{ x:-84, y:-90, w:168, h:148 }, clips:{ walk:C(8, 8, 'walk'), chew:C(4, 8, 'chew'), shed:C(10, 14, 'shed', true) }, still:{} },
+  huskerBurning: { draw:(g, P) => husker(g, { ...P, variant:'burning' }), scale:.64, dy:-11, box:{ x:-84, y:-90, w:168, h:148 }, clips:{ walk:C(8, 8, 'walk'), chew:C(4, 8, 'chew') }, still:{} },
+  huskerCharred: { draw:(g, P) => husker(g, { ...P, variant:'burnt' }), scale:.64, dy:-11, box:{ x:-84, y:-90, w:168, h:148 }, clips:{ walk:C(8, 8, 'walk'), chew:C(4, 8, 'chew'), shed:C(10, 14, 'shed', true) }, still:{} },
   rooster: { draw:rooster, scale:.6, dy:-11, box:{ x:-60, y:-84, w:120, h:142 }, clips:{ walk:C(8, 12, 'walk'), chew:C(4, 10, 'chew'), crow:C(10, 12, 'crow', true) }, still:{} },
 };

@@ -81,6 +81,11 @@ export const TYPES = {
   // The Hayrick: a tank. Once, when it has walked past p 0.3, it throws its pitchfork down its column and pins the first non-gourd pumpkin it meets there (row 0, beside the fence, first) for `pinT` s
   // (engine/nightmare.js; engine/board.js treats a pinned cell like a grave). Its burning version (walks onto fire) keeps the throw and is Ice-only; `rise` is how long it lies down.
   ...(__RELEASE__ >= 4 ? { hayrick: { hp:8, sp:0.03, r:26, coins:10, eat:0.8, pts:30, drop:2, pinT:4 }, hayrickBurning: { hp:8, sp:0.03, r:26, coins:10, eat:0.8, pts:30, drop:2, pinT:4, rise:4 } } : {}),
+  // The Corn Husker: its first hit only strips the husk (no damage); the bare cob then walks `bareMul` times as fast (combat.js hitMonsterNow, stripHusk in monsters.js).
+  // Walking onto fire: husker -> huskerBurning, huskerBare -> huskerCharred (BURNS_TO). A burning husker is stripped by any pumpkin, leaving the charred cob, which is the Ice-only one
+  // (`rise` s down). huskerBare / huskerCharred hold the bare cob's speed (sp x bareMul) for a night that spawns them directly.
+  ...(__RELEASE__ >= 4 ? { husker: { hp:3, sp:0.04, r:22, coins:8, eat:0.6, pts:24, drop:1, bareMul:1.3 }, huskerBurning: { hp:3, sp:0.04, r:22, coins:8, eat:0.6, pts:24, drop:1, bareMul:1.3 },
+    huskerBare: { hp:3, sp:0.052, r:22, coins:8, eat:0.6, pts:24, drop:1 }, huskerCharred: { hp:3, sp:0.052, r:22, coins:8, eat:0.6, pts:24, drop:1, rise:4 } } : {}),
 };
 
 /** Modifiers (docs/WORLDS.md §6): data-only stat tweaks any monster can carry. */
@@ -112,16 +117,20 @@ export const VARIANTS = {
 
 /** Burning monsters (one rule for the Flaming Mummy and, from Release 4, fire tiles): an ordinary type that walks onto a fire tile (or stands by a burning one of its
  *  family) turns into its burning version, keeping its health. A burning type is Ice-only: any other kill knocks it down for its `rise` seconds and it rises with 1 health.
- *  Tasks 5 and 6 of the Release 4 plan add hayrick, husker and huskerBare here. */
-export const BURNS_TO = { mummy:'firemummy', ...(__RELEASE__ >= 4 ? { hayrick:'hayrickBurning' } : {}) };
-export const ICE_ONLY = new Set(['firemummy', ...(__RELEASE__ >= 4 ? ['hayrickBurning'] : [])]);
+ *  The Hayrick and the Corn Husker (husker, huskerBare) are in here from Release 4. */
+export const BURNS_TO = { mummy:'firemummy', ...(__RELEASE__ >= 4 ? { hayrick:'hayrickBurning', husker:'huskerBurning', huskerBare:'huskerCharred' } : {}) };
+export const ICE_ONLY = new Set(['firemummy', ...(__RELEASE__ >= 4 ? ['hayrickBurning', 'huskerCharred'] : [])]);
+/** The Corn Husker's first hit strips its husk (no damage): husker -> huskerBare, huskerBurning -> huskerCharred. Any pumpkin strips it. */
+export const HUSK_STRIP = __RELEASE__ >= 4 ? { husker:'huskerBare', huskerBurning:'huskerCharred' } : {};
+/** Looks a type is always seen in during a night, baked with it so the first hit never hitches. */
+export const ALSO_BAKE = __RELEASE__ >= 4 ? { husker:['huskerBare'] } : {};
 /** burning type -> the ordinary type it ignites */
 export const BURNING_FROM = Object.fromEntries(Object.entries(BURNS_TO).map(([a, b]) => [b, a]));
 
 export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch', ...(__RELEASE__ >= 3 ? { hollowking:'The Hollow King' } : {}) };
 export const BOSS_NAME = BOSS_NAMES.gravekeeper;   // legacy alias used by endless mode
 
-export const MNAME = { sack:'Loot Sack', jukebox:'Jukebox', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss', ...(__RELEASE__ >= 4 ? { rooster:'Cinder Rooster', hayrick:'Hayrick', hayrickBurning:'Burning Hayrick' } : {}) };
+export const MNAME = { sack:'Loot Sack', jukebox:'Jukebox', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss', ...(__RELEASE__ >= 4 ? { rooster:'Cinder Rooster', hayrick:'Hayrick', hayrickBurning:'Burning Hayrick', husker:'Corn Husker', huskerBare:'Bare Cob', huskerBurning:'Burning Husker', huskerCharred:'Charred Cob' } : {}) };
 
 export const BOSS_INTRO = {
   ...(__RELEASE__ >= 3 ? { hollowking: { 1:'Five times he splits off a world boss in his own colours. While it stands, nothing hurts him: beat it first. He wipes a column of your patch, smashes a fence and calls monsters. They keep coming until he falls.' } } : {}),
@@ -170,5 +179,5 @@ export const MINTRO = {
   witch:'New foe: witches. Every few seconds one turns a monster into a reverse chameleon, or now and then a true chameleon.',
   bulwark:'New foe: bulwark knights. Everything inside their steel aura has double health. Kill the knight first, or pull the others out of the aura.',
   turtle:'New foe: shell turtles. They rise from puddles and walk backwards, shell towards you, like a slow wall. Grey pierces through; everything else has to chew the shell.',
-  ...(__RELEASE__ >= 4 ? { rooster:'New foe: cinder roosters. Every few seconds one crows, and every monster in its lane and the lanes beside it sprints for a moment. Where it falls it leaves a fire burning.', hayrick:'New foe: hayricks. Tough haystacks. Once, each throws its pitchfork down its column and pins the first pumpkin it meets there for a few seconds, so it cannot slide or be pushed (it can still fly with its bunch). Walking onto fire makes one a burning hayrick: only Ice finishes it.' } : {}),
+  ...(__RELEASE__ >= 4 ? { rooster:'New foe: cinder roosters. Every few seconds one crows, and every monster in its lane and the lanes beside it sprints for a moment. Where it falls it leaves a fire burning.', hayrick:'New foe: hayricks. Tough haystacks. Once, each throws its pitchfork down its column and pins the first pumpkin it meets there for a few seconds, so it cannot slide or be pushed (it can still fly with its bunch). Walking onto fire makes one a burning hayrick: only Ice finishes it.', husker:'New foe: corn huskers. The first hit only strips the husk and does no damage; the bare cob underneath walks faster. Walking onto fire makes one a burning husker, and its bare cob a charred cob: only Ice finishes that.' } : {}),
 };

@@ -25,7 +25,7 @@ def story_done(upto=20):
 # ---------- Task 1: the track, the book page and the release checks ----------
 def check_r4_absent(browser, url):
     js = bundle_js()
-    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick'):
+    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker'):
         ok((s in js) == R4, f"{s!r} {'in' if R4 else 'not in'} the bundle")
 
 
@@ -503,6 +503,77 @@ def check_hayrick_baked(browser, url):
 
 
 CHECKS.update({'check_hayrick_pin': check_hayrick_pin, 'check_hayrick_no_target': check_hayrick_no_target, 'check_hayrick_far': check_hayrick_far, 'check_hayrick_burn': check_hayrick_burn, 'check_hayrick_baked': check_hayrick_baked})
+
+
+# ---------- Task 6: the Corn Husker (husk, bare cob, burning, charred) ----------
+# One pumpkin hit, straight through hitMonster (type = PTYPES index: 0 Green, 2 Ice).
+HIT = """([type, id]) => { const g = window.__gg, m = window['__' + id]; g.hitMonster({ type, vis:type, lv:1, size:1, lane:m.lane, x:m.x, y:0, hit:new Set(), grp:null, guar:false, trail:[] }, m); }"""
+MKHUSK = """([typ, id, lane, p]) => { const g = window.__gg; const m = g.spawnMonster(typ, lane, true, p); m.sp = 0.04; window['__' + id] = m; }"""
+
+
+def check_husker(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    ok(page.evaluate("() => { const T = window.__gg.TYPES; return [T.husker.hp, T.husker.sp, T.husker.bareMul, T.huskerBare.hp, T.huskerBurning.hp, T.huskerCharred.rise, T.husker.r]; }") == [3, 0.04, 1.3, 3, 3, 4, 22], 'husker data: 3 health, speed 0.04, bareMul 1.3, r 22; charred cob rises after 4 s')
+    # the first Green hit only strips the husk
+    page.evaluate(MKHUSK, ['husker', 'a', 2, 0.3])
+    page.evaluate(HIT, [0, 'a'])
+    r = page.evaluate("() => [window.__a.type, window.__a.hp, window.__a.sp, window.__a.dead, window.__a.anim && window.__a.anim.clip]")
+    ok(r[0] == 'huskerBare' and r[1] == 3 and abs(r[2] - 0.052) < 1e-9 and not r[3], f'one Green hit: huskerBare, health unchanged, speed x1.3 {r}')
+    ok(r[4] == 'shed', f'the strip plays the shed clip {r[4]}')
+    page.evaluate(HIT, [0, 'a'])
+    ok(page.evaluate("() => [window.__a.type, window.__a.hp < 3]") == ['huskerBare', True], 'the bare cob takes damage normally on the next hit')
+    ok(page.evaluate("() => window.__a.sp") < 0.0521, 'the second hit does not speed it up again')
+    # Ice strips too (and still chills it)
+    page.evaluate(MKHUSK, ['husker', 'b', 3, 0.3])
+    page.evaluate(HIT, [2, 'b'])
+    r = page.evaluate("() => [window.__b.type, window.__b.hp, window.__b.slowT > 0 || window.__b.frozenT > 0]")
+    ok(r == ['huskerBare', 3, True], f'an Ice hit strips the husk without damage and still slows it {r}')
+    # a bare cob is not Ice-only
+    page.evaluate("() => { const g = window.__gg; window.__b.lastHit = 0; g.damage(window.__b, 999, '#8fae78'); }")
+    ok(page.evaluate("() => window.__b.dead"), 'a Green kill finishes a bare cob')
+    # burning husker: any pumpkin strips it, leaving the charred cob
+    page.evaluate(MKHUSK, ['huskerBurning', 'c', 4, 0.3])
+    page.evaluate(HIT, [0, 'c'])
+    r = page.evaluate("() => [window.__c.type, window.__c.hp, window.__c.dead, window.__c.anim && window.__c.anim.clip]")
+    ok(r == ['huskerCharred', 3, False, 'shed'], f'a Green hit on a huskerBurning leaves a huskerCharred, health unchanged {r}')
+    ice_only_run(page, 'huskerCharred', 'charred cob')
+    # walking onto fire
+    page.evaluate(QUIET)
+    page.evaluate("() => window.__gg.lightFire(2, 0.5)")
+    page.evaluate(MKHUSK, ['husker', 'd', 2, 0.4]); page.evaluate(MKHUSK, ['huskerBare', 'e', 2, 0.45]); page.evaluate(MKHUSK, ['husker', 'f', 4, 0.4])
+    t0 = time.time(); t = None
+    while time.time() - t0 < 3:
+        if page.evaluate("() => [window.__d.type, window.__e.type]") == ['huskerBurning', 'huskerCharred']: t = time.time() - t0; break
+        time.sleep(0.05)
+    ok(t is not None, f'a husker on fire becomes huskerBurning and a bare cob becomes huskerCharred ({t})')
+    ok(page.evaluate("() => window.__f.type") == 'husker', 'control: a husker in a lane with no fire stays a husker')
+    # a burning husker lights ordinary ones nearby; a charred cob lights bare ones
+    page.evaluate(QUIET)
+    for typ, id, lane in (('huskerBurning', 'g', 3), ('husker', 'h', 4), ('husker', 'i', 6), ('huskerCharred', 'j', 1), ('huskerBare', 'k', 0)):
+        page.evaluate(MKHUSK, [typ, id, lane, 0.5]); page.evaluate(f"() => {{ window.__{id}.sp = 0; }}")
+    time.sleep(0.5)
+    ok(page.evaluate("() => [window.__h.type, window.__i.type]") == ['huskerBurning', 'husker'], 'a burning husker ignites an ordinary one in the next lane, not one three lanes away')
+    ok(page.evaluate("() => window.__k.type") == 'huskerCharred', 'a charred cob ignites a bare cob next to it')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_husker_baked(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const d = window.__gg.NIGHTMARE_LEVELS[0][0]; d.pool = [...d.pool, ['husker', 3]]; }")
+    nm_start(page, 1)
+    ok(page.evaluate("() => window.__gg.isBaked('husker') && window.__gg.isBaked('huskerBare')"), 'a night with a husker in its pool bakes the husker and the bare cob (the first hit never hitches)')
+    ok(page.evaluate("() => ['husker', 'huskerBare', 'huskerBurning', 'huskerCharred'].every(k => { const C = window.__gg.CHARS[k]; return !!C && !!C.clips.walk && !!C.clips.chew; })"), 'all four looks have walk and chew clips')
+    ok(page.evaluate("() => ['huskerBare', 'huskerCharred'].every(k => !!window.__gg.CHARS[k].clips.shed)"), 'the looks a strip leaves behind have the shed clip')
+    ok(page.evaluate("() => { const g = window.__gg; g.prebake(['huskerBurning', 'huskerCharred']); return g.isBaked('huskerBurning') && g.isBaked('huskerCharred'); }"), 'the burning looks bake on their own')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_husker': check_husker, 'check_husker_baked': check_husker_baked})
 
 
 def main():

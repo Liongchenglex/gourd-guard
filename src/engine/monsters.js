@@ -1,7 +1,7 @@
 import { endGame, shoreP } from './game.js';
 import { SACK } from '../data/economy.js';
 import { resolveMatches } from './board.js';
-import { TYPES, MODS, VARIANTS, BURNS_TO, ICE_ONLY, BURNING_FROM } from '../data/monsters.js';
+import { TYPES, MODS, VARIANTS, BURNS_TO, ICE_ONLY, BURNING_FROM, HUSK_STRIP } from '../data/monsters.js';
 import { BURN_EVERY, RAINBOW, GLUE_SLOW } from '../data/pumpkins.js';
 import { glueStep } from './glue.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
@@ -165,6 +165,15 @@ export function burnMonster(m){
   const to = BURNS_TO[m.type]; if (!to) return false;
   m.type = to; m.flash = 0.3;
   addFloat('Alight!', m.x, mY(m) - m.r - 24, '#ff8a3a', 16, 0.9); SFX.monsterAct('firemummy', 'ignite'); for (let i = 0; i < 10; i++) spark(m.x, mY(m), '#ff8a3a', 120);
+  return true;
+}
+/** The Corn Husker's husk comes off on its first pumpkin hit: no damage, the type changes (husker -> huskerBare, huskerBurning -> huskerCharred), it speeds up by bareMul and the shed clip plays. */
+export function stripHusk(m){
+  const to = HUSK_STRIP[m.type]; if (!to) return false;
+  const T = TYPES[m.type];
+  m.type = to; m.sp *= T.bareMul; m.flash = 0.2; m.anim = { clip:'shed', t:0, dur:10 / 14 };
+  addFloat('Husk off!', m.x, mY(m) - m.r - 24, '#e8d49a', 16, 0.9); SFX.monsterAct('husker', 'shed');
+  for (let i = 0; i < 12; i++) spark(m.x, mY(m) - 10, i % 2 ? '#d2b878' : '#a88a54', 130);
   return true;
 }
 /** A burning monster sets ordinary monsters of its own family alight within one lane and one tile. */

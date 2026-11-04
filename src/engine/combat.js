@@ -1,11 +1,11 @@
-import { TYPES, BOSS_NAMES, ICE_ONLY } from '../data/monsters.js';
+import { TYPES, BOSS_NAMES, ICE_ONLY, HUSK_STRIP } from '../data/monsters.js';
 import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW, TURQUOISE, BROWN, TURQ_FRAC, BROWN_KB, BROWN_SIZE_MULT, PAINT, BEIGE } from '../data/pumpkins.js';
 import { layGlue } from './glue.js';
 import { hkGate, hkAfterHit, onHkFormDown, onKingDown } from './hollowking.js';
 import { SFX, musicStart } from './audio.js';
 import { MUSIC } from '../data/music.js';
 import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches, brownSize, paintPull, paintInherit } from './board.js';
-import { TILE_P, mS, mY, spMulNow, spawnMonster, inHexZone } from './monsters.js';
+import { TILE_P, mS, mY, spMulNow, spawnMonster, inHexZone, stripHusk } from './monsters.js';
 import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS, walls, FENCE_Y } from './state.js';
 import { TAU, clamp, fmt, rnd } from './util.js';
 import { lvOf, save, persist } from '../save.js';
@@ -265,7 +265,8 @@ function hitMonsterNow(pr, m){
   }
   m.lastHit = pr.type; m.lastHitLv = pr.lv; m.lastHitAlt = pr.vis === PAINT && pr.type !== PAINT ? PAINT : -1;
   const hitPower = pumpkinPower(pr);
-  damage(m, hitPower, PTYPES[pr.type].spark);
+  if (__RELEASE__ >= 4 && HUSK_STRIP[m.type]) stripHusk(m);   // a Corn Husker's first hit only takes the husk off (Release 4)
+  else damage(m, hitPower, PTYPES[pr.type].spark);
   if (pr.type === 5 && pr.grp && !pr.grp.spawned){   // Purple: every launched bunch spawns one pumpkin on its first hit
     pr.grp.spawned = true; purpleSpawn(m, y, i);
   }

@@ -86,6 +86,12 @@ export const TYPES = {
   // (`rise` s down). huskerBare / huskerCharred hold the bare cob's speed (sp x bareMul) for a night that spawns them directly.
   ...(__RELEASE__ >= 4 ? { husker: { hp:3, sp:0.04, r:22, coins:8, eat:0.6, pts:24, drop:1, bareMul:1.3 }, huskerBurning: { hp:3, sp:0.04, r:22, coins:8, eat:0.6, pts:24, drop:1, bareMul:1.3 },
     huskerBare: { hp:3, sp:0.052, r:22, coins:8, eat:0.6, pts:24, drop:1 }, huskerCharred: { hp:3, sp:0.052, r:22, coins:8, eat:0.6, pts:24, drop:1, rise:4 } } : {}),
+  // The Strawlord (N1-4, N1-13), a mini boss (engine/nightmare.js updateStrawlord): nailed to its post at the back of a lane (`hold`), it moves to another lane every
+  // `moveEvery` s and casts flock every flockEvery[0] s (phase 1) / flockEvery[1] s (phase 2): `crows` (min, max) crows dive down random lanes. Phase 2 comes at half health
+  // (or from the start with bossForm 2): it tears off the post but stays at the back, and each flock lights `fires2` fire tiles. No boss items or costume (noItems).
+  // The crow: one of its flock, fast and frail, flying like a bat down its lane at the wall (a minion: it does not count toward the night).
+  ...(__RELEASE__ >= 4 ? { strawlord: { boss:true, hp:20, r:30, sp:0.03, coins:30, eat:0, pts:200, drop:4, hold:0.12, moveEvery:8, flockEvery:[6, 4], crows:[3, 5], fires2:2, noItems:true, form2:{ hp:30 } },
+    crow: { hp:1, sp:0.11, r:14, flying:true, coins:2, eat:0.4, pts:8, drop:0 } } : {}),
 };
 
 /** Modifiers (docs/WORLDS.md §6): data-only stat tweaks any monster can carry. */
@@ -123,16 +129,18 @@ export const ICE_ONLY = new Set(['firemummy', ...(__RELEASE__ >= 4 ? ['hayrickBu
 /** The Corn Husker's first hit strips its husk (no damage): husker -> huskerBare, huskerBurning -> huskerCharred. Any pumpkin strips it. */
 export const HUSK_STRIP = __RELEASE__ >= 4 ? { husker:'huskerBare', huskerBurning:'huskerCharred' } : {};
 /** Looks a type is always seen in during a night, baked with it so the first hit never hitches. */
-export const ALSO_BAKE = __RELEASE__ >= 4 ? { husker:['huskerBare'] } : {};
+export const ALSO_BAKE = __RELEASE__ >= 4 ? { husker:['huskerBare'], strawlord:['crow'] } : {};   // a boss's minions too (the Strawlord's crows)
 /** burning type -> the ordinary type it ignites */
 export const BURNING_FROM = Object.fromEntries(Object.entries(BURNS_TO).map(([a, b]) => [b, a]));
 
-export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch', ...(__RELEASE__ >= 3 ? { hollowking:'The Hollow King' } : {}) };
+export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch', ...(__RELEASE__ >= 3 ? { hollowking:'The Hollow King' } : {}), ...(__RELEASE__ >= 4 ? { strawlord:'The Strawlord' } : {}) };
 export const BOSS_NAME = BOSS_NAMES.gravekeeper;   // legacy alias used by endless mode
 
-export const MNAME = { sack:'Loot Sack', jukebox:'Jukebox', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss', ...(__RELEASE__ >= 4 ? { rooster:'Cinder Rooster', hayrick:'Hayrick', hayrickBurning:'Burning Hayrick', husker:'Corn Husker', huskerBare:'Bare Cob', huskerBurning:'Burning Husker', huskerCharred:'Charred Cob' } : {}) };
+export const MNAME = { sack:'Loot Sack', jukebox:'Jukebox', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss', ...(__RELEASE__ >= 4 ? { rooster:'Cinder Rooster', hayrick:'Hayrick', hayrickBurning:'Burning Hayrick', husker:'Corn Husker', huskerBare:'Bare Cob', huskerBurning:'Burning Husker', huskerCharred:'Charred Cob', crow:'Crow' } : {}) };
 
 export const BOSS_INTRO = {
+  ...(__RELEASE__ >= 4 ? { strawlord: { 1:'A giant scarecrow nailed to its post at the back of the field. It hops between lanes and flaps its coat open to loose a flock of crows down the field. At half health it tears free and its burning head sets the field alight. Monsters keep coming until it falls.',
+    2:'It is already off its post: crows every few seconds, and every flock sets fire to the field. Monsters keep coming until it falls.' } } : {}),
   ...(__RELEASE__ >= 3 ? { hollowking: { 1:'Five times he splits off a world boss in his own colours. While it stands, nothing hurts him: beat it first. He wipes a column of your patch, smashes a fence and calls monsters. They keep coming until he falls.' } } : {}),
   gravekeeper: { 1:'It stops a third of the way down and never reaches the wall, but it teleports between lanes and raises ghouls. Monsters keep coming until it falls.',
                  2:'Its full form: more health, faster summons, and every few seconds it drags a monster forward. Monsters keep coming until it falls.' },

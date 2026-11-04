@@ -286,6 +286,7 @@ export const SFX = {
     switch (type){
       case 'ghoul': S('ghoul', 0.5, { rate: 1.1 }) || groan(120, 0.09); break;
       case 'bat': S('bat', 0.45, { rate: 1.1 }) || (tone(1800, 0.06, 'square', 0.035, 2400), noise(0.05, 0.08, 2500, 1.5)); break;
+      case (__RELEASE__ >= 4 ? 'crow' : ''): S('bat', 0.4, { rate: 0.8 }) || noise(0.05, 0.08, 2000, 1.5); break;   // the Strawlord's crows (Release 4)
       case 'imp': S('imp', 0.4) || tone(700, 0.12, 'sawtooth', 0.05, 1100); break;
       case 'rider': S('imp', 0.35) || tone(700, 0.08, 'sawtooth', 0.03, 900, 0.04); S('cloth', 0.35); break;
       case (__RELEASE__ >= 4 ? 'husker' : ''): case (__RELEASE__ >= 4 ? 'huskerBare' : ''): case (__RELEASE__ >= 4 ? 'huskerBurning' : ''): case (__RELEASE__ >= 4 ? 'huskerCharred' : ''): S('cloth', 0.4, { rate: 1.25 }) || cloth(); S('wood', 0.2); break;   // dry husk and a hollow cob (Release 4)
@@ -316,6 +317,7 @@ export const SFX = {
     switch (type){
       case 'ghoul': S('ghouldie', 0.5) || groan(110, 0.1, 0.45); break;
       case 'bat': S('batdie', 0.45, { rate: 1.3 }) || S('pop', 0.4) || tone(2000, 0.05, 'square', 0.04, 2600); break;
+      case (__RELEASE__ >= 4 ? 'crow' : ''): S('batdie', 0.45, { rate: 0.9 }) || S('pop', 0.4) || tone(1400, 0.05, 'square', 0.04, 1800); break;
       case 'imp': case 'rider': S('impdie', 0.45) || tone(900, 0.2, 'sawtooth', 0.06, 1500); break;
       case 'brute': S('giantdie', 0.6, { rate: 0.85 }) || (tone(70, 0.4, 'sawtooth', 0.1, 40), noise(0.3, 0.25, 120, 1)); S('heavy', 0.4, { rate: 0.8, delay: 0.1 }); break;
       case 'hauler': S('giantdie', 0.65) || (tone(70, 0.4, 'sawtooth', 0.1, 40), noise(0.3, 0.25, 120, 1)); break;
@@ -404,6 +406,13 @@ export const SFX = {
       // The Hollow King (Release 3; owner 2026-11-03: scary): slowed growls, a deep bell toll and a low drone under every big moment
       case 'hollowking:arrive': bell(55, 0, 0.12); bell(55, 1.1, 0.1); tone(41, 2.4, 'sawtooth', 0.05, 30); S('roarbig', 1, { rate: 0.6, delay: 0.2 }); S('reverse', 0.6, { rate: 0.7 }); S('darkcast', 0.6, { rate: 0.8, delay: 0.9 }); S('scream', 0.35, { rate: 0.55, delay: 1.3 }); break;
       case 'hollowking:hit': S('roar', 0.55, { rate: 0.7 }); break;
+      // The Strawlord (Release 4): creaking wood and cloth, a flurry of wings for its crows (the bat samples), fire when it tears free
+      case (__RELEASE__ >= 4 ? 'strawlord:arrive' : ''): S('creak', 0.6) || noise(0.4, 0.2, 500, 1); S('cloth', 0.45, { delay: 0.2 }); [0.35, 0.45, 0.55].forEach(d => S('bat', 0.35, { delay: d, rate: 0.8 })); S('roar', 0.45, { rate: 1.2, delay: 0.5 }); break;
+      case (__RELEASE__ >= 4 ? 'strawlord:flock' : ''): S('cloth', 0.5, { rate: 0.8 }) || cloth(); [0, 0.07, 0.14, 0.21, 0.28].forEach(d => S('bat', 0.35, { delay: d, rate: 0.75 + d }) || noise(0.05, 0.1, 2500, 1.5, d)); break;
+      case (__RELEASE__ >= 4 ? 'strawlord:tear' : ''): S('woodbreak', 0.7) || noise(0.4, 0.3, 300, 0.8); S('metallight', 0.4, { delay: 0.15 }); S('fire', 0.5, { delay: 0.3 }); S('roarbig', 0.55, { rate: 1.15, delay: 0.4 }); break;
+      case (__RELEASE__ >= 4 ? 'strawlord:move' : ''): S('whoosh', 0.45, { rate: 0.85 }) || woosh(false, 0.16); S('cloth', 0.3, { delay: 0.05 }); break;
+      case (__RELEASE__ >= 4 ? 'strawlord:hit' : ''): S('cloth', 0.5) || cloth(); S('wood', 0.3, { delay: 0.03 }); break;
+      case (__RELEASE__ >= 4 ? 'strawlord:die' : ''): S('fire', 0.6) || noise(0.5, 0.3, 600, 0.7); S('woodbreak', 0.6, { delay: 0.1 }); S('roarbig', 0.6, { rate: 1.1, delay: 0.2 }); [0.4, 0.5, 0.6].forEach(d => S('bat', 0.3, { delay: d })); break;
       case 'hollowking:immune': S('clank', 0.5, { rate: 0.8 }) || tone(300, 0.08, 'square', 0.05); break;
       case 'hollowking:tell': S('darkcast', 0.8, { rate: 0.7 }); S('witchlong', 0.45, { rate: 0.6 }); tone(55, 0.9, 'sawtooth', 0.05, 110); break;
       case 'hollowking:wipe': S('stonecrash', 0.9, { rate: 0.8 }) || noise(0.4, 0.3, 300, 0.7); S('roar', 0.5, { rate: 0.6 }); break;

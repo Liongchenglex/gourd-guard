@@ -11,7 +11,7 @@ export default __RELEASE__ >= 4 ? [
   L( 1, 'Embers',                 0, 0, 16, 3.4,  0.86, POOL),
   L( 2, 'Cockcrow',               1, 1, 17, 3.35, 0.87, POOL),
   L( 3, 'Wrapped in Embers',      2, 1, 18, 3.3,  0.88, POOL),
-  L( 4, 'The Strawlord',          3, 1, 18, 3.3,  0.88, POOL),
+  { ...L( 4, 'The Strawlord',      3, 1, 18, 3.3,  0.88, POOL), boss:'strawlord', bossChest:'normal' },   // Task 7: the mini boss (one normal chest, no boss items)
   L( 5, 'The Grave Gourd',        4, 2, 18, 3.25, 0.89, [['ghoul', 10]]),
   L( 6, 'The Grave Riser',        0, 2, 19, 3.25, 0.89, POOL),
   L( 7, 'Haystack',               1, 2, 19, 3.2,  0.9,  POOL),
@@ -20,7 +20,7 @@ export default __RELEASE__ >= 4 ? [
   L(10, 'Dawn Chorus',            4, 2, 21, 3.1,  0.91, [['bat', 10], ['imp', 6]]),
   L(11, 'The Burning Barn',       0, 3, 21, 3.1,  0.92, POOL),
   L(12, 'Risen Rows',             1, 3, 22, 3.05, 0.92, POOL),
-  L(13, 'Strawlord Returns',      2, 3, 22, 3.0,  0.93, POOL),
+  { ...L(13, 'Strawlord Returns',  2, 3, 22, 3.0,  0.93, POOL), boss:'strawlord', bossForm:2, bossChest:'normal' },   // Task 7: in phase 2 from the start
   L(14, 'Burnt Offerings',        3, 3, 23, 3.0,  0.94, [['brute', 10], ['imp', 6]]),
   L(15, 'Eclipse',                4, 3, 24, 2.95, 0.95, POOL),
 ] : [];

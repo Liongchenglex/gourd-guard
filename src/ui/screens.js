@@ -215,7 +215,7 @@ export function openPreview(n){
   renderQuests(n, def);
   $('#pvSub').textContent = place;
   const mons = $('#pvMonsters'); mons.innerHTML = '';
-  prebakeAsync([...def.pool.map(([t]) => poolKey(t, VARIANTS)), ...def.pool.flatMap(([t]) => (__RELEASE__ >= 4 && ALSO_BAKE[t]) || []), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), 'ghoul']);   // bake this level's sprite strips while the card is read
+  prebakeAsync([...def.pool.map(([t]) => poolKey(t, VARIANTS)), ...[...def.pool.map(([t]) => t), def.boss].flatMap(t => (__RELEASE__ >= 4 && t && ALSO_BAKE[t]) || []), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), 'ghoul']);   // bake this level's sprite strips while the card is read
   for (const [t] of def.pool){
     const d = document.createElement('div'); d.className = 'pv-ic';
     d.appendChild(monsterIcon(t, 108));

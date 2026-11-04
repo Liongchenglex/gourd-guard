@@ -5,7 +5,7 @@ import { TYPES, MODS, VARIANTS, BURNS_TO, ICE_ONLY, BURNING_FROM, HUSK_STRIP } f
 import { BURN_EVERY, RAINBOW, GLUE_SLOW } from '../data/pumpkins.js';
 import { glueStep } from './glue.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
-import { updateNightmareMonster } from './nightmare.js';
+import { updateNightmareMonster, initStrawlord, updateStrawlord } from './nightmare.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
 import { PTYPES } from '../data/pumpkins.js';
@@ -109,6 +109,7 @@ export function spawnMonster(key, lane, minion, p, formArg){
     for (const [l, dp] of spots.slice(0, T.bats)) spawnMonster('bat', Math.max(0, Math.min(COLS - 1, l)), true, Math.max(-0.02, m.p + dp));
   }
   if (__RELEASE__ >= 3 && type === 'boss' && kind === 'hollowking') initHollowKing(m);
+  if (__RELEASE__ >= 4 && type === 'boss' && kind === 'strawlord') initStrawlord(m);
   G.monsters.push(m);
   return m;
 }
@@ -342,6 +343,7 @@ export function updateMonster(m, dt){
       }
       case 'boss': {
         if (__RELEASE__ >= 3 && m.kind === 'hollowking'){ updateHollowKing(m, dt); if (m.p >= m.hold) sp = 0; break; }
+        if (__RELEASE__ >= 4 && m.kind === 'strawlord'){ updateStrawlord(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // stops exactly at hold, never past it
         if (m.kind === 'poltergeist'){ updatePoltergeist(m, dt); if (m.p >= m.hold) sp = 0; break; }
         if (m.kind === 'vampirecount'){ if (updateVampireCount(m, dt) || m.p >= m.hold) sp = 0; break; }
         if (m.kind === 'hexwitch'){ updateHexwitch(m, dt); if (m.p >= m.hold) sp = 0; break; }

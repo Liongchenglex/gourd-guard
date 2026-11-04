@@ -25,7 +25,7 @@ def story_done(upto=20):
 # ---------- Task 1: the track, the book page and the release checks ----------
 def check_r4_absent(browser, url):
     js = bundle_js()
-    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker'):
+    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord'):
         ok((s in js) == R4, f"{s!r} {'in' if R4 else 'not in'} the bundle")
 
 
@@ -574,6 +574,125 @@ def check_husker_baked(browser, url):
 
 
 CHECKS.update({'check_husker': check_husker, 'check_husker_baked': check_husker_baked})
+
+
+# ---------- Task 7: the Strawlord mini boss and its crows ----------
+BOSS = "window.__gg.G.monsters.find(m => m.type === 'boss' && !m.dead)"
+CROWS = "window.__gg.G.monsters.filter(m => m.type === 'crow' && !m.dead)"
+
+
+def strawlord_up(page, k):
+    """Start Nightmare 1-k, bring its boss in now, then stop ordinary spawns and clear the field so only the boss (and its crows) act.
+    Records the boss's highest p from here on in window.__maxP. Returns the boss's [kind, hp, maxHp, phase2, hold]."""
+    nm_start(page, k)
+    page.evaluate("() => { const G = window.__gg.G; G.sproutT = -999; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }")
+    time.sleep(0.3)
+    return page.evaluate(f"""() => {{ const g = window.__gg, G = g.G, b = {BOSS}; if (!b) return null;
+      G.spawnTimer = 999; G.monsters.splice(0, G.monsters.length, b); G.fires.length = 0; G.fmNext = 99; b.p = b.hold - 0.01;
+      window.__b = b; window.__maxP = 0; clearInterval(window.__mp); window.__mp = setInterval(() => {{ window.__maxP = Math.max(window.__maxP, window.__b.p); window.__gg.G.spawnTimer = 999; }}, 10);
+      return [b.kind, b.hp, b.maxHp, !!b.phase2, b.hold]; }}""")
+
+
+def check_strawlord(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    d = page.evaluate("() => { const T = window.__gg.TYPES, s = T.strawlord, c = T.crow; return s && c ? [s.boss, s.hp, s.form2.hp, s.hold, s.moveEvery, s.flockEvery, s.crows, s.fires2, s.noItems, c.hp, c.sp, c.r, c.flying, c.coins, c.eat, c.pts, c.drop] : null; }")
+    ok(d == [True, 20, 30, 0.12, 8, [6, 4], [3, 5], 2, True, 1, 0.11, 14, True, 2, 0.4, 8, 0], f'Strawlord and crow data {d}')
+    ok(page.evaluate("() => [window.__gg.NIGHTMARE_LEVELS[0][3].boss, window.__gg.NIGHTMARE_LEVELS[0][3].bossChest, window.__gg.NIGHTMARE_LEVELS[0][12].boss, window.__gg.NIGHTMARE_LEVELS[0][12].bossForm]") == ['strawlord', 'normal', 'strawlord', 2],
+       'N1-4 and N1-13 are Strawlord nights (N1-13 in phase 2), with one normal chest')
+    ok(page.evaluate("() => window.__gg.BOSS_NAMES.strawlord") == 'The Strawlord', 'its name on screen is "The Strawlord"')
+    b = strawlord_up(page, 4)
+    ok(b is not None and b[0] == 'strawlord' and b[1] == b[2] == 20 and not b[3], f'on N1-4 the Strawlord arrives with 20 health, not yet in phase 2 {b}')
+    if b is None:
+        page.close(); return
+    lane0 = page.evaluate("() => window.__b.lane")
+    time.sleep(6.5)
+    n = page.evaluate(f"() => {CROWS}.length")
+    ok(3 <= n <= 5, f'6.5 s on, 3 to 5 crows have burst out ({n})')
+    cr = page.evaluate(f"() => {CROWS}.map(c => [c.minion, c.lane, c.p])")
+    ok(all(c[0] for c in cr) and all(c[2] > 0.1 for c in cr), f'the crows are minions flying down from the Strawlord {cr}')
+    time.sleep(2.0)
+    ok(page.evaluate("() => window.__b.lane") != lane0, f'after 8 s it has moved to another lane (from {lane0})')
+    ok(page.evaluate("() => window.__gg.G.fires.length") == 0, 'phase 1 lights no fire')
+    # phase 2 at half health
+    page.evaluate(f"() => {{ const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, b.hp - b.maxHp / 2, '#fff'); {CROWS}.forEach(c => c.old = true); window.__f0 = g.G.fires.length; }}")
+    time.sleep(0.25)
+    p2 = page.evaluate("() => [!!window.__b.phase2, window.__b.anim && window.__b.anim.clip, window.__b.hp]")
+    ok(p2[0] and p2[1] == 'tear' and p2[2] == 10, f'at half health phase 2 starts and the tear clip plays {p2}')
+    time.sleep(4.5)
+    r = page.evaluate(f"() => [{CROWS}.filter(c => !c.old).length, window.__gg.G.fires.length - window.__f0]")
+    ok(r[0] >= 3 and r[1] == 2, f'4.5 s into phase 2 it has flocked again (new crows {r[0]}) and lit 2 fire tiles ({r[1]})')
+    mp, hold = page.evaluate("() => [window.__maxP, window.__b.hold]")
+    ok(mp <= hold + 1e-9, f'it never walks past hold (max p {mp:.4f}, hold {hold})')
+    # immune to knockback and freeze
+    page.evaluate("() => { const g = window.__gg, b = window.__b; g.knockback && g.knockback(b); }")
+    ok(page.evaluate("() => [window.__b.kb || 0, window.__b.frozenT || 0]") == [0, 0], 'no knockback, no freeze')
+    # killing it gives exactly one normal chest
+    c0 = page.evaluate("() => window.__gg.save.chests.length")
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 999, '#fff'); }")
+    time.sleep(0.3)
+    ch = page.evaluate("() => window.__gg.save.chests.slice(%d)" % c0)
+    ok(len(ch) == 1 and ch[0]['kind'] == 'normal' and not ch[0].get('boss'), f'killing it adds exactly one normal chest and no boss item {ch}')
+    ok(page.evaluate("() => window.__gg.G.bossDead"), 'the boss is down (the night can end)')
+    page.evaluate("() => clearInterval(window.__mp)")
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_strawlord_returns(browser, url):
+    """N1-13 (bossForm 2): it starts already in phase 2 with form2 health, never plays tear, and flocks every 4 s with 2 fires."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    b = strawlord_up(page, 13)
+    ok(b is not None and b[0] == 'strawlord' and b[1] == b[2] == 30 and b[3], f'on N1-13 it arrives in phase 2 with 30 health {b}')
+    if b is None:
+        page.close(); return
+    ok(page.evaluate("() => !window.__b.anim || window.__b.anim.clip !== 'tear'"), 'no tear clip: it is already off the post')
+    time.sleep(4.5)
+    r = page.evaluate(f"() => [{CROWS}.length, window.__gg.G.fires.length]")
+    ok(3 <= r[0] <= 5 and r[1] == 2, f'4.5 s on it has flocked once (crows {r[0]}) and lit 2 fires ({r[1]})')
+    c0 = page.evaluate("() => window.__gg.save.chests.length")
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 999, '#fff'); }"); time.sleep(0.3)
+    ch = page.evaluate("() => window.__gg.save.chests.slice(%d).map(c => c.kind)" % c0)
+    ok(ch == ['normal'], f'N1-13 also gives one normal chest {ch}')
+    page.evaluate("() => clearInterval(window.__mp)")
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_strawlord_continue(browser, url):
+    """check_nm_continue, boss part: a phase 2 Strawlord comes back in phase 2 with its health."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    b = strawlord_up(page, 4)
+    if b is None:
+        ok(False, 'the Strawlord arrived'); page.close(); return
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 13, '#fff'); }"); time.sleep(0.25)
+    before = page.evaluate("() => [!!window.__b.phase2, window.__b.hp]")
+    page.evaluate("() => { clearInterval(window.__mp); const g = window.__gg, c = g.continueState(); g.continueNight(c); }"); time.sleep(0.6)
+    after = page.evaluate(f"() => {{ const b = {BOSS}; return b ? [!!b.phase2, b.hp, b.kind, !b.anim || b.anim.clip !== 'tear'] : null; }}")
+    ok(before == [True, 7] and after == [True, 7, 'strawlord', True], f'a continued night brings it back in phase 2 with its 7 health, no second tear {before} -> {after}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_strawlord_baked(browser, url):
+    """Its frames (idle as walk, flock, hit, tear) and the crow's are baked when the night starts, capped like the Hollow King's (under 10 MB at bake scale 2.5)."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    C = page.evaluate("() => { const C = window.__gg.CHARS; return C.strawlord && C.crow ? [Object.keys(C.strawlord.clipsFor ? C.strawlord.clipsFor(null) : C.strawlord.clips).sort(), Object.keys(C.crow.clips).sort()] : null; }")
+    ok(C == [['flock', 'hit', 'tear', 'walk'], ['walk']], f'the Strawlord bakes walk (its idle), flock, hit and tear; the crow bakes walk (its fly) {C}')
+    page.evaluate("() => window.__gg.setBakeScale(2.5)")
+    t0 = time.time(); nm_start(page, 4); dt = time.time() - t0
+    ok(page.evaluate("() => window.__gg.isBaked('strawlord') && window.__gg.isBaked('crow')"), 'starting N1-4 bakes the Strawlord and the crow')
+    mb = page.evaluate("() => window.__gg.atlasBytes('strawlord') / 1e6")
+    ok(mb < 10, f'the Strawlord\'s frames take {mb:.1f} MB at bake scale 2.5 (limit 10)')
+    ok(dt < 3, f'the night opens in {dt:.1f} s')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_strawlord': check_strawlord, 'check_strawlord_returns': check_strawlord_returns, 'check_strawlord_continue': check_strawlord_continue, 'check_strawlord_baked': check_strawlord_baked})
 
 
 def main():

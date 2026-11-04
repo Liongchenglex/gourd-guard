@@ -5,6 +5,7 @@
 
 import { E, PL, RR, S, SM, SO, ell, pal, rgba, rng } from '../paint.js';
 import { TAU } from '../../util.js';
+import { STRAWLORD } from './strawlord.js';
 
 const cl01 = x => x < 0 ? 0 : x > 1 ? 1 : x, ease = x => { x = cl01(x); return x * x * (3 - 2 * x); }, lerp = (a, b, t) => a + (b - a) * t;
 const seg = (t, a, b) => ease((t - a) / (b - a));
@@ -350,6 +351,7 @@ function husker(g, P = {}){
 // ---------- registry ----------
 const C = (n, fps, key, once = false) => ({ n, fps, once, pose:t => ({ [key]:t }) });
 export const NM1 = {
+  ...STRAWLORD,   // the mini boss and its crows (strawlord.js)
   // small and quick: r 20, so the feet sit at 19 below the centre (50 x .6 - 11); the archive drew it for r 18 at scale .56
   // a tank like the Mossback: r 26, so the feet sit at 24.6 below the centre (50 x .66 - 10 = 23)
   hayrick: { draw:hayrick, scale:.66, dy:-10, box:{ x:-72, y:-112, w:144, h:172 }, clips:{ walk:C(8, 6, 'walk'), chew:C(4, 7, 'chew'), toss:C(10, 14, 'toss', true) }, still:{} },

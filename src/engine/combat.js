@@ -210,12 +210,13 @@ export function kill(m){
   if (__RELEASE__ >= 3 && m.kind === 'hollowking' && !m.hkClone) onKingDown();
   if (m.type === 'boss'){
     const twinAlive = G.monsters.some(o => o !== m && o.type === 'boss' && !o.dead);   // the other Twin Tide, or the other boss of a two-boss night
-    if (!twinAlive && G.mode === 'story' && G.def && !G.def.nightmare && (G.def.levelNo === 10 || G.def.levelNo === 20)){ const itemOf = TYPES[m.kind].noItems ? null : m.kind;   // no costume for the Hollow King yet: boss items become coins; story boss chests only (Release 4: not on a nightmare night)
-      const ck = G.def.levelNo === 20 ? 'boss' : 'normal';
+    const levelChest = __RELEASE__ >= 4 ? G.def && G.def.bossChest : null;   // a level that names its boss chest (Release 4: the Strawlord's one normal chest on N1-4 and N1-13) whatever its levelNo
+    if (!twinAlive && G.mode === 'story' && G.def && (levelChest || (!G.def.nightmare && (G.def.levelNo === 10 || G.def.levelNo === 20)))){ const itemOf = TYPES[m.kind].noItems ? null : m.kind;   // no costume for the Hollow King yet: boss items become coins; story boss chests only (Release 4: not on a nightmare night, unless the level names one)
+      const ck = levelChest || (G.def.levelNo === 20 ? 'boss' : 'normal');
       const nc = __RELEASE__ >= 3 ? (G.def.bossChests || 1) + (G.def.extraChestP && Math.random() < G.def.extraChestP ? 1 : 0) : 1;   // 6-20: 2 chests, 50% a third (owner, 2026-11-03)
       for (let c = 0; c < nc; c++) addChest(ck, itemOf);
       if (nc > 1) addFloat(`${nc} chests!`, m.x, mY(m) - m.r - 100, '#ffd35a', 22, 2.2);
-      addFloat(G.def.levelNo === 20 ? 'Boss chest!' : 'Treasure chest!', m.x, mY(m) - m.r - 70, '#ffd35a', 22, 2); if (G.vfx) G.vfx.push({ kind:'loot', item:G.def.levelNo === 20 ? 'bossChest' : 'chest', x:m.x, y:mY(m) - 20, t:0, dur:1.8 }); }
+      addFloat(ck === 'boss' ? 'Boss chest!' : 'Treasure chest!', m.x, mY(m) - m.r - 70, '#ffd35a', 22, 2); if (G.vfx) G.vfx.push({ kind:'loot', item:ck === 'boss' ? 'bossChest' : 'chest', x:m.x, y:mY(m) - 20, t:0, dur:1.8 }); }
     const groupDown = m.kind !== 'twintides' || (m.twin && m.twin.dead);   // a whole boss is down (both of a Twin Tides pair)
     if (twinAlive && groupDown && G.def && G.def.boss2){
       G.shake = 1; SFX.bossSfx(m.kind, 'die');

@@ -45,6 +45,8 @@
  * @property {boolean} [frenzyAfterBoss]  boss levels with `frenzy`: the jukebox drops when the first boss (or Twin Tides pair) falls, not at `frenzyAt`
  * @property {number} [bossChests]     boss levels: chests the boss always drops (default 1; 6-20: 2, owner 2026-11-03)
  * @property {number} [extraChestP]    boss levels: chance of one more chest on top (6-20: 0.5; Release 3)
+ * @property {string} [bossChest]     boss levels: the boss drops a chest of this kind ('normal' or 'boss') whatever the level's number, nightmare nights
+ *   included (Release 4: the Strawlord's one normal chest on N1-4 and N1-13). Without it only story levels 10 (normal) and 20 (boss) drop one
  * @property {number|number[]} [frenzyAt]  fraction of `total` spawned when the jukebox drops (default 0.8); from Release 3 a list of drop points
  *   (6-19: [0.5, 1]): every jukebox but the last brings extra monsters that do not count toward `total`, the spawn bar shows a mark per point
  *   and counts monsters that arrived (not kills), so each jukebox drops on its mark
@@ -65,6 +67,6 @@ export function expandLevel(def, n){
     pattern:def.pattern, graves:def.graves, unlockPumpkins:def.unlockPumpkins || [], unlockGear:def.unlockGear || [],
     intro:def.intro || [], fog:def.fog || [], castles:def.castles || null, puddles:def.puddles || 0, sea:!!def.sea || !!def.shore || !!def.shoreFrac, gust:def.gust || null, gravesLayout:def.gravesLayout || null, laneWeights:def.laneWeights || null,
     fogRows:def.fogRows || [], fogCols:def.fogCols || [], caps:def.caps || null, spawnGap:def.spawnGap == null ? null : def.spawnGap, spawnBurst:def.spawnBurst == null ? null : def.spawnBurst, bossGap:def.bossGap || null, bossHpMul:def.bossHpMul || null, unlockCopy:def.unlockCopy || null, castlesLayout:def.castlesLayout || null, shore:def.shore || 0, hexAll:def.hexAll || null, quests:def.quests || null, name:def.name || null, introPumpkins:def.introPumpkins || [], puddlesLayout:def.puddlesLayout || null, shoreFrac:def.shoreFrac || 0, boss2:def.boss2 || null, frenzy:!!def.frenzy, frenzyAfterBoss:!!def.frenzyAfterBoss, frenzyAt:def.frenzyAt || 0, frenzyHp:def.frenzyHp || 0, extraChestP:def.extraChestP || 0, bossChests:def.bossChests || 1, worldNo:def.world, levelNo:def.level,
-    ...(__RELEASE__ >= 4 ? { fireStart:def.fireStart || 0, fireLayout:def.fireLayout || null, fireMarks:def.fireMarks || null } : {}),
+    ...(__RELEASE__ >= 4 ? { fireStart:def.fireStart || 0, fireLayout:def.fireLayout || null, fireMarks:def.fireMarks || null, bossChest:def.bossChest || null } : {}),
     nightmare:!!def.nightmare, label:def.nightmare ? `N${def.world}-${def.level}` : `${def.world}-${def.level}` };
 }

@@ -543,16 +543,19 @@ function closeBook(){ curBook = null; bookNightmare = false; nightmareBg(null); 
 
 let loadoutFocus = null;
 /** Pumpkin picking (owner, 2026-09-27): pumpkins in unlock order, a detail card for the focused one (level, ability, lore), then the trophies. */
+/** Pumpkins to pick: 5, or 4 with the 5-20 Focused patch power; never more than the types on offer (a gourd night opens the picker even
+ *  with 5 or fewer types, Release 4). */
+const teamSize = () => Math.min(perkOn('pick4') ? 4 : 5, loadoutAvail ? loadoutAvail.length : 5);
 export function openLoadout(avail, next, required, gourds){
   if (__RELEASE__ >= 4) renderGourds(gourds || []);   // the Gourds section: the night's gourds, picked and locked (not one of the pumpkins)
   loadoutAvail = avail; loadoutNext = next; loadoutMust = (required || []).map(m => m.t); loadoutWhy = required || [];
   const pref = [...loadoutMust, ...(save.loadout || []).filter(t => avail.includes(t) && !loadoutMust.includes(t))];
-  for (const t of avail) if (pref.length < (perkOn('pick4') ? 4 : 5) && !pref.includes(t)) pref.push(t);
-  loadoutSel = new Set(pref.slice(0, perkOn('pick4') ? 4 : 5));
+  for (const t of avail) if (pref.length < teamSize() && !pref.includes(t)) pref.push(t);
+  loadoutSel = new Set(pref.slice(0, teamSize()));
   const night = t => t < 2 ? 0 : unlockNightOf(PTYPES[t].key);   // Green and Yellow are there from the start
   const order = avail.slice().sort((x, y) => night(x) - night(y) || x - y);
   loadoutFocus = loadoutMust[0] != null ? loadoutMust[0] : order[0];
-  $('#loTitle').textContent = `Pick ${perkOn('pick4') ? 4 : 5} pumpkins`;
+  $('#loTitle').textContent = `Pick ${teamSize()} pumpkins`;
   const box = $('#picks'); box.innerHTML = '';
   for (const t of order){
     const b = document.createElement('button'); b.className = 'pick';
@@ -566,7 +569,7 @@ export function openLoadout(avail, next, required, gourds){
       loadoutFocus = t;
       if (!loadoutMust.includes(t)){   // introduced this level: stays in
         if (loadoutSel.has(t)){ loadoutSel.delete(t); SFX.ui('unpick'); }
-        else if (loadoutSel.size < (perkOn('pick4') ? 4 : 5)){ loadoutSel.add(t); SFX.ui('pick'); }   // Focused patch: exactly four
+        else if (loadoutSel.size < teamSize()){ loadoutSel.add(t); SFX.ui('pick'); }   // Focused patch: exactly four
         else SFX.ui('locked');
       } else SFX.ui('tap');
       syncLoadout();
@@ -653,7 +656,7 @@ export function renderTrophies(){ renderPowers(); }
 export function syncLoadout(){
   for (const b of document.querySelectorAll('#picks .pick')) b.setAttribute('aria-pressed', loadoutSel.has(+b.dataset.t) ? 'true' : 'false');
   const n = loadoutSel.size;
-  const min = perkOn('pick4') ? 4 : 5;   // 5-20 perk: four colours are enough
+  const min = teamSize();   // 5-20 perk: four colours are enough
   $('#loCount').textContent = n >= min ? 'Ready. Only the pumpkins you pick will sprout and drop tonight.' : `${n} of ${min} picked. Tap a pumpkin to pick it and read about it.`;
   $('#bLoGo').disabled = n < min;
   const why = loadoutWhy.filter(w => w.why !== 'New this level').map(w => `${PTYPES[w.t].name} is locked in: ${w.why.toLowerCase()}.`).join(' ');
@@ -1025,7 +1028,7 @@ export function wireButtons(){
 
   $('#bLoBack').onclick = () => { if (loadoutFromEndless) openEndless(); else if (loadoutFromPreview) openPreview(previewNight); else setState('title'); };   // back to the level card the night was started from (owner)
 
-  $('#bLoGo').onclick = () => { if (loadoutSel.size < (perkOn('pick4') ? 4 : 5)) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo); };
+  $('#bLoGo').onclick = () => { if (loadoutSel.size < teamSize()) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo); };
 
   for (const b of document.querySelectorAll('#shopTabs .tab')) b.onclick = () => { SFX.ui('tap'); setShopTab(b.dataset.tab); };
   $('#bSeedAd').onclick = () => watchSeedAd(renderShop);

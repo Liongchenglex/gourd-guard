@@ -25,7 +25,7 @@ def story_done(upto=20):
 # ---------- Task 1: the track, the book page and the release checks ----------
 def check_r4_absent(browser, url):
     js = bundle_js()
-    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord', 'Grave Gourd'):
+    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord', 'Grave Gourd', 'e3a43c'):
         ok((s in js) == R4, f"{s!r} {'in' if R4 else 'not in'} the bundle")
 
 
@@ -872,6 +872,21 @@ def check_gourd_loadout(browser, url):
     page.evaluate("() => window.__gg.beginNight(1003)"); time.sleep(0.5)
     hid = page.evaluate("() => { const s = document.querySelector('#loGourdSec'); return [window.__gg.state, !s || s.hidden]; }")
     ok(hid == ['loadout', True], f'N1-3 (no gourd) shows no Gourds section {hid}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+    # a player who has beaten only world 1 (4 pumpkin types): the picker still opens on a gourd night, and Start works
+    page, errors = open_page(browser, url)
+    set_stars(page, {**story_done(20), **{1000 + k: 3 for k in range(1, 5)}})
+    n = page.evaluate("() => window.__gg.typesForNight(21).length")
+    page.evaluate("() => { window.__gg.save.gourds = { grave:true }; window.__gg.save.perksOff = {}; window.__gg.beginNight(1005); }"); time.sleep(0.5)
+    st = page.evaluate("() => [window.__gg.state, !document.querySelector('#loGourdSec').hidden, document.querySelector('#loTitle').textContent, document.querySelector('#bLoGo').disabled, document.querySelectorAll('#loTeam .slot').length]")
+    ok(n <= 5 and st == ['loadout', True, f'Pick {n} pumpkins', False, n], f'with {n} types the picker opens on N1-5 with its Gourds section, asks for {n} and can start {st}')
+    if st[0] == 'loadout':
+        page.click('#bLoGo'); time.sleep(0.5)
+        g = page.evaluate("() => [window.__gg.state, window.__gg.G.n, window.__gg.G.loadout.length, !!window.__gg.gourdPos()]")
+        ok(g == ['play', 1005, n, True], f'Start night begins N1-5 with all {n} types and the gourd {g}')
+    page.evaluate("() => window.__gg.beginNight(5)"); time.sleep(0.5)
+    ok(page.evaluate("() => window.__gg.state") == 'play', 'a story level with 5 or fewer types still skips the picker')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 

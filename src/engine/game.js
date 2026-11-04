@@ -71,7 +71,7 @@ export function beginNight(n){
   if (hasMummies && !must.some(m => m.t === 3)) must.push({ t:3, why:'Mummies only die to Fire' });   // owner: Fire is auto-selected and locked on mummy levels
   if (def.pool.some(([k]) => ICE_ONLY.has(k)) && !must.some(m => m.t === 2)) must.push({ t:2, why:'Flaming mummies only die to Ice' });
   if (__RELEASE__ >= 4 && (def.fireStart > 0 || (def.fireLayout && def.fireLayout.length) || (def.fireMarks && def.fireMarks.length)) && !must.some(m => m.t === 2)) must.push({ t:2, why:'Only Ice puts out fire and kills burning monsters' });   // fire tiles light burning monsters
-  if (av.length > 5) openLoadout(av, lo => startGame('story', n, lo), must, __RELEASE__ >= 4 && def.gourd ? ['grave'] : null);   // the night's Grave Gourd shows in the picker's Gourds section (Release 4)
+  if (av.length > 5 || (__RELEASE__ >= 4 && def.gourd)) openLoadout(av, lo => startGame('story', n, lo), must, __RELEASE__ >= 4 && def.gourd ? ['grave'] : null);   // a gourd night always opens the picker, so its Gourds section is seen (Release 4)
   else startGame('story', n, av);
 }
 

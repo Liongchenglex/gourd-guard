@@ -137,11 +137,11 @@ Not a pumpkin: a taller piece on the patch (`src/engine/gourd.js`, art `src/engi
 - **Its power**: see §6 (one slot of every sprout tick fills its square).
 - **Edges**: its square is 8 cells, 5 on an edge, 3 in a corner.
 - **A continued night** keeps the gourd in its cell (the nearest free cell if a grave now covers it), or keeps it due back if it was broken.
-- **Picker**: on a `gourd:true` level the pumpkin picker shows a **Gourds** section under Pumpkins with the Grave Gourd picked and locked (tap it for its card). It does not count toward the 5 (or 4) pumpkins. The picker only opens when more than 5 pumpkin types are unlocked, as before.
+- **Picker**: on a `gourd:true` level the pumpkin picker shows a **Gourds** section under Pumpkins with the Grave Gourd picked and locked (tap it for its card). It does not count toward the 5 (or 4) pumpkins. A gourd night **always opens the picker** (controller ruling, 2026-11-04), even with 5 or fewer pumpkin types unlocked, so the Gourds section is seen; the pick count is then capped at the types on offer (a player who has beaten only world 1 picks all 4). Story levels still skip the picker at 5 or fewer types.
 - No levels or upgrades for the gourd in this release. Checks: `check_gourd_basic`, `check_gourd_edges`, `check_gourd_hold`, `check_gourd_unlock`, `check_gourd_loadout`, `check_gourd_continue` in `tools/nm_check.py`.
 
 ### Loadout
-- While 5 or fewer types are unlocked, every unlocked type is in play (world 1: 2, 3, then 4 colours).
+- While 5 or fewer types are unlocked, every unlocked type is in play (world 1: 2, 3, then 4 colours); on a Grave Gourd night the picker still opens, asking for all of them (§5).
 - From the 6th unlocked type (Pink at 2-8), the player picks **exactly 5** before each level. "Up to 5" was rejected because fewer colors make bunching trivially easy.
 - Only loadout colors sprout and drop.
 - Level-by-level tables for every type, including the ones with their own effects, live in `docs/WORLDS.md` §5.

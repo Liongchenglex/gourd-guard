@@ -11,19 +11,19 @@ import { K } from './canvas.js';
 import { COLS, CS, GX, GY, LANE, ROWS, grid } from '../state.js';
 
 export const GOURD_HUE = '#e3a43c';
-const GLOW = mix(GOURD_HUE, '#fff6d0', .35);
-const STEM = pal('#6e4c2a'), LEAF = pal('#4c7a34');
 const R = 0.58 * CS;                                // drawing units: about as wide as a pumpkin (1.4 R), and with its stem about 1.3 cells tall
 const BOX = { w:3.2 * R, h:3.1 * R, ox:1.6 * R, oy:1.72 * R };   // sprite box and the gourd's origin inside it
 const FOOT = 0.86 * R, LIFT = FOOT - 0.365 * CS;    // its foot (shadow line) is .86 R below its origin and stands on the pumpkins' soil line, .365 CS below the cell centre
 const P = pts => pts.map(([x, y]) => [x * R, y * R]);
-const BODY = SM(P([[0,.86],[.5,.74],[.7,.36],[.6,-.04],[.3,-.3],[.2,-.42],[.32,-.58],[.4,-.82],[.28,-1.04],[0,-1.12],[-.28,-1.04],[-.4,-.82],[-.32,-.58],[-.2,-.42],[-.3,-.3],[-.6,-.04],[-.7,.36],[-.5,.74]]));
+// Everything that calls the painter lives inside functions, so a build below Release 4 (which imports this module but never calls it)
+// drops it all: no top-level calls to pal / mix / SM here.
+const BODY = () => SM(P([[0,.86],[.5,.74],[.7,.36],[.6,-.04],[.3,-.3],[.2,-.42],[.32,-.58],[.4,-.82],[.28,-1.04],[0,-1.12],[-.28,-1.04],[-.4,-.82],[-.32,-.58],[-.2,-.42],[-.3,-.3],[-.6,-.04],[-.7,.36],[-.5,.74]]));
 
 /** The Calabash at the origin: shadow, body, the small top bulb with its waist crease, a curly stem and the face. */
 function paintGourd(g){
-  const c = pal(GOURD_HUE);
+  const c = pal(GOURD_HUE), STEM = pal('#6e4c2a'), LEAF = pal('#4c7a34');
   S.shadow(g, 0, R * .86, R * .86, R * .2);
-  S.part(g, BODY, c, { x:0, y:R * .26, r:R * .8 }, { mat:'pumpkin', hx:-.3 * R, hy:.02 * R });
+  S.part(g, BODY(), c, { x:0, y:R * .26, r:R * .8 }, { mat:'pumpkin', hx:-.3 * R, hy:.02 * R });
   S.part(g, E(0, -R * .74, R * .38, R * .34), c, { x:0, y:-R * .74, r:R * .4 }, { mat:'pumpkin' });
   S.contact(g, E(0, -R * .74, R * .38, R * .34), 0, -R * .42, R * .3, R * .08, .35);
   S.crease(g, SO([[-R * .22, -R * .4], [0, -R * .36], [R * .22, -R * .4]]), c, R * .04, .5);
@@ -37,6 +37,7 @@ function paintGourd(g){
   S.stroke(g, g2 => { g2.beginPath(); g2.moveTo(-R * .16 * .92, ey + R * .32 * .92); g2.quadraticCurveTo(0, ey + R * .45 * .92, R * .16 * .92, ey + R * .32 * .92); }, c, 2.4 * s);
 }
 
+const glowCol = () => mix(GOURD_HUE, '#fff6d0', .35);
 const kOf = () => Math.min(2.5, Math.max(0.5, K || 1));
 let body = null, glow = null;
 function bodySprite(){
@@ -50,8 +51,8 @@ function glowSprite(){
   const k = kOf(); if (glow && glow.k === k) return glow;
   const S3 = CS * 3, c = document.createElement('canvas'); c.width = c.height = Math.ceil(S3 * k);
   const g = c.getContext('2d'); g.scale(k, k);
-  for (let r = 0; r < 3; r++) for (let q = 0; q < 3; q++){ g.beginPath(); g.roundRect(q * CS + 6, r * CS + 6, CS - 12, CS - 12, 12); g.fillStyle = rgba(GLOW, r === 1 && q === 1 ? .1 : .2); g.fill(); }
-  g.save(); g.shadowColor = GLOW; g.shadowBlur = 10; g.strokeStyle = rgba(GLOW, .75); g.lineWidth = 2.5; g.beginPath(); g.roundRect(3, 3, S3 - 6, S3 - 6, 16); g.stroke(); g.restore();
+  for (let r = 0; r < 3; r++) for (let q = 0; q < 3; q++){ g.beginPath(); g.roundRect(q * CS + 6, r * CS + 6, CS - 12, CS - 12, 12); g.fillStyle = rgba(glowCol(), r === 1 && q === 1 ? .1 : .2); g.fill(); }
+  g.save(); g.shadowColor = glowCol(); g.shadowBlur = 10; g.strokeStyle = rgba(glowCol(), .75); g.lineWidth = 2.5; g.beginPath(); g.roundRect(3, 3, S3 - 6, S3 - 6, 16); g.stroke(); g.restore();
   return (glow = { c, k });
 }
 /** Bake both now (night start), not on first sight. */

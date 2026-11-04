@@ -13,7 +13,7 @@ export default __RELEASE__ >= 4 ? [
   L( 2, 'Cockcrow',               1, 1, 17, 3.35, 0.87, POOL),
   L( 3, 'Wrapped in Embers',      2, 1, 18, 3.3,  0.88, POOL),
   { ...L( 4, 'The Strawlord',      3, 1, 18, 3.3,  0.88, POOL), boss:'strawlord', bossChest:'normal', unlockGourds:['grave'] },   // Task 7: the mini boss (one normal chest, no boss items); beating it unlocks the Grave Gourd (Task 8)
-  Gd(L( 5, 'The Grave Gourd',        4, 2, 18, 3.25, 0.89, [['ghoul', 10]])),
+  { ...Gd(L( 5, 'The Grave Gourd',        4, 0, 18, 3.25, 0.89, [['ghoul', 10]])), coach:'gourd', gravesLayout:[[1,3],[3,3],[2,5],[1,5],[3,5]] },   // Task 9: the gourd tutorial plays here; the graves ring the gourd's start cell (2, 3) and the cell it slides to (2, 4; the grave at (2, 5) stops the slide), so breaking it shows them all clear
   Gd(L( 6, 'The Grave Riser',        0, 2, 19, 3.25, 0.89, POOL)),
   Gd(L( 7, 'Haystack',               1, 2, 19, 3.2,  0.9,  POOL)),
   Gd(L( 8, 'Corn Maze',              2, 2, 20, 3.2,  0.9,  POOL)),

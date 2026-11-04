@@ -13,8 +13,9 @@ R4 = False   # set by --expect: the build holds Release 4 (playtest)
 MODE = 'on'
 
 
-def nm_start(page, k):
-    """Start Nightmare 1-k (night 1000 + k)."""
+def nm_start(page, k, coach=False):
+    """Start Nightmare 1-k (night 1000 + k). The gourd tutorial on N1-5 is marked seen unless coach=True, so the other checks get a plain night."""
+    if not coach: page.evaluate("() => { window.__gg.save.seenGourdCoach = true; }")
     start(page, 1000 + k)
 
 
@@ -25,7 +26,7 @@ def story_done(upto=20):
 # ---------- Task 1: the track, the book page and the release checks ----------
 def check_r4_absent(browser, url):
     js = bundle_js()
-    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord', 'Grave Gourd', 'e3a43c'):
+    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord', 'Grave Gourd', 'e3a43c', 'around your gourd'):
         ok((s in js) == R4, f"{s!r} {'in' if R4 else 'not in'} the bundle")
 
 
@@ -896,9 +897,9 @@ def check_gourd_continue(browser, url):
     if not R4: return
     page, errors = open_page(browser, url)
     gourd_night(page)
-    page.evaluate(GMOVE, [1, 5])
+    page.evaluate(GMOVE, [4, 5])
     page.evaluate("() => { const g = window.__gg, c = g.continueState(); g.continueNight(c); }"); time.sleep(0.3)
-    ok(page.evaluate(GP) == [1, 5] and page.evaluate("() => window.__gg.grid.flat().filter(x => x && x.gourd).length") == 1, f'a continued night keeps the gourd in its cell (1, 5) ({page.evaluate(GP)})')
+    ok(page.evaluate(GP) == [4, 5] and page.evaluate("() => window.__gg.grid.flat().filter(x => x && x.gourd).length") == 1, f'a continued night keeps the gourd in its cell (4, 5) ({page.evaluate(GP)})')
     page.evaluate("() => { const g = window.__gg; g.G.continued = false; const p = g.gourdPos(); g.destroyGourd(g.grid[p.r][p.c]); const c = g.continueState(); g.continueNight(c); }"); time.sleep(0.3)
     ok(page.evaluate(GP) is None and page.evaluate("() => window.__gg.G.gourdDue") is True, f'a destroyed gourd stays due on the continued night ({page.evaluate(GP)})')
     page.evaluate("() => { window.__gg.G.sproutT = -999; window.__gg.spawnSprouts(); }")
@@ -908,6 +909,57 @@ def check_gourd_continue(browser, url):
 
 
 CHECKS.update({'check_gourd_basic': check_gourd_basic, 'check_gourd_edges': check_gourd_edges, 'check_gourd_hold': check_gourd_hold, 'check_gourd_unlock': check_gourd_unlock, 'check_gourd_loadout': check_gourd_loadout, 'check_gourd_continue': check_gourd_continue})
+
+
+def check_gourd_coach(browser, url):
+    """Task 9: the gourd tutorial on N1-5, a second script of the first-night coach (src/engine/coach.js)."""
+    if not R4: return
+    STEP = "(s) => { const g = window.__gg; for (let i = 0; i < Math.round(s / 0.05); i++) g.update(0.05); return g.G.coach ? g.G.coach.step : null; }"
+    SQ = "() => { const g = window.__gg, p = g.gourdPos(); let n = 0; for (let a = p.r - 1; a <= p.r + 1; a++) for (let b = p.c - 1; b <= p.c + 1; b++) if (g.grid[a] && g.grid[a][b] && !g.grid[a][b].gourd) n++; return n; }"
+    page, errors = open_page(browser, url)
+    nm_start(page, 5, coach=True)
+    d = page.evaluate("() => { const g = window.__gg; return [g.G.coach && g.G.coach.step, g.coachHolds(), g.gourdPos(), g.graves[1][3], g.graves[3][3], g.save.seenGourdCoach || false]; }")
+    ok(d[0] == 'gslide' and d[1] is True and d[2] == {'r': 2, 'c': 3} and d[3] and d[4] and d[5] is False, f'N1-5 with the tutorial unseen starts the gourd script, holding, gourd at (2, 3), graves around it {d}')
+    ok(page.evaluate(STEP, 3) == 'gslide' and page.evaluate("() => [window.__gg.G.monsters.length, window.__gg.G.spawned, window.__gg.G.coach.move && window.__gg.G.coach.move.dir]")[:2] == [0, 0], 'step 1 waits for the slide: no monsters, no spawns')
+    ok(page.evaluate("() => { const g = window.__gg, p = g.gourdPos(); return g.slideOne(g.grid[p.r][p.c], g.G.coach.move.dir); }") is True, 'the gourd slides')
+    ok(page.evaluate(STEP, 0.1) == 'gfill', 'sliding the gourd moves the script to the fill step')
+    ok(page.evaluate("() => document.querySelector('#coachTip').textContent") .startswith('Every sprout fills the space around your gourd'), 'the fill tip is shown')
+    before = page.evaluate(SQ)
+    ok(page.evaluate(STEP, 1.0) == 'gfill' and page.evaluate(SQ) > before, 'the fill step plays a fill around the gourd')
+    ok(page.evaluate("() => [window.__gg.G.monsters.length, window.__gg.G.spawned]") == [0, 0], 'monsters still wait during the fill')
+    ok(page.evaluate(STEP, 4) == 'ghold', 'then the hand holds the gourd')
+    ok(page.evaluate("() => document.querySelector('#coachTip').textContent").lower().find('hold') >= 0, 'the hold tip is shown')
+    ok(page.evaluate(STEP, 3) == 'ghold' and page.evaluate("() => window.__gg.gourdPos() !== null"), 'the hold step waits for the player to break the gourd')
+    pre = page.evaluate("() => { const g = window.__gg, p = g.gourdPos(); return [p, g.graves.flat().filter(Boolean).length, g.graves[1][3] || g.graves[3][3]]; }")
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos(); g.destroyGourd(g.grid[p.r][p.c]); }")
+    d = page.evaluate("() => [window.__gg.graves.flat().filter(Boolean).length, window.__gg.G.gourdDue]")
+    ok(pre[0] == {'r': 2, 'c': 4} and pre[1] == 5 and d == [0, True], f'the gourd stopped at (2, 4); breaking it clears all 5 graves around it and it is due back {pre} {d}')
+    ok(page.evaluate(STEP, 0.1) == 'gback', 'breaking the gourd moves the script to the respawn step')
+    ok(page.evaluate("() => document.querySelector('#coachTip').textContent").startswith('It grows back on the next sprout'), 'the respawn tip is shown')
+    ok(page.evaluate(STEP, 4) == 'praise' and page.evaluate("() => window.__gg.gourdPos() !== null"), 'the gourd grows back on a sprout and the script says Nice')
+    ok(page.evaluate("() => window.__gg.coachHolds()") is False, 'the praise step lets the night carry on')
+    page.evaluate(STEP, 4)
+    d = page.evaluate("() => [window.__gg.G.coach, window.__gg.save.seenGourdCoach]")
+    ok(d == [None, True], f'after the praise the script ends and seenGourdCoach is set {d}')
+    page.evaluate("() => { window.__gg.G.spawnTimer = 0; }"); page.evaluate(STEP, 0.5)
+    ok(page.evaluate("() => window.__gg.G.spawned") > 0, 'monsters spawn after the tutorial')
+    # seen: no script
+    nm_start(page, 5, coach=True)
+    ok(page.evaluate("() => [window.__gg.G.coach, window.__gg.coachHolds()]") == [None, False], 'a player who has seen it gets a plain N1-5')
+    # breaking the gourd early (before the fill) skips to the respawn step
+    page.evaluate("() => { window.__gg.save.seenGourdCoach = false; }")
+    nm_start(page, 5, coach=True)
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos(); g.destroyGourd(g.grid[p.r][p.c]); }")
+    ok(page.evaluate(STEP, 0.1) == 'gback', 'breaking the gourd early jumps to the respawn step')
+    ok(page.evaluate(STEP, 8) is None and page.evaluate("() => [window.__gg.save.seenGourdCoach, window.__gg.gourdPos() !== null]") == [True, True], 'and it still finishes with the gourd back')
+    # the first-night coach on 1-1 is unchanged
+    page.evaluate("() => { window.__gg.save.seenCoach = false; }"); start(page, 1)
+    ok(page.evaluate("() => window.__gg.G.coach && window.__gg.G.coach.step") == 'slide', '1-1 still starts its own coach')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_gourd_coach': check_gourd_coach})
 
 
 def main():

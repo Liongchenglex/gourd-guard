@@ -4,13 +4,16 @@
 //   2. flick: once the bunch lights up, one ghoul walks down its column and the hand swipes the bunch upward
 //   3. smash: the hand presses and holds a spare pumpkin until it crushes, to free up space (owner, 2026-10-07)
 //   4. praise: a short "Nice!" tip, then the night carries on as normal
+// Release 4 adds a second script on Nightmare 1-5 (`coach:'gourd'`, GOURD_STEPS below): slide the Grave Gourd, watch a sprout fill the space
+// around it, hold it until it breaks (the graves around it clear), and watch it grow back on the next sprout.
 // The hand is one baked sprite blitted with transforms (no painter calls or shadowBlur per frame).
 import { G, grid, graves, setGrid, ROWS, COLS, CS, GX, GY, LANE, FIELD_TOP, FENCE_Y } from './state.js';
-import { newCell, planMove, applyMove, revertMove, sameColorSize, findCell, bestLitGroup, resolveMatches } from './board.js';
+import { newCell, spawnSprouts, planMove, applyMove, revertMove, sameColorSize, findCell, bestLitGroup, resolveMatches } from './board.js';
 import { spawnMonster } from './monsters.js';
 import { scale } from './render/canvas.js';
 import { save, persist } from '../save.js';
 import { $ } from './util.js';
+import { gourdPos } from './gourd.js';
 
 const TIPS = {
   slide: 'Drag a pumpkin to slide it. Line up <b>3 of the same colour</b> to make a bunch.',
@@ -19,8 +22,19 @@ const TIPS = {
   praise: '<b>Nice!</b> Keep bunching and launching to guard your walls.',
 };
 
-/** Starts the coach on a fresh 1-1 (call after the board is built). */
+// The gourd script (Release 4). Steps: gslide (the hand slides the gourd) -> gfill (a sprout fills its 3x3) -> ghold (the hand holds it
+// until it breaks) -> gback (it grows back on the next sprout) -> praise. Monsters and sprouts wait through all of it (coachHolds); the
+// script runs its own two sprout ticks, the fill and the respawn, through the real spawnSprouts().
+const GTIPS = __RELEASE__ >= 4 ? {
+  gslide: 'This is the <b>Grave Gourd</b>. Drag it to slide it, like a pumpkin.',
+  gfill: 'Every sprout <b>fills the space around your gourd</b>.',
+  ghold: '<b>Press and hold</b> the gourd to break it. The graves around it clear away.',
+  gback: 'It <b>grows back</b> on the next sprout.',
+} : {};
+
+/** Starts the coach on a fresh 1-1 (call after the board is built), or the gourd script on a Nightmare 1-5 that has not been seen. */
 export function startCoach(){
+  if (__RELEASE__ >= 4 && G.mode === 'story' && G.def && G.def.coach === 'gourd' && !save.seenGourdCoach && gourdPos()) return startGourdCoach();
   if (!(G.mode === 'story' && G.n === 1 && !save.seenCoach)) return;
   // a clear patch: greens that touch nothing, plus two in the corner and one that slides in to make three
   setGrid(Array.from({ length:ROWS }, () => Array(COLS).fill(null)));
@@ -29,6 +43,45 @@ export function startCoach(){
   save.seenFlick = true;   // the coach teaches the flick; skip the one-off banner
   G.coach = { step:'slide', t:0, move:null, stepT:0 };
   findMove(); tip('slide');
+}
+
+/** Gourd script start: a clear patch with only the gourd on it (the level's graves stay), so the fill and the hold read on their own. */
+function startGourdCoach(){
+  const gp = gourdPos(), gourd = grid[gp.r][gp.c];
+  setGrid(Array.from({ length:ROWS }, () => Array(COLS).fill(null)));
+  grid[gp.r][gp.c] = gourd;
+  G.coach = { kind:'gourd', step:'gslide', t:0, stepT:0, move:null, ref:gourd, from:gp };
+  findGourdMove(); tip('gslide');
+}
+
+/** The slide the hand shows: the gourd one cell right, else left. */
+function findGourdMove(){
+  const c = G.coach, gp = gourdPos(); c.move = null; if (!gp) return;
+  const ref = grid[gp.r][gp.c];
+  for (const dir of ['right', 'left', 'up', 'down']){
+    const moves = planMove(gp.r, gp.c, dir);
+    if (moves){ c.move = { ref, dir, tr:moves[0][2], tc:moves[0][3] }; return; }
+  }
+}
+
+function gourdCoachUpdate(c){
+  const gp = gourdPos(), go = step => { c.step = step; c.stepT = 0; tip(step); };
+  if (c.step === 'gslide'){
+    if (!gp) go('gback');   // broken before it was slid: carry on from the respawn
+    else if (gp.r !== c.from.r || gp.c !== c.from.c) go('gfill');   // slid (any way)
+    else if (!c.move || !findCell(c.move.ref)) findGourdMove();
+  } else if (c.step === 'gfill'){
+    if (!gp) go('gback');
+    else if (!c.filled && c.stepT > 0.6){ c.filled = true; spawnSprouts(); }   // one real sprout tick: its first slot fills the gourd's square
+    else if (c.filled && c.stepT > 3.2){ c.ref = grid[gp.r][gp.c]; go('ghold'); }
+  } else if (c.step === 'ghold'){
+    if (!gp) go('gback'); else c.ref = grid[gp.r][gp.c];   // any way of breaking it counts (a real hold)
+  } else if (c.step === 'gback'){
+    if (gp) go('praise');
+    else if (c.stepT > 1.2){ c.stepT = 0.01; spawnSprouts(); }   // the next sprout tick brings it back (retried if the patch had no room)
+  } else if (c.step === 'praise' && c.stepT > 3.5){
+    tip(null); G.coach = null; save.seenGourdCoach = true; persist(); resolveMatches();
+  }
 }
 
 /** A slide that makes a bunch right now: the hand demonstrates this one. */
@@ -56,7 +109,7 @@ function spare(){
 function tip(step){
   const el = $('#coachTip'); if (!el) return;
   if (!step){ el.hidden = true; return; }
-  el.innerHTML = TIPS[step]; el.hidden = false;
+  el.innerHTML = TIPS[step] || GTIPS[step]; el.hidden = false;
   el.style.top = Math.round((FENCE_Y - CS * 1.25) * scale) + 'px';
 }
 
@@ -66,6 +119,7 @@ export const coachHolds = () => !!(G && G.coach && G.coach.step !== 'praise');  
 export function coachUpdate(dt){
   const c = G && G.coach; if (!c || G.over) return;
   c.t += dt; c.stepT += dt;
+  if (__RELEASE__ >= 4 && c.kind === 'gourd'){ gourdCoachUpdate(c); return; }
   const lit = bestLitGroup();
   if (c.step === 'slide'){
     if (lit){   // a bunch formed: send one ghoul down its column
@@ -111,7 +165,7 @@ export function drawCoach(ctx){
   const c = G && G.coach; if (!c || G.over) return;
   const h = hand();
   const blit = (x, y, s, a) => { ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y); ctx.scale(s, s); ctx.drawImage(h, -18, -6, 64, 64); ctx.restore(); };
-  if (c.step === 'slide' && c.move){
+  if ((c.step === 'slide' || c.step === 'gslide') && c.move){
     const pos = findCell(c.move.ref); if (!pos) return;
     const [x0, y0] = cellXY(pos.r, pos.c), [x1, y1] = cellXY(c.move.tr, c.move.tc);
     const P = 2.0, u = (c.t % P) / P;   // press 0-.2, drag .2-.65, hold .65-.85, fade .85-1
@@ -121,7 +175,7 @@ export function drawCoach(ctx){
     ctx.strokeRect(GX + pos.c * CS + 5, GY + pos.r * CS + 5, CS - 10, CS - 10);
     ctx.setLineDash([6, 6]); ctx.strokeRect(GX + c.move.tc * CS + 5, GY + c.move.tr * CS + 5, CS - 10, CS - 10); ctx.restore();
     blit(x + 6, y + 4, press, u > .85 ? (1 - u) / .15 : 1);
-  } else if (c.step === 'smash'){
+  } else if (c.step === 'smash' || c.step === 'ghold'){
     const pos = c.ref && findCell(c.ref); if (!pos) return;
     const [x0, y0] = cellXY(pos.r, pos.c), P = 2.2, u = (c.t % P) / P;   // press .0-.1, hold and fill .1-.7, crush flash .7-.85, rest
     const f = u < .1 ? 0 : u < .7 ? (u - .1) / .6 : 1;

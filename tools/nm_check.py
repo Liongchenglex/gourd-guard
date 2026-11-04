@@ -259,6 +259,61 @@ def check_fire_budget(browser, url):
 CHECKS.update({'check_fire_basic': check_fire_basic, 'check_fire_order': check_fire_order, 'check_fire_marks': check_fire_marks, 'check_nm_continue': check_nm_continue, 'check_fire_budget': check_fire_budget})
 
 
+# ---------- Task 3: burning monsters ----------
+def check_burn_walk(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    page.evaluate("() => window.__gg.lightFire(2, 0.5)")
+    page.evaluate("""() => { const g = window.__gg; window.__m = g.spawnMonster('mummy', 2, true, 0.4); window.__m.hp = 2; window.__c = g.spawnMonster('mummy', 4, true, 0.4); }""")
+    t0 = time.time(); t = None
+    while time.time() - t0 < 3:
+        if page.evaluate("() => window.__m.type") == 'firemummy': t = time.time() - t0; break
+        time.sleep(0.05)
+    ok(t is not None, f'a mummy walking onto a fire tile becomes a firemummy within 3 s ({t})')
+    ok(page.evaluate("() => window.__c.type") == 'mummy', 'control: a mummy in a lane with no fire stays a mummy')
+    ok(page.evaluate("() => window.__m.hp") == 2, 'it keeps its health')
+    ok(page.evaluate("() => window.__gg.G.fires.length") == 1, 'the fire stays')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_ice_only(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    page.evaluate("() => { const g = window.__gg; window.__m = g.spawnMonster('firemummy', 3, true, 0.3); window.__m.sp = 0; window.__m.lastHit = 0; g.damage(window.__m, 999, '#8fae78'); }")
+    r = page.evaluate("() => [window.__m.dead, window.__m.rise, window.__m.hp]")
+    ok(r[0] is False and r[1] > 0, f'a Green hit for 999 leaves a firemummy down (dead {r[0]}, rise {r[1]})')
+    time.sleep(4.6)
+    r = page.evaluate("() => [window.__m.dead, window.__m.rise, window.__m.hp]")
+    ok(r == [False, 0, 1], f'it rises with 1 health {r}')
+    page.evaluate("() => { const g = window.__gg; window.__m.lastHit = 2; g.damage(window.__m, 999, '#9ad8ff'); }")
+    ok(page.evaluate("() => window.__m.dead"), 'an Ice hit kills it')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_ice_lock(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    set_stars(page, story_done(70))   # enough pumpkins that the loadout screen opens (it skips the picker with 5 or fewer)
+    def musts(fire):
+        return page.evaluate("""(fire) => { const g = window.__gg, d = g.NIGHTMARE_LEVELS[0][0]; const old = d.fireStart; d.fireStart = fire; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show'));
+          g.beginNight(1001); d.fireStart = old;
+          return new Promise(res => setTimeout(() => res([...document.querySelectorAll('#loTeam .slot.must')].map(b => b.getAttribute('aria-label'))), 400)); }""", fire)
+    r = musts(3)
+    ok(any(x.startswith('Ice') for x in r), f'a level with fireStart > 0 locks Ice into the loadout {r}')
+    page.reload(); page.wait_for_function('() => !!window.__gg'); set_stars(page, story_done(70))
+    r = musts(0)
+    ok(not any(x.startswith('Ice') for x in r), f'control: a nightmare level with no fire does not lock Ice {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_burn_walk': check_burn_walk, 'check_ice_only': check_ice_only, 'check_ice_lock': check_ice_lock})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

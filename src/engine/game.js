@@ -1,5 +1,5 @@
 import { perkOn, clearRentals } from '../data/perks.js';
-import { MINTRO, TYPES, BOSS_NAMES, VARIANTS } from '../data/monsters.js';
+import { MINTRO, TYPES, BOSS_NAMES, VARIANTS, ICE_ONLY } from '../data/monsters.js';
 import { GEAR } from '../data/shop.js';
 import { PATTERNS } from '../data/patterns.js';
 import { NTYPES, PTYPES, POWER, PINK } from '../data/pumpkins.js';
@@ -66,7 +66,8 @@ export function beginNight(n){
   const must = def.unlockPumpkins.map(k => ({ t:PTYPES.findIndex(p => p.key === k), why:'New this level' })).filter(m => m.t >= 0);   // this level's new pumpkin(s) are locked into the loadout
   const hasMummies = def.pool.some(([k]) => k === 'mummy' || (VARIANTS[k] && VARIANTS[k].base === 'mummy'));
   if (hasMummies && !must.some(m => m.t === 3)) must.push({ t:3, why:'Mummies only die to Fire' });   // owner: Fire is auto-selected and locked on mummy levels
-  if (def.pool.some(([k]) => k === 'firemummy') && !must.some(m => m.t === 2)) must.push({ t:2, why:'Flaming mummies only die to Ice' });
+  if (def.pool.some(([k]) => ICE_ONLY.has(k)) && !must.some(m => m.t === 2)) must.push({ t:2, why:'Flaming mummies only die to Ice' });
+  if (__RELEASE__ >= 4 && (def.fireStart > 0 || (def.fireLayout && def.fireLayout.length) || (def.fireMarks && def.fireMarks.length)) && !must.some(m => m.t === 2)) must.push({ t:2, why:'Only Ice puts out fire and kills burning monsters' });   // fire tiles light burning monsters
   if (av.length > 5) openLoadout(av, lo => startGame('story', n, lo), must);
   else startGame('story', n, av);
 }

@@ -1,7 +1,7 @@
 import { endGame, shoreP } from './game.js';
 import { SACK } from '../data/economy.js';
 import { resolveMatches } from './board.js';
-import { TYPES, MODS, VARIANTS } from '../data/monsters.js';
+import { TYPES, MODS, VARIANTS, BURNS_TO, ICE_ONLY, BURNING_FROM } from '../data/monsters.js';
 import { BURN_EVERY, RAINBOW, GLUE_SLOW } from '../data/pumpkins.js';
 import { glueStep } from './glue.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
@@ -159,13 +159,25 @@ export function spawnJukebox(hp){
   m.hp = hp != null ? Math.min(m.maxHp, hp) : m.maxHp;
   return m;
 }
+/** An ordinary monster turns into its burning version (BURNS_TO), keeping its health: "Alight!", the ignite sound and sparks. */
+export function burnMonster(m){
+  const to = BURNS_TO[m.type]; if (!to) return false;
+  m.type = to; m.flash = 0.3;
+  addFloat('Alight!', m.x, mY(m) - m.r - 24, '#ff8a3a', 16, 0.9); SFX.monsterAct('firemummy', 'ignite'); for (let i = 0; i < 10; i++) spark(m.x, mY(m), '#ff8a3a', 120);
+  return true;
+}
+/** A burning monster sets ordinary monsters of its own family alight within one lane and one tile. */
+function igniteNear(m){
+  const from = BURNING_FROM[m.type]; if (!from) return;
+  for (const o of G.monsters) if (o.type === from && !o.dead && o.rise <= 0 && Math.abs(o.lane - m.lane) <= 1 && Math.abs(o.p - m.p) < TILE_P()) burnMonster(o);
+}
 export function updateMonster(m, dt){
   m.age += dt; m.ph += dt;
   if (m.flash > 0) m.flash -= dt;
   if (m.anim){ m.anim.t += dt; if (m.anim.t >= m.anim.dur) m.anim = null; }   // a skill animation playing over the top (render/anim.js)
   if (m.rise > 0){   // collapsed mummy: lies still, untargetable, then stands back up at full health
     m.rise -= dt;
-    if (m.rise <= 0){ m.rise = 0; m.hp = (m.type === 'mummy' || m.type === 'firemummy') ? 1 : m.maxHp; m.flash = 0.2; addFloat('Rises again', m.x, mY(m) - m.r - 30, '#d8cfb0', 16, 0.9); if (m.type === 'boss') SFX.bossSfx(m.kind, 'revive'); else SFX.monsterAct('mummy', 'rise'); }   // mummies come back with 1 HP (owner)
+    if (m.rise <= 0){ m.rise = 0; m.hp = (m.type === 'mummy' || ICE_ONLY.has(m.type)) ? 1 : m.maxHp; m.flash = 0.2; addFloat('Rises again', m.x, mY(m) - m.r - 30, '#d8cfb0', 16, 0.9); if (m.type === 'boss') SFX.bossSfx(m.kind, 'revive'); else SFX.monsterAct('mummy', 'rise'); }   // mummies come back with 1 HP (owner)
     return;
   }
   let sp = m.sp;
@@ -275,9 +287,7 @@ export function updateMonster(m, dt){
         break;
       }
       case 'firemummy': {   // sets ordinary mummies alight as it passes
-        for (const o of G.monsters) if (o.type === 'mummy' && !o.dead && o.rise <= 0 && Math.abs(o.lane - m.lane) <= 1 && Math.abs(o.p - m.p) < TILE_P()){
-          o.type = 'firemummy'; o.flash = 0.3; addFloat('Alight!', o.x, mY(o) - o.r - 24, '#ff8a3a', 16, 0.9); SFX.monsterAct('firemummy', 'ignite'); for (let i = 0; i < 10; i++) spark(o.x, mY(o), '#ff8a3a', 120);
-        }
+        igniteNear(m);
         if (Math.random() < dt * 14) G.parts.push({ x:m.x + rnd(-m.r * 0.6, m.r * 0.6), y:mY(m) + rnd(-10, 6), vx:rnd(-10, 10), vy:-rnd(50, 90), t:0, life:0.5, size:rnd(3, 6), color:'#ff8a3a', kind:'flame', grav:0 });
         m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
         break;
@@ -480,7 +490,7 @@ function updateVampireCount(m, dt){
 
 /** Who a hex may land on (witch, Hexwitch and its Hollow King form, hexAll levels): never a boss, the Loot Sack, the jukebox, a true
  *  chameleon, or a mummy of either kind: a mummy only goes down to its own colour, so a hex could leave nothing able to finish it (owner, 2026-10-19 and 2026-11-03). */
-const NO_HEX = new Set(['boss', 'sack', 'jukebox', 'chameleon', 'rchameleon', 'mummy', 'firemummy']);
+const NO_HEX = new Set(['boss', 'sack', 'jukebox', 'chameleon', 'rchameleon', 'mummy', ...ICE_ONLY]);
 export function hexable(o){ return !o.dead && !NO_HEX.has(o.type); }
 
 /** A crackling purple bolt from a witch to the monster it hexes (owner: hexes should zap and show lightning). */

@@ -104,6 +104,14 @@ export const VARIANTS = {
   owlBat:       { base:'bat',   mod:'stubborn', name:'Owl-bat',       tint:'#a07a4a', intro:'Owl-bats shrug off knockback.' },
 };
 
+/** Burning monsters (one rule for the Flaming Mummy and, from Release 4, fire tiles): an ordinary type that walks onto a fire tile (or stands by a burning one of its
+ *  family) turns into its burning version, keeping its health. A burning type is Ice-only: any other kill knocks it down for its `rise` seconds and it rises with 1 health.
+ *  Tasks 5 and 6 of the Release 4 plan add hayrick, husker and huskerBare here. */
+export const BURNS_TO = { mummy:'firemummy' };
+export const ICE_ONLY = new Set(['firemummy']);
+/** burning type -> the ordinary type it ignites */
+export const BURNING_FROM = Object.fromEntries(Object.entries(BURNS_TO).map(([a, b]) => [b, a]));
+
 export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch', ...(__RELEASE__ >= 3 ? { hollowking:'The Hollow King' } : {}) };
 export const BOSS_NAME = BOSS_NAMES.gravekeeper;   // legacy alias used by endless mode
 

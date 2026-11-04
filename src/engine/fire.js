@@ -6,7 +6,8 @@
 import { FIRE_P_RANGE, FRENZY_BURST } from '../data/rules.js';
 import { SFX, sample } from './audio.js';
 import { spark } from './combat.js';
-import { mY, TILE_P, lanesOf } from './monsters.js';
+import { mY, TILE_P, lanesOf, burnMonster } from './monsters.js';
+import { BURNS_TO } from '../data/monsters.js';
 import { COLS, FIELD_BOT, FIELD_TOP, G, LANE } from './state.js';
 import { shuffle } from './util.js';
 import { banner } from '../ui/hud.js';
@@ -114,5 +115,10 @@ export function dropFireMark(mark){
   banner('Wildfire!', 'The field catches fire and a horde rushes in.', 2.2); SFX.bossAlert();
 }
 
-/** Per-frame: the flames' clocks (drawing reads f.t for its loop phase). */
-export function updateFires(dt){ for (const f of G.fires) f.t += dt; }
+/** Per-frame: the flames' clocks (drawing reads f.t for its loop phase), and monsters that have walked onto a fire tile: a type in BURNS_TO (Mummy, later Hayrick and Corn Husker)
+ *  turns into its burning version, keeping its health. Fire does not hurt or stop any monster; one that is down (rising) is not lit. */
+export function updateFires(dt){
+  for (const f of G.fires) f.t += dt;
+  if (!G.fires.length) return;
+  for (const m of G.monsters) if (!m.dead && !m.hidden && m.rise <= 0 && BURNS_TO[m.type] && fireAt(m.lane, m.p)) burnMonster(m);
+}

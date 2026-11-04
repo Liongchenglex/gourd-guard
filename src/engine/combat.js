@@ -1,4 +1,4 @@
-import { TYPES, BOSS_NAMES } from '../data/monsters.js';
+import { TYPES, BOSS_NAMES, ICE_ONLY } from '../data/monsters.js';
 import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW, TURQUOISE, BROWN, TURQ_FRAC, BROWN_KB, BROWN_SIZE_MULT, PAINT, BEIGE } from '../data/pumpkins.js';
 import { layGlue } from './glue.js';
 import { hkGate, hkAfterHit, onHkFormDown, onKingDown } from './hollowking.js';
@@ -159,8 +159,8 @@ export function kill(m){
     for (let i = 0; i < 10; i++) spark(m.x, mY(m), '#d09bff', 160); SFX.knock();
     return;
   }
-  if (m.type === 'firemummy' && m.lastHit !== 2){   // not Ice: it collapses and rises again later
-    m.hp = 0; m.rise = TYPES.firemummy.rise; m.eating = false; m.kb = 0; m.burnLeft = 0;
+  if (ICE_ONLY.has(m.type) && m.lastHit !== 2){   // not Ice: it collapses and rises again later
+    m.hp = 0; m.rise = TYPES[m.type].rise; m.eating = false; m.kb = 0; m.burnLeft = 0;
     addFloat('Down… still burning', m.x, mY(m) - m.r - 30, '#ff8a3a', 16, 1);
     for (let i = 0; i < 10; i++) chunk(m.x, mY(m), '#ff8a3a', 160); SFX.knock();
     return;

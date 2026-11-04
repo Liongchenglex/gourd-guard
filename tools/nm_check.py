@@ -26,7 +26,7 @@ def story_done(upto=20):
 # ---------- Task 1: the track, the book page and the release checks ----------
 def check_r4_absent(browser, url):
     js = bundle_js()
-    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord', 'Grave Gourd', 'e3a43c', 'around your gourd'):
+    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord', 'Grave Gourd', 'e3a43c', 'around your gourd', 'Grave Riser'):
         ok((s in js) == R4, f"{s!r} {'in' if R4 else 'not in'} the bundle")
 
 
@@ -960,6 +960,66 @@ def check_gourd_coach(browser, url):
 
 
 CHECKS.update({'check_gourd_coach': check_gourd_coach})
+
+
+# ---------- Task 10: the Grave Riser ----------
+COL_GRAVES = "(c) => window.__gg.graves.map(row => row[c] ? 1 : 0)"
+
+
+def check_grave_riser(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    ok(page.evaluate("() => { const T = window.__gg.TYPES.graveriser; return T && [T.hp, T.digEvery]; }") == [3, 7], 'grave riser: 3 health, digs every 7 s (data)')
+    # lane 4: an empty column. lane 2: pumpkins in rows 0-1, a grave in row 2, the gourd in row 3, so row 4 is the only free cell.
+    # lane 6: frozen for its whole dig time. lane 0: not on the field yet (p < 0). lane 1: a column with no riser.
+    page.evaluate("""() => { const g = window.__gg; g.graves.forEach(r => r.fill(false));
+      g.grid[0][2] = g.newCell(0); g.grid[1][2] = g.newCell(1); g.graves[2][2] = true; g.grid[3][2] = g.newGourd();
+      const mk = (l, p) => { const m = g.spawnMonster('graveriser', l, true, p); m.sp = 0; return m; };
+      window.__gr = { a:mk(4, 0.3), b:mk(2, 0.3), c:mk(6, 0.3), d:mk(0, -0.04) }; window.__gr.c.frozenT = 9; }""")
+    time.sleep(6.3)
+    ok(sum(page.evaluate(COL_GRAVES, 4)) == 0, 'no grave in column 4 before 7 s')
+    time.sleep(1.2)
+    g4 = page.evaluate(COL_GRAVES, 4)
+    ok(sum(g4) == 1, f'7.5 s on: exactly one grave in column 4 {g4}')
+    ok(page.evaluate("() => window.__gg.grid.every(r => !r[4])"), 'the grave went on an empty cell (no pumpkin was replaced)')
+    g2 = page.evaluate(COL_GRAVES, 2)
+    ok(g2 == [0, 0, 1, 0, 1], f'column 2: the only free cell (row 4) got the grave; pumpkins, the old grave and the gourd untouched {g2}')
+    ok(page.evaluate("() => { const g = window.__gg; return !!g.grid[0][2] && !!g.grid[1][2] && g.isGourd(g.grid[3][2]); }"), 'the pumpkins and the gourd in column 2 are still there')
+    ok(sum(page.evaluate(COL_GRAVES, 6)) == 0, 'a frozen riser does not dig')
+    ok(sum(page.evaluate(COL_GRAVES, 0)) == 0, 'a riser not yet on the field (p < 0) does not dig')
+    ok(sum(page.evaluate(COL_GRAVES, 1)) == 0, 'no grave in a column without a riser')
+    ok(page.evaluate("() => { const a = window.__gr.a.anim; return !!a && a.clip === 'dig'; }"), 'the riser plays its dig clip')
+    # it dies: the grave stays, and its die clip plays where it stood
+    page.evaluate("() => { const g = window.__gg, m = window.__gr.a; m.lastHit = 0; g.damage(m, 99, '#8fae78'); }")
+    ok(page.evaluate("() => window.__gr.a.dead") is True, 'the riser is dead')
+    ok(page.evaluate("() => window.__gg.G.vfx.some(v => v.kind === 'clip' && v.key === 'graveriser' && v.clip === 'die')"), 'its die clip plays (a clip effect)')
+    time.sleep(0.8)
+    ok(sum(page.evaluate(COL_GRAVES, 4)) == 1, 'after it dies the grave stays')
+    # column 4 full: no new graves
+    page.evaluate("""() => { const g = window.__gg, G = g.G; G.monsters.length = 0; g.graves.forEach(r => r.fill(false));
+      for (let r = 0; r < 5; r++) g.grid[r][4] = g.newCell(r % 2);
+      window.__gf = g.spawnMonster('graveriser', 4, true, 0.3); window.__gf.sp = 0; }""")
+    time.sleep(7.6)
+    ok(sum(page.evaluate(COL_GRAVES, 4)) == 0 and page.evaluate("() => window.__gg.grid.every(r => !!r[4])"), 'column 4 full: no new grave, every pumpkin still there')
+    ok(page.evaluate("() => !window.__gg.graves.some(r => r.some(Boolean))"), 'and no grave anywhere else')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_grave_riser_baked(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const d = window.__gg.NIGHTMARE_LEVELS[0][0]; d.pool = [...d.pool, ['graveriser', 3]]; }")
+    nm_start(page, 1)
+    ok(page.evaluate("() => window.__gg.isBaked('graveriser')"), 'the grave riser frames are baked when a night with one in its pool starts')
+    ok(page.evaluate("() => { const C = window.__gg.CHARS.graveriser; return !!C && ['walk', 'chew', 'dig', 'die'].every(k => !!C.clips[k]); }"), 'it has walk, chew, dig and die clips')
+    ok(page.evaluate("() => window.__gg.CHARS.graveriser.clips.die.n") == 8, 'the die clip has 8 frames (the clip effect plays 8)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_grave_riser': check_grave_riser, 'check_grave_riser_baked': check_grave_riser_baked})
 
 
 def main():

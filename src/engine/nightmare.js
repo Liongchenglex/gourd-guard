@@ -4,10 +4,10 @@
 
 import { TYPES } from '../data/monsters.js';
 import { SFX } from './audio.js';
-import { addFloat, ring, spark } from './combat.js';
+import { addFloat, chunk, ring, spark } from './combat.js';
 import { lightRandomFires } from './fire.js';
 import { igniteNear, mY, spawnMonster } from './monsters.js';
-import { COLS, G, LANE, ROWS, grid } from './state.js';
+import { COLS, CS, G, GY, LANE, ROWS, graves, grid } from './state.js';
 
 /** Monsters a crow cannot speed up: those that stand still on purpose. */
 const noRush = o => o.type === 'boss' || o.type === 'sack' || o.type === 'jukebox';
@@ -34,6 +34,20 @@ function throwFork(m){
     SFX.monsterAct('hayrick', 'toss');
     return;
   }
+}
+
+/** The Grave Riser digs: a grave on a random cell of its column on the patch with no pumpkin (the gourd is a cell too) and no grave.
+ *  With no such cell it does nothing this time (no clip, no sound). The grave is an ordinary one: it stays after the riser dies. */
+function dig(m){
+  const c = m.lane, free = [];
+  for (let r = 0; r < ROWS; r++) if (!grid[r][c] && !graves[r][c]) free.push(r);
+  if (!free.length) return;
+  const r = free[Math.floor(Math.random() * free.length)], x = LANE(c), y = GY + r * CS + CS / 2;
+  graves[r][c] = true;
+  m.anim = { clip:'dig', t:0, dur:10 / 12 };   // the dig clip: 10 frames at 12 fps (render/chars/graveriser.js)
+  for (let i = 0; i < 14; i++) chunk(x, y, i % 2 ? '#5a4030' : '#8a8d96', 180);   // earth and stone burst up as the headstone rises
+  ring(x, y, 36, 'rgba(190,160,120,.8)');
+  SFX.monsterAct('graveriser', 'dig');
 }
 
 // ---------- The Strawlord (mini boss, N1-4 and N1-13; spec Part 4) ----------
@@ -93,6 +107,15 @@ export function updateNightmareMonster(m, dt){
       if (m.type === 'hayrickBurning') igniteNear(m);
       if (!m.thrown && m.p > 0.3) throwFork(m);
       m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
+      return true;
+    }
+    case 'graveriser': {   // its dig timer runs only while it is on the field (this switch already skips a frozen, chewing, knocked-back or fallen monster)
+      if (m.p > 0){
+        if (m.digT == null) m.digT = TYPES.graveriser.digEvery;
+        m.digT -= dt;
+        if (m.digT <= 0){ m.digT = TYPES.graveriser.digEvery; dig(m); }
+      }
+      m.x = m.tx + Math.sin(m.ph * 1.2) * 1.5;
       return true;
     }
     case 'crow':   // flies like a bat down its lane; one fresh out of the Strawlord's coat glides over to its lane first

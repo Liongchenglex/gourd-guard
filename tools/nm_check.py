@@ -624,12 +624,18 @@ def check_strawlord(browser, url):
     ok(r[0] >= 3 and r[1] == 2, f'4.5 s into phase 2 it has flocked again (new crows {r[0]}) and lit 2 fire tiles ({r[1]})')
     mp, hold = page.evaluate("() => [window.__maxP, window.__b.hold]")
     ok(mp <= hold + 1e-9, f'it never walks past hold (max p {mp:.4f}, hold {hold})')
-    # immune to knockback and freeze
-    page.evaluate("() => { const g = window.__gg, b = window.__b; g.knockback && g.knockback(b); }")
-    ok(page.evaluate("() => [window.__b.kb || 0, window.__b.frozenT || 0]") == [0, 0], 'no knockback, no freeze')
+    # immune to knockback and freeze, through the real hit path: 20 level-5 Ice hits from a 5+ bunch (guar: knockback guaranteed; freeze 50% a hit)
+    hits = """(m) => { const g = window.__gg, out = { kb:0, frozen:0, slowed:0 };
+      for (let i = 0; i < 20; i++){ const pr = { x:m.x, y:g.fieldY(1), vy:-900, type:2, vis:2, lv:5, guar:true, lane:m.lane, hitWalls:new Set(), grp:{ spawned:false, small:false, kills:0 }, size:1, rot:0, spin:9, hit:new Set(), trail:[], r:16, dead:false };
+        g.hitMonster(pr, m); if (m.kb > 0) out.kb++; if (m.frozenT > 0) out.frozen++; if (m.slowT > 0) out.slowed++; }
+      return out; }"""
+    ctl = page.evaluate(f"() => {{ const g = window.__gg, m = g.spawnMonster('ghoul', (window.__b.lane + 3) % 7, true, 0.5); m.sp = 0; m.hp = m.maxHp = 5000; const r = ({hits})(m); m.dead = true; return r; }}")
+    ok(ctl['kb'] > 0 and ctl['frozen'] > 0, f'control: the same 20 Ice hits knock back and freeze a ghoul {ctl}')
+    r = page.evaluate(f"() => {{ const b = window.__b; b.hp = 5000; return [({hits})(b), b.kb || 0, b.frozenT || 0]; }}")
+    ok(r[0]['kb'] == 0 and r[0]['frozen'] == 0 and r[1] == 0 and r[2] == 0 and r[0]['slowed'] > 0, f'the Strawlord takes all 20 hits with no knockback and no freeze, but is slowed {r}')
     # killing it gives exactly one normal chest
     c0 = page.evaluate("() => window.__gg.save.chests.length")
-    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 999, '#fff'); }")
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 99999, '#fff'); }")
     time.sleep(0.3)
     ch = page.evaluate("() => window.__gg.save.chests.slice(%d)" % c0)
     ok(len(ch) == 1 and ch[0]['kind'] == 'normal' and not ch[0].get('boss'), f'killing it adds exactly one normal chest and no boss item {ch}')

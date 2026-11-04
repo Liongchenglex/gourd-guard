@@ -16,7 +16,7 @@ const list = ks => ks.length < 2 ? pname(ks[0]) : ks.slice(0, -1).map(pname).joi
 const MON = { ghoul:'a ghoul', fogwalker:'a fogwalker' };
 
 /** Fresh per-night quest counters (kept on G.q; carried over when an ad continues the night). */
-export const newQuestCounters = () => ({ tools:0, big:0, best:0, chill:0, burn:0, boom:0, heal:0, refl:0, wrong:0, pierce:0, brown:0, touched:{} });
+export const newQuestCounters = () => ({ tools:0, big:0, best:0, chill:0, burn:0, boom:0, heal:0, refl:0, wrong:0, pierce:0, brown:0, touched:{}, ...(__RELEASE__ >= 4 ? { fireOut:0 } : {}) });   // fireOut: fire tiles Ice put out (Release 4)
 
 /** What the quests read at any moment of the night. */
 function snap(){

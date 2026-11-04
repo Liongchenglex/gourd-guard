@@ -20,6 +20,7 @@ import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, GX, GY, H, HOLD_TIME, LANE,
 import { TAU, clamp, mulberry } from '../util.js';
 import { save } from '../../save.js';
 import { drawCoach } from '../coach.js';
+import { drawFires, drawFireFx } from './fire.js';
 
 // ---------- Render ----------
 
@@ -45,6 +46,7 @@ export function render(){
   if ((g.def && g.def.sea) || g.sea) drawSea(t);
   drawPuddles(t);
   if (__RELEASE__ >= 3) drawGlue();
+  if (__RELEASE__ >= 4 && g.fires && g.fires.length) drawFires(g.fires, t);   // fire tiles (Release 4): one baked frame each, under the monsters
   for (const m of g.monsters) if (m.type === 'doctor' && !m.dead && m.p > 0) drawHealZone(m, t);
   for (const m of g.monsters) if (m.type === 'bulwark' && !m.dead && m.p > 0) drawBulwarkZone(m, t);
   drawHexZones(t);
@@ -549,6 +551,7 @@ function drawVfx(){
     else if (v.kind === 'blast') drawBlast(ctx, v);
     else if (v.kind === 'hexbolt') drawHexBolt(ctx, v);
     else if (v.kind === 'sigil') drawSigil(ctx, v);
+    else if (__RELEASE__ >= 4 && (v.kind === 'firehiss' || v.kind === 'fireflare')) drawFireFx(v);   // Ice puts a fire out / a pumpkin burns up in one
     else if (v.kind === 'clip'){
       ctx.save(); ctx.translate(v.x, v.y); ctx.scale(v.s, v.s);
       drawChar(ctx, {}, v.key, null, [v.clip, Math.floor(p * 7.999)]); ctx.restore();

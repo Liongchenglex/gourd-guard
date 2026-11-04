@@ -46,6 +46,10 @@ canvas#cv{ position:absolute; inset:0; width:100%; height:100%; display:block; t
 .jbMark{ position:absolute; top:0; bottom:0; width:calc(var(--u)*8px); margin-left:calc(var(--u)*-8px); border-radius:99px; background:#c0392b; box-shadow:0 0 0 calc(var(--u)*1.5px) rgba(255,211,90,.9); opacity:.75; }
 .jbMark.live{ animation:jbPulse .6s ease-in-out infinite alternate; opacity:1; }
 .jbMark.done{ background:#5a4a4a; box-shadow:none; opacity:.6; }
+.fmMark{ position:absolute; top:0; bottom:0; width:calc(var(--u)*8px); margin-left:calc(var(--u)*-4px); border-radius:99px; background:#ff6a1a; box-shadow:0 0 0 calc(var(--u)*1.5px) rgba(255,226,140,.9); opacity:.8; }
+.fmMark.live{ animation:fmPulse .3s ease-in-out infinite alternate; opacity:1; }
+.fmMark.done{ background:#5a3a2a; box-shadow:none; opacity:.6; }
+@keyframes fmPulse{ from{ transform:scale(1); } to{ transform:scale(1.45); background:#ffe27a; } }
 @keyframes jbPulse{ from{ transform:scale(1); } to{ transform:scale(1.35); background:#ffd35a; } }
 .hkMark{ position:absolute; top:0; bottom:0; width:calc(var(--u)*7px); margin-left:calc(var(--u)*-3.5px); border-radius:99px; box-shadow:0 0 0 calc(var(--u)*1.2px) rgba(20,8,30,.8); opacity:.85; }
 .hkMark.live{ animation:jbPulse .5s ease-in-out infinite alternate; opacity:1; }

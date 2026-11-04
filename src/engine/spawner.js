@@ -11,6 +11,7 @@ import { banner } from '../ui/hud.js';
 import { SPAWN_GAP, SPAWN_BURST, SPAWN_BURST_EARLY, SPAWN_LATE_FROM, FRENZY_BURST, FRENZY_BURST_GAP, FRENZY_PAIR } from '../data/rules.js';
 import { musicStart } from './audio.js';
 import { coachHolds } from './coach.js';
+import { dropFireMark } from './fire.js';
 
 export function pickFrom(pool){
   let tot = 0; for (const [, w] of pool) tot += w;
@@ -37,7 +38,7 @@ function spawnOne(d){
   const pool = d.caps ? d.pool.filter(([t]) => (counts[t] || 0) < (d.caps[t] == null ? Infinity : d.caps[t])) : d.pool;   // per-type caps (owner: "only 2 haulers")
   const t = G.spawned >= 1 && G.introQueue.length ? G.introQueue.shift() : pickFrom(pool.length ? pool : d.pool);
   counts[t] = (counts[t] || 0) + 1; const m = spawnMonster(t);
-  if (midJukebox()){ m.minion = true; return; }   // 6-19: the halfway Frenzy's monsters are extra; the bar waits at the mark
+  if (midJukebox() || (__RELEASE__ >= 4 && G.burstMinion)){ m.minion = true; return; }   // 6-19: the halfway Frenzy's monsters are extra; the bar waits at the mark. Release 4: so is a fire mark's horde
   G.spawned++;
 }
 
@@ -49,7 +50,9 @@ export function storySpawn(dt){
     || (d.frenzy && G.jukebox && !G.jukebox.dead);   // Frenzy (World 6): and while the jukebox stands
   const frenzyOn = d.frenzy && G.jukebox && !G.jukebox.dead;
   if (frenzyOn && G.burstLeft > 0 && (G.burstT -= dt) <= 0){ spawnOne(d); G.burstLeft--; G.burstT = FRENZY_BURST_GAP; }   // the drop's burst
-  if ((G.spawned < d.total || keepComing) && G.spawnTimer <= 0){
+  const fireBurst = __RELEASE__ >= 4 && G.fireBurst > 0;
+  if (fireBurst && (G.fireBurstT -= dt) <= 0){ G.burstMinion = true; spawnOne(d); G.burstMinion = false; G.fireBurst--; G.fireBurstT = FRENZY_BURST_GAP; }   // a fire mark's horde (Release 4): extras, one every 0.2 s
+  if ((G.spawned < d.total || keepComing) && G.spawnTimer <= 0 && !fireBurst){   // normal spawning waits for a fire mark's horde to finish
     for (let i = frenzyOn ? FRENZY_PAIR : 1; i > 0; i--) spawnOne(d);   // in pairs while the jukebox plays
     const late = d.levelNo >= SPAWN_LATE_FROM;   // the harder half of each world is spaced out (owner)
     const gap = d.spawnGap != null ? d.spawnGap : late ? SPAWN_GAP : 1, burst = d.spawnBurst != null ? d.spawnBurst : late ? SPAWN_BURST : SPAWN_BURST_EARLY;   // per-level overrides win
@@ -59,6 +62,10 @@ export function storySpawn(dt){
   if (d.frenzy && !d.frenzyAfterBoss && !G.jukebox && !G.jukeboxDone){
     const pts = jukeboxPoints(d), i = G.jbNext || 0;
     if (i < pts.length && G.spawned >= Math.floor(d.total * pts[i])) dropJukebox();   // with marks the bar counts arrivals too, so it drops on the mark (owner, 2026-11-03)
+  }
+  if (__RELEASE__ >= 4 && d.fireMarks && !(G.fireBurst > 0)){   // fire marks (Release 4): each fires once the bar (arrivals) reaches it
+    const i = G.fmNext || 0;
+    if (i < d.fireMarks.length && G.spawned >= Math.floor(d.total * d.fireMarks[i].at)) dropFireMark(d.fireMarks[i]);
   }
   if (d.boss2 && !G.bossSpawned && (G.spawned >= Math.floor(d.total * 0.4) || (G.bossHp && G.bossHp.length))){   // two bosses at once (World 6)
     G.bossSpawned = true;

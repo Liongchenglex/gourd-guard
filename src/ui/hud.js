@@ -44,6 +44,16 @@ function jukeboxMarks(){
   bar.querySelectorAll('.jbMark').forEach((e, i) => { e.classList.toggle('live', standing && i === used - 1); e.classList.toggle('done', i < used && !(standing && i === used - 1)); });
 }
 
+/** Fire marks (Release 4): a flame mark on the spawn bar at each `fireMarks` point; it pulses for a moment when it fires, then dims. */
+let fmFor = null;
+function fireMarks(){
+  const bar = $('#prog').parentNode, d = G.mode === 'story' && G.def, fm = d && d.fireMarks && d.fireMarks.length ? d.fireMarks : null;
+  if (fmFor !== G || (fm && bar.querySelectorAll('.fmMark').length !== fm.length)){ fmFor = G; for (const e of bar.querySelectorAll('.fmMark')) e.remove(); if (fm) fm.forEach(m => { const e = document.createElement('b'); e.className = 'fmMark'; e.style.left = m.at * 100 + '%'; e.setAttribute('aria-hidden', 'true'); bar.appendChild(e); }); }
+  if (!fm) return;
+  const used = G.fmNext || 0, fresh = G.t - (G.fmT == null ? -99 : G.fmT) < 1.5;
+  bar.querySelectorAll('.fmMark').forEach((e, i) => { const live = fresh && i === used - 1; e.classList.toggle('live', live); e.classList.toggle('done', i < used && !live); });
+}
+
 export function updateHud(force){
   if (!G || G.mode === 'demo') return;
   const coins = save.coins + G.coins;
@@ -52,7 +62,7 @@ export function updateHud(force){
   else if (G.def.boss){   // boss level: the bar fills a little until the boss shows, then tracks its health
     const bs = G.monsters.filter(m => m.type === 'boss' && !m.hkClone), hp = bs.reduce((a, b) => a + Math.max(0, b.hp), 0), mx = G.bossMax || bs.reduce((a, b) => a + b.maxHp, 0);   // two-boss nights: both bosses' full health, a fallen one counting 0
     prog = G.bossDead ? 1 : bs.length ? 0.1 + 0.9 * (1 - hp / mx) : 0.1 * Math.min(1, G.spawned / Math.max(1, Math.floor(G.total * 0.4)));
-  } else if (__RELEASE__ >= 3 && Array.isArray(G.def.frenzyAt)) prog = G.total ? Math.min(G.spawned, G.total) / G.total : 0;   // levels with jukebox marks: the bar counts monsters that arrived, so each jukebox drops on its mark (owner, 2026-11-03)
+  } else if ((__RELEASE__ >= 3 && Array.isArray(G.def.frenzyAt)) || (__RELEASE__ >= 4 && G.def.fireMarks && G.def.fireMarks.length)) prog = G.total ? Math.min(G.spawned, G.total) / G.total : 0;   // levels with jukebox marks: the bar counts monsters that arrived, so each jukebox drops on its mark (owner, 2026-11-03)
   else prog = G.total ? G.resolved / G.total : 0;
   const label = G.mode === 'story' ? `Night ${G.def.label}` : `${G.frenzy ? 'Frenzy' : 'Hour'} ${(G.hour || 0) + 1} · ${G.score.toLocaleString()}`;
   const wf = Math.round(wallFrac() * 100);
@@ -65,7 +75,8 @@ export function updateHud(force){
     qHtml = questsFor(G.def).slice(1).map(q => { const L = questLive(q); return `<span class="qt${L.done ? ' ok' : L.failed ? ' bad' : ''}"><b>${L.txt}</b> ${questShort(q)}</span>`; }).join('');
   }
   const sig = [questOn ? qHtml : '', wf, coins, seeds, Math.round(prog * 100), label, save.fw, save.repair, save.buster, save.lantern, save.mine, save.bomb, save.scarecrow, save.emergency, G.aim, tools.join(','), Math.round(G.fogClear || 0)].join('|');
-  if (__RELEASE__ >= 3){ hkMarks(); jukeboxMarks(); }   // cheap: rebuilt once per night, two class toggles otherwise
+  if (__RELEASE__ >= 3){ hkMarks(); jukeboxMarks(); }
+  if (__RELEASE__ >= 4) fireMarks();   // cheap: rebuilt once per night, two class toggles otherwise
   if (sig === hudSig && !force) return;
   const coinsChanged = hudSig && hudSig.split('|')[1] !== String(coins);
   hudSig = sig;

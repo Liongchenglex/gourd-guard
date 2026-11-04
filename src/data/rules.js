@@ -27,3 +27,7 @@ export const FRENZY_BURST = [4, 6], FRENZY_BURST_GAP = 0.2, FRENZY_PAIR = 2;
 
 // Emergency Pumpkins (World 6 tool, owner 2026-10-31): pumpkins dropped into empty patch cells per use.
 export const EMERGENCY_N = 9;
+
+// Fire tiles (Release 4, Nightmare Pumpkin Patch): random fires (night start, fire marks) light field tiles whose tile-row centre
+// lies in this band of the field (0 = top, 1 = the fence), so a fire is never right at the spawn line or on the wall.
+export const FIRE_P_RANGE = [0.25, 0.8];

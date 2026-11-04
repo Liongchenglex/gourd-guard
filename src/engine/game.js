@@ -27,6 +27,8 @@ import { banner, updateHud } from '../ui/hud.js';
 import { openLoadout, setState, showResult } from '../ui/screens.js';
 import { SPROUT_EVERY, FIREWORK_TARGETS, FIREWORK_DAMAGE, EMERGENCY_N } from '../data/rules.js';
 import { startCoach, coachHolds, coachUpdate } from './coach.js';
+import { lightFire, lightRandomFires, fireAhead, burnPumpkin, updateFires } from './fire.js';
+import { prebakeFire } from './render/fire.js';
 
 // ---------- Flow ----------
 
@@ -49,6 +51,7 @@ export function makePreview(n){
   if (def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
   else if (def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def.puddles) placePuddles(def.puddles);
+  if (__RELEASE__ >= 4){ G.fires = []; startFires(def); }   // the night's fire tiles at start (random ones land elsewhere in play, as puddles do)
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def.pattern, def.graves);
   if (def.gravesLayout) applyGravesLayout(def.gravesLayout);
@@ -87,12 +90,14 @@ export function startGame(mode, n, loadout){
     t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], glue:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
     loot:{ chests:0, seeds:0 }, chestDropped:false, continued:false, sackT:0, jukebox:null, jukeboxDone:false, jbNext:0,
+    ...(__RELEASE__ >= 4 ? { fires:[], fmNext:0, fmT:-99, fireBurst:0, fireBurstT:0, burstMinion:false } : {}),   // fire tiles and fire marks (src/engine/fire.js)
   });
   if (mode === 'story' && takeSack()) G.sackT = SACK.spawnAt;
   if (def) prebake([...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), ...(__RELEASE__ >= 3 && def.boss === 'hollowking' ? ['hollowking|' + TYPES.hollowking.forms[0]] : []), 'ghoul']);   // bake this level's sprite strips now, not on first sight
   if (def && def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
   else if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def && def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def && def.puddles) placePuddles(def.puddles);
+  if (__RELEASE__ >= 4 && def){ startFires(def); if (def.nightmare) prebakeFire(); }   // after the castles, so random fires skip them; the flame strip is baked now, not on first sight
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def ? def.pattern : Math.floor(Math.random() * PATTERNS.length), def ? def.graves : 2);
   if (def && def.gravesLayout) applyGravesLayout(def.gravesLayout);   // after the board exists: explicit graves replace pumpkins
@@ -262,6 +267,11 @@ export function placeScarecrow(lane){
 }
 /** Seconds between sprouts: the player's setting, one less with the 2-20 perk. */
 export function sproutEvery(){ return Math.max(1, SPROUT_EVERY - (perkOn('sprout') ? 1 : 0)); }   // fixed interval; only the Eager sprouts power changes it (owner)
+/** Fire tiles at night start (Release 4): the level's explicit `fireLayout`, then `fireStart` random tiles. */
+function startFires(def){
+  if (def.fireLayout) for (const [lane, p] of def.fireLayout) lightFire(lane, p, true);
+  if (def.fireStart) lightRandomFires(def.fireStart, true);
+}
 export function raiseCastles(n, hp){
   const lanes = shuffle([...Array(COLS).keys()]).slice(0, n);
   for (const lane of lanes) G.castles.push({ lane, p:rnd(0.4, 0.72), hp, maxHp:hp, flash:0, dead:false });
@@ -337,6 +347,10 @@ export function update(dt){
       }
       if (pr.dead) continue;
       const targets = g.monsters.filter(m => !m.dead && !(m.rise > 0) && !m.hidden && !pr.hit.has(m) && Math.abs(pr.x - m.x) < m.hw).sort((a, b) => b.p - a.p);
+      if (__RELEASE__ >= 4 && g.fires && g.fires.length){   // fire tiles (Release 4): the first fire it reaches, unless a monster stands in front of it
+        const f = fireAhead(pr, targets);
+        if (f){ burnPumpkin(pr, f); continue; }   // Ice puts it out; every pumpkin stops there, with no on-hit power
+      }
       for (const m of targets){
         if (Math.abs(pr.y - mY(m)) < pr.r + m.r * mS(m) * 0.8 || pr.y < mY(m)){
           hitMonster(pr, m);
@@ -346,7 +360,7 @@ export function update(dt){
     }
     if (!pr.dead && pr.y < FIELD_TOP - 14){
       pr.dead = true;
-      if (!pr.hit.size){
+      if (!pr.hit.size && !pr.burned){   // a pumpkin that burned in a fire counts as a hit: White does not come back, and it is not a miss
         const spot = pr.type === 6 ? (pr.lv >= 3 ? landingNear(pr.x, pr.vis) : landingCell(pr.x)) : null;   // White: boomerang back into the patch (level 3+: beside its colour)
         if (spot){ G.q.boom++; flyInto(spot[0], spot[1], pr.vis, pr.x, FIELD_TOP); addFloat('Back!', pr.x, FIELD_TOP + 30, '#ffffff', 16, 0.8); SFX.extra('return'); resolveMatches(); }
         else { g.missed++; SFX.extra('miss'); }
@@ -355,6 +369,7 @@ export function update(dt){
     }
   }
   g.projs = g.projs.filter(p => !p.dead);
+  if (__RELEASE__ >= 4 && g.fires) updateFires(dt);
   if (g.fogClear > 0) g.fogClear -= dt;
   for (const mine of g.mines){   // landmines hide on a tile; the first monster to step on one sets off a 3×3 blast (owner)
     const tile = CS / (FIELD_BOT - FIELD_TOP);
@@ -439,7 +454,7 @@ export function update(dt){
     if (g.hintT <= 0){ g.hintT = 1.5; g.hint = bestLitGroup() ? null : bestMove(); }
   }
   if (g.sackT > 0 && !g.over){ g.sackT -= dt; if (g.sackT <= 0) spawnSack(); }   // the ad-summoned Loot Sack
-  if (!g.over && g.mode === 'story' && (g.def.boss ? g.bossDead && (!g.continued || g.spawned >= g.def.total) : g.spawned >= g.def.total) && g.monsters.every(m => m.type === 'sack')) endGame(true);   // a Loot Sack still waddling about does not hold up the win
+  if (!g.over && g.mode === 'story' && !(__RELEASE__ >= 4 && g.fireBurst > 0) && (g.def.boss ? g.bossDead && (!g.continued || g.spawned >= g.def.total) : g.spawned >= g.def.total) && g.monsters.every(m => m.type === 'sack')) endGame(true);   // a Loot Sack still waddling about does not hold up the win
   updateHud(false);
 }
 
@@ -475,7 +490,8 @@ export function continueState(){
   const living = g.monsters.filter(m => !m.dead && m.type === 'boss' && !m.hkClone), bosses = living.map(m => Math.max(1, Math.ceil(m.hp)));
   return { n:g.n, loadout:g.loadout.slice(), q:JSON.parse(JSON.stringify(g.q)), remaining, bossSpawned:g.bossSpawned, bossDead:g.bossDead, bossHp:bosses, bossKinds:g.def.boss2 ? living.map(m => m.kind) : null,
     hk:__RELEASE__ >= 3 ? hkState() : null,   // the Hollow King's phase and his standing form (Release 3)
-    jukebox:{ next:g.jbNext || 0, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null } };   // next: drop points already used (one per jukebox dropped)   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
+    jukebox:{ next:g.jbNext || 0, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null },   // next: drop points already used (one per jukebox dropped)   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
+    ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0 } : {}) };   // the burning tiles and the fire marks already passed (Release 4)
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
 export function continueNight(c){
@@ -483,6 +499,7 @@ export function continueNight(c){
   G.continued = true; if (c.q) G.q = c.q;   // quest progress carries into the continued night
   G.spawned = G.resolved = Math.max(0, G.def.total - c.remaining);   // the progress bar picks up where the lost night left off
   if (__RELEASE__ >= 3) G.hkRestore = c.hk || null;
+  if (__RELEASE__ >= 4 && c.fires){ G.fires = []; for (const [lane, p] of c.fires) lightFire(lane, p, true); G.fmNext = c.fmNext || 0; }   // the same tiles burn (not the level's start fires again)
   if (c.bossSpawned){ G.bossDead = c.bossDead; G.bossHp = c.bossHp.slice(); G.bossKinds = c.bossKinds ? c.bossKinds.slice() : null; if (c.bossDead) G.bossSpawned = true; }
   if (c.jukebox){
     const next = c.jukebox.next != null ? c.jukebox.next : c.jukebox.done ? 1 : 0;   // an older snapshot said only "done"

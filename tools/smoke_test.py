@@ -6,7 +6,7 @@ Target is the built app: `npm run build`, then `python3 tools/serve_dist.py` in 
 Exits non-zero if the page throws any error. Saves screenshots to tools/out/.
 Requires: pip install playwright && playwright install chromium
 """
-import argparse, pathlib, random, sys, time
+import argparse, pathlib, random, sys, time, os
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -19,7 +19,7 @@ W, CS, ROWS = 540, 74, 5
 
 errors = []
 with sync_playwright() as p:
-    browser = p.chromium.launch()
+    browser = p.chromium.launch(args=os.environ.get('GG_CHROME_ARGS', '').split())   # e.g. GG_CHROME_ARGS=--disable-gpu when the headless GPU process hangs (a sleeping Mac)
     for vp in [{'width': 390, 'height': 844}, {'width': 1280, 'height': 800}]:
         page = browser.new_page(viewport=vp)
         page.on('pageerror', lambda e: errors.append(str(e)))

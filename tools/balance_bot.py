@@ -8,7 +8,7 @@ Usage:
 
 Target is the built app: `npm run build`, then `python3 tools/serve_dist.py` in another terminal.
 
-The bot takes one action every --interval ms (850 ≈ a steady human pace):
+The bot takes one action every --interval ms of game time (850 ≈ a steady human pace; paced on the game clock so a busy machine does not make it play faster):
   1. use a wall repair if any wall is under 25% (and repairs are available)
   2. collect the dropped pumpkin closest to fading
   3. launch a lit bunch if at least half of it will hit something (or a monster is close)
@@ -21,17 +21,26 @@ Upgrade levels are set per night to a plausible progression (see profile()).
 
 Requires: pip install playwright && playwright install chromium
 """
-import argparse, json, pathlib, re, sys, time
+import argparse, json, pathlib, re, sys, time, os
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 UNLOCK = [1, 2, 5, 8, 64, 43, 23, 69, 84, 28, 46, 87]  # night each pumpkin type unlocks (Green, Yellow, Ice, Fire, Grey, Purple, White, Black, Deep Blue, Pink, Turquoise, Brown)
 
+# Nightmare nights (Release 4): a sensible post-5-20 team rather than "the five most recent" (which had no Green): Green, Ice (it puts fire out
+# and kills burning monsters; the game locks it in on fire levels), Black (splash), Deep Blue (row lightning) and Grey (pierces Hayricks).
+# On a level with plain Mummies, Fire replaces Grey (the mummy lock below).
+NM_TEAM = [0, 2, 7, 8, 4]
+
 BOT_JS = """
 (interval) => {
-  window.__bot = setInterval(() => {
+  let lastT = -1;
+  window.__bot = setInterval(() => {   // paced on the game clock (G.t), not the wall clock: a slow or busy machine runs the game slower (dt is capped), and the bot slows with it
     const h = window.__gg; if (!h || h.state !== 'play') return;
     const G = h.G;
+    if (G.t < lastT) lastT = -1;   // a new night
+    if (lastT >= 0 && G.t - lastT < interval / 1000) return;
+    lastT = G.t;
     if (h.save.repair > 0 && h.walls.some(w => w.hp < w.max * 0.25)){ const i = h.walls.findIndex(w => w.hp < w.max * 0.25); document.querySelector('#rpBtn').click(); h.repairWall(i); return; }   // repair is per wall now
     const gp = h.gourdPos ? h.gourdPos() : null;   // nightmare nights with a Grave Gourd (c = -1: never index a pumpkin table by a cell's c)
     if (gp){
@@ -69,7 +78,7 @@ BOT_JS = """
     const b = h.bestLitGroup(avoid); if (b && h.emptyCells().length < 6){ h.launchGroup(b); return; }
     const cells = []; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) if (h.grid[r][c] && !h.grid[r][c].lit) cells.push(h.grid[r][c]);
     if (cells.length){ window.__botMoves++; h.slideOne(cells[Math.floor(Math.random() * cells.length)], ['left', 'right', 'down'][Math.floor(Math.random() * 3)]); }
-  }, interval);
+  }, 40);
 }
 """
 
@@ -128,7 +137,7 @@ def main():
 
     results = []
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(args=os.environ.get('GG_CHROME_ARGS', '').split())   # e.g. GG_CHROME_ARGS=--disable-gpu when the headless GPU process hangs (a sleeping Mac)
         for n in [parse_night(x) for x in args.nights.split(',')]:
             for rep in range(args.repeats):
                 page = browser.new_page(viewport={'width': 390, 'height': 844})
@@ -142,7 +151,7 @@ def main():
                     stars:Object.fromEntries([20, 40, 60, 80, 100].filter(k => k < n).map(k => [k, 3])),   // earlier worlds' level-20 perks are earned
                     lv:{ green:lv, yellow:lv, ice:lv, fire:lv, grey:lv, purple:lv, white:lv, black:lv, blue:lv, pink:lv, turquoise:lv, brown:lv } })""",
                     [lv, fence, args.repairs, args.fireworks, args.sprout, n])
-                loadout = sorted([t for t in range(12) if UNLOCK[t] <= n], key=lambda t: UNLOCK[t])[-5:]   # the five most recent types
+                loadout = NM_TEAM[:] if n > 1000 else sorted([t for t in range(12) if UNLOCK[t] <= n], key=lambda t: UNLOCK[t])[-5:]   # nightmare: a post-5-20 team; story: the five most recent types
                 page.evaluate(BOT_JS, args.interval)
                 page.evaluate("([n, lo]) => window.__gg.startGame('story', n, lo)", [n, loadout])
                 # The game locks Fire into the loadout on mummy levels and Ice on flaming-mummy levels (see beginNight); mirror that,
@@ -153,7 +162,9 @@ def main():
                 if page.evaluate("() => { const d = window.__gg.G.def; return !!d && (d.fireStart > 0 || !!(d.fireLayout && d.fireLayout.length) || !!(d.fireMarks && d.fireMarks.length)); }") and 2 not in need: need.append(2)
                 if any(t not in loadout for t in need):
                     for t in need:
-                        if t not in loadout: loadout = [x for x in loadout if x != min(loadout, key=lambda x: UNLOCK[x] if x not in need else 10**9)] + [t]
+                        if t in loadout: continue
+                        if n > 1000 and 4 in loadout and 4 not in need: loadout = [x for x in loadout if x != 4] + [t]   # nightmare: Grey makes room
+                        else: loadout = [x for x in loadout if x != min(loadout, key=lambda x: UNLOCK[x] if x not in need else 10**9)] + [t]
                     page.evaluate("([n, lo]) => window.__gg.startGame('story', n, lo)", [n, loadout])
                 t0 = time.time()
                 while time.time() - t0 < args.timeout and page.evaluate("window.__gg.state") != 'result':

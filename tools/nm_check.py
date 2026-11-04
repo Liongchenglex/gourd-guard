@@ -2,9 +2,10 @@
 against a build served by tools/serve_dist.py.
   Playtest build:  npm run build:playtest            then  .venv/bin/python tools/nm_check.py --url http://127.0.0.1:4173/ --expect on
   Release 3 build: VITE_RELEASE=3 npx vite build      then  ... --expect r3   (nothing from Release 4)
+  Release 2 build: VITE_RELEASE=2 npx vite build      then  ... --expect r2   (nothing from Release 4)
   Store build:     npm run build                      then  ... --expect off
 Checks read the global R4 (on only). Exits 1 on any failure. --only runs one check by name."""
-import argparse, sys, time
+import argparse, sys, time, os
 from playwright.sync_api import sync_playwright
 
 from w6_check import open_page, ok, FAILS, start, bundle_js, set_stars
@@ -301,18 +302,19 @@ def check_ice_only(browser, url):
 
 
 def check_ice_lock(browser, url):
+    """Ice is locked in where there is fire: N1-1 (fire tiles and a mark) locks it; N1-5 (no fire, ghouls only) does not. Real level data, no mutation."""
     if not R4: return
     page, errors = open_page(browser, url)
     set_stars(page, story_done(70))   # enough pumpkins that the loadout screen opens (it skips the picker with 5 or fewer)
-    def musts(fire):
-        return page.evaluate("""(fire) => { const g = window.__gg, d = g.NIGHTMARE_LEVELS[0][0]; const old = d.fireStart; d.fireStart = fire; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show'));
-          g.beginNight(1001); d.fireStart = old;
-          return new Promise(res => setTimeout(() => res([...document.querySelectorAll('#loTeam .slot.must')].map(b => b.getAttribute('aria-label'))), 400)); }""", fire)
-    r = musts(3)
-    ok(any(x.startswith('Ice') for x in r), f'a level with fireStart > 0 locks Ice into the loadout {r}')
+    def musts(n):
+        return page.evaluate("""(n) => { const g = window.__gg; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.beginNight(n);
+          return new Promise(res => setTimeout(() => res([...document.querySelectorAll('#loTeam .slot.must')].map(b => b.getAttribute('aria-label'))), 400)); }""", n)
+    r = musts(1001)
+    ok(any(x.startswith('Ice') for x in r), f'N1-1 (fire tiles) locks Ice into the loadout {r}')
     page.reload(); page.wait_for_function('() => !!window.__gg'); set_stars(page, story_done(70))
-    r = musts(0)
-    ok(not any(x.startswith('Ice') for x in r), f'control: a nightmare level with no fire does not lock Ice {r}')
+    ok(not page.evaluate("() => { const d = window.__gg.levelFor(1005); return d.fireStart > 0 || !!d.fireLayout || !!d.fireMarks; }"), 'control: N1-5 has no fire')
+    r = musts(1005)
+    ok(not any(x.startswith('Ice') for x in r), f'control: N1-5 (no fire, no Ice-only monster) does not lock Ice {r}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
@@ -378,8 +380,8 @@ def check_rooster_fire(browser, url):
 def check_rooster_baked(browser, url):
     if not R4: return
     page, errors = open_page(browser, url)
-    page.evaluate("() => { const d = window.__gg.NIGHTMARE_LEVELS[0][0]; d.pool = [...d.pool, ['rooster', 3]]; }")
-    nm_start(page, 1)
+    ok(any(e[0] == 'rooster' for e in page.evaluate("() => window.__gg.NIGHTMARE_LEVELS[0][1].pool")), 'N1-2 has it in its pool')
+    nm_start(page, 2)
     ok(page.evaluate("() => window.__gg.isBaked('rooster')"), 'the rooster frames are baked when a night with a rooster in its pool starts')
     ok(page.evaluate("() => { const C = window.__gg.CHARS.rooster; return !!C && !!C.clips.crow && !!C.clips.walk && !!C.clips.chew; }"), 'it has walk, chew and crow clips')
     ok(not errors, f'no page errors {errors[:2]}')
@@ -494,8 +496,8 @@ def check_hayrick_burn(browser, url):
 def check_hayrick_baked(browser, url):
     if not R4: return
     page, errors = open_page(browser, url)
-    page.evaluate("() => { const d = window.__gg.NIGHTMARE_LEVELS[0][0]; d.pool = [...d.pool, ['hayrick', 3]]; }")
-    nm_start(page, 1)
+    ok(any(e[0] == 'hayrick' for e in page.evaluate("() => window.__gg.NIGHTMARE_LEVELS[0][6].pool")), 'N1-7 has it in its pool')
+    nm_start(page, 7)
     ok(page.evaluate("() => window.__gg.isBaked('hayrick')"), 'the hayrick frames are baked when a night with a hayrick in its pool starts')
     ok(page.evaluate("() => ['hayrick', 'hayrickBurning'].every(k => { const C = window.__gg.CHARS[k]; return !!C && !!C.clips.toss && !!C.clips.walk && !!C.clips.chew; })"), 'hayrick and hayrickBurning have walk, chew and toss clips')
     ok(page.evaluate("() => { const g = window.__gg; g.prebake(['hayrickBurning']); return g.isBaked('hayrickBurning'); }"), 'the burning look bakes on its own')
@@ -564,8 +566,8 @@ def check_husker(browser, url):
 def check_husker_baked(browser, url):
     if not R4: return
     page, errors = open_page(browser, url)
-    page.evaluate("() => { const d = window.__gg.NIGHTMARE_LEVELS[0][0]; d.pool = [...d.pool, ['husker', 3]]; }")
-    nm_start(page, 1)
+    ok(any(e[0] == 'husker' for e in page.evaluate("() => window.__gg.NIGHTMARE_LEVELS[0][7].pool")), 'N1-8 has it in its pool')
+    nm_start(page, 8)
     ok(page.evaluate("() => window.__gg.isBaked('husker') && window.__gg.isBaked('huskerBare')"), 'a night with a husker in its pool bakes the husker and the bare cob (the first hit never hitches)')
     ok(page.evaluate("() => ['husker', 'huskerBare', 'huskerBurning', 'huskerCharred'].every(k => { const C = window.__gg.CHARS[k]; return !!C && !!C.clips.walk && !!C.clips.chew; })"), 'all four looks have walk and chew clips')
     ok(page.evaluate("() => ['huskerBare', 'huskerCharred'].every(k => !!window.__gg.CHARS[k].clips.shed)"), 'the looks a strip leaves behind have the shed clip')
@@ -1010,8 +1012,8 @@ def check_grave_riser(browser, url):
 def check_grave_riser_baked(browser, url):
     if not R4: return
     page, errors = open_page(browser, url)
-    page.evaluate("() => { const d = window.__gg.NIGHTMARE_LEVELS[0][0]; d.pool = [...d.pool, ['graveriser', 3]]; }")
-    nm_start(page, 1)
+    ok(any(e[0] == 'graveriser' for e in page.evaluate("() => window.__gg.NIGHTMARE_LEVELS[0][5].pool")), 'N1-6 has it in its pool')
+    nm_start(page, 6)
     ok(page.evaluate("() => window.__gg.isBaked('graveriser')"), 'the grave riser frames are baked when a night with one in its pool starts')
     ok(page.evaluate("() => { const C = window.__gg.CHARS.graveriser; return !!C && ['walk', 'chew', 'dig', 'die'].every(k => !!C.clips[k]); }"), 'it has walk, chew, dig and die clips')
     ok(page.evaluate("() => window.__gg.CHARS.graveriser.clips.die.n") == 8, 'the die clip has 8 frames (the clip effect plays 8)')
@@ -1067,16 +1069,153 @@ def check_bot_hooks(browser, url):
 CHECKS.update({'check_bot_hooks': check_bot_hooks})
 
 
+# ---------- Task 12: the real levels N1-1 to N1-15, intro cards, the nightmare bestiary ----------
+NM_NAMES = ['Embers', 'Cockcrow', 'Wrapped in Embers', 'The Strawlord', 'The Grave Gourd', 'The Grave Riser', 'Haystack', 'Corn Maze',
+            'Harvest Fire', 'Dawn Chorus', 'The Burning Barn', 'Risen Rows', 'Strawlord Returns', 'Burnt Offerings', 'Eclipse']
+NM_NEW = ['rooster', 'hayrick', 'husker', 'graveriser']   # the new monsters N1-15 brings together
+LEVELS_JS = """() => { const g = window.__gg; return g.NIGHTMARE_LEVELS[0].map((d, i) => { const L = g.levelFor(1001 + i);
+  return { name:d.name, pool:d.pool.map(e => e[0]), weights:d.pool.map(e => e[1]), types:d.pool.every(([k]) => !!g.TYPES[k]), gourd:!!d.gourd, unlockGourds:d.unlockGourds || null,
+    boss:d.boss, bossForm:d.bossForm, bossChest:d.bossChest || null, coach:d.coach || null, gravesLayout:d.gravesLayout || null, intro:d.intro || [],
+    fireStart:d.fireStart || 0, fireLayout:d.fireLayout || [], fireMarks:d.fireMarks || [], spawnGap:d.spawnGap, spawnBurst:d.spawnBurst, total:d.total,
+    quests:g.questsFor(L), questsOk:g.questsFor(L).every(([t]) => !!g.QUEST_TYPES[t]), iceOnly:d.pool.some(([k]) => g.ICE_ONLY.has(k)) }; }); }"""
+
+
+def nm_levels(page):
+    return page.evaluate(LEVELS_JS)
+
+
+def check_nm_levels(browser, url):
+    """The 15 designed levels (spec Part 5): names, pools, the gourd, the Strawlord, fire and pacing are data, and every preview opens."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    L = nm_levels(page)
+    ok(len(L) == 15, f'15 nightmare levels ({len(L)})')
+    ok([d['name'] for d in L] == NM_NAMES, f"each level has the spec's name {[d['name'] for d in L]}")
+    ok(len(set(d['name'] for d in L)) == len(L), 'the names are unique')
+    ok(all(d['pool'] and d['types'] for d in L), 'every pool is non-empty and every pool type exists in TYPES')
+    ok(L[3]['unlockGourds'] == ['grave'] and L[3]['boss'] == 'strawlord' and L[3]['bossChest'] == 'normal' and not L[3]['gourd'], f"N1-4: the Strawlord, a normal chest, unlocks the Grave Gourd {L[3]['boss'], L[3]['bossChest'], L[3]['unlockGourds']}")
+    ok(L[12]['boss'] == 'strawlord' and L[12]['bossForm'] == 2 and L[12]['bossChest'] == 'normal', 'N1-13: the Strawlord in phase 2 with a normal chest')
+    ok(all(d['gourd'] for d in L[4:]) and not any(d['gourd'] for d in L[:4]), 'N1-5 and later have the gourd; N1-1 to N1-4 do not')
+    ok(L[4]['coach'] == 'gourd' and L[4]['gravesLayout'] == [[1, 3], [3, 3], [2, 5], [1, 5], [3, 5]] and L[4]['pool'] == ['ghoul'], f"N1-5 keeps the tutorial: coach, its grave ring, ghouls only {L[4]['coach'], L[4]['gravesLayout'], L[4]['pool']}")
+    ok(all('graveriser' in L[k - 1]['pool'] for k in (6, 12, 15)) and not any('graveriser' in L[k]['pool'] for k in range(15) if k + 1 not in (6, 12, 15)), 'the Grave Riser is in N1-6, N1-12 and N1-15 only')
+    intros = {k + 1: d['intro'] for k, d in enumerate(L) if d['intro']}
+    ok(intros == {2: ['rooster'], 6: ['graveriser'], 7: ['hayrick'], 8: ['husker']}, f'new monsters are introduced on N1-2, N1-6, N1-7 and N1-8 {intros}')
+    ok(all(t in d['pool'] for d in L for t in d['intro']), 'every introduced monster is in its level pool')
+    ok(all(t in L[14]['pool'] for t in NM_NEW), f"N1-15 holds every new monster {L[14]['pool']}")
+    ok([m['at'] for m in L[14]['fireMarks']] == [0.33, 0.66, 1], f"N1-15 fire marks at 33%, 66% and 100% {L[14]['fireMarks']}")
+    ok(set(L[13]['pool']) == {'firemummy', 'hayrickBurning', 'huskerBurning'}, f"N1-14 spawns only burning monsters {L[13]['pool']}")
+    ok(L[0]['pool'] == ['ghoul', 'bat', 'imp', 'brute'] and len(L[0]['fireLayout']) == 3 and [m['at'] for m in L[0]['fireMarks']] == [0.5], f"N1-1: 3 fire tiles at the start, one mark at 50%, world 1 monsters {L[0]['fireLayout']}")
+    ok(len({k for d in L for k in (d['fireStart'], len(d['fireLayout']), sum(m['n'] for m in d['fireMarks']))}) > 3, 'fire amounts vary from level to level')
+    lanes11 = {l for l, p in L[10]['fireLayout']}
+    ok(len(lanes11) == 3 and len(L[10]['fireLayout']) >= 9 and len(L[10]['fireMarks']) == 3, f"N1-11: three whole lanes ablaze and three marks ({sorted(lanes11)}, {len(L[10]['fireLayout'])} tiles)")
+    ok(all(isinstance(d['spawnGap'], (int, float)) and isinstance(d['spawnBurst'], (int, float)) for d in L), 'every level sets spawnGap and spawnBurst (the story SPAWN_LATE_FROM rule does not decide nightmare pacing)')
+    ok(all(d['questsOk'] and len(d['quests']) == 3 for d in L), 'every level has three quests of existing types')
+    # Ice is locked into the picker on every level with fire or an Ice-only type
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 16)}})
+    page.evaluate("() => { window.__gg.save.gourds = { grave:true }; }")
+    for k, d in enumerate(L, 1):
+        fire = d['fireStart'] or d['fireLayout'] or d['fireMarks']
+        if not (fire or d['iceOnly']): continue
+        musts = page.evaluate("""(n) => { const g = window.__gg; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.beginNight(n);
+          return new Promise(res => setTimeout(() => res([...document.querySelectorAll('#loTeam .slot.must')].map(b => b.getAttribute('aria-label'))), 300)); }""", 1000 + k)
+        ok(any(x.startswith('Ice') for x in musts), f'N1-{k} locks Ice into the loadout {musts}')
+    for k in range(1, 16):
+        page.evaluate(f"() => window.__gg.openPreview({1000 + k})"); time.sleep(0.25)
+    ok(not errors, f'every preview opens without a page error {errors[:2]}')
+    page.close()
+
+
+def intro_titles(page, n):
+    """Play night n from its preview card and read the intro cards it shows, in order."""
+    page.evaluate(f"() => window.__gg.openPreview({n})"); time.sleep(0.4)
+    page.click('#bPvGo'); time.sleep(0.4)
+    out = []
+    for _ in range(8):
+        if page.evaluate("() => window.__gg.state") != 'intro': break
+        out.append(page.evaluate("() => document.querySelector('#inTitle').textContent"))
+        page.click('#bIntroOk'); time.sleep(0.3)
+    return out
+
+
+def check_nm_intros(browser, url):
+    """First appearances on the nightmare track show a card: fire (N1-1), the Grave Gourd (N1-5), each new monster, the Strawlord."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 16)}})
+    page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true }; s.seenGourdCoach = true; s.seenIntro = { quests:true }; }")
+    t = {k: intro_titles(page, 1000 + k) for k in (1, 2, 3, 4, 5, 6, 7, 8)}
+    ok(any('Fire' in x for x in t[1]), f'N1-1 explains fire tiles {t[1]}')
+    ok(not any('Fire' in x for x in t[2] + t[3]), f'N1-2 and N1-3 do not repeat the fire card {t[2]} {t[3]}')
+    ok(any('Cinder Rooster' in x for x in t[2]), f'N1-2 introduces the Cinder Rooster {t[2]}')
+    ok(any('Strawlord' in x for x in t[4]), f'N1-4 introduces the Strawlord {t[4]}')
+    ok(any('Grave Gourd' in x for x in t[5]), f'N1-5 explains the Grave Gourd {t[5]}')
+    ok(any('Grave Riser' in x for x in t[6]) and not any('Gourd' in x for x in t[6]), f'N1-6 introduces the Grave Riser, no second gourd card {t[6]}')
+    ok(any('Hayrick' in x for x in t[7]) and any('Corn Husker' in x for x in t[8]), f'N1-7 and N1-8 introduce the Hayrick and the Corn Husker {t[7]} {t[8]}')
+    txt = page.evaluate("() => { window.__gg.save.seenIntro = { quests:true }; window.__gg.openPreview(1001); document.querySelector('#bPvGo').click(); return document.querySelector('#inText').textContent; }")
+    ok('Ice' in txt and 'burns up' in txt, f'the fire card says a pumpkin burns up and Ice puts it out ({txt[:90]}...)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_nm_bestiary(browser, url):
+    """The nightmare book's bestiary page (spec: the nightmare monsters, the Strawlord and the Fallen Gravekeeper; unmet ones are silhouettes)."""
+    page, errors = open_page(browser, url)
+    set_stars(page, {**story_done(), **{1000 + k: 3 for k in range(1, 3)}})   # N1-1 to N1-3 open: the rooster has been met
+    page.evaluate("() => window.__gg.openBook(0)"); time.sleep(0.6)
+    page.click('#bBookmark'); time.sleep(0.8)
+    flip = page.evaluate("() => !document.querySelector('#bBkFlip').hidden")
+    if not R4:
+        ok(not flip, 'below Release 4 the nightmare page has no bestiary (Coming soon)')
+        ok(not errors, f'no page errors {errors[:2]}')
+        page.close(); return
+    ok(flip, 'the nightmare page has a Bestiary button')
+    page.click('#bBkFlip'); time.sleep(0.7)
+    b = page.evaluate("() => [document.querySelector('#bsTitle').textContent, [...document.querySelectorAll('#bestiary .bs')].map(e => [e.classList.contains('unmet'), e.querySelector('b').textContent])]")
+    names = [x[1] for x in b[1]]
+    ok('Nightmare' in b[0], f'the page is titled as the nightmare edition ({b[0]!r})')
+    ok('Cinder Rooster' in names and ['Cinder Rooster' == n for n in names].count(True) == 1, f'the met rooster is listed by name {names}')
+    ok(not any(n in names for n in ('Ghoul', 'Bat', 'Mummy')), 'world 1 monsters met in the story are not repeated')
+    ok(b[1] and b[1][-1][0] and len(b[1]) >= 10, f'unmet nightmare monsters are silhouettes; the last entry is the Fallen Gravekeeper, still unmet ({len(b[1])} entries)')
+    ok(page.evaluate("() => document.querySelector('#bsCount').textContent").startswith('1 of'), f"one of them met so far ({page.evaluate('() => document.querySelector(`#bsCount`).textContent')})")
+    page.click('#bBookmark'); time.sleep(0.8)
+    page.evaluate("() => { const p = document.querySelector('#bestiary'); if (p.hidden) document.querySelector('#bBkFlip').click(); }"); time.sleep(0.7)
+    t = page.evaluate("() => document.querySelector('#bsTitle').textContent")
+    ok('Nightmare' not in t, f'leaving nightmare mode brings back the story bestiary ({t!r})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_nm_prebake(browser, url):
+    """Burning forms bake when the night starts (not on first ignition), and the level preview draws its start fires at full size."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    nm_start(page, 7)   # Haystack: hayricks and fire
+    ok(page.evaluate("() => window.__gg.isBaked('hayrickBurning')"), 'a night with hayricks and fire bakes the Burning Hayrick at the start')
+    nm_start(page, 8)   # Corn Maze
+    ok(page.evaluate("() => ['huskerBurning', 'huskerCharred', 'huskerBare'].every(k => window.__gg.isBaked(k))"), 'a night with huskers bakes the bare, burning and charred cobs')
+    nm_start(page, 3)
+    ok(page.evaluate("() => window.__gg.isBaked('firemummy')"), 'a night with mummies and fire bakes the Flaming Mummy')
+    set_stars(page, {**story_done(), **{1000 + k: 3 for k in range(1, 3)}})
+    page.evaluate("() => window.__gg.openPreview(1001)"); time.sleep(0.4)
+    f = page.evaluate("() => window.__gg.G.preview ? window.__gg.G.fires.map(f => f.t) : null")
+    ok(f and len(f) == 3 and all(x >= 0.25 for x in f), f'the N1-1 preview shows its 3 start fires fully grown {f}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_nm_levels': check_nm_levels, 'check_nm_intros': check_nm_intros, 'check_nm_bestiary': check_nm_bestiary, 'check_nm_prebake': check_nm_prebake})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)
-    ap.add_argument('--expect', choices=['on', 'r3', 'off'], required=True)
+    ap.add_argument('--expect', choices=['on', 'r3', 'r2', 'off'], required=True)
     ap.add_argument('--only', default=None)
     a = ap.parse_args()
     global R4, MODE
     MODE = a.expect; R4 = a.expect == 'on'
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(args=os.environ.get('GG_CHROME_ARGS', '').split())   # e.g. GG_CHROME_ARGS=--disable-gpu when the headless GPU process hangs (a sleeping Mac)
         for name, fn in CHECKS.items():
             if a.only and name != a.only: continue
             print(name)

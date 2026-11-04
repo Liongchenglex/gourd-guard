@@ -3,16 +3,16 @@ import { SPAWN_STEPS } from '../data/patterns.js';
 import { NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, prevLevelFor, firstNightOf, typesForNight, gearUnlockNightOf, NIGHTMARE_LEVELS, NM_BOOK_LEVELS, nmNight } from '../data/worlds/index.js';
-import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, ALSO_BAKE } from '../data/monsters.js';
+import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO } from '../data/monsters.js';
+import { hasFire } from '../data/levels.js';
 import { monsterIcon } from '../engine/render/monsters.js';
-import { poolKey, prebakeAsync } from '../engine/render/anim.js';
+import { prebakeAsync } from '../engine/render/anim.js';
 import { hollowking } from '../engine/render/chars/hollowking.js';
-import { atlasKey } from '../engine/render/chars.js';
 import { SFX, ensureAudio, musicStop, musicSync, musicStart, applyVolumes } from '../engine/audio.js';
-import { beginEndless, beginNight, continueNight, continueState, makeDemo, makePreview, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow, useEmergency } from '../engine/game.js';
+import { bakeKeys, beginEndless, beginNight, continueNight, continueState, makeDemo, makePreview, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow, useEmergency } from '../engine/game.js';
 import { bgWorld, buildBg, buildSprites, pumpkinIcon, worldScene, setBg } from '../engine/render/sprites.js';
 import { BOOKS, NIGHTMARE_LORE } from '../data/lore.js';
-import { BESTIARY, COMPANIONS } from '../data/bestiary.js';
+import { BESTIARY, COMPANIONS, FALLEN } from '../data/bestiary.js';
 import { toolIcon } from '../engine/render/tools.js';
 import { COSTUMES, SKINS, STAR_COSTUME, starsHave, starsMax, grantStarCrown } from '../data/wardrobe.js';
 import { showCrownReveal } from './reveal.js';
@@ -218,7 +218,7 @@ export function openPreview(n){
   renderQuests(n, def);
   $('#pvSub').textContent = place;
   const mons = $('#pvMonsters'); mons.innerHTML = '';
-  prebakeAsync([...def.pool.map(([t]) => poolKey(t, VARIANTS)), ...[...def.pool.map(([t]) => t), def.boss].flatMap(t => (__RELEASE__ >= 4 && t && ALSO_BAKE[t]) || []), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), 'ghoul']);   // bake this level's sprite strips while the card is read
+  prebakeAsync(bakeKeys(def));   // bake this level's sprite strips while the card is read (the same list as the night's start)
   for (const [t] of def.pool){
     const d = document.createElement('div'); d.className = 'pv-ic';
     d.appendChild(monsterIcon(t, 108));
@@ -261,6 +261,8 @@ export function openPreview(n){
   const info = [];   // no counts here (owner): just what is special
   if (def.boss) info.push(def.boss2 === def.boss ? 'Two pairs of bosses. Monsters keep coming until all fall.' : def.boss2 ? 'Two bosses at once. Monsters keep coming until both fall.' : 'Monsters keep coming until the boss falls.');
   if (def.frenzyAfterBoss) info.push('When the first pair falls, the jukebox drops.');
+  if (__RELEASE__ >= 4 && def.fireMarks && def.fireMarks.length) info.push('Fire marks on the spawn bar light more fire and bring a horde.');
+  if (__RELEASE__ >= 4) for (const k of def.unlockGourds) if (GOURDS[k]) info.push(`🎁 Reward: the ${GOURDS[k].name}.`);
   if (!def.nightmare && def.levelNo === 10){ const nextName = WORLD_NAMES[def.worldNo]; info.push(`🎁 Reward: levels 11–20${nextName && WORLD_LEVELS[def.worldNo] && WORLD_LEVELS[def.worldNo].length ? ` and World ${def.worldNo + 1}: ${nextName}` : ''}.`); }
   if (!def.nightmare && def.levelNo === 20){ const perk = PERKS.find(p => perkNight(p) === n); if (perk) info.push(`🎁 Reward: ${perk.name}. ${perk.desc}`); }
   if (def.name) $('#pvSub').textContent = `${place} · ${def.name}`;
@@ -300,6 +302,8 @@ function startPreviewedNight(){
   if ((def.puddles || def.puddlesLayout) && !(prev && (prev.puddles || prev.puddlesLayout))) cards.push({ key:'puddles', icon:'💧', title:'Puddles', text:PUDDLE_INTRO });
   if (def.sea && !(prev && prev.sea)) cards.push({ key:'sea', icon:'🌊', title:'The sea row', text:SEA_INTRO });
   if (def.gust && !(prev && prev.gust)) cards.push({ key:'wind', icon:'🍂', title:'Wind', text:WIND_INTRO });
+  if (__RELEASE__ >= 4 && hasFire(def) && !hasFire(prev)) cards.push({ key:'fire', icon:'🔥', title:'Fire tiles', text:FIRE_INTRO });   // the nightmare track's first fire (N1-1)
+  if (__RELEASE__ >= 4 && def.gourd && !(prev && prev.gourd)) cards.push({ key:'gourd', icon:gourdIcon(160), title:'The Grave Gourd', text:GOURD_INTRO });   // its first night (N1-5)
   for (const t of def.intro) if (!VARIANTS[t]) cards.push({ key:'m:' + t, icon:monsterIcon(t, 160), title:`New monster: ${MNAME[t] || t}`, text:MINTRO[t] || '' });   // returning variants get no card (owner)
   for (const k of [...new Set([def.boss, def.boss2].filter(Boolean))]) cards.push({ key:`b:${k}:${def.bossForm}`, icon:monsterIcon(k, 200, def.bossForm), title:def.bossForm === 2 ? `${BOSS_NAMES[k]}, full form` : `Boss: ${BOSS_NAMES[k]}`, text:BOSS_INTRO[k][def.bossForm] });
   introQueue = cards.filter(c => !save.seenIntro[c.key]);
@@ -435,7 +439,8 @@ function applyNightmare(wi){
   const on = bookNightmare;
   spread.classList.toggle('nightmare', on); bm.setAttribute('aria-pressed', on ? 'true' : 'false'); bm.setAttribute('aria-label', on ? 'Leave nightmare mode' : 'Nightmare mode');
   const nmLv = __RELEASE__ >= 4 && on ? NIGHTMARE_LEVELS[wi] : null;   // Release 4: this book's nightmare levels (else "Coming soon")
-  $('#bkLevels').hidden = on && !nmLv; $('#bkStars').hidden = on && !nmLv; $('#bkSoon').hidden = !on || !!nmLv; $('#bBkFlip').hidden = on;
+  $('#bkLevels').hidden = on && !nmLv; $('#bkStars').hidden = on && !nmLv; $('#bkSoon').hidden = !on || !!nmLv; $('#bBkFlip').hidden = on && !nmLv;
+  if (__RELEASE__ >= 4 && nmLv) renderBestiary(wi, true);   // the nightmare edition of the bestiary (openBook drew the story one)
   const theme = levels[0].theme;
   nightmareBg(on ? nightmareKey(theme) : null);
   if (!on) return;
@@ -505,30 +510,36 @@ export function openBook(wi, animate){
   applyNightmare(wi);
   setState('levels');
 }
-/** The book's collection page: every monster of world wi in order of first appearance, met or not yet met. */
-function renderBestiary(wi){
-  const levels = WORLD_LEVELS[wi], start = firstNightOf(wi + 1), seen = new Set(), order = [], firstN = {};
+/** The book's collection page: every monster of world wi in order of first appearance, met or not yet met. The nightmare edition (Release 4,
+ *  `nm`) lists the monsters first met on the book's nightmare levels (not the story book's again), then the world's Fallen boss, still to come. */
+function renderBestiary(wi, nm){
+  const levels = nm ? NIGHTMARE_LEVELS[wi] : WORLD_LEVELS[wi], start = nm ? nmNight(wi + 1, 1) : firstNightOf(wi + 1), seen = new Set(), order = [], firstN = {};
+  const kin = k => [k, ...(COMPANIONS[VARIANTS[k] ? VARIANTS[k].base : k] || [])];
+  const story = nm ? new Set(WORLD_LEVELS[wi].flatMap(d => [...d.pool.map(([k]) => k), ...(d.boss ? [d.boss] : [])]).flatMap(kin)) : null;
   levels.forEach((d, i) => {
     const n = start + i, met = isOpen(n);   // a level you can enter has shown you its monsters (preview and intro cards)
     const keys = [...d.pool.map(([k]) => k), ...(d.boss ? [d.boss] : [])];
-    for (const k of keys) for (const kk of [k, ...(COMPANIONS[VARIANTS[k] ? VARIANTS[k].base : k] || [])]){
+    for (const k of keys) for (const kk of kin(k)){
+      if (story && story.has(kk)) continue;
       if (firstN[kk] == null){ firstN[kk] = n; order.push(kk); }
       if (met) seen.add(kk);
     }
   });
+  if (__RELEASE__ >= 4 && nm && FALLEN[wi]){ order.push(FALLEN[wi].key); firstN[FALLEN[wi].key] = start + NM_BOOK_LEVELS - 1; }   // the nightmare book's boss: never met until the owner's fight is in
+  const where = n => nm ? `Nightmare ${wi + 1}-${n - start + 1}` : `level ${levels[n - start].world}-${levels[n - start].level}`;
   const L = $('#bsLeft'), R = $('#bsRight'); L.innerHTML = ''; R.innerHTML = '';
   let metCount = 0;
   order.forEach((k, i) => {
     const v = VARIANTS[k], base = v ? v.base : k, e = BESTIARY[k] || BESTIARY[base] || {}, met = seen.has(k); if (met) metCount++;
-    const name = v ? v.name : BOSS_NAMES[k] || MNAME[k] || k;
+    const name = e.name || (v ? v.name : BOSS_NAMES[k] || MNAME[k] || k);
     const d = document.createElement('div'); d.className = 'bs' + (met ? '' : ' unmet');
-    d.appendChild(monsterIcon(k, 92, 1));
+    d.appendChild(e.icon ? monsterIcon(e.icon[0], 92, e.icon[1]) : monsterIcon(k, 92, 1));
     const t = document.createElement('div');
-    t.innerHTML = met ? `<b>${name}</b><p class="ab">${e.ability || MINTRO[base] || ''}</p><p class="lo">${e.lore || ''}</p>` : `<b>Not yet met</b><p class="ab">Reach level ${levels[firstN[k] - start].world}-${levels[firstN[k] - start].level} to find out.</p>`;
+    t.innerHTML = met ? `<b>${name}</b><p class="ab">${e.ability || MINTRO[base] || ''}</p><p class="lo">${e.lore || ''}</p>` : `<b>Not yet met</b><p class="ab">Reach ${where(firstN[k])} to find out.</p>`;
     d.appendChild(t);
     (i < Math.ceil(order.length / 2) ? L : R).appendChild(d);
   });
-  $('#bsTitle').textContent = `${WORLD_NAMES[wi]} bestiary`; $('#bsTitle').style.color = BOOKS[wi].ink;
+  $('#bsTitle').textContent = nm ? `Nightmare ${WORLD_NAMES[wi]} bestiary` : `${WORLD_NAMES[wi]} bestiary`; $('#bsTitle').style.color = BOOKS[wi].ink;
   $('#bsCount').textContent = `${metCount} of ${order.length} met`;
 }
 function flipBook(toBestiary){

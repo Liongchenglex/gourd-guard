@@ -3,7 +3,12 @@
 // lore: a line of story. ability: what it does in play, in the player's words. Keys match TYPES / VARIANTS / boss kinds.
 // Monsters spawned by another (gargoyle, blob) are listed under COMPANIONS so they appear beside their parent.
 
-export const COMPANIONS = { hauler:['gargoyle'], slime:['blob'], vampire:['bat'] };
+export const COMPANIONS = { hauler:['gargoyle'], slime:['blob'], vampire:['bat'],
+  ...(__RELEASE__ >= 4 ? { hayrick:['hayrickBurning'], husker:['huskerBare', 'huskerBurning', 'huskerCharred'], strawlord:['crow'] } : {}) };   // Release 4: burning forms and the Strawlord's crows
+
+/** The boss waiting at the end of each nightmare book (Release 4), listed last in its nightmare bestiary and never met until its fight is built
+ *  (N1-16 is the owner's to design). `icon` draws it as [type, form] meanwhile: the Gravekeeper's full form, shown as a silhouette. */
+export const FALLEN = __RELEASE__ >= 4 ? [{ key:'fallenGravekeeper' }] : [];
 
 export const BESTIARY = {
   ghoul:      { lore:'Dug itself out of the churchyard the night the moon turned orange. Not bright, but very determined.', ability:'Nothing special. Walks straight down its lane and chews the wall.' },
@@ -55,5 +60,18 @@ export const BESTIARY = {
   soddenMummy:{ lore:'A mummy the sea got hold of. The wrappings are green now and it does not care to discuss it.', ability:'Cannot be knocked back, and still only Fire finishes it.' },
   turtle:     { lore:'The oldest thing in the marsh. Walks backwards so it can keep an eye on you.', ability:'A slow ten-hit wall of shell. Grey pierces through; everything else has to chew.' },
   ...(__RELEASE__ >= 3 ? { hollowking: { lore:'On All Hallows\u2019 night the fires of the five fallen bosses gathered in one hollow pumpkin. It carved itself a face and crowned itself with thorns.', ability:'Never reaches the wall. Five times he splits off a world boss in his colours and takes no damage until it falls. Wipes a column of your patch, smashes a fence, calls monsters.' } } : {}),
+  ...(__RELEASE__ >= 4 ? {   // the nightmare Pumpkin Patch (Release 4)
+    rooster:    { lore:'Crowed once at the eclipse and the sun never came back. Its comb still smoulders.', ability:'Crows every few seconds: monsters in its lane and the two beside it sprint. Leaves a fire burning where it falls.' },
+    strawlord:  { lore:'The scarecrow at the edge of the patch, nailed up the night the moon went dark. It got tired of waiting.', ability:'Never reaches the wall. Hops between lanes and looses its crows. At half health it tears free, and every flock sets fire to the field.' },
+    crow:       { lore:'The Strawlord’s flock. They stopped being afraid of it a long time ago.', ability:'Comes only with the Strawlord. Fast and frail: dives down a lane at your wall.' },
+    graveriser: { lore:'The patch’s old gravedigger. Works by lantern light and never asks whose grave it is.', ability:'Every few seconds digs a grave on an empty cell of its own column in your patch. The graves stay after it falls.' },
+    hayrick:    { lore:'The last haystack of the harvest, stitched together by something that wanted a body.', ability:'Tough. Once it throws its pitchfork down its column and pins the first pumpkin there for a few seconds.' },
+    hayrickBurning:{ lore:'A hayrick that walked through the embers. It burns slowly and does not mind at all.', ability:'Only Ice finishes it. Anything else knocks it down and it rises with 1 health. Sets other hayricks alight.' },
+    husker:     { lore:'Grew in the corn maze that nobody came out of. Wears its husk like a coat.', ability:'Its first hit only strips the husk. The bare cob underneath walks faster.' },
+    huskerBare: { lore:'What is under the husk: a cob with ideas.', ability:'Walks faster than the husker it came out of.' },
+    huskerBurning:{ lore:'A husker that took a shortcut through the fire.', ability:'Any pumpkin strips its burning husk and leaves the charred cob.' },
+    huskerCharred:{ lore:'Blackened to the core and still walking.', ability:'Only Ice finishes it. Anything else knocks it down for a while.' },
+    fallenGravekeeper:{ name:'The Fallen Gravekeeper', icon:['gravekeeper', 2], lore:'The Gravekeeper, charred under the eclipse. His lantern burns black now.', ability:'Waits at the end of the nightmare patch.' },
+  } : {}),
   twintides:  { lore:'Two serpents hatched from one egg on the night the village drowned. They finish each other’s sentences.', ability:'Never reach the wall. Both must die within a short window or the fallen one rises again.' },
 };

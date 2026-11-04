@@ -64,6 +64,9 @@
  *   field tiles catch fire and a burst of FRENZY_BURST monsters arrives that does not count toward `total`; the bar counts arrivals, as with jukebox marks
  */
 
+/** Does this level light fire (tiles at the start or fire marks)? Release 4 fields; false on every older level. */
+export const hasFire = d => !!d && (d.fireStart > 0 || !!(d.fireLayout && d.fireLayout.length) || !!(d.fireMarks && d.fireMarks.length));
+
 /** Runtime shape the engine reads. `n` is the global story index (1-based across all worlds), or a nightmare night number (nmNight). */
 export function expandLevel(def, n){
   return { n, world:def.theme, total:def.total, interval:def.interval, spMul:def.spMul,

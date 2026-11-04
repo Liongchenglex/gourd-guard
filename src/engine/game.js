@@ -1,5 +1,6 @@
 import { perkOn, clearRentals } from '../data/perks.js';
-import { MINTRO, TYPES, BOSS_NAMES, VARIANTS, ICE_ONLY, ALSO_BAKE } from '../data/monsters.js';
+import { MINTRO, TYPES, BOSS_NAMES, VARIANTS, ICE_ONLY, ALSO_BAKE, BURNS_TO } from '../data/monsters.js';
+import { hasFire } from '../data/levels.js';
 import { GEAR } from '../data/shop.js';
 import { PATTERNS } from '../data/patterns.js';
 import { NTYPES, PTYPES, POWER, PINK } from '../data/pumpkins.js';
@@ -53,7 +54,7 @@ export function makePreview(n){
   if (def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
   else if (def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def.puddles) placePuddles(def.puddles);
-  if (__RELEASE__ >= 4){ G.fires = []; startFires(def); }   // the night's fire tiles at start (random ones land elsewhere in play, as puddles do)
+  if (__RELEASE__ >= 4){ G.fires = []; startFires(def); for (const f of G.fires) f.t = 1; }   // the night's fire tiles at start (random ones land elsewhere in play, as puddles do), fully grown: the preview never runs their clocks
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def.pattern, def.graves);
   if (def.gravesLayout) applyGravesLayout(def.gravesLayout);
@@ -70,7 +71,7 @@ export function beginNight(n){
   const hasMummies = def.pool.some(([k]) => k === 'mummy' || (VARIANTS[k] && VARIANTS[k].base === 'mummy'));
   if (hasMummies && !must.some(m => m.t === 3)) must.push({ t:3, why:'Mummies only die to Fire' });   // owner: Fire is auto-selected and locked on mummy levels
   if (def.pool.some(([k]) => ICE_ONLY.has(k)) && !must.some(m => m.t === 2)) must.push({ t:2, why:'Flaming mummies only die to Ice' });
-  if (__RELEASE__ >= 4 && (def.fireStart > 0 || (def.fireLayout && def.fireLayout.length) || (def.fireMarks && def.fireMarks.length)) && !must.some(m => m.t === 2)) must.push({ t:2, why:'Only Ice puts out fire and kills burning monsters' });   // fire tiles light burning monsters
+  if (__RELEASE__ >= 4 && hasFire(def) && !must.some(m => m.t === 2)) must.push({ t:2, why:'Only Ice puts out fire and kills burning monsters' });   // fire tiles light burning monsters
   if (av.length > 5 || (__RELEASE__ >= 4 && def.gourd)) openLoadout(av, lo => startGame('story', n, lo), must, __RELEASE__ >= 4 && def.gourd ? ['grave'] : null);   // a gourd night always opens the picker, so its Gourds section is seen (Release 4)
   else startGame('story', n, av);
 }
@@ -79,6 +80,17 @@ export function beginEndless(){
   const av = typesForNight(highestOpen());
   if (av.length > 5) openLoadout(av, lo => startGame('endless', 1, lo));
   else startGame('endless', 1, av.length >= 3 ? av : typesForNight(2));
+}
+
+/** The sprite strips a level needs (prebaked when its night starts, and while its preview card is read): its pool, a boss and its minions
+ *  (ALSO_BAKE), the jukebox, and on a nightmare night the burning form of every pool type that can catch fire (BURNS_TO), so the first
+ *  ignition never hitches (Release 4). */
+export function bakeKeys(def){
+  const kinds = [...def.pool.map(([k]) => k), def.boss].filter(Boolean), also = kinds.flatMap(k => (__RELEASE__ >= 4 && ALSO_BAKE[k]) || []);
+  return [...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...also,
+    ...(__RELEASE__ >= 4 && def.nightmare ? [...kinds, ...also].map(k => BURNS_TO[k]).filter(Boolean) : []),
+    ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []),
+    ...(__RELEASE__ >= 3 && def.boss === 'hollowking' ? ['hollowking|' + TYPES.hollowking.forms[0]] : []), 'ghoul'];
 }
 
 export function startGame(mode, n, loadout){
@@ -97,7 +109,7 @@ export function startGame(mode, n, loadout){
     ...(__RELEASE__ >= 4 ? { fires:[], fmNext:0, fmT:-99, fireBurst:0, fireBurstT:0, burstMinion:false, gourdDue:false } : {}),   // fire tiles and fire marks (src/engine/fire.js); gourdDue: a destroyed Grave Gourd waits for the next sprout tick (src/engine/gourd.js)
   });
   if (mode === 'story' && takeSack()) G.sackT = SACK.spawnAt;
-  if (def) prebake([...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...[...def.pool.map(([k]) => k), def.boss].flatMap(k => (__RELEASE__ >= 4 && k && ALSO_BAKE[k]) || []), ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []), ...(__RELEASE__ >= 3 && def.boss === 'hollowking' ? ['hollowking|' + TYPES.hollowking.forms[0]] : []), 'ghoul']);   // bake this level's sprite strips now, not on first sight
+  if (def) prebake(bakeKeys(def));   // bake this level's sprite strips now, not on first sight
   if (def && def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
   else if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def && def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def && def.puddles) placePuddles(def.puddles);

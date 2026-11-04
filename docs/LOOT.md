@@ -46,6 +46,7 @@ Where it comes from: every level-20 boss.
 | Level-20 boss | A boss chest, given at once |
 | The Hollow King (6-20, Release 3) | Two boss chests, plus a 50% chance of a third (owner, 2026-11-03; was one plus a 50% second); boss-item prizes in them pay coins (no Hollow King costume yet) |
 | The Strawlord (Nightmare 1-4 and 1-13, Release 4) | One treasure chest, given at once, on each win (owner, 2026-11-04; placeholder, polished later). No boss items and no costume. Set by the level field `bossChest:'normal'` |
+| A won nightmare night (Release 4) | The night bonus of the last story night: 10 + 3 × LEVELS coins (LEVELS = the story levels in the build: 120 in the playtest build, so 370) + 5 per quest met that night. Placeholder (owner, 2026-11-04: "assume for now, polish later"). Kills roll the usual kill reward, and on non-boss nightmare nights the 1% chest chance applies as on any normal night |
 | Any boss kill in the story | Also a 5% chance of 1–3 seeds |
 | A boss beaten in Endless Night | A 50% chance of 1–2 seeds (no chest; owner, 2026-10-20, was 1–3) |
 | Loot Sack (an ad on the level card summons it) | A treasure chest 50% (tap to pick up), a set of 5 tools 25%, or 80–160 coins 25%; plus a 50% chance of 1 seed. In endless, a Loot Sack comes every other hour. |

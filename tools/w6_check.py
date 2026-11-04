@@ -5,7 +5,7 @@
   Release 3 build: VITE_RELEASE=3 npx vite build then  ... --expect r3   (World 6 complete, nothing from Release 4; tools/nm_check.py --expect r3 too)
   Checks take `on` (World 6 present: on, r3 or r2); Release 3 checks read the global R3 (on or r3).
 Exits 1 on any failure. --only runs one check by name."""
-import argparse, json, pathlib, sys, time
+import argparse, json, pathlib, sys, time, os
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -1041,7 +1041,7 @@ def main():
     MODE = a.expect; R3 = a.expect in ('on', 'r3')
     on = a.expect in ('on', 'r3', 'r2')
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(args=os.environ.get('GG_CHROME_ARGS', '').split())   # e.g. GG_CHROME_ARGS=--disable-gpu when the headless GPU process hangs (a sleeping Mac)
         for name, fn in CHECKS.items():
             if a.only and name != a.only: continue
             print(name)

@@ -19,7 +19,7 @@ The owner builds many ideas ahead of the stores and wants to see all of them on 
 | 1 | Worlds 1–5 | In the stores (branch `r1-ground-rules`) |
 | 2 | Hallow's End 6-1 to 6-16 | Content complete on `dev` (owner: "a wrap", 2026-11-02); not yet shipped (cut `release/2` when the owner says) |
 | 3 | Hallow's End 6-17 to 6-20 (the Hollow King) **and** the Beige pumpkin | Built on `dev` (2026-11-02; spec `docs/superpowers/specs/2026-11-02-release-3-design.md`), awaiting the owner's play; not shipped. (The owner merged the old R3 and R4 on 2026-11-02.) |
-| 4 | Nightmare Pumpkin Patch | Idea (maps in `docs/archive/nightmare-worlds/`) |
+| 4 | Nightmare Pumpkin Patch: Nightmare 1-1 to 1-15 (fire tiles, the Cinder Rooster, Hayrick, Corn Husker and Grave Riser, the Strawlord mini boss, the Grave Gourd); 1-16 (the Fallen Gravekeeper) waits for the owner's design | Built on `dev` (2026-11-04; spec `docs/superpowers/specs/2026-11-04-release-4-nightmare-patch-design.md`), awaiting the owner's play; not shipped. Check with `tools/nm_check.py --expect on\|r3\|r2\|off` |
 | 5 | Nightmare Foggy Hollow | Idea |
 | … | further nightmare worlds, one per release | Owner to order |
 
@@ -45,6 +45,7 @@ The owner may reorder or regroup releases at any time. When they do, update this
   - Keep gated data out of top-level calls such as `.map()` in modules that might be dropped.
   - Examples today (Release 2): the World 6 book blurb (`lore.js`), the Frenzy song (`audio.js` / `src/data/music_w6.js`), Emergency Pumpkins (`shop.js`, `hud.js` tray), and the fog-free preview map (`render/draw.js`).
   - Release 3: the 6-17 to 6-20 entries themselves (an inline `...(__RELEASE__ >= 3 ? [...] : [])` in `world6.js`, because the runtime release filter alone leaves their names in a Release 2 bundle), the Beige pumpkin (`PTYPES`, `BEIGE`/`RAINBOW` indices, `BUY_PUMPKIN`, `UPGRADE_COST`, lore, face), glue (`src/engine/glue.js`), the Hollow King (`TYPES`, `BOSS_NAMES`, `BOSS_INTRO`, `CHARS`, `src/engine/hollowking.js`, bestiary, book page), the jukebox marks and the extra boss chests.
+  - Release 4: the nightmare levels (`nightmare1.js`, `NIGHTMARE_LEVELS`), fire (`src/engine/fire.js`, `render/fire.js`), the new monsters and the Strawlord (`TYPES`, `MNAME`, `MINTRO`, `BOSS_NAMES`, bestiary, `src/engine/nightmare.js`, their `render/chars/` modules), the Grave Gourd (`src/data/gourds.js`, `src/engine/gourd.js`, `render/gourd.js`, the coach script), the fire and gourd intro cards and the nightmare bestiary page. `check_r4_absent` in `tools/nm_check.py` greps the lower bundles for their names.
 - **Changes to things already in the stores** (not just new content) need a release tag too. Anything untagged ships with the next store build.
 
 ## Checks for every release

@@ -165,6 +165,9 @@ export const SEA_INTRO = 'The sea has reached the top of the field. Anything can
 export const WIND_INTRO = 'Wind blows through Witchwood. Leaves show the direction for two seconds, then every pumpkin in your patch shifts one cell that way, as if pushed. Bunches can form or break.';
 export const FRENZY_INTRO = 'Near the end of the night a jukebox drops at the top of the field. Monsters keep coming while it plays. Only pumpkins can smash it.';
 export const FOG_INTRO = 'Fog covers part of the field. Monsters inside it are invisible but still walking. Pumpkins fly through it and hit as normal. A Lantern clears it for a while.';
+// Release 4 (nightmare track): the fire tiles card (first level with fire) and the Grave Gourd card (first level with a gourd), from level fields compared with prevLevelFor.
+export const FIRE_INTRO = __RELEASE__ >= 4 ? 'Fire burns on some tiles of the field. A pumpkin that flies into a fire burns up, and the fire stays. Only Ice puts a fire out, and it stops there. Monsters walk through fire unharmed, but a mummy that does catches fire: only Ice finishes it. Marks on the spawn bar light more fire and bring a horde.' : '';
+export const GOURD_INTRO = __RELEASE__ >= 4 ? 'The Grave Gourd stands on your patch. Slide it like a pumpkin; it never bunches or flies. Every sprout fills the empty cells around it. Press and hold it to break it: every grave around it is cleared, and a new gourd sprouts on the next tick.' : '';
 
 export const MINTRO = {
   bat:'New foe: bats. Quick, but one hit does it.',

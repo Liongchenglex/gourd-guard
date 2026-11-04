@@ -470,3 +470,21 @@
 
   Record before and after tables in `GAME_DESIGN.md` §11.
 - [ ] **Step 6: Commit.** "Nightmare Pumpkin Patch levels N1-1 to N1-15, bestiary, balance (Release 4)". Include the docs. Don't deploy until the owner says "deploy".
+
+### Task 13: The gourd as its own pick on the picking screen (owner, 2026-11-05)
+
+**Files:**
+- Modify: `src/ui/screens.js` (`openLoadout`, `renderGourds`, `renderTeam`, `renderDetail`, `syncLoadout`, `teamSize`), `index.html` (`#ovLoadout` header: a `#loGourdSlot` beside `#loTeam`), `src/style.css` (`#ovLoadout` gourd slot and section), `docs/GAME_DESIGN.md` §5 picker
+- Test: `tools/nm_check.py` (`check_gourd_loadout` extended; new `check_gourd_pick_ui`)
+
+**Interfaces:**
+- Consumes: `GOURDS` (`src/data/gourds.js`), `gourdIcon(size)`, `openLoadout(avail, next, required, gourds)` (Task 8).
+- Produces: `loadoutGourd: string | null` (the picked gourd key), passed to `startGame` the way the Task 8 path passes `['grave']` today; `#loGourdSlot` element.
+
+Design (spec Part 3 "A separate pick in the picker"): title "Pick N pumpkins and 1 gourd" on gourd nights (unchanged otherwise); header shows the Your team row and, apart from it with its own label "Your gourd", one gourd slot with an amber rounded frame; the Gourds section heading reads "Gourd · pick 1"; tapping a gourd tile selects it into the slot and shows its card; with one gourd it starts selected and can't be emptied; Start needs N pumpkins and the gourd. Story nights look exactly as before. Phone width 390 px: the header must fit without scrolling; touch targets ≥44 px.
+
+- [ ] **Step 1: Write the failing checks.** `check_gourd_pick_ui` (R4): on N1-5 the picker title contains "pumpkins and 1 gourd"; `#loGourdSlot` exists, is outside `#loTeam`, holds the Grave Gourd; `#loTeam` has exactly N slots (no gourd inside); the Gourds heading text contains "pick 1"; tapping the gourd tile fills the detail card with the Grave Gourd; tapping the gourd slot does not empty it; Start is enabled with N pumpkins and disabled with N−1. On a story night (night 15) there is no `#loGourdSlot` visible and the title is unchanged. Screenshot the picker at 390×844 into the plan workspace for the owner.
+- [ ] **Step 2: Run, expect FAIL.**
+- [ ] **Step 3: Implement.**
+- [ ] **Step 4: Run, expect PASS**, then full `nm_check --expect on`, `w6_check --expect on`, `smoke_test`; `check_r4_absent` on r3/off builds.
+- [ ] **Step 5: Commit** "Picker: the gourd is its own pick (Release 4)" with the GAME_DESIGN.md picker lines.

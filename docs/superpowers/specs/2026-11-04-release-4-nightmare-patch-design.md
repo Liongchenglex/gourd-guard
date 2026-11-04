@@ -47,6 +47,12 @@ The archived gourd rules (`docs/archive/gourds/`) are replaced by these where th
 - **Design** (our call, owner said "your pick"): the **Calabash** (amber `#e3a43c`, tall bottle gourd, pinched waist, curly stem), named **the Grave Gourd**. Cute like the pumpkins, keeps its face on the patch, one design everywhere.
 - **Unlocked by beating Nightmare 1-4** (owner). **Nightmare 1-5 teaches it** with a coach tutorial (owner), like the first-night coach (`src/engine/coach.js`): slide the gourd, watch a sprout fill the cells around it, press and hold it to destroy it and clear the graves around it, see a new one come back.
 - **How many** (owner): one gourd on the patch on every nightmare night from 1-5 on. It is shown in a new **Gourds** section of the pumpkin picker (`#loScroll` already plans for it). With only one gourd it is picked and locked (our call); it does not take one of the pumpkin slots.
+- **A separate pick in the picker** (owner, 2026-11-05): the gourd is its own selection, apart from the pumpkin team, and the picking screen must make that obvious. Our design calls:
+  - The title says both, e.g. "Pick 4 pumpkins and 1 gourd".
+  - The pinned header shows the **Your team** row of pumpkin slots and, set apart by a gap and its own label, a single **Your gourd** slot with a different frame (amber, rounded, gourd-shaped), so the two never read as one row of five.
+  - The Gourds section has its own heading and count ("Gourd · pick 1"). Tapping a gourd tile selects it into the gourd slot and fills the detail card with its power. With one gourd it starts selected; the slot can't be emptied (a gourd night needs a gourd).
+  - Start needs the pumpkin count and the gourd. The pumpkin count and the gourd count never mix.
+  - Built so later gourds are a choice of one from several, with the same slot.
 - **It moves** (owner): you slide it like a pumpkin, and it is part of a push line like a pumpkin. It **never joins a bunch, never lights up and is never flicked** (our call). Rainbow does not match it; Paint does not pull it.
 - **You destroy it yourself** (owner) by pressing and holding it (the same hold as crushing a pumpkin, quick with the 1-20 power). When destroyed it **clears every grave in the 3×3 around it** (owner). Pumpkins in that square are untouched (our call).
 - **It comes back on the very next sprout** (owner): the next sprout tick puts a new gourd in a random empty cell. That takes one sprout slot (our call). If the patch is full it waits for the first sprout tick with a free cell.

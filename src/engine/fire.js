@@ -34,7 +34,8 @@ export function lightFire(lane, p, quiet){
   if (!G || !G.fires || lane < 0 || lane >= COLS) return false;
   const q = centre(rowOf(p));
   if (fireAt(lane, q)) return false;
-  G.fires.push({ lane, p:q, t:0 });
+  const f = { lane, p:q, t:0 }; G.fires.push(f);
+  for (const pr of G.projs || []) if (pr.lane === lane && !pr.dead && pr.y <= fireY(f) + 20) (pr.passed || (pr.passed = new Set())).add(f);   // a pumpkin already past this tile flies on: things are met in the order they stand
   if (!quiet){
     const x = LANE(lane), y = FIELD_TOP + q * (FIELD_BOT - FIELD_TOP);
     for (let i = 0; i < 10; i++) spark(x, y, i % 2 ? '#ffd35a' : '#ff6a1a', 140);
@@ -85,7 +86,7 @@ export function putOut(f){
  *  unless a monster it can still hit stands in front of that fire (nearer the fence): that monster is hit first. */
 export function fireAhead(pr, targets){
   let best = null;
-  for (const f of G.fires) if (f.lane === pr.lane && pr.y <= fireY(f) + 20 && (!best || f.p > best.p)) best = f;
+  for (const f of G.fires) if (f.lane === pr.lane && pr.y <= fireY(f) + 20 && !(pr.passed && pr.passed.has(f)) && (!best || f.p > best.p)) best = f;   // skips a fire lit behind it (lightFire)
   if (!best) return null;
   const fy = fireY(best);
   for (const m of targets) if (mY(m) > fy) return null;

@@ -177,6 +177,15 @@ def check_fire_order(browser, url):
     r = shoot(page, 7, 3)
     hps = page.evaluate(f"() => [window.__gg.G.monsters[{a}].hp, window.__gg.G.monsters[{b}].hp]")
     ok(r[2] and hps == [50, 50], f'a Black that burns does no splash {hps} {r}')
+    # Review fix: a fire lit behind a pumpkin already in flight past that tile does not burn it in mid-air
+    page.evaluate(QUIET)
+    r = page.evaluate(f"""() => {{ const g = window.__gg, G = g.G, F0 = g.fieldY(0), F1 = g.fieldY(1);
+      const done = ({SHOOT})(0, 3), pr = G.projs[G.projs.length - 1];
+      return new Promise(res => {{ const wait = () => {{ if ((pr.y - F0) / (F1 - F0) > 0.2 && !pr.dead) return requestAnimationFrame(wait);
+        g.lightFire(3, 0.6); const at = (pr.y - F0) / (F1 - F0); done.then(v => res([at, ...v, G.fires.length])); }}; wait(); }}); }}""")
+    ok(r[0] <= 0.2 and not r[3] and r[1] < 0.05 and r[4] == 1, f'a fire lit at p 0.6 behind a pumpkin in flight at p {r[0]:.2f} lets it fly on (min p {r[1]:.2f}, burned {r[3]}, fires {r[4]})')
+    r = shoot(page, 0, 3)
+    ok(r[2] and r[0] > 0.6, f'the next pumpkin up lane 3 still burns in that fire {r}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 

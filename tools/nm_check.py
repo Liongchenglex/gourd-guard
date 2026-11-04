@@ -395,38 +395,38 @@ def check_hayrick_pin(browser, url):
     fire_night(page)
     hasGourd = page.evaluate("() => !!window.__gg.isGourd")
     ok(page.evaluate("() => { const T = window.__gg.TYPES; return [T.hayrick.hp, T.hayrick.pinT, T.hayrickBurning.rise]; }") == [8, 4, 4], 'hayrick: 8 health, pins for 4 s; hayrickBurning rises after 4 s (data)')
-    page.evaluate("""() => { const g = window.__gg; g.grid[4][2] = g.newCell(0); g.grid[1][2] = g.newCell(1); g.grid[4][5] = g.newCell(0);
+    page.evaluate("""() => { const g = window.__gg; g.grid[1][2] = g.newCell(0); g.grid[4][2] = g.newCell(1); g.grid[4][5] = g.newCell(0);
       window.__h = g.spawnMonster('hayrick', 2, true, 0.35); window.__h.sp = 0; }""")
     t0 = time.time(); t = None
     while time.time() - t0 < 3:
-        if page.evaluate("() => (window.__gg.grid[4][2].pinned || 0)") > 0: t = time.time() - t0; break
+        if page.evaluate("() => (window.__gg.grid[1][2].pinned || 0)") > 0: t = time.time() - t0; break
         time.sleep(0.05)
-    ok(t is not None, f'within 3 s the hayrick pins the lowest pumpkin in its column, (4, 2) ({t})')
-    ok(not (page.evaluate("() => (window.__gg.grid[1][2].pinned || 0)") > 0) and not (page.evaluate("() => (window.__gg.grid[4][5].pinned || 0)") > 0), 'the pumpkin above it and the one in another column are not pinned')
+    ok(t is not None, f'within 3 s the hayrick pins the first pumpkin the fork meets (nearest the fence), (1, 2) ({t})')
+    ok(not (page.evaluate("() => (window.__gg.grid[4][2].pinned || 0)") > 0) and not (page.evaluate("() => (window.__gg.grid[4][5].pinned || 0)") > 0), 'the pumpkin behind it (row 4) and the one in another column are not pinned')
     ok(page.evaluate("() => window.__h.thrown"), 'the hayrick has thrown (m.thrown)')
-    ref = "() => window.__gg.grid[4][2]"
+    ref = "() => window.__gg.grid[1][2]"
     ok(page.evaluate(f"() => window.__gg.slideOne(({ref})(), 'left')") is False, 'slideOne on the pinned pumpkin returns false')
-    ok(page.evaluate(f"() => !!window.__gg.grid[4][2] && !window.__gg.grid[4][1]"), 'it stayed in its cell')
+    ok(page.evaluate(f"() => !!window.__gg.grid[1][2] && !window.__gg.grid[1][1]"), 'it stayed in its cell')
     # a push whose line holds the pinned pumpkin is refused too, like a push into a grave
-    page.evaluate("() => { const g = window.__gg; g.grid[4][3] = g.newCell(2); }")
-    ok(page.evaluate("() => window.__gg.slideOne(window.__gg.grid[4][3], 'left')") is False, 'a neighbour cannot push the pinned pumpkin')
-    page.evaluate("() => { window.__gg.grid[4][3] = null; }")
-    ok(page.evaluate("() => { const g = window.__gg, c = g.grid[4][2]; return g.bestMove() ? g.bestMove().ref !== c : true; }"), 'bestMove never picks the pinned pumpkin')
+    page.evaluate("() => { const g = window.__gg; g.grid[1][3] = g.newCell(2); }")
+    ok(page.evaluate("() => window.__gg.slideOne(window.__gg.grid[1][3], 'left')") is False, 'a neighbour cannot push the pinned pumpkin')
+    page.evaluate("() => { window.__gg.grid[1][3] = null; }")
+    ok(page.evaluate("() => { const g = window.__gg, c = g.grid[1][2]; return g.bestMove() ? g.bestMove().ref !== c : true; }"), 'bestMove never picks the pinned pumpkin')
     time.sleep(1.5)
-    ok(page.evaluate("() => window.__gg.slideOne(window.__gg.grid[4][2], 'left')") is False, 'still pinned 1.5 s later')
+    ok(page.evaluate("() => window.__gg.slideOne(window.__gg.grid[1][2], 'left')") is False, 'still pinned 1.5 s later')
     # the pin runs out: 4 s from the throw
     time.sleep(1.6)
-    left = page.evaluate("() => (window.__gg.grid[4][2].pinned || 0)")
+    left = page.evaluate("() => (window.__gg.grid[1][2].pinned || 0)")
     ok(0 <= (left or 0) < 1.2, f'the pin counts down in update ({left})')
     time.sleep(1.2)
-    ok(page.evaluate("() => window.__gg.slideOne(window.__gg.grid[4][2], 'left')") is True, 'after 4.2 s it slides')
+    ok(page.evaluate("() => window.__gg.slideOne(window.__gg.grid[1][2], 'left')") is True, 'after 4.2 s it slides')
     ok(page.evaluate("() => window.__h.thrown") and page.evaluate("() => !window.__gg.grid.flat().some(c => c && c.pinned > 0)"), 'the hayrick throws once a night: nothing is pinned again')
     if hasGourd:
         page.evaluate(QUIET)
-        page.evaluate("""() => { const g = window.__gg; g.grid[4][2] = g.newCell(0); g.grid[4][2].gourd = true; g.grid[3][2] = g.newCell(1);
+        page.evaluate("""() => { const g = window.__gg; g.grid[0][2] = g.newCell(0); g.grid[0][2].gourd = true; g.grid[1][2] = g.newCell(1);
           window.__h = g.spawnMonster('hayrick', 2, true, 0.35); window.__h.sp = 0; }""")
         time.sleep(1.5)
-        ok(page.evaluate("() => !(window.__gg.grid[4][2].pinned > 0) && window.__gg.grid[3][2].pinned > 0"), 'with the gourd at (4, 2) the pin goes to the next pumpkin up')
+        ok(page.evaluate("() => !(window.__gg.grid[0][2].pinned > 0) && window.__gg.grid[1][2].pinned > 0"), 'with the gourd at (0, 2) the pin goes to the next pumpkin down the column, (1, 2)')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 

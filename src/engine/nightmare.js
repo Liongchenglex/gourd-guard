@@ -21,10 +21,10 @@ function crow(m){
   SFX.monsterAct('rooster', 'crow');
 }
 
-/** The Hayrick throws its pitchfork down its column: the lowest pumpkin there (a gourd is skipped, and so is one already pinned or in flight) is pinned for pinT seconds.
+/** The Hayrick throws its pitchfork down its column: the first pumpkin it meets there, coming down from the field (row 0 is beside the fence; a gourd is skipped, and so is one already pinned or in flight) is pinned for pinT seconds.
  *  Once per monster: with nothing to pin it keeps the fork and tries again next frame. */
 function throwFork(m){
-  for (let r = ROWS - 1; r >= 0; r--){
+  for (let r = 0; r < ROWS; r++){
     const cell = grid[r][m.lane];
     if (!cell || cell.gourd || cell.fly > 0 || cell.pinned > 0) continue;
     cell.pinned = cell.pinMax = TYPES[m.type].pinT; m.thrown = true;

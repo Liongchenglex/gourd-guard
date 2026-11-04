@@ -78,7 +78,7 @@ export const TYPES = {
   // Release 4, Nightmare Pumpkin Patch (spec Part 4). The Cinder Rooster crows every `crowEvery` s (not while frozen): every monster in its lane and the
   // two beside it walks `rushMul` times as fast for `rushT` s. Where it dies, however it dies, a fire tile is left (engine/nightmare.js, combat.js kill()).
   ...(__RELEASE__ >= 4 ? { rooster: { hp:2, sp:0.05, r:20, coins:6, eat:0.5, pts:20, drop:1, crowEvery:8, rushT:2, rushMul:1.6 } } : {}),
-  // The Hayrick: a tank. Once, when it has walked past p 0.3, it throws its pitchfork down its column and pins the lowest non-gourd pumpkin there for `pinT` s
+  // The Hayrick: a tank. Once, when it has walked past p 0.3, it throws its pitchfork down its column and pins the first non-gourd pumpkin it meets there (row 0, beside the fence, first) for `pinT` s
   // (engine/nightmare.js; engine/board.js treats a pinned cell like a grave). Its burning version (walks onto fire) keeps the throw and is Ice-only; `rise` is how long it lies down.
   ...(__RELEASE__ >= 4 ? { hayrick: { hp:8, sp:0.03, r:26, coins:10, eat:0.8, pts:30, drop:2, pinT:4 }, hayrickBurning: { hp:8, sp:0.03, r:26, coins:10, eat:0.8, pts:30, drop:2, pinT:4, rise:4 } } : {}),
 };
@@ -170,5 +170,5 @@ export const MINTRO = {
   witch:'New foe: witches. Every few seconds one turns a monster into a reverse chameleon, or now and then a true chameleon.',
   bulwark:'New foe: bulwark knights. Everything inside their steel aura has double health. Kill the knight first, or pull the others out of the aura.',
   turtle:'New foe: shell turtles. They rise from puddles and walk backwards, shell towards you, like a slow wall. Grey pierces through; everything else has to chew the shell.',
-  ...(__RELEASE__ >= 4 ? { rooster:'New foe: cinder roosters. Every few seconds one crows, and every monster in its lane and the lanes beside it sprints for a moment. Where it falls it leaves a fire burning.', hayrick:'New foe: hayricks. Tough haystacks. Once, each throws its pitchfork down its column and pins the lowest pumpkin there for a few seconds, so it cannot slide or be pushed (it can still fly with its bunch). Walking onto fire makes one a burning hayrick: only Ice finishes it.' } : {}),
+  ...(__RELEASE__ >= 4 ? { rooster:'New foe: cinder roosters. Every few seconds one crows, and every monster in its lane and the lanes beside it sprints for a moment. Where it falls it leaves a fire burning.', hayrick:'New foe: hayricks. Tough haystacks. Once, each throws its pitchfork down its column and pins the first pumpkin it meets there for a few seconds, so it cannot slide or be pushed (it can still fly with its bunch). Walking onto fire makes one a burning hayrick: only Ice finishes it.' } : {}),
 };

@@ -4,7 +4,7 @@ import { NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, prevLevelFor, firstNightOf, typesForNight, gearUnlockNightOf, NIGHTMARE_LEVELS, NM_BOOK_LEVELS, nmNight } from '../data/worlds/index.js';
 import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO } from '../data/monsters.js';
-import { hasFire } from '../data/levels.js';
+import { hasFire, nightmareTitle } from '../data/levels.js';
 import { monsterIcon } from '../engine/render/monsters.js';
 import { prebakeAsync } from '../engine/render/anim.js';
 import { hollowking } from '../engine/render/chars/hollowking.js';
@@ -214,7 +214,7 @@ export function openPreview(n){
   previewNight = n; syncSack();
   const def = levelFor(n), place = def.nightmare ? WORLDS[def.world].name : WORLD_NAMES[def.worldNo - 1];
   makePreview(n);   // the night's own map behind the card (owner: not a random background)
-  $('#pvTitle').textContent = def.nightmare ? `Nightmare ${def.worldNo}-${def.levelNo}` : `Level ${def.label}`;
+  $('#pvTitle').textContent = def.nightmare ? nightmareTitle(def) : `Level ${def.label}`;
   renderQuests(n, def);
   $('#pvSub').textContent = place;
   const mons = $('#pvMonsters'); mons.innerHTML = '';
@@ -262,7 +262,7 @@ export function openPreview(n){
   if (def.boss) info.push(def.boss2 === def.boss ? 'Two pairs of bosses. Monsters keep coming until all fall.' : def.boss2 ? 'Two bosses at once. Monsters keep coming until both fall.' : 'Monsters keep coming until the boss falls.');
   if (def.frenzyAfterBoss) info.push('When the first pair falls, the jukebox drops.');
   if (__RELEASE__ >= 4 && def.fireMarks && def.fireMarks.length) info.push('Fire marks on the spawn bar light more fire and bring a horde.');
-  if (__RELEASE__ >= 4) for (const k of def.unlockGourds) if (GOURDS[k]) info.push(`🎁 Reward: the ${GOURDS[k].name}.`);
+  if (__RELEASE__ >= 4) for (const k of def.unlockGourds) if (GOURDS[k] && !(save.gourds && save.gourds[k])) info.push(`🎁 Reward: the ${GOURDS[k].name}.`);
   if (!def.nightmare && def.levelNo === 10){ const nextName = WORLD_NAMES[def.worldNo]; info.push(`🎁 Reward: levels 11–20${nextName && WORLD_LEVELS[def.worldNo] && WORLD_LEVELS[def.worldNo].length ? ` and World ${def.worldNo + 1}: ${nextName}` : ''}.`); }
   if (!def.nightmare && def.levelNo === 20){ const perk = PERKS.find(p => perkNight(p) === n); if (perk) info.push(`🎁 Reward: ${perk.name}. ${perk.desc}`); }
   if (def.name) $('#pvSub').textContent = `${place} · ${def.name}`;

@@ -68,8 +68,8 @@ function gourdCoachUpdate(c){
   const gp = gourdPos(), go = step => { c.step = step; c.stepT = 0; tip(step); };
   if (c.step === 'gslide'){
     if (!gp) go('gback');   // broken before it was slid: carry on from the respawn
-    else if (gp.r !== c.from.r || gp.c !== c.from.c) go('gfill');   // slid (any way)
-    else if (!c.move || !findCell(c.move.ref)) findGourdMove();
+    else if (c.move && gp.r === c.move.tr && gp.c === c.move.tc) go('gfill');   // it reached the cell the hand showed
+    else if (!c.move || !findCell(c.move.ref) || gp.r !== c.from.r || gp.c !== c.from.c){ c.from = { r:gp.r, c:gp.c }; findGourdMove(); }   // slid somewhere else: the hand shows the way again from here
   } else if (c.step === 'gfill'){
     if (!gp) go('gback');
     else if (!c.filled && c.stepT > 0.6){ c.filled = true; spawnSprouts(); }   // one real sprout tick: its first slot fills the gourd's square

@@ -5,6 +5,7 @@ import { $, clamp } from '../engine/util.js';
 import { wallFrac } from '../engine/walls.js';
 import { save } from '../save.js';
 import { TYPES } from '../data/monsters.js';
+import { nightmareTitle } from '../data/levels.js';
 import { toolIcon } from '../engine/render/tools.js';
 import { QUEST_START, questsFor, questLive, questShort } from '../data/quests.js';
 
@@ -64,7 +65,7 @@ export function updateHud(force){
     prog = G.bossDead ? 1 : bs.length ? 0.1 + 0.9 * (1 - hp / mx) : 0.1 * Math.min(1, G.spawned / Math.max(1, Math.floor(G.total * 0.4)));
   } else if ((__RELEASE__ >= 3 && Array.isArray(G.def.frenzyAt)) || (__RELEASE__ >= 4 && G.def.fireMarks && G.def.fireMarks.length)) prog = G.total ? Math.min(G.spawned, G.total) / G.total : 0;   // levels with jukebox marks: the bar counts monsters that arrived, so each jukebox drops on its mark (owner, 2026-11-03)
   else prog = G.total ? G.resolved / G.total : 0;
-  const label = G.mode === 'story' ? `Night ${G.def.label}` : `${G.frenzy ? 'Frenzy' : 'Hour'} ${(G.hour || 0) + 1} · ${G.score.toLocaleString()}`;
+  const label = G.mode === 'story' ? G.def.nightmare ? nightmareTitle(G.def) : `Night ${G.def.label}` : `${G.frenzy ? 'Frenzy' : 'Hour'} ${(G.hour || 0) + 1} · ${G.score.toLocaleString()}`;
   const wf = Math.round(wallFrac() * 100);
   const tools = toolsForNight(G.mode === 'story' ? progressNight(G.n) : highestOpen());
   if (!trayDrawn){ trayDrawn = true; for (const [btn, key] of TRAY){ const cv = $(btn).querySelector('canvas.ti'); if (!cv) continue; const ic = toolIcon(key, 40); cv.width = ic.width; cv.height = ic.height; cv.getContext('2d').drawImage(ic, 0, 0); } }

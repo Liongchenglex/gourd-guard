@@ -64,6 +64,9 @@
  *   field tiles catch fire and a burst of FRENZY_BURST monsters arrives that does not count toward `total`; the bar counts arrivals, as with jukebox marks
  */
 
+/** The title a nightmare level goes by everywhere (banner, preview card, top bar): "Nightmare 1-5". */
+export const nightmareTitle = d => `Nightmare ${d.worldNo}-${d.levelNo}`;
+
 /** Does this level light fire (tiles at the start or fire marks)? Release 4 fields; false on every older level. */
 export const hasFire = d => !!d && (d.fireStart > 0 || !!(d.fireLayout && d.fireLayout.length) || !!(d.fireMarks && d.fireMarks.length));
 

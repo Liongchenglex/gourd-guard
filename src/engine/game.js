@@ -1,6 +1,6 @@
 import { perkOn, clearRentals } from '../data/perks.js';
-import { MINTRO, TYPES, BOSS_NAMES, VARIANTS, ICE_ONLY, ALSO_BAKE, BURNS_TO } from '../data/monsters.js';
-import { hasFire } from '../data/levels.js';
+import { MINTRO, TYPES, BOSS_NAMES, VARIANTS, ICE_ONLY, ALSO_BAKE, BURNS_TO, HUSK_STRIP } from '../data/monsters.js';
+import { hasFire, nightmareTitle } from '../data/levels.js';
 import { GEAR } from '../data/shop.js';
 import { PATTERNS } from '../data/patterns.js';
 import { NTYPES, PTYPES, POWER, PINK } from '../data/pumpkins.js';
@@ -70,8 +70,10 @@ export function beginNight(n){
   const must = def.unlockPumpkins.map(k => ({ t:PTYPES.findIndex(p => p.key === k), why:'New this level' })).filter(m => m.t >= 0);   // this level's new pumpkin(s) are locked into the loadout
   const hasMummies = def.pool.some(([k]) => k === 'mummy' || (VARIANTS[k] && VARIANTS[k].base === 'mummy'));
   if (hasMummies && !must.some(m => m.t === 3)) must.push({ t:3, why:'Mummies only die to Fire' });   // owner: Fire is auto-selected and locked on mummy levels
-  if (def.pool.some(([k]) => ICE_ONLY.has(k)) && !must.some(m => m.t === 2)) must.push({ t:2, why:'Flaming mummies only die to Ice' });
-  if (__RELEASE__ >= 4 && hasFire(def) && !must.some(m => m.t === 2)) must.push({ t:2, why:'Only Ice puts out fire and kills burning monsters' });   // fire tiles light burning monsters
+  const iceKind = k => ICE_ONLY.has(k) || (__RELEASE__ >= 4 && ICE_ONLY.has(HUSK_STRIP[k]));   // an Ice-only type, or one whose husk strips to one (the Burning Husker)
+  const fireSource = __RELEASE__ >= 4 && (hasFire(def) || def.boss === 'strawlord' || def.boss2 === 'strawlord' || def.pool.some(([k]) => k === 'rooster'));   // fire tiles, or something that lights them (the rooster's death, the Strawlord)
+  if ((def.pool.some(([k]) => iceKind(k)) || fireSource) && !must.some(m => m.t === 2))   // Ice is locked in wherever Ice-only monsters or fire can be
+    must.push({ t:2, why: __RELEASE__ >= 4 && (fireSource || def.pool.some(([k]) => iceKind(k) && k !== 'firemummy')) ? 'Only Ice puts out fire and kills burning monsters' : 'Flaming mummies only die to Ice' });
   if (av.length > 5 || (__RELEASE__ >= 4 && def.gourd)) openLoadout(av, lo => startGame('story', n, lo), must, __RELEASE__ >= 4 && def.gourd ? ['grave'] : null);   // a gourd night always opens the picker, so its Gourds section is seen (Release 4)
   else startGame('story', n, av);
 }
@@ -141,7 +143,7 @@ export function startGame(mode, n, loadout){
     else if (def.boss) parts.push(def.boss === 'twintides' ? `${BOSS_NAMES[def.boss]} wait in this night. Monsters keep coming until both fall.` : `${BOSS_NAMES[def.boss]} waits in this night. Monsters keep coming until it falls.`);
     if (def.graves && def.graves > (prev ? prev.graves : 0)) parts.push(n === 3 ? 'Graves now appear in your patch. They block slides.' : 'One more grave in the patch.');
     if (n === 1) parts.push('Swipe a pumpkin to slide it. Bunch 3 of a color.');
-    banner(def.nightmare ? `Nightmare ${def.worldNo}-${def.levelNo}` : `Night ${def.label}`, parts.length ? parts.join(' ') : WORLDS[G.world].name, parts.length > 1 ? 4.2 : 3); SFX.levelStart();
+    banner(def.nightmare ? nightmareTitle(def) : `Night ${def.label}`, parts.length ? parts.join(' ') : WORLDS[G.world].name, parts.length > 1 ? 4.2 : 3); SFX.levelStart();
   } else banner('Endless night', 'How long can the walls hold?', 2.4);
 }
 

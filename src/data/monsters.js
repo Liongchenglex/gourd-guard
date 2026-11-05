@@ -133,7 +133,7 @@ export const ICE_ONLY = new Set(['firemummy', ...(__RELEASE__ >= 4 ? ['hayrickBu
 /** The Corn Husker's first hit strips its husk (no damage): husker -> huskerBare, huskerBurning -> huskerCharred. Any pumpkin strips it. */
 export const HUSK_STRIP = __RELEASE__ >= 4 ? { husker:'huskerBare', huskerBurning:'huskerCharred' } : {};
 /** Looks a type is always seen in during a night, baked with it so the first hit never hitches. */
-export const ALSO_BAKE = __RELEASE__ >= 4 ? { husker:['huskerBare'], strawlord:['crow'] } : {};   // a boss's minions too (the Strawlord's crows)
+export const ALSO_BAKE = __RELEASE__ >= 4 ? { husker:['huskerBare'], huskerBurning:['huskerCharred'], strawlord:['crow'] } : {};   // a boss's minions too (the Strawlord's crows)
 /** burning type -> the ordinary type it ignites */
 export const BURNING_FROM = Object.fromEntries(Object.entries(BURNS_TO).map(([a, b]) => [b, a]));
 

@@ -311,6 +311,12 @@ def check_ice_lock(browser, url):
           return new Promise(res => setTimeout(() => res([...document.querySelectorAll('#loTeam .slot.must')].map(b => b.getAttribute('aria-label'))), 400)); }""", n)
     r = musts(1001)
     ok(any(x.startswith('Ice') for x in r), f'N1-1 (fire tiles) locks Ice into the loadout {r}')
+    w = lambda: page.evaluate("() => document.querySelector('#loWhy').textContent")
+    ok('only ice puts out fire' in w(), f'and says why in words that fit fire, not flaming mummies: {w()!r}')
+    r = musts(1014)
+    ok(any(x.startswith('Ice') for x in r) and 'only ice puts out fire' in w(), f'N1-14 (burning monsters) locks Ice with the fire wording {r} {w()!r}')
+    r = musts(16)
+    ok(any(x.startswith('Ice') for x in r) and 'Ice is locked in: flaming mummies only die to ice.' in w(), f'story 1-16 (Flaming Mummies, no fire) locks Ice exactly as before {r} {w()!r}')
     page.reload(); page.wait_for_function('() => !!window.__gg'); set_stars(page, story_done(70))
     ok(not page.evaluate("() => { const d = window.__gg.levelFor(1005); return d.fireStart > 0 || !!d.fireLayout || !!d.fireMarks; }"), 'control: N1-5 has no fire')
     r = musts(1005)
@@ -868,6 +874,8 @@ def check_gourd_loadout(browser, url):
         document.querySelectorAll('#loTeam .slot:not(.empty)').length, document.querySelector('#loTitle').textContent]; }""")
     ok(st[0] == 'loadout' and st[1] and 'pick 1' in (st[2] or ''), f'N1-5 opens the picker with a Gourds section headed "Gourd · pick 1" {st[:3]}')
     ok(st[3] == [True, 'true', True], f'the Grave Gourd is there, picked and locked {st[3]}')
+    col = page.evaluate("() => getComputedStyle(document.querySelector('#loGourdSec h3')).color")
+    ok(col == 'rgb(227, 164, 60)', f'the Gourd heading is amber {col}')
     ok(st[4] == 5 and st[5] == 'Pick 5 pumpkins and 1 gourd', f'it does not take a pumpkin slot: 5 pumpkins still fill the team {st[4:]}')
     page.click('#loGourdSec .pick'); time.sleep(0.2)
     det = page.evaluate("() => document.querySelector('#loDetail').textContent")
@@ -910,6 +918,26 @@ def check_gourd_continue(browser, url):
     page.close()
 
 
+def check_nm_polish(browser, url):
+    """Final fix wave: the top bar says "Nightmare 1-5" like the banner and card; the N1-4 card shows the gourd reward only until it is unlocked."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    nm_start(page, 5)
+    page.evaluate("() => window.__gg.updateHud(true)")
+    t = page.evaluate("() => document.querySelector('#lvlLabel').textContent")
+    ok(t == 'Nightmare 1-5', f'the top bar reads Nightmare 1-5 {t!r}')
+    set_stars(page, {**story_done(), **{1000 + k: 3 for k in range(1, 4)}})
+    page.evaluate("() => { window.__gg.save.gourds = {}; window.__gg.openPreview(1004); }"); time.sleep(0.4)
+    t = page.evaluate("() => document.querySelector('#pvInfo').textContent")
+    ok('Reward: the Grave Gourd' in t, f'N1-4 card shows the reward while it is locked {t!r}')
+    page.evaluate("() => { window.__gg.save.gourds = { grave:true }; window.__gg.openPreview(1004); }"); time.sleep(0.4)
+    t = page.evaluate("() => document.querySelector('#pvInfo').textContent")
+    ok('Grave Gourd' not in t, f'and hides it once unlocked {t!r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_nm_polish': check_nm_polish})
 CHECKS.update({'check_gourd_basic': check_gourd_basic, 'check_gourd_edges': check_gourd_edges, 'check_gourd_hold': check_gourd_hold, 'check_gourd_unlock': check_gourd_unlock, 'check_gourd_loadout': check_gourd_loadout, 'check_gourd_continue': check_gourd_continue})
 
 
@@ -923,6 +951,12 @@ def check_gourd_coach(browser, url):
     d = page.evaluate("() => { const g = window.__gg; return [g.G.coach && g.G.coach.step, g.coachHolds(), g.gourdPos(), g.graves[1][3], g.graves[3][3], g.save.seenGourdCoach || false]; }")
     ok(d[0] == 'gslide' and d[1] is True and d[2] == {'r': 2, 'c': 3} and d[3] and d[4] and d[5] is False, f'N1-5 with the tutorial unseen starts the gourd script, holding, gourd at (2, 3), graves around it {d}')
     ok(page.evaluate(STEP, 3) == 'gslide' and page.evaluate("() => [window.__gg.G.monsters.length, window.__gg.G.spawned, window.__gg.G.coach.move && window.__gg.G.coach.move.dir]")[:2] == [0, 0], 'step 1 waits for the slide: no monsters, no spawns')
+    # a slide that does not reach the demonstrated cell keeps the hand (the player can try again)
+    off = page.evaluate("""() => { const g = window.__gg, p = g.gourdPos(), want = g.G.coach.move.dir;
+      for (const d of ['left', 'up', 'down', 'right']) if (d !== want && g.slideOne(g.grid[p.r][p.c], d)) return [d, g.gourdPos()]; return null; }""")
+    if off:
+        ok(page.evaluate(STEP, 0.5) == 'gslide', f'a slide {off[0]} (away from the demonstrated cell) keeps the hand on step 1 {off}')
+        ok(page.evaluate("() => { const g = window.__gg, c = g.G.coach, p = g.gourdPos(); return !!c.move && g.grid[p.r][p.c] === c.move.ref; }"), 'and the hand now shows the way from the new cell')
     ok(page.evaluate("() => { const g = window.__gg, p = g.gourdPos(); return g.slideOne(g.grid[p.r][p.c], g.G.coach.move.dir); }") is True, 'the gourd slides')
     ok(page.evaluate(STEP, 0.1) == 'gfill', 'sliding the gourd moves the script to the fill step')
     ok(page.evaluate("() => document.querySelector('#coachTip').textContent") .startswith('Every sprout fills the space around your gourd'), 'the fill tip is shown')
@@ -1266,6 +1300,8 @@ def check_nm_prebake(browser, url):
     ok(page.evaluate("() => window.__gg.isBaked('hayrickBurning')"), 'a night with hayricks and fire bakes the Burning Hayrick at the start')
     nm_start(page, 8)   # Corn Maze
     ok(page.evaluate("() => ['huskerBurning', 'huskerCharred', 'huskerBare'].every(k => window.__gg.isBaked(k))"), 'a night with huskers bakes the bare, burning and charred cobs')
+    nm_start(page, 14)   # Burnt Offerings spawns huskerBurning directly: its strip product (huskerCharred) must be baked up front too
+    ok(page.evaluate("() => ['huskerBurning', 'huskerCharred'].every(k => window.__gg.isBaked(k))"), 'N1-14 (Burning Huskers) bakes the Charred Cob before the first strip')
     nm_start(page, 3)
     ok(page.evaluate("() => window.__gg.isBaked('firemummy')"), 'a night with mummies and fire bakes the Flaming Mummy')
     set_stars(page, {**story_done(), **{1000 + k: 3 for k in range(1, 3)}})

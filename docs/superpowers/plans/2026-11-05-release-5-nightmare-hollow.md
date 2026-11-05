@@ -153,9 +153,9 @@
 
 **Interfaces / values:**
 - `rotdoctor: { hp:4, sp:0.035, r:22, coins:9, eat:0.5, pts:30, drop:2 }`; each frame every other living monster within its 3×3 (1.5 tiles, lanes ±1, the doctor's heal-zone geometry) gets `m.rotOnly = true` for that frame (cleared at the start of each frame for all monsters, before doctors and bosses set it). The doctor itself never gets it.
-- `reaper: { hp:3, sp:0.07, r:21, coins:9, eat:0.5, pts:28, drop:2, show:3, hide:4 }`: the Wraith's fade cycle with these times; on death spawns `crow` (minion) at its lane and p.
+- `reaper: { hp:3, sp:0.07, r:21, coins:9, eat:0.5, pts:28, drop:2, show:3, hide:4, reap:true }`: the Wraith's fade cycle with these times; on death spawns `crow` (minion) at its lane and p. At the fence (owner): its scythe swing IS its chew: the chewing step applies `eat` per second to its own fence and both neighbours (continuously, like any chew; frozen or slowed scales it as for any chewer), and its registry `chew` clip is the archive's reap swing looping. A fence at 0 in its own lane lets it walk through, as for any monster.
 
-- [ ] **Step 1: Write the failing checks**: `check_rotdoctor` (a ghoul beside it takes nothing from a normal pumpkin and 1.5 from a rotten one; the doctor takes normal damage; a ghoul two lanes away takes normal damage; zone drawn with ≤1 drawImage), `check_reaper` (data; hidden 4 s / shown 3 s; dies to 3 normal hits; a crow appears where it fell).
+- [ ] **Step 1: Write the failing checks**: `check_rotdoctor` (a ghoul beside it takes nothing from a normal pumpkin and 1.5 from a rotten one; the doctor takes normal damage; a ghoul two lanes away takes normal damage; zone drawn with ≤1 drawImage), `check_reaper` (data; hidden 4 s / shown 3 s; dies to 3 normal hits; a crow appears where it fell; chewing at fence 3 for 4 s takes about 2 off each of fences 2, 3 and 4 and nothing off fences 1 and 5; its chew frames are the reap swing).
 - [ ] **Step 2–4:** FAIL, implement, pass; `char_sheet.py` strips to the scratchpad.
 - [ ] **Step 5: Commit** "Plague Doctor 2 and the Reaper (Release 5)".
 

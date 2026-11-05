@@ -315,6 +315,189 @@ CHECKS.update({'check_gourd_list_r4': check_gourd_list_r4, 'check_two_gourds_sta
                'check_protector_data': check_protector_data})
 
 
+# ---------- Task 3: rotten pumpkins ----------
+R5_NAMES += ('rotOnly', 'cleanOnly')   # the hit flags (property names survive minification)
+# Clear every pumpkin off the patch (gourds stay), then put rotten ones on the given cells (newCell(ROTTEN): a rotten one slid there).
+ROT_AT = """(cells) => { const g = window.__gg; g.grid.forEach(row => row.forEach((c, i) => { if (!(c && c.gourd)) row[i] = null; }));
+  for (const [r, c] of cells) g.grid[r][c] = g.newCell(g.ROTTEN); g.resolveMatches(); }"""
+# Pin a hit flag on a monster for the test: a getter that ignores the per-frame reset (clearHitFlags writes false, the read stays true).
+PIN = "(m, flag) => Object.defineProperty(m, flag, { get:() => true, set(){}, configurable:true })"
+# A still ghoul with given health; sampled for knockback every 5 ms (window.__kb).
+GHOUL = """([lane, p, hp, max]) => { const g = window.__gg, m = g.spawnMonster('ghoul', lane, false, p); m.sp = 0; m.hp = hp; m.maxHp = max; m.eat = 0;
+  (window.__ms = window.__ms || []).push(m); return window.__ms.length - 1; }"""
+KB_WATCH = "() => { window.__kb = 0; clearInterval(window.__ki); window.__ki = setInterval(() => { for (const m of window.__ms || []) window.__kb = Math.max(window.__kb, m.kb || 0); }, 5); }"
+
+
+def rot_reset(page):
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; g.G.projs.length = 0; window.__ms = []; window.__kb = 0; }")
+
+
+def check_rot_cell(browser, url):
+    if not R5: return
+    page, errors = open_page(browser, url)
+    two_gourds(page)
+    r = page.evaluate("""() => { const g = window.__gg; g.grid[0][0] = g.newCell(0); const n0 = g.G.parts.length;
+      const a = g.rotCell(0, 0), x = g.grid[0][0]; return [g.ROTTEN, a, x.c, g.isRotten(x), x.lit, g.G.parts.length > n0, g.rotCell(0, 0), g.isRotten(g.newCell(0)), g.isRotten(null)]; }""")
+    ok(r == [-2, True, -2, True, False, True, False, False, False], f'rotCell on a pumpkin: c = ROTTEN (-2), unlit, a puff; again false; isRotten reads it {r}')
+    r = page.evaluate("""() => { const g = window.__gg; g.grid[0][3] = null; g.grid[0][4] = g.newCell(1); g.grid[0][4].fly = 0.3; g.grid[1][4] = g.newCell(0);
+      return [g.rotCell(2, 1), g.grid[2][1].c, g.grid[2][1].gourd, g.rotCell(2, 5), g.grid[2][5].gourd, g.rotCell(0, 3), g.grid[0][3], g.rotCell(0, 4), g.grid[0][4].c, g.rotCell(1, 4), g.grid[1][4].c]; }""")
+    ok(r == [False, -1, 'grave', False, 'protector', False, None, False, 1, False, 0], f'false and unchanged: a gourd (either kind), an empty cell, a flying cell, a protected cell {r}')
+    # a cell of a lit bunch: it leaves the bunch (the other two go dark)
+    r = page.evaluate("""() => { const g = window.__gg; for (const c of [0, 1, 2]) g.grid[4][c] = g.newCell(0); g.resolveMatches(); const was = g.grid[4][0].lit;
+      const a = g.rotCell(4, 1); return [was, a, g.grid[4][1].lit, g.grid[4][0].lit, g.grid[4][2].lit]; }""")
+    ok(r == [True, True, False, False, False], f'rotting one cell of a lit three: it goes dark and so do the other two {r}')
+    time.sleep(0.6)   # a few frames with rotten pumpkins on the patch
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_rot_bunch(browser, url):
+    if not R5: return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { window.__gg.save.lv.paint = 5; }")
+    two_gourds(page)
+    page.evaluate(ROT_AT, [[4, 0], [4, 1], [4, 2]])
+    r = page.evaluate("""() => { const g = window.__gg, cs = [0, 1, 2].map(c => g.grid[4][c]), gid = cs[0].gids[0], grp = g.G.groups[gid];
+      return [cs.every(x => x.lit), cs.every(x => x.gids.length === 1 && x.gids[0] === gid), grp && grp.color, grp && grp.size]; }""")
+    ok(r == [True, True, -2, 3], f'three rotten in a row light up as one bunch of colour ROTTEN {r}')
+    page.evaluate(ROT_AT, [[4, 0], [4, 1]])
+    ok(page.evaluate("() => !window.__gg.grid[4][0].lit && !window.__gg.grid[4][1].lit"), 'two rotten alone stay dark (three to bunch, as any colour)')
+    # a Rainbow touching a rotten three stays out; a Rainbow with two rotten does not make a bunch
+    page.evaluate(ROT_AT, [[4, 0], [4, 1], [4, 2]])
+    r = page.evaluate("() => { const g = window.__gg; g.grid[4][3] = g.newCell(g.RAINBOW); g.resolveMatches(); const grp = g.G.groups[g.grid[4][0].gids[0]]; return [g.grid[4][3].lit, grp && grp.size]; }")
+    ok(r == [False, 3], f'a Rainbow touching a rotten three stays out of it (bunch still 3) {r}')
+    page.evaluate(ROT_AT, [[4, 0], [4, 1]])
+    r = page.evaluate("() => { const g = window.__gg; g.grid[4][2] = g.newCell(g.RAINBOW); g.resolveMatches(); return [0, 1, 2].map(c => g.grid[4][c].lit); }")
+    ok(r == [False, False, False], f'two rotten and a Rainbow make no bunch {r}')
+    # Paint never pulls a rotten pumpkin (it does pull the green beside it)
+    r = page.evaluate("""() => { const g = window.__gg, P = g.PTYPES.findIndex(p => p.key === 'paint');
+      g.grid.forEach(row => row.forEach((c, i) => { if (!(c && c.gourd)) row[i] = null; }));
+      for (const c of [2, 3, 4]) g.grid[0][c] = g.newCell(P); g.grid[1][3] = g.newCell(g.ROTTEN); g.grid[0][1] = g.newCell(g.ROTTEN); g.grid[0][5] = g.newCell(0); g.resolveMatches();
+      const gid = g.grid[0][3].gids[0], pull = g.paintPull(gid).map(o => [o.r, o.c]);
+      g.launchGroup(g.grid[0][3]); return [pull, g.isRotten(g.grid[1][3]), g.isRotten(g.grid[0][1]), g.G.projs.length]; }""")
+    ok(r == [[[0, 5]], True, True, 4], f'a Paint bunch pulls the green beside it, never the rotten ones; they stay on the patch {r}')
+    # the hint treats rotten as a colour: the slide that makes a rotten three
+    page.evaluate("() => { window.__gg.G.projs.length = 0; }")
+    page.evaluate(ROT_AT, [[4, 3], [4, 4], [0, 2]])
+    r = page.evaluate("() => { const g = window.__gg, b = g.bestMove(); return b && [b.ref === g.grid[0][2], b.dir]; }")
+    ok(r == [True, 'down'], f'bestMove slides the lone rotten one down beside the other two {r}')
+    time.sleep(0.5)
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_rot_hit(browser, url):
+    if not R5: return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const s = window.__gg.save; s.lv.green = 1; s.lv.grey = 1; }")
+    two_gourds(page)
+    r = page.evaluate("""() => { const g = window.__gg, m = {}, a = [g.hitRule(m, true), g.hitRule(m, false)]; m.rotOnly = true; a.push(g.hitRule(m, true), g.hitRule(m, false));
+      m.rotOnly = false; m.cleanOnly = true; a.push(g.hitRule(m, true), g.hitRule(m, false)); return a; }""")
+    ok(r == ['heal', 'hurt', 'hurt', 'blocked', 'blocked', 'hurt'], f'hitRule: plain heal/hurt, rotOnly hurt/blocked, cleanOnly blocked/hurt {r}')
+    # the flags are reset every frame before monsters update
+    rot_reset(page)
+    page.evaluate("() => { const g = window.__gg, m = g.spawnMonster('ghoul', 0, false, 0.3); m.sp = 0; m.rotOnly = true; m.cleanOnly = true; window.__f = m; }")
+    time.sleep(0.2)
+    ok(page.evaluate("() => [window.__f.rotOnly, window.__f.cleanOnly]") == [False, False], 'rotOnly and cleanOnly are cleared at the start of each frame')
+
+    def fly(cells, launch, lane, p, hp, mx, pin=None, behind=None, wait=1.0):
+        rot_reset(page)
+        page.evaluate(ROT_AT, cells)
+        i = page.evaluate(GHOUL, [lane, p, hp, mx])
+        if pin: page.evaluate(f"(f) => ({PIN})(window.__ms[{i}], f)", pin)
+        j = page.evaluate(GHOUL, [lane, behind, 3, 3]) if behind is not None else None
+        page.evaluate(KB_WATCH)
+        page.evaluate(launch)
+        time.sleep(wait)
+        return page.evaluate(f"() => [window.__ms[{i}].hp, window.__kb, {f'window.__ms[{j}].hp' if j is not None else 'null'}, window.__gg.G.projs.filter(p => p.lane === {lane}).length]")
+
+    L3 = "() => { const g = window.__gg; g.launchGroup(g.grid[4][3]); }"
+    r = fly([[4, 2], [4, 3], [4, 4]], L3, 3, 0.5, 2, 3)
+    ok(r[0] == 2.5 and r[1] == 0, f'a launched rotten pumpkin heals a ghoul at 2/3 to 2.5/3, no knockback {r}')
+    r = fly([[4, 2], [4, 3], [4, 4]], L3, 3, 0.5, 3, 3)
+    ok(r[0] == 3 and r[1] == 0, f'at full health it stays at full {r}')
+    r = fly([[4, 1], [4, 2], [4, 3], [4, 4], [4, 5]], L3, 3, 0.5, 3, 3, pin='rotOnly')
+    ok(r[0] == 1.5 and r[1] == 0, f'on a rotOnly monster a rotten one hurts by ROT_DMG 1.5 (3 -> 1.5), no knockback even from a bunch of 5 {r}')
+    r = fly([[4, 2], [4, 3], [4, 4]], L3, 3, 0.5, 2, 3, pin='cleanOnly')
+    ok(r[0] == 2 and r[1] == 0, f'on a cleanOnly monster a rotten one does nothing (no heal) {r}')
+    # normal pumpkins on a rotOnly monster: no damage, used up there (a ghoul behind it is untouched), Grey's pierce stops too
+    GREEN = "() => { const g = window.__gg; g.grid.forEach(row => row.forEach((c, i) => { if (!(c && c.gourd)) row[i] = null; })); for (const c of [2, 3, 4]) g.grid[4][c] = g.newCell(0); g.resolveMatches(); g.launchGroup(g.grid[4][3]); }"
+    r = fly([], GREEN, 3, 0.5, 3, 3, pin='rotOnly', behind=0.3)
+    ok(r[0] == 3 and r[2] == 3 and r[3] == 0, f'a green on a rotOnly monster: no damage, used up (the ghoul behind untouched) {r}')
+    GREY = GREEN.replace('g.newCell(0)', 'g.newCell(4)')
+    r = fly([], GREY, 3, 0.5, 3, 3, pin='rotOnly', behind=0.3)
+    ok(r[0] == 3 and r[2] == 3, f'a Grey on a rotOnly monster stops there too (no pierce) {r}')
+    r = fly([], GREEN, 3, 0.5, 3, 3, pin='cleanOnly')
+    ok(r[0] == 2, f'a green on a cleanOnly monster hurts as usual {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_rot_area(browser, url):
+    if not R5: return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const s = window.__gg.save; s.lv.black = 5; s.lv.blue = 5; }")
+    two_gourds(page)
+    PR = "(t, lane) => ({ x:window.__gg.LANE(lane), y:300, vy:-900, type:t, vis:t, lv:5, guar:false, lane, hitWalls:new Set(), grp:{ spawned:false, small:false, kills:0 }, size:1, hit:new Set(), trail:[], r:16, dead:false })"
+
+    def area(t, rot_lane, ctl_lane):
+        rot_reset(page)
+        tgt = page.evaluate(GHOUL, [3, 0.5, 100, 100]); ro = page.evaluate(GHOUL, [rot_lane, 0.5, 100, 100]); ctl = page.evaluate(GHOUL, [ctl_lane, 0.5, 100, 100])
+        page.evaluate(f"() => ({PIN})(window.__ms[{ro}], 'rotOnly')")
+        return page.evaluate(f"() => {{ const g = window.__gg, ms = window.__ms; ms.forEach(m => m.kb = 0); g.hitMonster(({PR})({t}, 3), ms[{tgt}]); return [ms[{tgt}].hp < 100, ms[{ro}].hp, ms[{ro}].kb, ms[{ctl}].hp < 100]; }}")
+    r = area(7, 2, 4)
+    ok(r == [True, 100, 0, True], f'a level-5 Black splash leaves the rotOnly monster beside it untouched (no damage, no knockback), hurts the control {r}')
+    r = area(8, 2, 5)
+    ok(r == [True, 100, 0, True], f'a level-5 Deep Blue chain skips the rotOnly monster and strikes the control {r}')
+    # burn and a mine: through damage(), which refuses a rotOnly monster anything but a rotten hit
+    rot_reset(page)
+    ro = page.evaluate(GHOUL, [2, 0.5, 100, 100]); ctl = page.evaluate(GHOUL, [3, 0.5, 100, 100])
+    page.evaluate(f"() => ({PIN})(window.__ms[{ro}], 'rotOnly')")
+    page.evaluate("() => { for (const m of window.__ms){ m.burnLeft = 3; m.burnAmt = 1; m.burnTick = 0.05; } }")
+    time.sleep(1.2)
+    r = page.evaluate(f"() => [window.__ms[{ro}].hp, window.__ms[{ctl}].hp < 100]")
+    ok(r == [100, True], f'burning: the rotOnly monster takes nothing, the control burns {r}')
+    page.evaluate("() => { const ms = window.__ms; ms.forEach(m => { m.hp = 100; m.burnLeft = 0; }); window.__gg.G.mines.push({ lane:2, p:0.5, t:99, dead:false }); }")
+    time.sleep(0.3)
+    r = page.evaluate(f"() => [window.__gg.G.mines.length, window.__ms[{ro}].hp, window.__ms[{ctl}].hp < 100]")
+    ok(r == [0, 100, True], f'a mine blast: the rotOnly monster takes nothing, the control does {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_protector_break_rainbow(browser, url):
+    if not R5: return
+    page, errors = open_page(browser, url)
+    two_gourds(page)
+    r = page.evaluate("""() => { const g = window.__gg; g.grid[1][4] = g.newCell(g.ROTTEN); g.grid[3][6] = g.newCell(g.ROTTEN); g.grid[1][6] = g.newCell(0);
+      g.grid[0][3] = g.newCell(0); g.rotCell(0, 3); g.resolveMatches(); g.destroyGourd(g.grid[2][5]);
+      return [g.grid[1][4].c === g.RAINBOW, g.grid[3][6].c === g.RAINBOW, g.isRotten(g.grid[0][3]), g.grid[1][6].c, g.gourdPos('protector')]; }""")
+    ok(r == [True, True, True, 0, None], f'breaking the Protector turns the two rotten in its square into Rainbows; the one outside stays rotten; a green stays green {r}')
+    time.sleep(0.4)
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_rot_continue(browser, url):
+    if not R5: return
+    page, errors = open_page(browser, url)
+    two_gourds(page)
+    page.evaluate("""() => { const g = window.__gg; for (const [r, c] of [[0, 0], [4, 6], [0, 3]]){ g.grid[r][c] = g.newCell(1); g.rotCell(r, c); } g.grid[1][4] = g.newCell(g.ROTTEN); g.resolveMatches();
+      const c = g.continueState(); window.__snap = JSON.parse(JSON.stringify(c.rot)); g.continueNight(c); }""")
+    time.sleep(0.3)
+    snap = page.evaluate("() => window.__snap")
+    ok(sorted(snap) == [[0, 0], [0, 3], [1, 4], [4, 6]], f'the snapshot lists the rotten cells {snap}')
+    r = page.evaluate("() => { const g = window.__gg, out = []; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) if (g.isRotten(g.grid[r][c])) out.push([r, c]); return [g.G.continued, out]; }")
+    ok(r == [True, [[0, 0], [0, 3], [1, 4], [4, 6]]], f'the continued night has the same rotten cells (one slid into the Protector square too) {r}')
+    ok(page.evaluate("() => window.__gg.gourdsOn().map(o => o.kind)") == ['grave', 'protector'], 'and both gourds')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_rot_cell': check_rot_cell, 'check_rot_bunch': check_rot_bunch, 'check_rot_hit': check_rot_hit, 'check_rot_area': check_rot_area,
+               'check_protector_break_rainbow': check_protector_break_rainbow, 'check_rot_continue': check_rot_continue})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

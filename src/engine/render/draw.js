@@ -23,6 +23,8 @@ import { drawCoach } from '../coach.js';
 import { drawFires, drawFireFx } from './fire.js';
 import { drawPin, drawFlyingFork } from './pin.js';
 import { drawGourdCell, drawGourdGlow } from './gourd.js';
+import { ROTTEN, ROT_FX } from '../rot.js';
+import { rotSprite } from './rot.js';
 
 // ---------- Render ----------
 
@@ -92,10 +94,11 @@ export function render(){
   drawCoach(ctx);
   drawHoldRing();
   for (const pr of g.projs){
-    const skinKey = save.wardrobe && save.wardrobe.skins[pr.vis];
+    const rotten = __RELEASE__ >= 5 && pr.vis === ROTTEN;   // a rotten flight (Release 5): its own sprite and a green trail, no costume
+    const skinKey = !rotten && save.wardrobe && save.wardrobe.skins[pr.vis];
     if (skinKey){ const s0 = pr.guar ? 0.76 : 0.66; wake(ctx, SKIN_ART[skinKey], pr.x, pr.y + 4, CS * s0 * .4, 96, t); }   // a skin's comet wake (owner)
     else { ctx.globalCompositeOperation = 'lighter';
-    const dot = discSprite(K, PTYPES[pr.vis].spark);
+    const dot = discSprite(K, rotten ? ROT_FX.spark : PTYPES[pr.vis].spark);
     for (let i = 0; i < pr.trail.length; i += 2){
       const a = (i / pr.trail.length), r = pr.r * a * 0.9; if (r <= 0) continue;
       ctx.globalAlpha = a * 0.35; ctx.drawImage(dot.c, pr.trail[i] - r, pr.trail[i + 1] - r, r * 2, r * 2);
@@ -104,8 +107,8 @@ export function render(){
     const s = pr.guar ? 0.76 : 0.66;
     ctx.save(); ctx.translate(pr.x, pr.y); ctx.rotate(pr.rot);
     const ps = s * (pr.type === BROWN ? [0.62, 0.82, 1.06][pr.size == null ? 1 : pr.size] : 1);   // brown flies at its grown size
-    ctx.drawImage(sprites[pr.vis][1], -CS * ps / 2, -CS * ps / 2, CS * ps, CS * ps);
-    if (save.wardrobe && save.wardrobe.costume) drawCostume(ctx, save.wardrobe.costume, 0, 3 * ps, CS * ps * .4, Math.round(CS * K));
+    ctx.drawImage(rotten ? rotSprite(true) : sprites[pr.vis][1], -CS * ps / 2, -CS * ps / 2, CS * ps, CS * ps);
+    if (!rotten && save.wardrobe && save.wardrobe.costume) drawCostume(ctx, save.wardrobe.costume, 0, 3 * ps, CS * ps * .4, Math.round(CS * K));
     ctx.restore();
   }
   for (const p of g.parts){
@@ -428,13 +431,14 @@ export function drawCell(r, c, cell, t, hg){
   if (cell.wig > 0) x += Math.sin(cell.wig * 30) * 3 * cell.wig;
   if (__RELEASE__ >= 4 && cell.gourd){ drawGourdCell(ctx, x, y, s, t, (r * 7 + c * 13) * .37, cell.gourd === true ? 'grave' : cell.gourd); return; }   // a gourd: its kind's baked sprite (no colour, never lit)
   const lit = cell.lit || cell.borrowed;   // a pumpkin a Paint bunch will borrow lights up too (owner, 2026-10-09)
+  const rotten = __RELEASE__ >= 5 && cell.c === ROTTEN;   // a rotten pumpkin (Release 5): its baked sprite, a sickly green halo when bunched, no costume
   if (lit){
     y += Math.sin(t * 3 + cell.t) * 1.5;
     const fl = 0.75 + 0.25 * Math.sin(t * 9 + cell.t * 3) * Math.sin(t * 5.3 + cell.t);
     const rad = CS * (cell.bsize >= 5 ? 0.78 : 0.62) * (held ? 1.2 : 1);
     ctx.globalCompositeOperation = 'lighter';
     const gr = ctx.createRadialGradient(x, y + 4, 4, x, y + 4, rad);
-    const hc = LIT_HALO[cell.c] || [255, 190, 70];   // each bunch glows in its own colour (owner, 2026-09-27)
+    const hc = rotten ? ROT_FX.halo : LIT_HALO[cell.c] || [255, 190, 70];   // each bunch glows in its own colour (owner, 2026-09-27)
     gr.addColorStop(0, `rgba(${hc[0]},${hc[1]},${hc[2]},${(held ? 0.8 : 0.55) * fl})`); gr.addColorStop(1, `rgba(${hc[0]},${hc[1]},${hc[2]},0)`);
     ctx.fillStyle = gr; ctx.fillRect(x - rad, y + 4 - rad, rad * 2, rad * 2);
     ctx.globalCompositeOperation = 'source-over';
@@ -453,8 +457,8 @@ export function drawCell(r, c, cell, t, hg){
   const sz = CS * s;
   if (bsz === 2){ const gg = ctx.createRadialGradient(x, y, CS * 0.2, x, y, CS * 0.7); gg.addColorStop(0, 'rgba(255,190,90,.55)'); gg.addColorStop(1, 'rgba(255,190,90,0)'); ctx.fillStyle = gg; ctx.fillRect(x - CS * 0.7, y - CS * 0.7, CS * 1.4, CS * 1.4); }   // big brown: ripe glow
   ctx.save(); ctx.translate(x, y + sz * .38 - hop * 7); ctx.rotate(rot); ctx.scale(sx, sy);   // pivot at the base so the squash sits on the ground
-  ctx.drawImage(sprites[cell.c][lit ? 1 : 0], -sz / 2, -sz * .88, sz, sz);
-  const wc = save.wardrobe && save.wardrobe.costume; if (wc) drawCostume(ctx, wc, 0, -sz * .88 + sz * (0.5 + 3 / CS), sz * .4, Math.round(CS * K));   // the worn costume, on every pumpkin
+  ctx.drawImage(rotten ? rotSprite(lit) : sprites[cell.c][lit ? 1 : 0], -sz / 2, -sz * .88, sz, sz);
+  const wc = !rotten && save.wardrobe && save.wardrobe.costume; if (wc) drawCostume(ctx, wc, 0, -sz * .88 + sz * (0.5 + 3 / CS), sz * .4, Math.round(CS * K));   // the worn costume, on every pumpkin
   ctx.restore();
   if (__RELEASE__ >= 4 && cell.pinned > 0) drawPin(ctx, x, y, cell.pinned, cell.pinMax);   // a Hayrick's pitchfork holds it (Release 4)
   if (bsz === 0){ ctx.fillStyle = '#7fd05a'; ell(ctx, x + CS * 0.12, y - CS * 0.3, 6, 3, -0.6); ell(ctx, x + CS * 0.2, y - CS * 0.36, 5, 2.5, 0.5); }   // small brown: a sprout

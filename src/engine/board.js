@@ -11,6 +11,7 @@ import { persist, save, lvOf } from '../save.js';
 import { addChest } from './loot.js';
 import { banner, updateHud } from '../ui/hud.js';
 import { destroyGourd, gourdSlot, gourdsBack } from './gourd.js';
+import { ROTTEN, ROT_FX } from './rot.js';
 
 export function newCell(c){ return { c, lit:false, gids:[], bsize:0, ox:0, oy:0, pop:0, grow:1, fly:0, wig:0, t:Math.random() * 10, age:0 }; }
 /** Smallest bunch that lights up for a colour: Turquoise launches at 2, everything else at 3. */
@@ -61,7 +62,7 @@ export function initBoard(pi, nGraves){
   for (const [r, c] of shuffle(spots).slice(0, nGraves)) graves[r][c] = true;
 }
 
-// Bunches: 3+ touching pumpkins of one color. Rainbows count as any color.
+// Bunches: 3+ touching pumpkins of one color. Rainbows count as any color, except rotten (Release 5): rotten bunches with rotten only.
 
 export function computeGroups(gr){
   const groups = [], present = new Set();
@@ -79,7 +80,7 @@ export function computeGroups(gr){
           const na = a + dr, nb = b + dc, key = na * COLS + nb;
           if (!inside(na, nb) || seen.has(key)) continue;
           const n = gr[na][nb];
-          if (n && !n.fly && !(__RELEASE__ >= 4 && n.gourd) && (n.c === k || n.c === RAINBOW)){ seen.add(key); q.push([na, nb]); }
+          if (n && !n.fly && !(__RELEASE__ >= 4 && n.gourd) && (n.c === k || (n.c === RAINBOW && !(__RELEASE__ >= 5 && k === ROTTEN)))){ seen.add(key); q.push([na, nb]); }   // a Rainbow never joins a rotten bunch (Release 5)
         }
       }
       if (cells.length >= minBunch(k)){ groups.push({ color:k, cells }); cells.forEach(([a, b]) => used.add(a * COLS + b)); }
@@ -125,7 +126,7 @@ export function resolveMatches(){
         changed = true; cell.pop = 1;
         const x = LANE(c), y = GY + r * CS + CS / 2;
         sx += x; sy += y; n++;
-        for (let i = 0; i < 5; i++) spark(x, y, PTYPES[cell.c].spark, 150);
+        for (let i = 0; i < 5; i++) spark(x, y, __RELEASE__ >= 5 && cell.c === ROTTEN ? ROT_FX.spark : PTYPES[cell.c].spark, 150);
       }
     }
     if (changed){ fresh++; biggest = Math.max(biggest, size); }
@@ -245,7 +246,7 @@ export function landingNear(x, colour){
   let best = null, bd = Infinity;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
     if (grid[r][c] || graves[r][c]) continue;
-    const near = [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].some(([a, b]) => inside(a, b) && grid[a][b] && !grid[a][b].fly && !(__RELEASE__ >= 4 && grid[a][b].gourd) && (grid[a][b].c === colour || grid[a][b].c === RAINBOW || colour === RAINBOW));
+    const near = [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].some(([a, b]) => inside(a, b) && grid[a][b] && !grid[a][b].fly && !(__RELEASE__ >= 4 && grid[a][b].gourd) && (grid[a][b].c === colour || ((grid[a][b].c === RAINBOW || colour === RAINBOW) && !(__RELEASE__ >= 5 && grid[a][b].c === ROTTEN))));   // a Rainbow is no match for a rotten one (Release 5)
     if (!near) continue;
     const d = Math.abs(c - c0) * 10 + (ROWS - r);
     if (d < bd){ bd = d; best = [r, c]; }
@@ -280,7 +281,7 @@ export function smash(ref){
   const pos = findCell(ref); if (!pos) return;
   grid[pos.r][pos.c] = null; G.smashes = (G.smashes || 0) + 1;   // counted for the 1-1 coach
   const x = LANE(pos.c), y = GY + pos.r * CS + CS / 2;
-  for (let i = 0; i < 14; i++) chunk(x, y, ref.c === RAINBOW ? '#f0a020' : PTYPES[ref.c].base, 200);
+  for (let i = 0; i < 14; i++) chunk(x, y, ref.c === RAINBOW ? '#f0a020' : __RELEASE__ >= 5 && ref.c === ROTTEN ? ROT_FX.base : PTYPES[ref.c].base, 200);
   SFX.smash();
   resolveMatches();
 }
@@ -302,7 +303,7 @@ export function boardScore(gr, threat){
   for (const g of computeGroups(gr)) for (const [, c] of g.cells) sc += 1 + threat[c] * 2;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
     const a = gr[r][c]; if (!a || (__RELEASE__ >= 4 && a.gourd)) continue;
-    const same = b => b && !(__RELEASE__ >= 4 && b.gourd) && (b.c === a.c || b.c === RAINBOW || a.c === RAINBOW);
+    const same = b => b && !(__RELEASE__ >= 4 && b.gourd) && (b.c === a.c || ((b.c === RAINBOW || a.c === RAINBOW) && !(__RELEASE__ >= 5 && (a.c === ROTTEN || b.c === ROTTEN))));   // rotten pairs only with rotten (Release 5)
     if (c + 1 < COLS && same(gr[r][c + 1])) sc += 0.2;
     if (r + 1 < ROWS && same(gr[r + 1][c])) sc += 0.2;
   }
@@ -348,7 +349,7 @@ export function paintPull(gid){
   const own = groupCells(gid), mine = new Set(own.map(o => o.cell)), seen = new Set(), out = [];
   for (const { r, c } of own) for (const [dr, dc] of [[1,0],[-1,0],[0,1],[0,-1]]){
     const a = r + dr, b = c + dc; if (a < 0 || a >= ROWS || b < 0 || b >= COLS) continue;
-    const n = grid[a][b]; if (!n || n.fly || mine.has(n) || seen.has(n) || (__RELEASE__ >= 4 && n.gourd)) continue;   // Paint never pulls the Grave Gourd
+    const n = grid[a][b]; if (!n || n.fly || mine.has(n) || seen.has(n) || (__RELEASE__ >= 4 && n.gourd) || (__RELEASE__ >= 5 && n.c === ROTTEN)) continue;   // Paint never pulls a gourd, nor a rotten pumpkin (Release 5)
     seen.add(n); out.push({ r:a, c:b, cell:n });
   }
   const threat = laneThreat(), cap = PAINT_PULL[lvOf(PAINT) - 1];

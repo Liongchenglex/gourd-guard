@@ -247,6 +247,7 @@ export const SFX = {
   },
   _phit(type, size, rainbow){
     if (__RELEASE__ >= 3 && type === BEIGE){ S('slime', 0.5, { rate: 0.9 }) || thump(); return; }   // Beige: a sticky splat
+    if (__RELEASE__ >= 5 && type === -2){ S('slime', 0.5, { rate: 0.65 }) || thump(); return; }   // a rotten pumpkin (ROTTEN, engine/rot.js): a soft wet splat
     switch (type){
       case 1: S('thud', 0.6) || thump(); S('coin', 0.45, { delay: 0.02 }) || coinChime(0.02); break;                       // Yellow
       case 2: S('ice', 0.55) || (tone(1800, 0.14, 'sine', 0.05, 2600), noise(0.12, 0.16, 4000, 2, 0.02, 2000)); break;    // Ice
@@ -268,6 +269,8 @@ export const SFX = {
       case 'splash': if (gate('splash', 30)) S('splash', 0.5) || tone(60, 0.2, 'sine', 0.1, 35); break;
       case 'pierce': break;   // no extra sound: each pierced monster just gets the normal pumpkin hit (owner)
       case 'glue': if (gate('glue', 60)) S('slime', 0.35, { rate: 0.8 }); break;   // Beige glue lands (Release 3)
+      case 'rot': if (__RELEASE__ >= 5 && gate('rot', 80)) S('slime', 0.3, { rate: 0.55 }); break;   // a pumpkin goes rotten (Release 5)
+      case 'blocked': if (__RELEASE__ >= 5 && gate('blocked', 60)) S('tap', 0.35, { rate: 0.7 }) || tap(); break;   // the wrong kind of pumpkin: a dull tap (Release 5)
       case 'spawn': S('warp', 0.4) || (tone(700, 0.08, 'sine', 0.07, 1100), sparkle(0.08)); break;
       case 'return': S('whooshlong', 0.5, { rate: 1.1 }) || (woosh(true, 0.18), tone(400, 0.12, 'sine', 0.05, 300, 0.3)); break;
       case 'miss': if (gate('miss', 80)) S('reverse', 0.35) || noise(0.35, 0.08, 1400, 1, 0, 400); break;

@@ -9,7 +9,7 @@ import { TILE_P, mS, mY, spMulNow, spawnMonster, inHexZone, stripHusk } from './
 import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS, walls, FENCE_Y } from './state.js';
 import { TAU, clamp, fmt, rnd } from './util.js';
 import { lvOf, save, persist } from '../save.js';
-import { KILL_REWARD, PROTECT_HEAL } from '../data/rules.js';
+import { KILL_REWARD, PROTECT_HEAL, ROT_DMG, ROT_HEAL } from '../data/rules.js';
 import { SACK, BOSS_SEED, ENDLESS_BOSS_SEED, CHEST_KILL_CHANCE } from '../data/economy.js';
 import { addChest, addSeeds, grant, toolSet } from './loot.js';
 import { GEAR } from '../data/shop.js';
@@ -19,6 +19,7 @@ import { dropJukebox, jukeboxPoints } from './spawner.js';
 import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
 import { isProtected } from './gourd.js';
+import { ROTTEN, ROT_FX, hitRule } from './rot.js';
 
 /** Release 5: a pumpkin launched from (r, c) inside a Protector Gourd's 3×3 mends its column's fence by PROTECT_HEAL (never above full) and
  *  its projectile carries `ward` (its first monster hit always knocks back; see hitMonsterNow). Returns whether it is warded. */
@@ -40,7 +41,7 @@ export function launchGroup(ref){
   const cells = groupCells(gid);
   if (!cells.length) return;
   const pulled = paintPull(gid);   // Paint: touching pumpkins of any colour launch with the bunch, each as itself (owner, 2026-10-08)
-  const type = grp.color, lv = lvOf(type), guar = grp.size + pulled.length >= 5;   // pulled pumpkins count toward the 5+ knockback (owner)
+  const type = grp.color, lv = __RELEASE__ >= 5 && type === ROTTEN ? 1 : lvOf(type), guar = grp.size + pulled.length >= 5;   // pulled pumpkins count toward the 5+ knockback (owner); rotten (Release 5) has no level
   const inh = type === PAINT ? paintInherit(pulled) : null;   // Paint takes the power of the colour it borrows most, at Paint's own level (owner, 2026-10-09)
   for (const { r, c, cell } of cells){
     const x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;
@@ -66,6 +67,7 @@ export function launchGroup(ref){
 export function damage(m, amt, color, small){
   if (m.dead) return;
   if (m.type === 'jukebox' && m.lastHit === -1){ m.flash = 0.1; addFloat('Pumpkins only', m.x, mY(m) - m.r - 14, '#ffd35a', 15, 0.7); return; }   // tools never hurt the jukebox (owner)
+  if (__RELEASE__ >= 5 && m.rotOnly && !rotDmg){ blockedPuff(m); return; }   // only rot can hurt it (Release 5): every other damage (splash, lightning, burn, mines, tools) is refused
   if (m.shield){   // shield knight marching: the hit bounces off
     m.flash = 0.1; addFloat('Blocked', m.x, mY(m) - m.r * mS(m) - 14, '#d8d8e0', 15, 0.6); SFX.monsterHit('knight', true);
     return;
@@ -264,6 +266,7 @@ let hitBy = null;   // the pumpkin whose hit is being resolved (quest counters c
 export function hitMonster(pr, m){ hitBy = pr; try { hitMonsterNow(pr, m); } finally { hitBy = null; } }
 function hitMonsterNow(pr, m){
   pr.hit.add(m);
+  if (__RELEASE__ >= 5){ const rot = pr.type === ROTTEN, rule = hitRule(m, rot); if (rot || rule === 'blocked'){ rotHitNow(pr, m, rule); return; } }   // a rotten pumpkin, or the wrong kind (Release 5)
   const i = pr.lv - 1, y = mY(m);
   const wc = save.wardrobe && save.wardrobe.costume;   // the worn costume's hit effect (visual only), capped so a big bunch stays cheap
   if (wc && G.vfx && G.vfx.filter(v => v.kind === 'costumeHit').length < 5) { G.vfx.push({ kind:'costumeHit', key:wc, x:m.x, y:y - m.r * .3, t:0, dur:0.75 }); SFX.costumeHit(wc); }
@@ -291,7 +294,7 @@ function hitMonsterNow(pr, m){
     pr.grp.spawned = true; purpleSpawn(m, y, i);
   }
   if (pr.type === BLUE){   // Deep Blue: lightning runs along the row and strikes up to CHAIN_N monsters (including this one)
-    const others = G.monsters.filter(o => o !== m && !o.dead && !o.hidden && o.rise <= 0 && Math.abs(mY(o) - y) < CS * 0.8).sort((a, b) => Math.abs(a.x - m.x) - Math.abs(b.x - m.x)).slice(0, CHAIN_N[i] - 1);
+    const others = G.monsters.filter(o => o !== m && !o.dead && !o.hidden && o.rise <= 0 && !(__RELEASE__ >= 5 && o.rotOnly) && Math.abs(mY(o) - y) < CS * 0.8).sort((a, b) => Math.abs(a.x - m.x) - Math.abs(b.x - m.x)).slice(0, CHAIN_N[i] - 1);
     let from = m;
     for (const o of others){
       const y1 = mY(from), y2 = mY(o);
@@ -305,7 +308,7 @@ function hitMonsterNow(pr, m){
     for (let k = 0; k < 14; k++) chunk(pr.x, y, k % 2 ? '#ff9a3a' : '#3a3540', 300); G.shake = Math.max(G.shake, 0.4);
     if (G.vfx) G.vfx.push({ kind:'blast', x:pr.x, y, t:0, dur:0.7, r:SPLASH_ROWS[i] === 3 ? CS * 1.5 : CS * 0.95, seed:Math.floor(Math.random() * 1e6) });   // fireball and shockwave (render/fx.js)
     const reach = SPLASH_ROWS[i] === 3 ? CS * 1.6 : CS * 0.7, frac = SPLASH_FRAC[i];
-    for (const o of G.monsters.slice()) if (o !== m && !o.dead && !o.hidden && o.rise <= 0 && Math.abs(o.lane - m.lane) <= 1 && Math.abs(mY(o) - y) < reach){ o.lastHit = 7; o.lastHitLv = pr.lv; damage(o, POWER[i] * frac, '#ff9a3a', true); SFX.extra('splash'); if (i >= 4 && !o.dead) knockback(o); }
+    for (const o of G.monsters.slice()) if (o !== m && !o.dead && !o.hidden && o.rise <= 0 && !(__RELEASE__ >= 5 && o.rotOnly) && Math.abs(o.lane - m.lane) <= 1 && Math.abs(mY(o) - y) < reach){ o.lastHit = 7; o.lastHitLv = pr.lv; damage(o, POWER[i] * frac, '#ff9a3a', true); SFX.extra('splash'); if (i >= 4 && !o.dead) knockback(o); }
     for (const w of G.castles) if (!w.dead && Math.abs(w.lane - m.lane) <= 1 && Math.abs(castleY(w) - y) < reach) damageCastle(w, POWER[i] * frac);
   }
   if (__RELEASE__ >= 3 && pr.type === BEIGE) layGlue(m.lane, m.p, pr.lv);   // Beige: every hit leaves glue where it lands (owner, 2026-11-03; was kills only)
@@ -314,6 +317,35 @@ function hitMonsterNow(pr, m){
   SFX.pumpkinHit(pr.type, pr.size, pr.vis === RAINBOW);   // pumpkin layer
   if (m.type === 'boss') SFX.bossSfx(m.kind, 'hit'); else SFX.monsterHit(m.type);   // monster layer
   if (pr.type === 4 && pr.hit.size > 1){ G.q.pierce++; SFX.extra('pierce'); }
+}
+
+// ---------- Rotten pumpkins and blocked hits (Release 5; rules in engine/rot.js) ----------
+
+let rotDmg = false;   // a rotten pumpkin's own hit is being dealt: damage() lets it through to a rotOnly monster
+/** A grey puff where a hit did nothing (the wrong kind of pumpkin, or any non-rotten damage on a rotOnly monster). */
+function blockedPuff(m){
+  const y = mY(m); m.flash = 0.08;
+  for (let k = 0; k < 6; k++) spark(m.x, y - 6, k % 2 ? '#a8a4ae' : '#d8d6dc', 90);
+  ring(m.x, y, 26, 'rgba(200,198,206,.75)');
+  SFX.extra('blocked');
+}
+/** A rotten pumpkin's hit, or a normal one that is 'blocked': ROT_DMG flat ('hurt'), half a hit point back ('heal', never above full), or
+ *  nothing ('blocked'). No on-hit power, no knockback (not the 5+ bunch's, not the Protector's ward). Either way the pumpkin is used up there,
+ *  Grey's pierce included. */
+function rotHitNow(pr, m, rule){
+  pr.dead = true;
+  if (rule === 'blocked'){ addFloat('Blocked', m.x, mY(m) - m.r * mS(m) - 14, '#c8c6ce', 15, 0.6); blockedPuff(m); return; }
+  const y = mY(m);
+  for (let k = 0; k < 10; k++) chunk(pr.x, pr.y, k % 3 ? ROT_FX.base : ROT_FX.mould, 180);   // a rotten splat
+  m.lastHit = ROTTEN; m.lastHitLv = 1; m.lastHitAlt = -1;
+  if (rule === 'hurt'){ rotDmg = true; try { damage(m, ROT_DMG, ROT_FX.spark); } finally { rotDmg = false; } }
+  else {
+    const was = m.hp; m.hp = Math.min(m.maxHp, m.hp + ROT_HEAL); m.flash = 0.06;
+    for (let k = 0; k < 5; k++) spark(m.x, y - 8, ROT_FX.spark, 80);
+    if (m.hp > was) addFloat(`+${fmt(m.hp - was)}`, m.x + rnd(-8, 8), y - m.r * mS(m) - 14, '#a6e05a', 18, 0.8);   // a green "+": it fed on the rot
+  }
+  SFX.pumpkinHit(ROTTEN, 1, false);
+  if (m.type === 'boss') SFX.bossSfx(m.kind, 'hit'); else SFX.monsterHit(m.type);
 }
 
 // ---------- Effects ----------

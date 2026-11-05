@@ -34,6 +34,8 @@ import { prebakeFire } from './render/fire.js';
 import { placeGourdsAtStart, gourdSnapshot, restoreGourd } from './gourd.js';
 import { GOURDS } from '../data/gourds.js';
 import { prebakeGourd } from './render/gourd.js';
+import { ROTTEN, ROT_FX, clearHitFlags, rotSnapshot, restoreRot } from './rot.js';
+import { prebakeRot } from './render/rot.js';
 
 // ---------- Flow ----------
 
@@ -127,6 +129,7 @@ export function startGame(mode, n, loadout, gourds){
   else if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def && def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def && def.puddles) placePuddles(def.puddles);
   if (__RELEASE__ >= 4 && def){ startFires(def); if (def.nightmare) prebakeFire(); }   // after the castles, so random fires skip them; the flame strip is baked now, not on first sight
+  if (__RELEASE__ >= 5 && def && def.nightmare) prebakeRot();   // the rotten pumpkin (Release 5), baked now, not on first sight
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def ? def.pattern : Math.floor(Math.random() * PATTERNS.length), def ? def.graves : 2);
   if (def && def.gravesLayout) applyGravesLayout(def.gravesLayout);   // after the board exists: explicit graves replace pumpkins
@@ -354,6 +357,7 @@ export function repairWall(lane){
 export function update(dt){
   const g = G;
   g.t += dt; g.idle += dt;
+  if (__RELEASE__ >= 5) clearHitFlags();   // rotOnly / cleanOnly hold only while their source sets them again this frame (engine/rot.js)
   if (!g.over){ if (g.mode === 'story') storySpawn(dt); else endlessSpawn(dt); }
   if (!g.over){
     const low = ROWS * COLS - emptyCells().length < 10;
@@ -371,6 +375,7 @@ export function update(dt){
         if (w.dead || pr.hitWalls.has(w) || w.lane !== pr.lane || pr.y > castleY(w) + 20) continue;
         pr.hitWalls.add(w);
         const i = pr.lv - 1;
+        if (__RELEASE__ >= 5 && pr.type === ROTTEN){ for (let k = 0; k < 8; k++) chunk(pr.x, castleY(w), ROT_FX.base, 160); } else   // rot does not hurt stone: it splats there (Release 5)
         damageCastle(w, pr.type === 7 ? POWER[i] * 1.5 : pumpkinPower(pr));   // Brown by size, Turquoise pairs half, as on monsters (owner bug report 2026-09-27: a big Brown did only base damage)
         if (pr.type === 7){
           ring(pr.x, castleY(w), 70, 'rgba(255,154,58,.9)'); for (let k = 0; k < 20; k++) spark(pr.x, castleY(w), '#ff9a3a', 240);
@@ -388,7 +393,7 @@ export function update(dt){
       for (const m of targets){
         if (Math.abs(pr.y - mY(m)) < pr.r + m.r * mS(m) * 0.8 || pr.y < mY(m)){
           hitMonster(pr, m);
-          if (pr.type !== 4){ pr.dead = true; break; }
+          if (pr.type !== 4 || pr.dead){ pr.dead = true; break; }   // Grey pierces, unless the hit used it up (a blocked hit, Release 5)
         }
       }
     }
@@ -399,7 +404,7 @@ export function update(dt){
         if (spot){ G.q.boom++; flyInto(spot[0], spot[1], pr.vis, pr.x, FIELD_TOP); addFloat('Back!', pr.x, FIELD_TOP + 30, '#ffffff', 16, 0.8); SFX.extra('return'); resolveMatches(); }
         else { g.missed++; SFX.extra('miss'); }
       }
-      for (let i = 0; i < 8; i++) spark(pr.x, pr.y, PTYPES[pr.vis].spark, 110);
+      for (let i = 0; i < 8; i++) spark(pr.x, pr.y, __RELEASE__ >= 5 && pr.vis === ROTTEN ? ROT_FX.spark : PTYPES[pr.vis].spark, 110);
     }
   }
   g.projs = g.projs.filter(p => !p.dead);
@@ -527,7 +532,8 @@ export function continueState(){
   return { n:g.n, loadout:g.loadout.slice(), q:JSON.parse(JSON.stringify(g.q)), remaining, bossSpawned:g.bossSpawned, bossDead:g.bossDead, bossHp:bosses, bossKinds:g.def.boss2 ? living.map(m => m.kind) : null,
     hk:__RELEASE__ >= 3 ? hkState() : null,   // the Hollow King's phase and his standing form (Release 3)
     jukebox:{ next:g.jbNext || 0, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null },   // next: drop points already used (one per jukebox dropped)   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
-    ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0, bossPhase2:living.map(m => !!m.phase2), gourd:g.def.gourd ? gourdSnapshot() : null } : {}) };   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
+    ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0, bossPhase2:living.map(m => !!m.phase2), gourd:g.def.gourd ? gourdSnapshot() : null } : {}),
+    ...(__RELEASE__ >= 5 ? { rot:rotSnapshot() } : {}) };   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
 export function continueNight(c){
@@ -537,6 +543,7 @@ export function continueNight(c){
   if (__RELEASE__ >= 3) G.hkRestore = c.hk || null;
   if (__RELEASE__ >= 4 && c.fires){ G.fires = []; for (const [lane, p] of c.fires) lightFire(lane, p, true); G.fmNext = c.fmNext || 0; }   // the same tiles burn (not the level's start fires again)
   if (__RELEASE__ >= 4 && c.gourd) restoreGourd(c.gourd);   // each gourd stands where it stood, or comes back on the first sprout
+  if (__RELEASE__ >= 5 && c.rot) restoreRot(c.rot);   // the rotten pumpkins lie where they lay (after the gourds)
   if (__RELEASE__ >= 4 && c.bossSpawned && c.bossPhase2) G.bossPhase2 = c.bossPhase2.slice();   // spawner.js puts each returning boss back in its phase
   if (c.bossSpawned){ G.bossDead = c.bossDead; G.bossHp = c.bossHp.slice(); G.bossKinds = c.bossKinds ? c.bossKinds.slice() : null; if (c.bossDead) G.bossSpawned = true; }
   if (c.jukebox){

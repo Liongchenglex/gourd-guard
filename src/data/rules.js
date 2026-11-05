@@ -38,3 +38,8 @@ export const FIRE_TRICKLE_EVERY = 6, FIRE_TRICKLE_MAX = 4;
 // The Protector Gourd (Release 5, Nightmare Foggy Hollow; spec Part 6): every pumpkin launched from its 3×3 mends the fence of its column by
 // this much as it is launched, never above full (our number, a first guess).
 export const PROTECT_HEAL = 1;
+
+// Rotten pumpkins (Release 5; spec Part 2): a rotten pumpkin heals what it hits by ROT_HEAL (owner: half a hit point, never above full health)
+// and hurts by ROT_DMG only a monster that only rot can hurt (`rotOnly`: a Plague Doctor 2's square, the Lamplighter's rot mood, the Fallen
+// Poltergeist's reaper phase). Per pumpkin, flat: no level or bunch-size multiplier (ROT_DMG is our number, a first guess).
+export const ROT_DMG = 1.5, ROT_HEAL = 0.5;

@@ -5,7 +5,7 @@
 // - The Grave Gourd ('grave'): breaking it clears every grave in its 3×3; every sprout tick its slot (the tick's first) fills the empty cells
 //   of its 3×3 (board.js spawnSprouts).
 // - The Protector Gourd ('protector', Release 5): pumpkins in its 3×3 (its own cell included) are protected (isProtected): no rot, no monster
-//   can destroy them; a pumpkin launched from there carries `ward` (combat.js). Breaking it runs onProtectorBreak (Task 3: rot to Rainbow).
+//   can destroy them; a pumpkin launched from there carries `ward` (combat.js). Breaking it turns the rotten pumpkins in its 3×3 into Rainbows.
 //   It does not sprout; when due it comes back on a random empty cell at the start of the next sprout tick (gourdsBack).
 // Every caller gates on `__RELEASE__ >= 4` (the Protector's branches on `>= 5`), so lower builds drop this module. Art: render/gourd.js.
 
@@ -14,6 +14,8 @@ import { applyMove, emptyCells, inside, newCell, planMove, randSprout, resolveMa
 import { chunk, ring, spark } from './combat.js';
 import { bustGrave } from './game.js';
 import { COLS, CS, G, GY, LANE, ROWS, graves, grid } from './state.js';
+import { RAINBOW } from '../data/pumpkins.js';
+import { isRotten } from './rot.js';
 
 /** The gourd's colour index: not a pumpkin colour, so no PTYPES row, bunch or sprite belongs to it. */
 export const GOURD = -1;
@@ -91,9 +93,16 @@ export function placeGourdAtStart(at = [2, 3]){
   return { r:spot[0], c:spot[1] };
 }
 
-/** Release 5 hook: the Protector Gourd has just broken at pos (it is already off the patch). Task 3 fills it (rotten pumpkins in its 3×3 turn
- *  into Rainbows); a no-op until then. */
-export function onProtectorBreak(pos){}   // filled by Task 3
+/** Release 5: the Protector Gourd has just broken at pos (it is already off the patch): every rotten pumpkin in its 3×3 becomes a Rainbow
+ *  (owner). destroyGourd resolves the bunches after. */
+export function onProtectorBreak(pos){
+  for (const [a, b] of squareAround(pos.r, pos.c)){
+    const cell = grid[a][b]; if (!isRotten(cell)) continue;
+    cell.c = RAINBOW; cell.lit = false; cell.pop = 1;
+    const x = LANE(b), y = GY + a * CS + CS / 2;
+    for (let i = 0; i < 8; i++) spark(x, y, ['#ff8a70', '#ffd98a', '#a8d4ff', '#a6e07a', '#c79cf2'][i % 5], 120);
+  }
+}
 
 /** Destroyed by the player's hold (board.js smash routes here), by kind. The Grave: every grave in its 3×3 is cleared (free, through
  *  bustGrave), pumpkins in the square are untouched. The Protector (Release 5): onProtectorBreak. Either way it is due back on the next

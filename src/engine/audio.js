@@ -411,6 +411,14 @@ export const SFX = {
       case 'hollowking:arrive': bell(55, 0, 0.12); bell(55, 1.1, 0.1); tone(41, 2.4, 'sawtooth', 0.05, 30); S('roarbig', 1, { rate: 0.6, delay: 0.2 }); S('reverse', 0.6, { rate: 0.7 }); S('darkcast', 0.6, { rate: 0.8, delay: 0.9 }); S('scream', 0.35, { rate: 0.55, delay: 1.3 }); break;
       case 'hollowking:hit': S('roar', 0.55, { rate: 0.7 }); break;
       // The Strawlord (Release 4): creaking wood and cloth, a flurry of wings for its crows (the bat samples), fire when it tears free
+      case (__RELEASE__ >= 4 ? 'fallengravekeeper:arrive' : ''): S('roarbig', 0.85, { rate: 0.85 }) || bell(196); S('fire', 0.55, { delay: 0.2 }); S('bat', 0.35, { delay: 0.5, rate: 0.8 }); break;   // the Fallen Gravekeeper (Release 4): the Gravekeeper's voice, lower, with fire
+      case (__RELEASE__ >= 4 ? 'fallengravekeeper:teleport' : ''): S('warp', 0.6, { rate: 0.85 }) || woosh(false, 0.2); S('fire', 0.4, { delay: 0.1 }); break;
+      case (__RELEASE__ >= 4 ? 'fallengravekeeper:summon' : ''): S('dig', 0.6) || noise(0.3, 0.3, 200, 0.8, 0, 90); S('roar', 0.55, { rate: 0.85, delay: 0.05 }); break;
+      case (__RELEASE__ >= 4 ? 'fallengravekeeper:smash' : ''): S('stonebreak', 0.7, { rate: 0.8 }) || noise(0.4, 0.3, 300, 0.8); S('fire', 0.6, { delay: 0.1 }); S('roarbig', 0.5, { rate: 0.9, delay: 0.05 }); break;
+      case (__RELEASE__ >= 4 ? 'fallengravekeeper:inferno' : ''): S('fire', 0.8) || noise(0.6, 0.3, 700, 0.7); S('whoosh', 0.5, { rate: 0.7, delay: 0.1 }); S('roarbig', 0.6, { rate: 0.8, delay: 0.2 }); break;
+      case (__RELEASE__ >= 4 ? 'fallengravekeeper:crows' : ''): [0, 0.08, 0.16].forEach(d => S('bat', 0.35, { delay: d, rate: 0.75 + d }) || noise(0.05, 0.1, 2500, 1.5, d)); break;
+      case (__RELEASE__ >= 4 ? 'fallengravekeeper:hit' : ''): S('roar', 0.55, { rate: 0.85 }) || (tone(150, 0.15, 'square', 0.07, 60), groan(100, 0.05, 0.15)); break;
+      case (__RELEASE__ >= 4 ? 'fallengravekeeper:die' : ''): S('roarbig', 0.9, { rate: 0.85 }) || bell(196); S('fire', 0.6, { delay: 0.2 }); S('stonebreak', 0.7, { delay: 0.5 }) || noise(0.5, 0.3, 200, 0.7, 0.7); break;
       case (__RELEASE__ >= 4 ? 'strawlord:arrive' : ''): S('creak', 0.6) || noise(0.4, 0.2, 500, 1); S('cloth', 0.45, { delay: 0.2 }); [0.35, 0.45, 0.55].forEach(d => S('bat', 0.35, { delay: d, rate: 0.8 })); S('roar', 0.45, { rate: 1.2, delay: 0.5 }); break;
       case (__RELEASE__ >= 4 ? 'strawlord:flock' : ''): S('cloth', 0.5, { rate: 0.8 }) || cloth(); [0, 0.07, 0.14, 0.21, 0.28].forEach(d => S('bat', 0.35, { delay: d, rate: 0.75 + d }) || noise(0.05, 0.1, 2500, 1.5, d)); break;
       case (__RELEASE__ >= 4 ? 'strawlord:tear' : ''): S('woodbreak', 0.7) || noise(0.4, 0.3, 300, 0.8); S('metallight', 0.4, { delay: 0.15 }); S('fire', 0.5, { delay: 0.3 }); S('roarbig', 0.55, { rate: 1.15, delay: 0.4 }); break;

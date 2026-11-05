@@ -4,7 +4,7 @@
 // first draft, to be tuned with the bot later at the top profile (see docs/GAME_DESIGN.md §11). Each level sets spawnGap and spawnBurst itself, so the story rule SPAWN_LATE_FROM never decides nightmare pacing.
 // Fire: `fireLayout` [lane, p] tiles and `fireStart` random tiles at night start, `fireMarks` [{at, n}] on the spawn bar (a horde arrives with each).
 // After the first mark the fire keeps spreading by itself, one tile every few seconds up to 4 on the field (FIRE_TRICKLE_* in ../rules.js).
-// N1-16 (the Fallen Gravekeeper) is the owner's to design; until then the book shows it as "Coming soon" (NM_BOOK_LEVELS).
+// N1-16 is the Fallen Gravekeeper, the book's boss (owner 2026-11-05).
 // Wrapped in the release gate so lower builds carry none of these names. Schema: ../levels.js.
 const L = d => ({ world:1, theme:6, nightmare:true, graves:0, boss:null, bossForm:1, unlockPumpkins:[], unlockGear:[], intro:[], ...d });
 const Gd = d => L({ ...d, gourd:true });   // the Grave Gourd stands on the patch from N1-5 on
@@ -74,5 +74,11 @@ export default __RELEASE__ >= 4 ? [
   // N1-15 Eclipse: the gauntlet before the boss: every new monster, Grave Risers, three fire marks (33%, 66%, 100%).
   Gd({ level:15, name:'Eclipse', pattern:4, total:24, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.14,
     pool:[['rooster', 4], ['hayrick', 3], ['husker', 4], ['graveriser', 3], ['crow', 3], ['casketjack', 2], ['ghoul', 4], ['mummy', 2]], fireMarks:[{ at:0.33, n:4 }, { at:0.66, n:4 }, { at:1, n:5 }],
+    quests:[['noTools'], ['wallMin', 40]] }),
+  // N1-16 The Fallen Gravekeeper (owner 2026-11-05): the nightmare patch's boss. It teleports leaving fire trails, raises Roosters, Casket Jacks and Grave
+  // Risers, smashes three fences at once with a wave of fire, sets a whole row or column ablaze at 75%, 50% and 25% health, and crows swoop in all night
+  // (engine/nightmare.js). Ghouls, Mummies and Hayricks walk in meanwhile. No fire marks: the boss brings its own fire. One normal chest for now (owner: reward later).
+  Gd({ level:16, name:'The Fallen Gravekeeper', pattern:0, total:20, interval:3.2, spMul:0.95, spawnGap:1, spawnBurst:0.12, boss:'fallengravekeeper', bossChest:'normal',
+    pool:[['ghoul', 7], ['mummy', 5], ['hayrick', 4]], fireStart:2,
     quests:[['noTools'], ['wallMin', 40]] }),
 ] : [];

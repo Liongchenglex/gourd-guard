@@ -8,9 +8,12 @@ import { addFloat, chunk, ring, spark } from './combat.js';
 import { lightFire } from './fire.js';
 import { gourdPos } from './gourd.js';
 import { findCell, resolveMatches } from './board.js';
-import { igniteNear, mS, mY, spawnMonster } from './monsters.js';
+import { igniteNear, mS, mY, spawnMonster, TILE_P } from './monsters.js';
 import { COLS, CS, FENCE_Y, G, GY, LANE, ROWS, gest, graves, grid, walls } from './state.js';
 import { PTYPES } from '../data/pumpkins.js';
+import { FIRE_P_RANGE } from '../data/rules.js';
+import { damageWall } from './walls.js';
+import { banner } from '../ui/hud.js';
 
 /** Monsters a crow cannot speed up: those that stand still on purpose. */
 const noRush = o => o.type === 'boss' || o.type === 'sack' || o.type === 'jukebox';
@@ -90,10 +93,10 @@ function flock(m){
 }
 /** The fire trail of a move (owner 2026-11-05): the tiles on its row in the lanes it passed over, from the lane it left towards the one it
  *  landed on (that one stays clear, it stands there), trailMax at most, the ones nearest the lane it left first. A tile already burning stays as it is. */
-function fireTrail(m, from){
+function fireTrail(m, from, max = TYPES.strawlord.trailMax){
   const step = m.lane > from ? 1 : -1;
   let n = 0;
-  for (let l = from; l !== m.lane && n < TYPES.strawlord.trailMax; l += step, n++) lightFire(l, m.p, n > 0);
+  for (let l = from; l !== m.lane && n < max; l += step, n++) lightFire(l, m.p, n > 0);
 }
 
 /** One frame of the Strawlord. Its timers run once it is on the field, as the Gravekeeper's do. */
@@ -115,6 +118,92 @@ export function updateStrawlord(m, dt){
     SFX.bossSfx('strawlord', 'move');
   }
 }
+
+// ---------- The Fallen Gravekeeper (N1-16, the nightmare patch's boss; owner 2026-11-05) ----------
+// Holds at the back like the Gravekeeper (monsters.js keeps it from walking past hold), immune to knockback and freeze like every boss. Every number
+// is in TYPES.fallengravekeeper. Its timers run once it is on the field (p > 0.05).
+const pick = a => a[Math.floor(Math.random() * a.length)];
+/** Set up a freshly spawned Fallen Gravekeeper. infDone (infernos already used) is set on its first frame, from its health then, so a continued
+ *  night (spawner.js restores the boss's health right after spawning it) does not replay the infernos it already passed. */
+export function initFallenGK(m){
+  const T = TYPES.fallengravekeeper;
+  m.teleport = T.teleportEvery; m.summon = T.summonEvery; m.smashT = T.smashEvery; m.crowT = T.crowEvery; m.sweep = []; m.smashHit = null; m.infDone = null;
+}
+const ash = m => { const y = mY(m) - 20; for (let i = 0; i < 14; i++) spark(m.x, y, i % 2 ? '#ff7a1a' : '#3a2620', 170); ring(m.x, mY(m), 40, 'rgba(255,122,26,.8)'); };
+/** It teleports to another lane (dissolving in ash and eclipse fire) and leaves a fire trail across the lanes it passed. */
+function fgkTeleport(m){
+  const T = TYPES.fallengravekeeper, from = m.lane;
+  ash(m); if (G.vfx) G.vfx.push({ kind:'clip', key:'fallengravekeeper', clip:'teleport', x:m.x, y:mY(m), s:mS(m), t:0, dur:0.5 });
+  m.lane = pick([...Array(COLS).keys()].filter(l => l !== from)); m.x = m.tx = LANE(m.lane); m.age = 0;   // age 0: the arrival plays the teleport clip in reverse (anim.js)
+  ash(m); fireTrail(m, from, T.trailMax);
+  SFX.bossSfx('fallengravekeeper', 'teleport');
+}
+/** It raises summonN monsters from summonPool in its lane or the one either side (minions: they do not count toward the night). */
+function fgkSummon(m){
+  const T = TYPES.fallengravekeeper;
+  for (let i = 0; i < T.summonN; i++){
+    const lane = Math.max(0, Math.min(COLS - 1, m.lane + Math.floor(Math.random() * 3) - 1)), o = spawnMonster(pick(T.summonPool), lane, true, Math.max(0, m.p - 0.02));
+    for (let k = 0; k < 10; k++) chunk(o.x, mY(o), k % 2 ? '#5a4030' : '#ff7a1a', 150);
+  }
+  m.anim = { clip:'cast', t:0, dur:6 / 12 };
+  SFX.bossSfx('fallengravekeeper', 'summon');
+}
+/** The smash: it drives its spade into the ground and a wave of eclipse fire races down its lane and the two beside it; when the wave lands
+ *  (smashWave s later) each of those fences loses smashHit of its full health, never its last 1 (like the Hollow King's smash). */
+function fgkSmash(m){
+  const T = TYPES.fallengravekeeper, lanes = [m.lane - 1, m.lane, m.lane + 1].filter(l => l >= 0 && l < COLS);
+  m.anim = { clip:'stab', t:0, dur:8 / 12 };
+  if (G.vfx) G.vfx.push({ kind:'firewave', lanes, y0:mY(m) + 14, y1:FENCE_Y - 12, t:0, dur:T.smashWave });
+  m.smashHit = { lanes, t:T.smashWave };
+  G.shake = Math.max(G.shake || 0, 0.4);
+  SFX.bossSfx('fallengravekeeper', 'smash');
+}
+function landSmash(m){
+  const T = TYPES.fallengravekeeper;
+  for (const l of m.smashHit.lanes){
+    const w = walls[l]; if (!w) continue;
+    const amt = Math.min(w.max * T.smashHit, w.hp - 1); if (amt > 0) damageWall(l, amt);
+    for (let i = 0; i < 10; i++) spark(LANE(l), FENCE_Y - 14, i % 2 ? '#ffb040' : '#ff5a1a', 200);
+  }
+  m.smashHit = null; G.shake = Math.max(G.shake || 0, 0.9);
+}
+/** An inferno: one whole field column (a random lane, back to fence) or one whole field row (a random row in the fire band, from its lane outward)
+ *  bursts into flame, a tile every infernoStep s. The tile it stands on stays clear. */
+function fgkInferno(m){
+  const T = TYPES.fallengravekeeper, tp = TILE_P(), rows = Math.max(1, Math.floor(1 / tp)), rowP = r => (r + 0.5) * tp, tiles = [];
+  const isRow = Math.random() < 0.5;
+  if (isRow){
+    const band = [...Array(rows).keys()].filter(r => rowP(r) >= FIRE_P_RANGE[0] && rowP(r) <= FIRE_P_RANGE[1]), r = band.length ? pick(band) : Math.floor(rows / 2);
+    for (const l of [...Array(COLS).keys()].sort((a, b) => Math.abs(a - m.lane) - Math.abs(b - m.lane))) tiles.push([l, rowP(r)]);
+  } else { const lane = Math.floor(Math.random() * COLS); for (let r = 0; r < rows; r++) tiles.push([lane, rowP(r)]); }
+  m.sweep = tiles.filter(([l, p]) => !(l === m.lane && Math.abs(p - m.p) < tp / 2)).map(([l, p], i) => ({ l, p, t:i * T.infernoStep }));
+  m.anim = { clip:'cast', t:0, dur:6 / 12 }; G.shake = Math.max(G.shake || 0, 0.6);
+  banner('Inferno!', isRow ? 'A whole row of the field bursts into flame.' : 'A whole column of the field bursts into flame.', 2);
+  SFX.bossSfx('fallengravekeeper', 'inferno');
+}
+/** Crows swoop in: crows[0]..crows[1] of them at the top of random lanes (minions). */
+function fgkCrows(){
+  const [a, b] = TYPES.fallengravekeeper.crows, n = a + Math.floor(Math.random() * (b - a + 1));
+  for (let i = 0; i < n; i++) spawnMonster('crow', Math.floor(Math.random() * COLS), true, -0.02);
+  SFX.bossSfx('fallengravekeeper', 'crows');
+}
+/** One frame of the Fallen Gravekeeper. */
+export function updateFallenGK(m, dt){
+  const T = TYPES.fallengravekeeper;
+  m.x = m.tx + Math.sin(m.ph * 1.4) * 4;
+  if (m.infDone == null) m.infDone = T.infernoAt.filter(a => m.hp <= m.maxHp * a).length;
+  if (m.sweep.length){
+    for (const s of m.sweep){ s.t -= dt; if (s.t <= 0){ s.done = true; if (lightFire(s.l, s.p) && G.vfx) G.vfx.push({ kind:'fireflare', x:LANE(s.l), y:FIELD_Y(s.p), t:0, dur:0.45 }); } }
+    m.sweep = m.sweep.filter(s => !s.done);
+  } else if (m.infDone < T.infernoAt.length && m.hp <= m.maxHp * T.infernoAt[m.infDone]){ m.infDone++; fgkInferno(m); }   // one at a time: a hit past two marks sets off the second when the first is done
+  if (m.smashHit && (m.smashHit.t -= dt) <= 0) landSmash(m);
+  if (m.p <= 0.05) return;
+  if ((m.teleport -= dt) <= 0){ m.teleport = T.teleportEvery; fgkTeleport(m); }
+  if ((m.summon -= dt) <= 0){ m.summon = T.summonEvery; fgkSummon(m); }
+  if ((m.smashT -= dt) <= 0){ m.smashT = T.smashEvery; fgkSmash(m); }
+  if ((m.crowT -= dt) <= 0){ m.crowT = T.crowEvery; fgkCrows(); }
+}
+const FIELD_Y = p => mY({ p });
 
 // ---------- Crows in the patch (owner 2026-11-05) ----------
 /** A crow at the fence picks a pumpkin to take: any on the patch but the Grave Gourd and the cells of its 3×3, one sliding or flying in, the one

@@ -525,7 +525,7 @@ function renderBestiary(wi, nm){
       if (met) seen.add(kk);
     }
   });
-  if (__RELEASE__ >= 4 && nm && FALLEN[wi]){ order.push(FALLEN[wi].key); firstN[FALLEN[wi].key] = start + NM_BOOK_LEVELS - 1; }   // the nightmare book's boss: never met until the owner's fight is in
+  if (__RELEASE__ >= 4 && nm && FALLEN[wi] && firstN[FALLEN[wi].key] == null){ order.push(FALLEN[wi].key); firstN[FALLEN[wi].key] = start + NM_BOOK_LEVELS - 1; }   // the nightmare book's boss: never met until the owner's fight is in
   const where = n => nm ? `Nightmare ${wi + 1}-${n - start + 1}` : `level ${levels[n - start].world}-${levels[n - start].level}`;
   const L = $('#bsLeft'), R = $('#bsRight'); L.innerHTML = ''; R.innerHTML = '';
   let metCount = 0;

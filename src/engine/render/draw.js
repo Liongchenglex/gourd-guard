@@ -571,7 +571,7 @@ function drawVfx(){
     else if (v.kind === 'blast') drawBlast(ctx, v);
     else if (v.kind === 'hexbolt') drawHexBolt(ctx, v);
     else if (v.kind === 'sigil') drawSigil(ctx, v);
-    else if (__RELEASE__ >= 4 && (v.kind === 'firehiss' || v.kind === 'fireflare')) drawFireFx(v);   // Ice puts a fire out / a pumpkin burns up in one
+    else if (__RELEASE__ >= 4 && (v.kind === 'firehiss' || v.kind === 'fireflare' || v.kind === 'firewave')) drawFireFx(v);   // Ice puts a fire out / a pumpkin burns up in one / the Fallen Gravekeeper's smash   // Ice puts a fire out / a pumpkin burns up in one
     else if (v.kind === 'clip'){
       ctx.save(); ctx.translate(v.x, v.y); ctx.scale(v.s, v.s);
       drawChar(ctx, {}, v.key, null, [v.clip, Math.floor(p * 7.999)]); ctx.restore();

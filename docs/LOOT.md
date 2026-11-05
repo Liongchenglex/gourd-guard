@@ -15,7 +15,7 @@ Holds **2 prizes**. Each prize is one roll on this table:
 | 1 pumpkin seed | 15% |
 | 100–200 coins | 45% |
 
-Where it comes from: the 1% chest drop on normal nights, every level-10 boss, the Strawlord (Nightmare 1-4 and 1-13, Release 4), and half of all Loot Sacks.
+Where it comes from: the 1% chest drop on normal nights, every level-10 boss, the Strawlord (Nightmare 1-4 and 1-13, Release 4), the Fallen Gravekeeper (Nightmare 1-16, Release 4), and half of all Loot Sacks.
 
 ## Boss chest
 
@@ -45,6 +45,7 @@ Where it comes from: every level-20 boss.
 | Level-10 boss | A treasure chest, given at once |
 | Level-20 boss | A boss chest, given at once |
 | The Hollow King (6-20, Release 3) | Two boss chests, plus a 50% chance of a third (owner, 2026-11-03; was one plus a 50% second); boss-item prizes in them pay coins (no Hollow King costume yet) |
+| The Fallen Gravekeeper (Nightmare 1-16, Release 4) | One treasure chest, given at once, on each win (2026-11-05; placeholder until the owner sets the reward). No boss items and no costume. `bossChest:'normal'` |
 | The Strawlord (Nightmare 1-4 and 1-13, Release 4) | One treasure chest, given at once, on each win (owner, 2026-11-04; placeholder, polished later). No boss items and no costume. Set by the level field `bossChest:'normal'` |
 | A won nightmare night (Release 4) | The night bonus of the last story night: 10 + 3 × LEVELS coins (LEVELS = the story levels in the build: 120 in the playtest build, so 370) + 5 per quest met that night. Placeholder (owner, 2026-11-04: "assume for now, polish later"). Kills roll the usual kill reward, and on non-boss nightmare nights the 1% chest chance applies as on any normal night |
 | Any boss kill in the story | Also a 5% chance of 1–3 seeds |

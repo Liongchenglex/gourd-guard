@@ -72,7 +72,7 @@ export function beginNight(n){
   const hasMummies = def.pool.some(([k]) => k === 'mummy' || (__RELEASE__ >= 4 && k === 'casketjack') || (VARIANTS[k] && VARIANTS[k].base === 'mummy'));   // Casket Jack brings mummies
   if (hasMummies && !must.some(m => m.t === 3)) must.push({ t:3, why:'Mummies only die to Fire' });   // owner: Fire is auto-selected and locked on mummy levels
   const iceKind = k => ICE_ONLY.has(k) || (__RELEASE__ >= 4 && ICE_ONLY.has(HUSK_STRIP[k]));   // an Ice-only type, or one whose husk strips to one (the Burning Husker)
-  const fireSource = __RELEASE__ >= 4 && (hasFire(def) || def.boss === 'strawlord' || def.boss2 === 'strawlord' || def.pool.some(([k]) => k === 'rooster'));   // fire tiles, or something that lights them (the rooster's death, the Strawlord)
+  const fireSource = __RELEASE__ >= 4 && (hasFire(def) || def.boss === 'strawlord' || def.boss2 === 'strawlord' || def.boss === 'fallengravekeeper' || def.pool.some(([k]) => k === 'rooster'));   // fire tiles, or something that lights them (the rooster's death, the Strawlord)
   if ((def.pool.some(([k]) => iceKind(k)) || fireSource) && !must.some(m => m.t === 2))   // Ice is locked in wherever Ice-only monsters or fire can be
     must.push({ t:2, why: __RELEASE__ >= 4 && (fireSource || def.pool.some(([k]) => iceKind(k) && k !== 'firemummy')) ? 'Only Ice puts out fire and kills burning monsters' : 'Flaming mummies only die to Ice' });
   if (av.length > 5 || (__RELEASE__ >= 4 && def.gourd)) openLoadout(av, lo => startGame('story', n, lo), must, __RELEASE__ >= 4 && def.gourd ? ['grave'] : null);   // a gourd night always opens the picker, so its Gourds section is seen (Release 4)

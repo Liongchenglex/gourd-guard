@@ -19,7 +19,7 @@ The owner builds many ideas ahead of the stores and wants to see all of them on 
 | 1 | Worlds 1–5 | In the stores (branch `r1-ground-rules`) |
 | 2 | Hallow's End 6-1 to 6-16 | Content complete on `dev` (owner: "a wrap", 2026-11-02); not yet shipped (cut `release/2` when the owner says) |
 | 3 | Hallow's End 6-17 to 6-20 (the Hollow King) **and** the Beige pumpkin | Built on `dev` (2026-11-02; spec `docs/superpowers/specs/2026-11-02-release-3-design.md`), awaiting the owner's play; not shipped. (The owner merged the old R3 and R4 on 2026-11-02.) |
-| 4 | Nightmare Pumpkin Patch: Nightmare 1-1 to 1-15 (fire tiles, the Cinder Rooster, Hayrick, Corn Husker, Grave Riser, Casket Jack and Crow, the Strawlord mini boss, the Grave Gourd); 1-16 (the Fallen Gravekeeper) waits for the owner's design | Built on `dev` (2026-11-04; numbers untuned (first draft), see `GAME_DESIGN.md` §11; spec `docs/superpowers/specs/2026-11-04-release-4-nightmare-patch-design.md`), awaiting the owner's play; not shipped. Check with `tools/nm_check.py --expect on\|r3\|r2\|off` |
+| 4 | Nightmare Pumpkin Patch: Nightmare 1-1 to 1-16 (fire tiles, the Cinder Rooster, Hayrick, Corn Husker, Grave Riser, Casket Jack and Crow, the Strawlord mini boss, the Grave Gourd, and the Fallen Gravekeeper on N1-16) | Built on `dev` (2026-11-04; numbers untuned (first draft), see `GAME_DESIGN.md` §11; spec `docs/superpowers/specs/2026-11-04-release-4-nightmare-patch-design.md`), awaiting the owner's play; not shipped. Check with `tools/nm_check.py --expect on\|r3\|r2\|off` |
 | 5 | Nightmare Foggy Hollow | Idea |
 | … | further nightmare worlds, one per release | Owner to order |
 

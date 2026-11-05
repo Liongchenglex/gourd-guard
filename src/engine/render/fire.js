@@ -78,6 +78,18 @@ export function drawFires(fires, t){
 /** The put-out puff (Ice) and the burn-up flare (any other pumpkin). */
 export function drawFireFx(v){
   const p = Math.min(1, v.t / v.dur);
+  if (v.kind === 'firewave'){   // the Fallen Gravekeeper's smash: a wall of eclipse fire racing down each lane to its fence, then a flare on the fence (baked frames only)
+    const sp = fireStrip(K), e = p * p * (3 - 2 * p), y = v.y0 + (v.y1 - v.y0) * e, fi = Math.floor(v.t * FPS * 1.6);
+    for (const l of v.lanes){
+      const x = LANE(l);
+      for (let k = 0; k < 3; k++){ const s = 1.25 - k * 0.28, yy = y - k * 24; ctx.globalAlpha = (p > 0.85 ? (1 - p) / 0.15 : 1) * (1 - k * 0.25);
+        ctx.drawImage(sp.c, ((fi + k * 3 + l) % N) * sp.fw, 0, sp.fw, sp.fh, x - OX * s, yy - OY * s, FW * s, FH * s); }
+    }
+    if (p > 0.75){ const fl = puff(K, 'flare'), r = 24 + (p - 0.75) * 160; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, (1 - p) * 4);
+      for (const l of v.lanes) ctx.drawImage(fl, LANE(l) - r, v.y1 - r, r * 2, r * 2);
+      ctx.globalCompositeOperation = 'source-over'; }
+    ctx.globalAlpha = 1; return;
+  }
   if (v.kind === 'firehiss'){
     const st = puff(K, 'steam');
     for (let i = 0; i < 5; i++){ const a = -Math.PI / 2 + (i - 2) * 0.55, d = 6 + p * 26, r = 10 + p * 20 + i * 2;

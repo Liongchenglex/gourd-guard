@@ -103,6 +103,14 @@ export const TYPES = {
   // while it walks (owner, same day: that was too strong). The casket gives no loot (noReward).
   ...(__RELEASE__ >= 4 ? { casketjack: { hp:6, sp:0.025, r:24, coins:12, eat:0.7, pts:30, drop:2 },
     coffin: { hp:1, sp:0, r:22, coins:0, eat:0, pts:6, drop:0, openIn:3, openDur:0.6, noKnockback:true, noReward:true } } : {}),
+  // The Fallen Gravekeeper (N1-16, the nightmare patch's boss; owner 2026-11-05; engine/nightmare.js updateFallenGK). Holds at `hold` like the Gravekeeper. Every
+  // `teleportEvery` s it jumps to another lane and leaves a fire trail on its row across the lanes it passed (`trailMax` at most). Every `summonEvery` s it raises
+  // `summonN` monsters from `summonPool` in or beside its lane (minions). Every `smashEvery` s it slams its spade: a wave of eclipse fire runs down its lane and the
+  // two beside it and each of those fences loses `smashHit` of its full health, never its last 1. At each fraction of its health in `infernoAt` (three times a
+  // fight) it sets one whole field column or row on fire. Every `crowEvery` s crows[0]..crows[1] crows swoop in on random lanes (minions). No boss items (noItems).
+  ...(__RELEASE__ >= 4 ? { fallengravekeeper: { boss:true, hp:40, r:34, sp:0.03, coins:50, eat:0, pts:400, drop:6, hold:0.28, teleportEvery:6, trailMax:4,
+    summonEvery:8, summonN:2, summonPool:['rooster', 'casketjack', 'graveriser'], smashEvery:12, smashHit:1 / 3, smashWave:0.45, infernoAt:[0.75, 0.5, 0.25], infernoStep:0.06,
+    crowEvery:6, crows:[1, 3], noItems:true } } : {}),
 };
 
 /** Modifiers (docs/WORLDS.md §6): data-only stat tweaks any monster can carry. */
@@ -140,17 +148,18 @@ export const ICE_ONLY = new Set(['firemummy', ...(__RELEASE__ >= 4 ? ['hayrickBu
 /** The Corn Husker's first hit strips its husk (no damage): husker -> huskerBare, huskerBurning -> huskerCharred. Any pumpkin strips it. */
 export const HUSK_STRIP = __RELEASE__ >= 4 ? { husker:'huskerBare', huskerBurning:'huskerCharred' } : {};
 /** Looks a type is always seen in during a night, baked with it so the first hit never hitches. */
-export const ALSO_BAKE = __RELEASE__ >= 4 ? { husker:['huskerBare'], huskerBurning:['huskerCharred'], strawlord:['crow'], casketjack:['coffin', 'mummy'] } : {};   // a boss's minions too (the Strawlord's crows)
+export const ALSO_BAKE = __RELEASE__ >= 4 ? { husker:['huskerBare'], huskerBurning:['huskerCharred'], strawlord:['crow'], casketjack:['coffin', 'mummy'], fallengravekeeper:['rooster', 'casketjack', 'coffin', 'mummy', 'graveriser', 'crow'] } : {};   // a boss's minions too (the Strawlord's crows)
 /** burning type -> the ordinary type it ignites */
 export const BURNING_FROM = Object.fromEntries(Object.entries(BURNS_TO).map(([a, b]) => [b, a]));
 
-export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch', ...(__RELEASE__ >= 3 ? { hollowking:'The Hollow King' } : {}), ...(__RELEASE__ >= 4 ? { strawlord:'The Strawlord' } : {}) };
+export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch', ...(__RELEASE__ >= 3 ? { hollowking:'The Hollow King' } : {}), ...(__RELEASE__ >= 4 ? { strawlord:'The Strawlord', fallengravekeeper:'The Fallen Gravekeeper' } : {}) };
 export const BOSS_NAME = BOSS_NAMES.gravekeeper;   // legacy alias used by endless mode
 
 export const MNAME = { sack:'Loot Sack', jukebox:'Jukebox', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss', ...(__RELEASE__ >= 4 ? { rooster:'Cinder Rooster', hayrick:'Hayrick', hayrickBurning:'Burning Hayrick', husker:'Corn Husker', huskerBare:'Bare Cob', huskerBurning:'Burning Husker', huskerCharred:'Charred Cob', crow:'Crow', graveriser:'Grave Riser', casketjack:'Casket Jack', coffin:'Fallen Casket' } : {}) };
 
 export const BOSS_INTRO = {
-  ...(__RELEASE__ >= 4 ? { strawlord: { 1:'A giant scarecrow nailed to its post at the back of the field. It flaps its coat open to loose a flock of crows down the field, and every time it hops to another lane it leaves a trail of fire behind it. At half health it tears free and the crows come faster. Monsters keep coming until it falls.',
+  ...(__RELEASE__ >= 4 ? { fallengravekeeper: { 1:'The Gravekeeper, charred under the eclipse. He leaves fire wherever he teleports, raises roosters, Casket Jacks and Grave Risers, and slams his spade so fire tears down three fences at once. Three times he sets a whole row or column of the field ablaze, and crows swoop in all night. Monsters keep coming until he falls.' },
+    strawlord: { 1:'A giant scarecrow nailed to its post at the back of the field. It flaps its coat open to loose a flock of crows down the field, and every time it hops to another lane it leaves a trail of fire behind it. At half health it tears free and the crows come faster. Monsters keep coming until it falls.',
     2:'It is already off its post: crows every few seconds, and a trail of fire every time it hops to another lane. Monsters keep coming until it falls.' } } : {}),
   ...(__RELEASE__ >= 3 ? { hollowking: { 1:'Five times he splits off a world boss in his own colours. While it stands, nothing hurts him: beat it first. He wipes a column of your patch, smashes a fence and calls monsters. They keep coming until he falls.' } } : {}),
   gravekeeper: { 1:'It stops a third of the way down and never reaches the wall, but it teleports between lanes and raises ghouls. Monsters keep coming until it falls.',

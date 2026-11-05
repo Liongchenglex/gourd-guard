@@ -6,9 +6,9 @@
 export const COMPANIONS = { hauler:['gargoyle'], slime:['blob'], vampire:['bat'],
   ...(__RELEASE__ >= 4 ? { hayrick:['hayrickBurning'], husker:['huskerBare', 'huskerBurning', 'huskerCharred'], strawlord:['crow'], casketjack:['coffin'] } : {}) };   // Release 4: burning forms, the Strawlord's crows (met first on N1-4), Casket Jack's Fallen Casket
 
-/** The boss waiting at the end of each nightmare book (Release 4), listed last in its nightmare bestiary and never met until its fight is built
- *  (N1-16 is the owner's to design). `icon` draws it as [type, form] meanwhile: the Gravekeeper's full form, shown as a silhouette. */
-export const FALLEN = __RELEASE__ >= 4 ? [{ key:'fallenGravekeeper' }] : [];
+/** The boss at the end of each nightmare book (Release 4), listed last in its nightmare bestiary. Once its fight is built (N1-16, the Fallen
+ *  Gravekeeper, 2026-11-05) the level lists it like any boss; until then this entry holds its place (an entry may give `icon` [type, form] to draw). */
+export const FALLEN = __RELEASE__ >= 4 ? [{ key:'fallengravekeeper' }] : [];
 
 export const BESTIARY = {
   ghoul:      { lore:'Dug itself out of the churchyard the night the moon turned orange. Not bright, but very determined.', ability:'Nothing special. Walks straight down its lane and chews the wall.' },
@@ -73,7 +73,7 @@ export const BESTIARY = {
     huskerBare: { lore:'What is under the husk: a cob with ideas.', ability:'Walks faster than the husker it came out of.' },
     huskerBurning:{ lore:'A husker that took a shortcut through the fire.', ability:'Any pumpkin strips its burning husk and leaves the charred cob.' },
     huskerCharred:{ lore:'Blackened to the core and still walking.', ability:'Only Ice finishes it. Anything else knocks it down for a while.' },
-    fallenGravekeeper:{ name:'The Fallen Gravekeeper', icon:['gravekeeper', 2], lore:'The Gravekeeper, charred under the eclipse. His lantern burns black now.', ability:'Waits at the end of the nightmare patch.' },
+    fallengravekeeper:{ lore:'The Gravekeeper, charred under the eclipse. His lantern burns black now.', ability:'Never reaches the wall. Teleports leaving fire behind, raises roosters, Casket Jacks and Grave Risers, slams three fences at once, and three times sets a whole row or column of the field on fire. Crows swoop in all night.' },
   } : {}),
   twintides:  { lore:'Two serpents hatched from one egg on the night the village drowned. They finish each other’s sentences.', ability:'Never reach the wall. Both must die within a short window or the fallen one rises again.' },
 };

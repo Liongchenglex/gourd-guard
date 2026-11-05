@@ -6,7 +6,7 @@ import { TYPES } from '../data/monsters.js';
 import { SFX } from './audio.js';
 import { addFloat, chunk, ring, spark } from './combat.js';
 import { lightFire } from './fire.js';
-import { gourdPos } from './gourd.js';
+import { gourdPos, isProtected } from './gourd.js';
 import { findCell, resolveMatches } from './board.js';
 import { igniteNear, mS, mY, spawnMonster, TILE_P } from './monsters.js';
 import { COLS, CS, FENCE_Y, G, GY, LANE, ROWS, gest, graves, grid, walls } from './state.js';
@@ -206,14 +206,15 @@ export function updateFallenGK(m, dt){
 const FIELD_Y = p => mY({ p });
 
 // ---------- Crows in the patch (owner 2026-11-05) ----------
-/** A crow at the fence picks a pumpkin to take: any on the patch but the Grave Gourd and the cells of its 3×3, one sliding or flying in, the one
- *  the player is holding, or one another crow is already diving at. Null when there is none (then it pecks the fence like any monster). */
+/** A crow at the fence picks a pumpkin to take: any on the patch but a gourd, the cells of the Grave Gourd's 3×3 (Release 4) or of a Protector
+ *  Gourd's (Release 5, isProtected), one sliding or flying in, the one the player is holding, or one another crow is already diving at. Null when there is none (then it pecks the fence like any monster). */
 function crowTarget(){
   const gp = gourdPos(), out = [];
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
     const cell = grid[r][c];
     if (!cell || cell.gourd || cell.fly > 0 || (gest && gest.ref === cell) || (G.crowDives && G.crowDives.some(d => d.cell === cell))) continue;   // nor one another crow is already diving at
-    if (gp && Math.abs(r - gp.r) <= 1 && Math.abs(c - gp.c) <= 1) continue;   // the gourd's protection
+    if (gp && Math.abs(r - gp.r) <= 1 && Math.abs(c - gp.c) <= 1) continue;   // the Grave Gourd's protection (Release 4)
+    if (__RELEASE__ >= 5 && isProtected(r, c)) continue;   // a Protector Gourd's square
     out.push(cell);
   }
   return out.length ? out[Math.floor(Math.random() * out.length)] : null;
@@ -230,13 +231,13 @@ export function crowStrike(m){
   SFX.monsterAct('crow', 'dive');
   return true;
 }
-/** Per frame: crows' dives land. The pumpkin breaks if it is still on the patch and not now inside the gourd's protection (it may have slid). */
+/** Per frame: crows' dives land. The pumpkin breaks if it is still on the patch and not now inside a gourd's protection (it may have slid). */
 export function updateCrowDives(dt){
   for (const d of G.crowDives){
     d.t -= dt; if (d.t > 0) continue;
     d.done = true;
     const pos = findCell(d.cell), gp = gourdPos();
-    if (!pos || (gp && Math.abs(pos.r - gp.r) <= 1 && Math.abs(pos.c - gp.c) <= 1)) continue;
+    if (!pos || (gp && Math.abs(pos.r - gp.r) <= 1 && Math.abs(pos.c - gp.c) <= 1) || (__RELEASE__ >= 5 && isProtected(pos.r, pos.c))) continue;
     grid[pos.r][pos.c] = null;
     const x = LANE(pos.c), y = GY + pos.r * CS + CS / 2, cell = d.cell;
     for (let i = 0; i < 12; i++) chunk(x, y, cell.c >= 0 && PTYPES[cell.c] ? PTYPES[cell.c].base : '#f0a020', 200);

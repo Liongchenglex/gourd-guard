@@ -78,7 +78,7 @@ export function render(){
   drawMines(t);
   drawDrops(t);
   drawWalls(t);
-  if (__RELEASE__ >= 4) drawGourdGlow(ctx, t);   // the Grave Gourd's 3×3, one baked tile under the graves and pumpkins
+  if (__RELEASE__ >= 4) drawGourdGlow(ctx, t);   // each gourd's 3×3, one baked tile per gourd under the graves and pumpkins
   drawGraves();
   if (G.aim === 'buster') drawAimGraves(t);
   if (G.aim === 'repair') drawAimWalls(t);
@@ -403,17 +403,17 @@ export function drawAimGraves(t){
 }
 export function drawGrid(t){
   const hg = heldGid(), flying = [];
-  let gourd = null;
+  let gourds = null;
   ctx.save();
   ctx.beginPath(); ctx.rect(0, GY - 4, W, ROWS * CS + 8); ctx.clip();
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
     const cell = grid[r][c]; if (!cell) continue;
     if (cell.fly > 0){ flying.push([r, c, cell]); continue; }
-    if (__RELEASE__ >= 4 && cell.gourd){ gourd = [r, c, cell]; continue; }   // the Grave Gourd is taller than its cell: drawn outside the clip
+    if (__RELEASE__ >= 4 && cell.gourd){ (gourds || (gourds = [])).push(r, c, cell); continue; }   // a gourd is taller than its cell: drawn outside the clip (flat list: no per-gourd array)
     drawCell(r, c, cell, t, hg);
   }
   ctx.restore();
-  if (__RELEASE__ >= 4 && gourd) drawCell(gourd[0], gourd[1], gourd[2], t, hg);
+  if (__RELEASE__ >= 4 && gourds) for (let i = 0; i < gourds.length; i += 3) drawCell(gourds[i], gourds[i + 1], gourds[i + 2], t, hg);
   for (const [r, c, cell] of flying) drawCell(r, c, cell, t, hg);
 }
 
@@ -426,7 +426,7 @@ export function drawCell(r, c, cell, t, hg){
   if (bsz >= 0) s *= [0.55, 0.8, 1.18][bsz];   // small, medium, big: clearly different sizes
   if (cell.fly > 0){ s *= 0.85; y -= Math.sin((1 - cell.fly / 0.55) * Math.PI) * 50; }
   if (cell.wig > 0) x += Math.sin(cell.wig * 30) * 3 * cell.wig;
-  if (__RELEASE__ >= 4 && cell.gourd){ drawGourdCell(ctx, x, y, s, t, (r * 7 + c * 13) * .37); return; }   // the Grave Gourd: its baked sprite (no colour, never lit)
+  if (__RELEASE__ >= 4 && cell.gourd){ drawGourdCell(ctx, x, y, s, t, (r * 7 + c * 13) * .37, cell.gourd === true ? 'grave' : cell.gourd); return; }   // a gourd: its kind's baked sprite (no colour, never lit)
   const lit = cell.lit || cell.borrowed;   // a pumpkin a Paint bunch will borrow lights up too (owner, 2026-10-09)
   if (lit){
     y += Math.sin(t * 3 + cell.t) * 1.5;

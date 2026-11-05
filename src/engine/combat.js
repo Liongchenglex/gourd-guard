@@ -9,7 +9,7 @@ import { TILE_P, mS, mY, spMulNow, spawnMonster, inHexZone, stripHusk } from './
 import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS, walls, FENCE_Y } from './state.js';
 import { TAU, clamp, fmt, rnd } from './util.js';
 import { lvOf, save, persist } from '../save.js';
-import { KILL_REWARD } from '../data/rules.js';
+import { KILL_REWARD, PROTECT_HEAL } from '../data/rules.js';
 import { SACK, BOSS_SEED, ENDLESS_BOSS_SEED, CHEST_KILL_CHANCE } from '../data/economy.js';
 import { addChest, addSeeds, grant, toolSet } from './loot.js';
 import { GEAR } from '../data/shop.js';
@@ -18,6 +18,19 @@ import { banner } from '../ui/hud.js';
 import { dropJukebox, jukeboxPoints } from './spawner.js';
 import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
+import { isProtected } from './gourd.js';
+
+/** Release 5: a pumpkin launched from (r, c) inside a Protector Gourd's 3×3 mends its column's fence by PROTECT_HEAL (never above full) and
+ *  its projectile carries `ward` (its first monster hit always knocks back; see hitMonsterNow). Returns whether it is warded. */
+function wardLaunch(r, c){
+  if (!isProtected(r, c)) return false;
+  const w = walls[c];
+  if (w && w.hp < w.max){
+    w.hp = Math.min(w.max, w.hp + PROTECT_HEAL); addFloat(`Wall +${PROTECT_HEAL}`, LANE(c), FENCE_Y - 40, '#f4eedc', 16, 0.9);
+    for (let k = 0; k < 5; k++) spark(LANE(c), FENCE_Y - 10, '#f4eedc', 100);
+  }
+  return true;
+}
 
 export function launchGroup(ref){
   if (!ref || !ref.lit || !G || G.over) return;
@@ -31,12 +44,14 @@ export function launchGroup(ref){
   const inh = type === PAINT ? paintInherit(pulled) : null;   // Paint takes the power of the colour it borrows most, at Paint's own level (owner, 2026-10-09)
   for (const { r, c, cell } of cells){
     const x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;
-    G.projs.push({ x, y, vy:-900, type:inh != null ? inh : type, vis:cell.c, lv, guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false });
+    const ward = __RELEASE__ >= 5 && wardLaunch(r, c);   // from a Protector Gourd's square (Release 5)
+    G.projs.push({ x, y, vy:-900, type:inh != null ? inh : type, vis:cell.c, lv, guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}) });
     grid[r][c] = null;
   }
   for (const { r, c, cell } of pulled){
     const own = cell.c === RAINBOW ? type : cell.c, x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;   // a pulled rainbow flies as Paint
-    G.projs.push({ x, y, vy:-900, type:own, vis:cell.c, lv:lvOf(own), guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false });
+    const ward = __RELEASE__ >= 5 && wardLaunch(r, c);
+    G.projs.push({ x, y, vy:-900, type:own, vis:cell.c, lv:lvOf(own), guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}) });
     grid[r][c] = null;
   }
   if (pulled.length) cells.push(...pulled);
@@ -254,6 +269,7 @@ function hitMonsterNow(pr, m){
   if (wc && G.vfx && G.vfx.filter(v => v.kind === 'costumeHit').length < 5) { G.vfx.push({ kind:'costumeHit', key:wc, x:m.x, y:y - m.r * .3, t:0, dur:0.75 }); SFX.costumeHit(wc); }
   for (let k = 0; k < 10; k++) chunk(pr.x, pr.y, pr.vis === RAINBOW ? '#f0a020' : PTYPES[pr.vis].base, 200);
   let kb = pr.guar || (pr.type === PINK ? Math.random() < KB_PINK[i] : pr.type === BROWN ? Math.random() < BROWN_KB[i] : (pr.type <= 1 || pr.type >= 4) && Math.random() < KB_CHANCE[i]);
+  if (__RELEASE__ >= 5 && pr.ward && !pr.wardHit){ pr.wardHit = true; kb = true; }   // launched from a Protector Gourd's square: its first monster hit always knocks back (bosses and noKnockback stay immune in knockback)
   if (pr.type === 2){
     G.q.chill++;
     if (m.type !== 'boss' && Math.random() < FREEZE_P[i]){ m.frozenT = Math.max(m.frozenT, SLOW_T[i]); addFloat('Frozen!', m.x, y - m.r - 34, '#bfefff', 18, 0.9); SFX.freeze(); }

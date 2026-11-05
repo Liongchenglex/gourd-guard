@@ -10,7 +10,7 @@ import { clamp, shuffle } from './util.js';
 import { persist, save, lvOf } from '../save.js';
 import { addChest } from './loot.js';
 import { banner, updateHud } from '../ui/hud.js';
-import { destroyGourd, gourdSlot } from './gourd.js';
+import { destroyGourd, gourdSlot, gourdsBack } from './gourd.js';
 
 export function newCell(c){ return { c, lit:false, gids:[], bsize:0, ox:0, oy:0, pop:0, grow:1, fly:0, wig:0, t:Math.random() * 10, age:0 }; }
 /** Smallest bunch that lights up for a colour: Turquoise launches at 2, everything else at 3. */
@@ -220,8 +220,9 @@ export function spawnPumpkin(){
 export function spawnSprouts(){
   let placed = 0;
   const n = SPROUT_COUNT + (perkOn('triple') && Math.random() < 0.5 ? 1 : 0);   // 3-20 perk: half the sprouts bring three
+  if (__RELEASE__ >= 5 && G.def && G.def.gourd) placed += gourdsBack();   // a broken Protector Gourd comes back first, in no slot (Release 5)
   for (let i = 0; i < n; i++){
-    if (__RELEASE__ >= 4 && i === 0 && G.def && G.def.gourd){ placed += gourdSlot(spawnPumpkin); continue; }   // the Grave Gourd's slot: it comes back if destroyed, else fills its 3×3, else one normal sprout
+    if (__RELEASE__ >= 4 && i === 0 && G.def && G.def.gourd && (G.gourdKinds || ['grave']).includes('grave')){ placed += gourdSlot(spawnPumpkin); continue; }   // the Grave Gourd's slot: it comes back if destroyed, else fills its 3×3, else one normal sprout
     if (spawnPumpkin()) placed++;
   }
   if (placed) SFX.sprout(placed);   // one soft pop per pumpkin that came in
@@ -275,7 +276,7 @@ export function collectDrop(d){
 }
 
 export function smash(ref){
-  if (__RELEASE__ >= 4 && ref && ref.gourd){ destroyGourd(ref); return; }   // holding the Grave Gourd breaks it and clears the graves around it
+  if (__RELEASE__ >= 4 && ref && ref.gourd){ destroyGourd(ref); return; }   // holding a gourd breaks it (the Grave clears the graves around it)
   const pos = findCell(ref); if (!pos) return;
   grid[pos.r][pos.c] = null; G.smashes = (G.smashes || 0) + 1;   // counted for the 1-1 coach
   const x = LANE(pos.c), y = GY + pos.r * CS + CS / 2;

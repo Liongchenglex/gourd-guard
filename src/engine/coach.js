@@ -13,7 +13,7 @@ import { spawnMonster } from './monsters.js';
 import { scale } from './render/canvas.js';
 import { save, persist } from '../save.js';
 import { $ } from './util.js';
-import { gourdPos } from './gourd.js';
+import { gourdPos, gourdsOn } from './gourd.js';
 
 const TIPS = {
   slide: 'Drag a pumpkin to slide it. Line up <b>3 of the same colour</b> to make a bunch.',
@@ -47,9 +47,9 @@ export function startCoach(){
 
 /** Gourd script start: a clear patch with only the gourd on it (the level's graves stay), so the fill and the hold read on their own. */
 function startGourdCoach(){
-  const gp = gourdPos(), gourd = grid[gp.r][gp.c];
+  const gp = gourdPos(), gourd = grid[gp.r][gp.c], all = gourdsOn();   // every gourd stays (Release 5 may stand a second one)
   setGrid(Array.from({ length:ROWS }, () => Array(COLS).fill(null)));
-  grid[gp.r][gp.c] = gourd;
+  for (const o of all) grid[o.r][o.c] = o.cell;
   G.coach = { kind:'gourd', step:'gslide', t:0, stepT:0, move:null, ref:gourd, from:gp };
   findGourdMove(); tip('gslide');
 }

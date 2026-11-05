@@ -31,7 +31,8 @@ import { startCoach, coachHolds, coachUpdate } from './coach.js';
 import { lightFire, lightRandomFires, fireAhead, burnPumpkin, updateFires } from './fire.js';
 import { updateCrowDives } from './nightmare.js';
 import { prebakeFire } from './render/fire.js';
-import { placeGourdAtStart, gourdSnapshot, restoreGourd } from './gourd.js';
+import { placeGourdsAtStart, gourdSnapshot, restoreGourd } from './gourd.js';
+import { GOURDS } from '../data/gourds.js';
 import { prebakeGourd } from './render/gourd.js';
 
 // ---------- Flow ----------
@@ -59,7 +60,7 @@ export function makePreview(n){
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def.pattern, def.graves);
   if (def.gravesLayout) applyGravesLayout(def.gravesLayout);
-  if (__RELEASE__ >= 4 && def.gourd) placeGourdAtStart();   // the preview shows the Grave Gourd where the night starts it
+  if (__RELEASE__ >= 4 && def.gourd) placeGourdsAtStart(['grave']);   // the preview shows the Grave Gourd where the night starts it
   initWalls();
   resolveMatches();
   setGest(null);
@@ -75,7 +76,7 @@ export function beginNight(n){
   const fireSource = __RELEASE__ >= 4 && (hasFire(def) || def.boss === 'strawlord' || def.boss2 === 'strawlord' || def.boss === 'fallengravekeeper' || def.pool.some(([k]) => k === 'rooster'));   // fire tiles, or something that lights them (the rooster's death, the Strawlord)
   if ((def.pool.some(([k]) => iceKind(k)) || fireSource) && !must.some(m => m.t === 2))   // Ice is locked in wherever Ice-only monsters or fire can be
     must.push({ t:2, why: __RELEASE__ >= 4 && (fireSource || def.pool.some(([k]) => iceKind(k) && k !== 'firemummy')) ? 'Only Ice puts out fire and kills burning monsters' : 'Flaming mummies only die to Ice' });
-  if (av.length > 5 || (__RELEASE__ >= 4 && def.gourd)) openLoadout(av, lo => startGame('story', n, lo), must, __RELEASE__ >= 4 && def.gourd ? ['grave'] : null);   // a gourd night always opens the picker, so its Gourds section is seen (Release 4)
+  if (av.length > 5 || (__RELEASE__ >= 4 && def.gourd)) openLoadout(av, (lo, gk) => startGame('story', n, lo, gk), must, __RELEASE__ >= 4 && def.gourd ? ['grave'] : null);   // a gourd night always opens the picker, so its Gourds section is seen (Release 4)
   else startGame('story', n, av);
 }
 
@@ -96,7 +97,16 @@ export function bakeKeys(def){
     ...(__RELEASE__ >= 3 && def.boss === 'hollowking' ? ['hollowking|' + TYPES.hollowking.forms[0]] : []), 'ghoul'];
 }
 
-export function startGame(mode, n, loadout){
+/** The gourds a night starts with (Release 4; a list since Release 5): none unless the level has `gourd:true`; there, the picked kinds in slot
+ *  order, or ['grave'] when none are passed (Release 4's picker hands over one key, a string). Unknown kinds are dropped (a lower build has no
+ *  Protector); two of one kind are folded into one for now (spec Part 6: a one-line rule change here when the owner allows it). */
+function nightGourds(def, gourds){
+  if (!def || !def.gourd) return [];
+  const list = gourds == null ? ['grave'] : typeof gourds === 'string' ? [gourds] : gourds;
+  return [...new Set(list.filter(k => GOURDS[k]))].slice(0, 2);
+}
+
+export function startGame(mode, n, loadout, gourds){
   if (__RELEASE__ >= 3) forgetForms();   // the Hollow King's spent forms do not outlive their night
   ensureAudio();
   const def = mode === 'story' ? levelFor(n) : null;
@@ -109,7 +119,7 @@ export function startGame(mode, n, loadout){
     t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], glue:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
     loot:{ chests:0, seeds:0 }, chestDropped:false, continued:false, sackT:0, jukebox:null, jukeboxDone:false, jbNext:0,
-    ...(__RELEASE__ >= 4 ? { fires:[], fmNext:0, fmT:-99, fireBurst:0, fireBurstT:0, fireTrickleT:null, burstMinion:false, gourdDue:false, crowDives:[] } : {}),   // fire tiles and fire marks (src/engine/fire.js); gourdDue: a destroyed Grave Gourd waits for the next sprout tick (src/engine/gourd.js)
+    ...(__RELEASE__ >= 4 ? { fires:[], fmNext:0, fmT:-99, fireBurst:0, fireBurstT:0, fireTrickleT:null, burstMinion:false, gourdDue:false, gourdDueOf:{}, gourdKinds:nightGourds(def, gourds), crowDives:[] } : {}),   // fire tiles and fire marks (src/engine/fire.js); the night's gourds (slot order) and which are due back: gourdDue the Grave Gourd's flag, gourdDueOf the other kinds' (src/engine/gourd.js)
   });
   if (mode === 'story' && takeSack()) G.sackT = SACK.spawnAt;
   if (def) prebake(bakeKeys(def));   // bake this level's sprite strips now, not on first sight
@@ -120,7 +130,7 @@ export function startGame(mode, n, loadout){
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def ? def.pattern : Math.floor(Math.random() * PATTERNS.length), def ? def.graves : 2);
   if (def && def.gravesLayout) applyGravesLayout(def.gravesLayout);   // after the board exists: explicit graves replace pumpkins
-  if (__RELEASE__ >= 4 && def && def.gourd){ prebakeGourd(); placeGourdAtStart(); }   // the Grave Gourd: centre cell, or the nearest without a grave (after the graves)
+  if (__RELEASE__ >= 4 && def && def.gourd){ prebakeGourd(); placeGourdsAtStart(G.gourdKinds); }   // the night's gourds: one in the centre cell, two at (2, 1) and (2, 5), or the nearest without a grave (after the graves)
   initWalls();
   resolveMatches();
   startCoach();   // first 1-1 only: a hand shows the slide and the flick (owner)
@@ -517,16 +527,16 @@ export function continueState(){
   return { n:g.n, loadout:g.loadout.slice(), q:JSON.parse(JSON.stringify(g.q)), remaining, bossSpawned:g.bossSpawned, bossDead:g.bossDead, bossHp:bosses, bossKinds:g.def.boss2 ? living.map(m => m.kind) : null,
     hk:__RELEASE__ >= 3 ? hkState() : null,   // the Hollow King's phase and his standing form (Release 3)
     jukebox:{ next:g.jbNext || 0, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null },   // next: drop points already used (one per jukebox dropped)   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
-    ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0, bossPhase2:living.map(m => !!m.phase2), gourd:g.def.gourd ? gourdSnapshot() : null } : {}) };   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and the Grave Gourd's cell or that it is due back (Release 4)
+    ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0, bossPhase2:living.map(m => !!m.phase2), gourd:g.def.gourd ? gourdSnapshot() : null } : {}) };   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
 export function continueNight(c){
-  startGame('story', c.n, c.loadout);
+  startGame('story', c.n, c.loadout, __RELEASE__ >= 4 && Array.isArray(c.gourd) ? c.gourd.map(s => s.kind) : undefined);   // the same gourds as the lost night
   G.continued = true; if (c.q) G.q = c.q;   // quest progress carries into the continued night
   G.spawned = G.resolved = Math.max(0, G.def.total - c.remaining);   // the progress bar picks up where the lost night left off
   if (__RELEASE__ >= 3) G.hkRestore = c.hk || null;
   if (__RELEASE__ >= 4 && c.fires){ G.fires = []; for (const [lane, p] of c.fires) lightFire(lane, p, true); G.fmNext = c.fmNext || 0; }   // the same tiles burn (not the level's start fires again)
-  if (__RELEASE__ >= 4 && c.gourd) restoreGourd(c.gourd);   // the gourd stands where it stood, or comes back on the first sprout
+  if (__RELEASE__ >= 4 && c.gourd) restoreGourd(c.gourd);   // each gourd stands where it stood, or comes back on the first sprout
   if (__RELEASE__ >= 4 && c.bossSpawned && c.bossPhase2) G.bossPhase2 = c.bossPhase2.slice();   // spawner.js puts each returning boss back in its phase
   if (c.bossSpawned){ G.bossDead = c.bossDead; G.bossHp = c.bossHp.slice(); G.bossKinds = c.bossKinds ? c.bossKinds.slice() : null; if (c.bossDead) G.bossSpawned = true; }
   if (c.jukebox){

@@ -32,7 +32,7 @@ import { lightFire, lightRandomFires, fireAhead, burnPumpkin, updateFires } from
 import { updateCrowDives } from './nightmare.js';
 import { prebakeFire } from './render/fire.js';
 import { placeGourdsAtStart, gourdSnapshot, restoreGourd } from './gourd.js';
-import { GOURDS, GOURD_SLOTS } from '../data/gourds.js';
+import { GOURDS, GOURD_SLOTS, ALLOW_SAME_GOURD } from '../data/gourds.js';
 import { prebakeGourd } from './render/gourd.js';
 import { ROTTEN, ROT_FX, clearHitFlags, rotSnapshot, restoreRot } from './rot.js';
 import { prebakeRot } from './render/rot.js';
@@ -113,11 +113,12 @@ export function offeredGourds(def){
 /** The gourds a night starts with (Release 4; a list since Release 5): none unless the level has `gourd:true`; there, the picked kinds in slot
  *  order (an empty list: none, the player left both slots empty), or the night's offer when none are passed (Release 4's nights: ['grave']).
  *  One key, a string, is one kind (Release 4's picker handed one over). Unknown kinds are dropped (a lower build has no Protector); two of one
- *  kind are folded into one for now (spec Part 6: a one-line rule change here, with ALLOW_SAME_GOURD in data/gourds.js, when the owner allows it). */
+ *  kind are folded into one unless ALLOW_SAME_GOURD (data/gourds.js, false for now: owner) allows it. */
 function nightGourds(def, gourds){
   if (!def || !def.gourd) return [];
   const list = gourds == null ? offeredGourds(def) : typeof gourds === 'string' ? [gourds] : gourds;
-  return [...new Set(list.filter(k => GOURDS[k]))].slice(0, GOURD_SLOTS);
+  const known = list.filter(k => GOURDS[k]);
+  return (ALLOW_SAME_GOURD ? known : [...new Set(known)]).slice(0, GOURD_SLOTS);
 }
 
 export function startGame(mode, n, loadout, gourds){

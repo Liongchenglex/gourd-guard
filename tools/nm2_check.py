@@ -849,6 +849,68 @@ def check_protector_coach(browser, url):
 CHECKS.update({'check_picker_two_gourds': check_picker_two_gourds, 'check_picker_r4_same': check_picker_r4_same, 'check_protector_coach': check_protector_coach})
 
 
+def check_same_gourd_flag(browser, url):
+    """Fix round 1: ALLOW_SAME_GOURD (data/gourds.js) is a one-line switch. Flipped on at runtime (setAllowSameGourd): two Graves start on
+    (2, 1) and (2, 5), both fill, crows spare both squares; breaking one leaves the other and the broken one alone comes back on the next
+    sprout tick; two Protectors both protect; a continued night keeps both; the picker opens two slots for a one-kind offer. Then off again."""
+    if not R5: return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const g = window.__gg; g.save.seenGourdCoach = true; g.save.seenProtectorCoach = true; g.save.gourds = { grave:true, protector:true }; }")
+    ok(page.evaluate("() => { window.__gg.startGame('story', 1105, [0, 1, 2, 3, 4], ['grave', 'grave']); return window.__gg.G.gourdKinds; }") == ['grave'], 'flag off: two Graves fold into one')
+    page.evaluate("() => window.__gg.setAllowSameGourd(true)")
+    page.evaluate("(lo) => window.__gg.startGame('story', 1105, lo, ['grave', 'grave'])", [0, 1, 2, 3, 4]); time.sleep(0.3); page.evaluate(GQ)
+    ok(page.evaluate("() => window.__gg.G.gourdKinds") == ['grave', 'grave'] and page.evaluate(GON) == [['grave', 2, 1], ['grave', 2, 5]], f'flag on: two Graves start on (2, 1) and (2, 5) {page.evaluate(GON)}')
+    ok(page.evaluate("() => window.__gg.gourdsOn().map(o => o.id)") == ['grave', 'grave#2'], 'each has its own id')
+    sq = page.evaluate("() => { const g = window.__gg; return [g.inGraveSquare(1, 0), g.inGraveSquare(3, 6), g.inGraveSquare(2, 3)]; }")
+    ok(sq == [True, True, False], f'crows spare both Graves\' squares (inGraveSquare) {sq}')
+    ok(page.evaluate("() => window.__gg.gourdFill()") == 16, 'the fill sprouts around both Graves (8 + 8 cells)')
+    page.evaluate("() => { const g = window.__gg; g.grid.forEach(row => row.forEach((c, i) => { if (!(c && c.gourd)) row[i] = null; })); g.destroyGourd(g.grid[2][5]); }")
+    r = page.evaluate("() => { const g = window.__gg; return [g.gourdsOn().map(o => [o.id, o.r, o.c]), g.G.gourdDue, !!g.G.gourdDueOf['grave#2']]; }")
+    ok(r == [[['grave', 2, 1]], False, True], f'breaking the second leaves the first standing; only the second is due {r}')
+    page.evaluate("() => window.__gg.spawnSprouts()")
+    r = page.evaluate("() => { const g = window.__gg; return [g.gourdsOn().map(o => o.id), g.gourdPos('grave'), g.G.gourdDue, !!g.G.gourdDueOf['grave#2']]; }")
+    ok(r[0] == ['grave', 'grave#2'] or r[0] == ['grave#2', 'grave'], f'the next sprout tick brings the broken one back {r}')
+    ok(r[1] == {'r': 2, 'c': 1} and r[2:] == [False, False], f"the other never moved (gourdPos('grave') is the night's first Grave); nothing is due {r}")
+    page.evaluate("() => { const g = window.__gg, o = g.gourdsOn().find(o => o.id === 'grave'); g.destroyGourd(o.cell); }")
+    r = page.evaluate("() => [window.__gg.gourdsOn().map(o => o.id), window.__gg.G.gourdDue]")
+    ok(r == [['grave#2'], True], f'breaking the first: only it is due (G.gourdDue, as in Release 4) {r}')
+    # a continued night keeps both: one standing, one due
+    snap = page.evaluate("() => window.__gg.gourdSnapshot()")
+    ok(len(snap) == 2 and snap[0]['due'] is True and snap[1]['due'] is False, f'the snapshot lists both, the first due {snap}')
+    page.evaluate("() => { const g = window.__gg, c = g.continueState(); g.continueNight(c); }"); time.sleep(0.3)
+    r = page.evaluate("() => { const g = window.__gg; return [g.G.gourdKinds, g.gourdsOn().map(o => o.id), g.G.gourdDue, !!g.G.gourdDueOf['grave#2']]; }")
+    ok(r == [['grave', 'grave'], ['grave#2'], True, False], f'continued: both kinds, the second standing, the first still due {r}')
+    page.evaluate("() => { window.__gg.G.sproutT = -999; window.__gg.spawnSprouts(); }")
+    ok(sorted(page.evaluate("() => window.__gg.gourdsOn().map(o => o.id)")) == ['grave', 'grave#2'], 'and the first sprout brings the first back')
+    # two Protectors both protect
+    page.evaluate("(lo) => window.__gg.startGame('story', 1105, lo, ['protector', 'protector'])", [0, 1, 2, 3, 4]); time.sleep(0.3); page.evaluate(GQ)
+    ok(page.evaluate(GON) == [['protector', 2, 1], ['protector', 2, 5]], f'two Protectors start on (2, 1) and (2, 5) {page.evaluate(GON)}')
+    pr = page.evaluate("() => { const g = window.__gg; g.grid[1][0] = g.newCell(0); g.grid[3][6] = g.newCell(1); g.grid[2][3] = g.newCell(2); return [g.isProtected(1, 0), g.isProtected(3, 6), g.isProtected(2, 3), g.rotCell(1, 0), g.rotCell(3, 6), g.rotCell(2, 3)]; }")
+    ok(pr == [True, True, False, False, False, True], f'both squares are protected and refuse rot; the cell between is not {pr}')
+    page.evaluate("() => { const g = window.__gg; g.destroyGourd(g.grid[2][1]); }")
+    r = page.evaluate("() => { const g = window.__gg; return [g.gourdsOn().map(o => o.id), g.isProtected(1, 0), g.isProtected(3, 6), !!g.G.gourdDueOf.protector, !!g.G.gourdDueOf['protector#2']]; }")
+    ok(r == [['protector#2'], False, True, True, False], f'breaking one: its square is open, the other still protects; only the broken one is due {r}')
+    page.evaluate("() => window.__gg.spawnSprouts()")
+    ok(sorted(page.evaluate("() => window.__gg.gourdsOn().map(o => o.id)")) == ['protector', 'protector#2'], 'and it comes back on the next sprout tick')
+    # the picker: a night offering one kind opens two slots
+    u = hollow_picker(page, ['grave', 'protector'], night=1101)
+    ok(u['slots'] == ['grave', None] and u['tiles'] == [['grave', 'true', False]] and u['heading'] == 'Gourds · pick up to 2', f'N2-1 (Grave only) opens two slots with the flag on {u["slots"]} {u["heading"]}')
+    page.click('#loGourds .pick[data-gourd="grave"]'); time.sleep(0.15)
+    ok(page.evaluate(GPICK)['slots'] == ['grave', 'grave'], 'tapping the picked Grave fills the free slot with a second')
+    page.click('#loGourds .pick[data-gourd="grave"]'); time.sleep(0.15)
+    ok(page.evaluate(GPICK)['slots'] == ['grave', None], 'with both full, a tap drops one')
+    page.click('#loGourds .pick[data-gourd="grave"]'); time.sleep(0.15); page.click('#bLoGo'); time.sleep(0.5)
+    ok(page.evaluate("() => [window.__gg.G.gourdKinds, window.__gg.gourdsOn().map(o => [o.kind, o.r, o.c])]") == [['grave', 'grave'], [['grave', 2, 1], ['grave', 2, 5]]], 'Start: two Graves on the patch')
+    page.evaluate("() => window.__gg.setAllowSameGourd(false)")
+    u = hollow_picker(page, ['grave', 'protector'], night=1101)
+    ok(u['slots'] == ['grave'] and u['slotMust'] == [True], f'flag off again: N2-1 is back to one locked slot {u["slots"]}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_same_gourd_flag': check_same_gourd_flag})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

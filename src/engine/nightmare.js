@@ -6,7 +6,7 @@ import { TYPES } from '../data/monsters.js';
 import { SFX } from './audio.js';
 import { addFloat, chunk, ring, spark } from './combat.js';
 import { lightFire } from './fire.js';
-import { gourdPos, isProtected } from './gourd.js';
+import { inGraveSquare, isProtected } from './gourd.js';
 import { findCell, resolveMatches } from './board.js';
 import { igniteNear, mS, mY, spawnMonster, TILE_P } from './monsters.js';
 import { COLS, CS, FENCE_Y, G, GY, LANE, ROWS, gest, graves, grid, walls } from './state.js';
@@ -209,11 +209,11 @@ const FIELD_Y = p => mY({ p });
 /** A crow at the fence picks a pumpkin to take: any on the patch but a gourd, the cells of the Grave Gourd's 3×3 (Release 4) or of a Protector
  *  Gourd's (Release 5, isProtected), one sliding or flying in, the one the player is holding, or one another crow is already diving at. Null when there is none (then it pecks the fence like any monster). */
 function crowTarget(){
-  const gp = gourdPos(), out = [];
+  const out = [];
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
     const cell = grid[r][c];
     if (!cell || cell.gourd || cell.fly > 0 || (gest && gest.ref === cell) || (G.crowDives && G.crowDives.some(d => d.cell === cell))) continue;   // nor one another crow is already diving at
-    if (gp && Math.abs(r - gp.r) <= 1 && Math.abs(c - gp.c) <= 1) continue;   // the Grave Gourd's protection (Release 4)
+    if (inGraveSquare(r, c)) continue;   // the Grave Gourd's protection (Release 4; every Grave's when a night has two)
     if (__RELEASE__ >= 5 && isProtected(r, c)) continue;   // a Protector Gourd's square
     out.push(cell);
   }
@@ -236,8 +236,8 @@ export function updateCrowDives(dt){
   for (const d of G.crowDives){
     d.t -= dt; if (d.t > 0) continue;
     d.done = true;
-    const pos = findCell(d.cell), gp = gourdPos();
-    if (!pos || (gp && Math.abs(pos.r - gp.r) <= 1 && Math.abs(pos.c - gp.c) <= 1) || (__RELEASE__ >= 5 && isProtected(pos.r, pos.c))) continue;
+    const pos = findCell(d.cell);
+    if (!pos || inGraveSquare(pos.r, pos.c) || (__RELEASE__ >= 5 && isProtected(pos.r, pos.c))) continue;
     grid[pos.r][pos.c] = null;
     const x = LANE(pos.c), y = GY + pos.r * CS + CS / 2, cell = d.cell;
     for (let i = 0; i < 12; i++) chunk(x, y, cell.c >= 0 && PTYPES[cell.c] ? PTYPES[cell.c].base : '#f0a020', 200);

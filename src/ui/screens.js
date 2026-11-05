@@ -9,7 +9,7 @@ import { monsterIcon } from '../engine/render/monsters.js';
 import { prebakeAsync } from '../engine/render/anim.js';
 import { hollowking } from '../engine/render/chars/hollowking.js';
 import { SFX, ensureAudio, musicStop, musicSync, musicStart, applyVolumes } from '../engine/audio.js';
-import { bakeKeys, beginEndless, beginNight, continueNight, continueState, makeDemo, makePreview, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow, useEmergency } from '../engine/game.js';
+import { offeredGourds, bakeKeys, beginEndless, beginNight, continueNight, continueState, makeDemo, makePreview, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow, useEmergency } from '../engine/game.js';
 import { bgWorld, buildBg, buildSprites, pumpkinIcon, worldScene, setBg } from '../engine/render/sprites.js';
 import { BOOKS, NIGHTMARE_LORE } from '../data/lore.js';
 import { BESTIARY, COMPANIONS, FALLEN } from '../data/bestiary.js';
@@ -304,7 +304,7 @@ function startPreviewedNight(){
   if (def.gust && !(prev && prev.gust)) cards.push({ key:'wind', icon:'🍂', title:'Wind', text:WIND_INTRO });
   if (__RELEASE__ >= 4 && hasFire(def) && !hasFire(prev)) cards.push({ key:'fire', icon:'🔥', title:'Fire tiles', text:FIRE_INTRO });   // the nightmare track's first fire (N1-1)
   if (__RELEASE__ >= 4 && def.gourd && !(prev && prev.gourd)) cards.push({ key:'gourd', icon:gourdIcon(160), title:'The Grave Gourd', text:GOURD_INTRO });   // its first night (N1-5)
-  if (__RELEASE__ >= 5 && def.gourd && (def.gourds || []).includes('protector') && save.gourds.protector && !(prev && (prev.gourds || []).includes('protector'))) cards.push({ key:'gourd:protector', icon:gourdIcon(160, 'protector'), title:'The Protector Gourd', text:PROTECTOR_INTRO });   // the first night that offers it (N2-5), once unlocked
+  if (__RELEASE__ >= 5 && offeredGourds(def).includes('protector') && !(prev && offeredGourds(prev).includes('protector'))) cards.push({ key:'gourd:protector', icon:gourdIcon(160, 'protector'), title:'The Protector Gourd', text:PROTECTOR_INTRO });   // the first night that offers it (N2-5), once unlocked
   for (const t of def.intro) if (!VARIANTS[t]) cards.push({ key:'m:' + t, icon:monsterIcon(t, 160), title:`New monster: ${MNAME[t] || t}`, text:MINTRO[t] || '' });   // returning variants get no card (owner)
   for (const k of [...new Set([def.boss, def.boss2].filter(Boolean))]) cards.push({ key:`b:${k}:${def.bossForm}`, icon:monsterIcon(k, 200, def.bossForm), title:def.bossForm === 2 ? `${BOSS_NAMES[k]}, full form` : `Boss: ${BOSS_NAMES[k]}`, text:BOSS_INTRO[k][def.bossForm] });
   introQueue = cards.filter(c => !save.seenIntro[c.key]);
@@ -610,11 +610,12 @@ function backToLoadout(){
  *    tapping the tile or the slot shows its card and never empties it.
  *  - More offered (N2-5 on): "Gourds · pick up to 2", "Your gourds" over GOURD_SLOTS slots, every offered gourd picked to start. A tile
  *    toggles its gourd (into the first free slot, the rest in the order picked); a tapped slot empties it. Start never waits for a gourd:
- *    either or both slots may be left empty (owner: "up to 2"). ALLOW_SAME_GOURD (data/gourds.js) would let a tile fill a second slot. */
+ *    either or both slots may be left empty (owner: "up to 2"). With ALLOW_SAME_GOURD (data/gourds.js) every gourd night opens GOURD_SLOTS
+ *    slots and a picked tile fills the free one too (then a tap on it, with both full, drops one). */
 function renderGourds(keys){
   loadoutGourds = keys.filter(k => GOURDS[k]);
-  const one = loadoutGourds.length === 1;
-  loadoutGourdSlots = !loadoutGourds.length ? 0 : one ? 1 : Math.min(GOURD_SLOTS, ALLOW_SAME_GOURD ? GOURD_SLOTS : loadoutGourds.length);
+  loadoutGourdSlots = !loadoutGourds.length ? 0 : ALLOW_SAME_GOURD ? GOURD_SLOTS : Math.min(GOURD_SLOTS, loadoutGourds.length);   // one kind offered: one slot, unless two of a kind are allowed
+  const one = loadoutGourdSlots === 1;
   loadoutGourdSel = loadoutGourds.slice(0, loadoutGourdSlots);   // both start picked (spec: the picker preselects every gourd it offers)
   $('#ovLoadout').classList.toggle('gNight', loadoutGourds.length > 0);
   $('#ovLoadout').classList.toggle('g2', loadoutGourdSlots > 1);

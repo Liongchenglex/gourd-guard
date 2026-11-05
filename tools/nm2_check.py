@@ -498,6 +498,186 @@ CHECKS.update({'check_rot_cell': check_rot_cell, 'check_rot_bunch': check_rot_bu
                'check_protector_break_rainbow': check_protector_break_rainbow, 'check_rot_continue': check_rot_continue})
 
 
+# ---------- Task 4: poison fog on the patch ----------
+# A quiet N2-1 with every cell a pumpkin (a 2-colour checker: no bunch of three; N2-1's gourd is cleared), nothing spawning or sprouting, no fog scheduled.
+PQ = """() => { const g = window.__gg, G = g.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.projs.length = 0; G.drops.length = 0;
+  if (G.fires) G.fires.length = 0; G.fmNext = 99; G.fireTrickleT = 1e9; g.graves.forEach(r => r.fill(false)); G.def.poison = null; G.poison.t = 1e9; G.poison.warn = G.poison.on = null;
+  g.grid.forEach(row => row.fill(null));
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) g.grid[r][c] = g.newCell((r + c) % 2); g.resolveMatches(); }"""
+ROTTEN_CELLS = "() => { const g = window.__gg, out = []; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) if (g.isRotten(g.grid[r][c])) out.push([r, c]); return out; }"
+
+
+def poison_page(quiet=True):
+    def go(browser, url):
+        page, errors = open_page(browser, url)
+        nm2_start(page, 1); time.sleep(0.3)
+        if quiet: page.evaluate(PQ)
+        return page, errors
+    return go
+
+
+def check_poison_cycle(browser, url):
+    if not R5: return
+    page, errors = poison_page()(browser, url)
+    page.evaluate("() => { const G = window.__gg.G; G.def.poison = { every:4, lines:[1, 1], dirs:['row'], dur:3 }; G.poison.t = 4; }")
+    t0 = time.time(); warn = on = off = None; row = None; seen = []; dirs = None
+    while time.time() - t0 < 9:
+        s = page.evaluate("() => { const p = window.__gg.G.poison; return [!!p.warn, p.on ? p.on.idx.slice() : null, p.on ? p.on.dir : null]; }")
+        now = time.time() - t0
+        if s[0] and warn is None: warn = now
+        if s[1] and on is None: on = now; row = s[1]; seen = page.evaluate(ROTTEN_CELLS); dirs = s[2]
+        if on is not None and not s[1] and off is None: off = now
+        if off is not None: break
+        time.sleep(0.04)
+    ok(warn is not None and abs(warn - 2.5) < 0.45, f'the arrows show at 2.5 s ({warn})')
+    ok(on is not None and abs(on - 4.0) < 0.45, f'the fog lies from 4 s ({on})')
+    ok(off is not None and 6.6 < off < 7.5, f'the fog is gone by 7 s ({off})')
+    ok(row is not None and len(row) == 1 and dirs == 'row', f'one row, as dirs and lines say {row} {dirs}')
+    if row:
+        ok(all(r == row[0] for r, _ in seen), f'the moment it settles only that row is rotten {seen}')
+        after = page.evaluate(ROTTEN_CELLS)
+        ok(sorted(after) == [[row[0], c] for c in range(7)], f'every pumpkin of the row is rotten and no other {after}')
+    ok(page.evaluate("() => window.__gg.G.poison.on === null && window.__gg.G.poison.warn === null"), 'warning and fog both cleared')
+    # after it lifts the clock runs again from `every`: no new warning in the first second
+    page.evaluate("() => { window.__gg.G.def.poison = null; }")
+    time.sleep(0.3)
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_poison_lines(browser, url):
+    """lines [2, 2] with both directions: two distinct rows or columns; fogged(r, c) reads the lying fog; poisonNow refuses while one runs."""
+    if not R5: return
+    page, errors = poison_page()(browser, url)
+    seen = set()
+    for _ in range(12):
+        page.evaluate("() => { const G = window.__gg.G; G.poison.on = null; G.poison.warn = null; G.def.poison = { every:99, lines:[2, 2], dirs:['row', 'col'], dur:3 }; }")
+        page.evaluate("() => window.__gg.poisonNow()")
+        w = page.evaluate("() => { const w = window.__gg.G.poison.warn; return [w.dir, w.idx, w.t]; }")
+        seen.add(w[0])
+        ok(len(w[1]) == 2 and w[1][0] != w[1][1] and all(0 <= i < (5 if w[0] == 'row' else 7) for i in w[1]), f'two distinct in-range {w[0]}s {w[1]}')
+    ok(seen == {'row', 'col'}, f'both directions turn up over 12 fogs {seen}')
+    ok(page.evaluate("() => window.__gg.poisonNow()") is False, 'poisonNow is refused while a warning runs')
+    page.evaluate("() => { const p = window.__gg.G.poison; p.warn = null; p.on = { dir:'col', idx:[2, 5], flow:1, t:3, dur:3, age:0 }; }")
+    f = page.evaluate("() => { const g = window.__gg; return [g.fogged(0, 2), g.fogged(4, 5), g.fogged(0, 3), g.fogged(2, 0)]; }")
+    ok(f == [True, True, False, False], f'fogged() reads the columns under the fog {f}')
+    ok(page.evaluate("() => window.__gg.poisonNow()") is False, 'poisonNow is refused while the fog lies')
+    page.evaluate("() => { const p = window.__gg.G.poison; p.on = null; }")
+    ok(page.evaluate("() => window.__gg.fogged(0, 2)") is False, 'no fog, nothing fogged')
+    # a custom line set, level dur used
+    page.evaluate("() => { window.__gg.G.def.poison = { every:99, lines:[1, 1], dirs:['row'], dur:2 }; }")
+    ok(page.evaluate("() => window.__gg.poisonNow({ dir:'col', idx:[0, 6] })") is True, 'poisonNow takes a given line set')
+    ok(page.evaluate("() => { const w = window.__gg.G.poison.warn; return [w.dir, w.idx, w.dur, w.t]; }") == ['col', [0, 6], 2, 1.5], 'with the 1.5 s warning and the level\'s dur')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_poison_protect(browser, url):
+    if not R5: return
+    page, errors = open_page(browser, url)
+    two_gourds(page)
+    page.evaluate(FULL)
+    page.evaluate("() => { const g = window.__gg; g.G.poison.t = 1e9; g.poisonNow({ dir:'row', idx:[2] }); }")
+    time.sleep(2.0)
+    r = page.evaluate(ROTTEN_CELLS)
+    ok(r == [[2, 0], [2, 2], [2, 3]], f'a row through the Protector: only (2,0), (2,2), (2,3) rot; the Grave Gourd, the Protector and its square do not {r}')
+    ok(page.evaluate("() => window.__gg.gourdsOn().map(o => o.kind)") == ['grave', 'protector'], 'both gourds stand')
+    page.evaluate("() => { const g = window.__gg, p = g.G.poison; p.on = null; g.poisonNow({ dir:'col', idx:[5] }); }")
+    time.sleep(2.0)
+    r = page.evaluate(ROTTEN_CELLS)
+    ok(r == [[0, 5], [2, 0], [2, 2], [2, 3], [4, 5]], f'a column through it: rows 0 and 4 rot, (1,5) (2,5) (3,5) do not {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_poison_landing(browser, url):
+    if not R5: return
+    page, errors = poison_page()(browser, url)
+    # slide: (2,2) up into the fogged row 1 (a grave on (0,2) stops it there)
+    page.evaluate("""() => { const g = window.__gg; g.grid[1][2] = null; g.graves[0][2] = true; g.grid[0][2] = null; g.resolveMatches();
+      g.poisonNow({ dir:'row', idx:[1] }); }""")
+    time.sleep(1.8)
+    ok(page.evaluate("() => window.__gg.fogged(1, 3)"), 'the fog lies on row 1')
+    r = page.evaluate("""async () => { const g = window.__gg, cell = g.grid[2][2]; window.__x = cell; g.slideOne(cell, 'up');
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      return [g.grid[1][2] === cell, g.isRotten(cell), Math.abs(cell.ox) + Math.abs(cell.oy) > 6]; }""")
+    ok(r == [True, False, True], f'mid-slide into the fog it is not rotten yet {r}')
+    time.sleep(0.8)
+    ok(page.evaluate("() => window.__gg.isRotten(window.__x) && window.__gg.grid[1][2] === window.__x"), 'once it lands it is rotten')
+    # sprout: the only empty cell is in the fogged row
+    page.evaluate("() => { const g = window.__gg; g.grid[1][5] = null; g.resolveMatches(); g.grid[1][5] = null; window.__n = g.spawnSprouts(); }")
+    time.sleep(0.3)
+    ok(page.evaluate("() => window.__n === true && window.__gg.isRotten(window.__gg.grid[1][5])"), 'a pumpkin sprouting into the fog is rotten')
+    # drop: collected into the fogged cell flies in (not rotten while flying), rotten on landing
+    page.evaluate("() => { window.__gg.grid[1][5] = null; }")
+    r = page.evaluate("""async () => { const g = window.__gg; g.collectDrop({ x:g.LANE(5), y:640, c:0, t:1, life:7, ph:0, dead:false });
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const cell = g.grid[1][5]; return [!!cell, cell && cell.fly > 0, cell && g.isRotten(cell)]; }""")
+    ok(r == [True, True, False], f'a dropped pumpkin in flight is not rotten {r}')
+    time.sleep(1.0)
+    ok(page.evaluate("() => window.__gg.isRotten(window.__gg.grid[1][5])"), 'it is rotten once it has landed')
+    # and a pumpkin outside the fog stays clean
+    ok(page.evaluate("() => !window.__gg.isRotten(window.__gg.grid[3][3]) && !window.__gg.isRotten(window.__gg.grid[2][5]) && !window.__gg.isRotten(window.__gg.grid[0][5])"), 'cells outside the fogged row are untouched')
+    # the fog lifts: a pumpkin sliding in afterwards is not rotted
+    page.evaluate("() => { window.__gg.G.poison.on = null; const g = window.__gg; g.grid[1][4] = null; g.resolveMatches(); }")
+    page.evaluate("() => { const g = window.__gg; g.slideOne(g.grid[3][4], 'up'); }")
+    time.sleep(0.8)
+    ok(page.evaluate("() => !window.__gg.isRotten(window.__gg.grid[1][4]) && window.__gg.grid[1][4] !== null"), 'with the fog gone, a landing pumpkin stays clean')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_poison_continue(browser, url):
+    if not R5: return
+    page, errors = poison_page()(browser, url)
+    page.evaluate("() => { const G = window.__gg.G; G.def.poison = { every:30, lines:[1, 1], dirs:['row'], dur:3 }; G.poison.t = 17; }")
+    page.evaluate("() => { const g = window.__gg; g.continueNight(g.continueState()); }"); time.sleep(0.3)
+    t = page.evaluate("() => window.__gg.G.poison.t")
+    ok(17 - 0.8 < t <= 17, f'G.poison.t survives a continue ({t})')
+    # a fog lying at the loss is not lying after it (the rot it made stays)
+    nm2_start(page, 1); time.sleep(0.3); page.evaluate(PQ)
+    page.evaluate("() => { const g = window.__gg, G = g.G; G.def.poison = { every:30, lines:[1, 1], dirs:['row'], dur:30 }; G.poison.t = 1e9; g.poisonNow({ dir:'row', idx:[1] }); }")
+    time.sleep(1.9)
+    ok(page.evaluate("() => !!window.__gg.G.poison.on"), 'the fog is lying before the loss')
+    page.evaluate("() => { const g = window.__gg; window.__rot = g.grid.flat().filter(c => g.isRotten(c)).length; window.__snap = g.continueState().poison; g.continueNight(g.continueState()); }"); time.sleep(0.3)
+    r = page.evaluate("() => { const p = window.__gg.G.poison; return [p.on, p.warn, window.__snap, window.__gg.grid.flat().filter(c => window.__gg.isRotten(c)).length]; }")
+    ok(r[0] is None and r[1] is None, f'no fog and no warning after the continue {r[:2]}')
+    ok(r[2] == 30 and r[3] == page.evaluate("() => window.__rot"), f'the clock restarts at every ({r[2]}) and the rot it made stays ({r[3]})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_poison_budget(browser, url):
+    """Extends check_fire_budget: a fog line lying on the patch, or its warning arrows, adds at most 4 drawImage calls a frame and no fill or stroke."""
+    if not R5: return
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script("""(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+      for (const k of ['drawImage', 'fill', 'stroke', 'fillRect', 'fillText', 'strokeText', 'createRadialGradient', 'createLinearGradient']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; } })();""")
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    nm2_start(page, 1); time.sleep(3.2)
+    page.evaluate(PQ); page.evaluate("() => { const g = window.__gg; for (let c = 0; c < 7; c++) g.grid[2][c] = null; for (let r = 0; r < 5; r++) g.grid[r][3] = null; g.resolveMatches(); }"); time.sleep(1.2)   # the lines are empty: nothing rots, so the frame differs only by the fog
+    count = "() => new Promise(res => { window.__gg.G.idle = -1e9; window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 30) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 30, (c.fill || 0) / 30, (c.stroke || 0) / 30, ((c.fillRect || 0) + (c.fillText || 0) + (c.strokeText || 0) + (c.createRadialGradient || 0) + (c.createLinearGradient || 0)) / 30]); } }; requestAnimationFrame(tick); })"
+    base = page.evaluate(count)
+    page.evaluate("() => { window.__gg.G.def.poison = null; window.__gg.G.poison.t = 1e9; window.__gg.G.poison.warn = window.__gg.G.poison.on = null; window.__gg.poisonNow({ dir:'row', idx:[2] }); window.__gg.G.floats.length = 0; }")
+    time.sleep(0.4)
+    warn = page.evaluate(count)
+    page.evaluate("() => { const p = window.__gg.G.poison; p.warn = null; p.on = { dir:'col', idx:[3], flow:1, t:60, dur:60, age:5 }; }")
+    time.sleep(0.4)
+    fog = page.evaluate(count)
+    ok(warn[0] - base[0] <= 4.01, f'the warning arrows add at most 4 drawImage a frame ({base[0]:.1f} -> {warn[0]:.1f})')
+    ok(fog[0] - base[0] <= 4.01, f'a fog line adds at most 4 drawImage a frame ({base[0]:.1f} -> {fog[0]:.1f})')
+    for name, v in (('warning', warn), ('fog', fog)):
+        ok(v[1] <= base[1] + 0.01 and v[2] <= base[2] + 0.01 and v[3] <= base[3] + 0.01, f'the {name} adds no fill, stroke, rect, text or gradient (fill {base[1]:.1f} -> {v[1]:.1f}, stroke {base[2]:.1f} -> {v[2]:.1f}, other {base[3]:.1f} -> {v[3]:.1f})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_poison_cycle': check_poison_cycle, 'check_poison_lines': check_poison_lines, 'check_poison_protect': check_poison_protect,
+               'check_poison_landing': check_poison_landing, 'check_poison_continue': check_poison_continue, 'check_poison_budget': check_poison_budget})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

@@ -43,3 +43,7 @@ export const PROTECT_HEAL = 1;
 // and hurts by ROT_DMG only a monster that only rot can hurt (`rotOnly`: a Plague Doctor 2's square, the Lamplighter's rot mood, the Fallen
 // Poltergeist's reaper phase). Per pumpkin, flat: no level or bunch-size multiplier (ROT_DMG is our number, a first guess).
 export const ROT_DMG = 1.5, ROT_HEAL = 0.5;
+
+// Poison fog on the patch (Release 5; spec Part 3): green arrows warn POISON_WARN s before it settles on 1-2 whole rows or columns, where it
+// lies for the level's `poison.dur` s (POISON_DUR when a caller gives none, our number) and rots everything under it.
+export const POISON_WARN = 1.5, POISON_DUR = 3;

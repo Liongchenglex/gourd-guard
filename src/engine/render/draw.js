@@ -21,6 +21,7 @@ import { TAU, clamp, mulberry } from '../util.js';
 import { save } from '../../save.js';
 import { drawCoach } from '../coach.js';
 import { drawFires, drawFireFx } from './fire.js';
+import { drawPoison } from './poison.js';
 import { drawPin, drawFlyingFork } from './pin.js';
 import { drawGourdCell, drawGourdGlow } from './gourd.js';
 import { ROTTEN, ROT_FX } from '../rot.js';
@@ -86,6 +87,7 @@ export function render(){
   if (G.aim === 'repair') drawAimWalls(t);
   updatePaintPull(t);   // marks borrowed pumpkins so drawGrid lights them
   drawGrid(t);
+  if (__RELEASE__ >= 5 && G.poison && (G.poison.warn || G.poison.on)) drawPoison(G.poison, t);   // poison fog and its arrows, over the pumpkins (Release 5)
   if (__RELEASE__ >= 4) drawCrowDives();
   if (__RELEASE__ >= 3 && G.hkTell) drawHkTell(t);
   drawPaintPull(t);

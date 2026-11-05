@@ -364,7 +364,6 @@ export const SFX = {
       case 'mummy:rise': S('dig', 0.45) || noise(0.25, 0.14, 600, 0.6, 0, 250); break;
       case (__RELEASE__ >= 4 ? 'graveriser:dig' : ''): S('dig', 0.55) || noise(0.25, 0.14, 600, 0.6, 0, 250); S('stonebreak', 0.25, { rate: 1.3, delay: 0.25 }); break;   // the spade bites, a headstone grinds up (Release 4)
       case (__RELEASE__ >= 4 ? 'crow:dive' : ''): S('bat', 0.45, { rate: 0.7 }) || noise(0.08, 0.1, 1800, 1.5); S('whoosh', 0.35, { rate: 1.4 }); break;   // a crow swoops into the patch (Release 4)
-      case (__RELEASE__ >= 4 ? 'casketjack:summon' : ''): S('wood', 0.45, { rate: 0.6 }) || noise(0.3, 0.12, 500, 0.6, 0, 200); S('dig', 0.3, { delay: 0.3 }); break;   // the lid creaks open (Release 4)
       case 'rooster:crow': S('scream', 0.3, { rate: 1.7 }) || (tone(700, 0.1, 'sawtooth', 0.06, 1100), tone(1100, 0.28, 'sawtooth', 0.06, 600, 0.1)); S('fire', 0.25, { delay: 0.05 }); break;   // Cinder Rooster (Release 4); no crow in the bank, so a pitched-up scream
       case 'knight:block': S('clank', 0.55) || clang(); break;
     }

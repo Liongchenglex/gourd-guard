@@ -120,7 +120,7 @@ function standsStill(o){
   if (o.type === 'archer') return o.p >= TYPES.archer.hold;
   if (o.type === 'diver') return !o.walker;
   if (o.type === 'sack' || o.type === 'jukebox') return true;
-  if (__RELEASE__ >= 4 && o.type === 'coffin') return true;   // Casket Jack's field coffin lies still: others walk round it
+  if (__RELEASE__ >= 4 && o.type === 'coffin') return true;   // Casket Jack's Fallen Casket lies still: others walk round it
   return false;
 }
 export function aheadLimit(m){
@@ -402,7 +402,6 @@ export function updateMonster(m, dt){
     }
   }
   if (__RELEASE__ >= 4 && m.rush > 0) sp *= TYPES.rooster.rushMul;
-  if (__RELEASE__ >= 4 && m.halt) sp = 0;   // Casket Jack stands still while its lid is open (engine/nightmare.js)
   let np = Math.min(m.p + sp * dt, aheadLimit(m));
   if (m.chewing && !m.chewing.dead) np = Math.min(np, m.chewing.p);   // held at a scarecrow
   if (np > m.p) m.p = np;

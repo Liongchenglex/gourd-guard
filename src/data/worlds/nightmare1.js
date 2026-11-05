@@ -20,7 +20,7 @@ export default __RELEASE__ >= 4 ? [
     pool:[['ghoul', 8], ['bat', 5], ['imp', 5], ['rooster', 6]], intro:['rooster'], fireStart:2, fireMarks:[{ at:0.6, n:4 }],
     quests:[['noTouch', 'ghoul'], ['wallMin', 55]] }),
   // N1-3 Wrapped in Embers: mummies walk into the fire in the middle lanes and come out Flaming (Fire and Ice both locked in). Casket Jack is new here:
-  // it lets a mummy out every few seconds and leaves a coffin with one more. Marks at 40% and 80%.
+  // where it falls it becomes a Fallen Casket that lets a mummy out unless it is smashed in time. Marks at 40% and 80%.
   L({ level: 3, name:'Wrapped in Embers', pattern:2, total:20, interval:3.2, spMul:0.95, spawnGap:1, spawnBurst:0.14,
     pool:[['mummy', 6], ['casketjack', 3], ['firemummy', 3], ['ghoul', 5], ['bat', 4]], intro:['casketjack'], fireLayout:[[2, 0.4], [3, 0.55], [4, 0.4]], fireMarks:[{ at:0.4, n:4 }, { at:0.8, n:4 }],
     quests:[['burn', 8], ['chill', 10]] }),

@@ -2,9 +2,9 @@
 // Ported from docs/archive/nightmare-monsters/coffin/coffin.js (Toy Plastic, docs/ART_BRIEF.md).
 //   casketjack: a walking pumpkin-wood coffin from the farm graveyard: a jack-o'-lantern face carved into the lid, a pumpkin stem and
 //               vine sprouting from the head end, iron hinges, a cross-nailed patch plank and a twine belt, stubby root legs and
-//               vine arms, a rusty spade in one hand. On `summon` (engine/nightmare.js) its lid creaks open with dust and amber light and a
-//               mummy's wrapped hands reach out; the engine steps the mummy out in front of it as the lid slams shut.
-//   coffin:     the field coffin it leaves where it falls: lying in a dirt mound, face glowing through the cracks (`walk`, its idle), and
+//               vine arms, a rusty spade in one hand. (The archive's `summon` clip, its lid creaking open, is still drawn below but not baked:
+//               the owner dropped the walking summon on 2026-11-05.)
+//   coffin:     the Fallen Casket it becomes where it falls: lying in a dirt mound, face glowing through the cracks (`walk`, its idle), and
 //               `open`, where the lid flips up with dust and light and two wrapped hands reach out; the engine pops the mummy out at the end.
 // Drawn around (0,0) in drawing units with the feet at y = 50 (the prop sits on y ≈ 20). Every clip is baked by render/anim.js, so the
 // glows are fine; nothing random per frame (rng(seed) only). Spread into NM1 (nm1.js).
@@ -189,10 +189,10 @@ export function coffinProp(g, P = {}){
 }
 
 // ---------- registry ----------
-// Casket Jack is r 24: dy = 22.8 - 50 x .62 ≈ -8. summon is 10 frames at 12 fps (engine/nightmare.js plays it for 10 / 12 s). The field coffin's
+// Casket Jack is r 24: dy = 22.8 - 50 x .62 ≈ -8. The Fallen Casket's
 // idle is baked as its walk; open is 6 frames at 10 fps (TYPES.coffin.openDur 0.6 s).
 const C = (n, fps, key, once = false) => ({ n, fps, once, pose:t => ({ [key]:t }) });
 export const CASKETJACK = {
-  casketjack: { draw:casketjack, scale:.62, dy:-8, box:{ x:-66, y:-90, w:160, h:150 }, clips:{ walk:C(8, 8, 'walk'), chew:C(4, 7, 'chew'), summon:C(10, 12, 'summon', true) }, still:{} },
+  casketjack: { draw:casketjack, scale:.62, dy:-8, box:{ x:-66, y:-90, w:160, h:150 }, clips:{ walk:C(8, 8, 'walk'), chew:C(4, 7, 'chew') }, still:{} },
   coffin: { draw:coffinProp, scale:.62, dy:0, box:{ x:-66, y:-56, w:132, h:84 }, clips:{ walk:C(4, 5, 'idle'), open:C(6, 10, 'open', true) }, still:{ idle:0 } },
 };

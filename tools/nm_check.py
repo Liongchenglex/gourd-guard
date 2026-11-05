@@ -27,7 +27,7 @@ def story_done(upto=20):
 # ---------- Task 1: the track, the book page and the release checks ----------
 def check_r4_absent(browser, url):
     js = bundle_js()
-    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord', 'Grave Gourd', 'e3a43c', 'around your gourd', 'Grave Riser', 'Your gourd', 'and 1 gourd', 'Casket Jack', 'Field Coffin'):
+    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord', 'Grave Gourd', 'e3a43c', 'around your gourd', 'Grave Riser', 'Your gourd', 'and 1 gourd', 'Casket Jack', 'Fallen Casket'):
         ok((s in js) == R4, f"{s!r} {'in' if R4 else 'not in'} the bundle")
 
 
@@ -1419,40 +1419,33 @@ def check_crow_strike(browser, url):
 
 
 def check_casketjack(browser, url):
-    """Casket Jack lets out a mummy (a minion) every 8 s on the field, standing still while its lid is open; where it falls it leaves a field
-    coffin that opens with one last mummy 3 s later, unless a pumpkin smashes it. The coffin gives no reward; Fire is locked on its nights."""
+    """Casket Jack lets out no mummy while it walks (owner 2026-11-05); where it falls it becomes the Fallen Casket, which opens with a mummy
+    3 s later unless a pumpkin smashes it. The casket gives no reward."""
     if not R4: return
     page, errors = open_page(browser, url)
     fire_night(page)
-    T = page.evaluate("() => { const T = window.__gg.TYPES; return [T.casketjack.hp, T.casketjack.summonEvery, T.coffin.hp, T.coffin.openIn, !!T.coffin.noReward]; }")
-    ok(T == [6, 8, 1, 3, True], f'data: Casket Jack 6 health, a mummy every 8 s; the coffin 1 health, opens after 3 s, no reward {T}')
-    ok(page.evaluate("() => !!window.__gg.CHARS.casketjack && !!window.__gg.CHARS.coffin && !!window.__gg.CHARS.casketjack.clips.summon && !!window.__gg.CHARS.coffin.clips.open"), 'both are drawn (registry: summon and open clips)')
-    page.evaluate("() => { const g = window.__gg; window.__j = g.spawnMonster('casketjack', 3, false, 0.3); window.__j.sumT = 0.3; }")
-    time.sleep(0.5)
-    s = page.evaluate("() => { const j = window.__j; return [j.anim && j.anim.clip, j.halt]; }")
-    ok(s == ['summon', True], f'it stops for its summon clip {s}')
-    p0 = page.evaluate("() => window.__j.p"); time.sleep(0.2)
-    ok(abs(page.evaluate("() => window.__j.p") - p0) < 1e-6, 'it does not walk while the lid is open')
-    time.sleep(0.7)
-    mu = page.evaluate("() => window.__gg.G.monsters.filter(m => m.type === 'mummy' && !m.dead).map(m => [m.lane, m.minion, m.p > window.__j.p])")
-    ok(mu == [[3, True, True]], f'one mummy steps out in its lane, in front of it, as a minion {mu}')
-    ok(page.evaluate("() => !window.__j.halt && window.__j.sumT > 6"), 'then it walks on; the next summon is 8 s off')
-    # it falls: a field coffin, which opens with a mummy after 3 s
-    page.evaluate("() => { const g = window.__gg; g.G.monsters.filter(m => m.type === 'mummy').forEach(m => m.dead = true); const j = window.__j; j.lastHit = 0; g.damage(j, 99, '#fff'); }")
+    T = page.evaluate("() => { const T = window.__gg.TYPES; return [T.casketjack.hp, T.casketjack.summonEvery == null, T.coffin.hp, T.coffin.openIn, !!T.coffin.noReward, window.__gg.MNAME ? window.__gg.MNAME.coffin : 'Fallen Casket']; }")
+    ok(T == [6, True, 1, 3, True, 'Fallen Casket'], f'data: Casket Jack 6 health, no walking summon; the Fallen Casket 1 health, opens after 3 s, no reward {T}')
+    ok(page.evaluate("() => !!window.__gg.CHARS.casketjack && !!window.__gg.CHARS.coffin && !!window.__gg.CHARS.coffin.clips.open"), 'both are drawn (the casket has its open clip)')
+    page.evaluate("() => { const g = window.__gg; window.__j = g.spawnMonster('casketjack', 3, false, 0.3); }")
+    p0 = page.evaluate("() => window.__j.p")
+    time.sleep(9.0)
+    r = page.evaluate("() => [window.__gg.G.monsters.filter(m => m.type === 'mummy' && !m.dead).length, window.__j.p]")
+    ok(r[0] == 0 and r[1] > p0, f'9 s of walking: it keeps walking and lets out no mummy {r}')
+    page.evaluate("() => { const g = window.__gg, j = window.__j; j.lastHit = 0; g.damage(j, 99, '#fff'); }")
     time.sleep(0.2)
     c = page.evaluate("() => window.__gg.G.monsters.filter(m => m.type === 'coffin' && !m.dead).map(m => [m.lane, m.minion, Math.abs(m.p - window.__j.p) < 0.01])")
-    ok(c == [[3, True, True]], f'it leaves a field coffin where it fell {c}')
+    ok(c == [[3, True, True]], f'it becomes a Fallen Casket where it fell {c}')
     time.sleep(1.5)
     ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.type === 'mummy' && !m.dead).length") == 0, 'no mummy yet at 1.5 s')
     time.sleep(1.7)
     r = page.evaluate("() => [window.__gg.G.monsters.filter(m => m.type === 'coffin' && !m.dead).length, window.__gg.G.monsters.filter(m => m.type === 'mummy' && !m.dead).map(m => m.minion)]")
-    ok(r == [0, [True]], f'3 s on it bursts open: the coffin is gone and one last mummy (a minion) is out {r}')
-    # smashed in time: no mummy, no coins, no loot
-    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; window.__co = g.spawnMonster('coffin', 1, true, 0.5); window.__co.openT = 3; window.__c0 = g.G.coins; window.__ch = g.save.chests.length; }")
+    ok(r == [0, [True]], f'3 s on it bursts open: the casket is gone and one mummy (a minion) is out {r}')
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; window.__co = g.spawnMonster('coffin', 1, true, 0.5); window.__co.openT = 3; window.__c0 = g.G.coins; }")
     page.evaluate("() => { const g = window.__gg, m = window.__co; m.lastHit = 0; g.damage(m, 1, '#fff'); }")
     time.sleep(3.3)
-    r = page.evaluate("() => [window.__co.dead, window.__gg.G.monsters.filter(m => m.type === 'mummy' && !m.dead).length, window.__gg.G.coins - window.__c0, window.__gg.G.drops ? window.__gg.G.drops.length : 0]")
-    ok(r[0] and r[1] == 0 and r[2] == 0, f'a smashed coffin lets nothing out and pays nothing {r}')
+    r = page.evaluate("() => [window.__co.dead, window.__gg.G.monsters.filter(m => m.type === 'mummy' && !m.dead).length, window.__gg.G.coins - window.__c0]")
+    ok(r[0] and r[1] == 0 and r[2] == 0, f'a smashed casket lets nothing out and pays nothing {r}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 

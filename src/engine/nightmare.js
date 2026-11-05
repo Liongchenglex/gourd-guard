@@ -159,13 +159,7 @@ export function updateCrowDives(dt){
   G.crowDives = G.crowDives.filter(d => !d.done);
 }
 
-/** Casket Jack's summon: it stops, its lid creaks open and a mummy (a minion) steps out just in front of it. */
-function summonMummy(m){
-  const T = TYPES.casketjack;
-  m.anim = { clip:'summon', t:0, dur:T.summonDur }; m.outT = T.summonOut;
-  SFX.monsterAct('casketjack', 'summon');
-}
-/** The field coffin opens: one last mummy steps out and the coffin is gone (no reward). */
+/** The Fallen Casket opens: a mummy steps out and the casket is gone (no reward). */
 function openCoffin(m){
   const mu = spawnMonster('mummy', m.lane, true, m.p + 0.01);
   mu.flash = 0.2;
@@ -173,7 +167,7 @@ function openCoffin(m){
   m.dead = true;
   SFX.monsterAct('mummy', 'rise');
 }
-/** Where Casket Jack falls (combat.js kill): it drops into a field coffin on the spot. */
+/** Where Casket Jack falls (combat.js kill): it becomes the Fallen Casket on the spot. */
 export function dropCoffin(m){
   const c = spawnMonster('coffin', m.lane, true, Math.max(0, m.p));
   c.openT = TYPES.coffin.openIn;
@@ -205,18 +199,10 @@ export function updateNightmareMonster(m, dt){
       m.x = m.tx + Math.sin(m.ph * 1.2) * 1.5;
       return true;
     }
-    case 'casketjack': {   // stands still through its summon; the mummy steps out partway through the clip. Its timer runs only on the field.
-      if (m.outT > 0){ m.outT -= dt; if (m.outT <= 0) spawnMonster('mummy', m.lane, true, m.p + 0.03); }
-      if (m.p > 0 && m.p < 0.92 && !m.anim){
-        if (m.sumT == null) m.sumT = TYPES.casketjack.summonEvery;
-        m.sumT -= dt;
-        if (m.sumT <= 0){ m.sumT = TYPES.casketjack.summonEvery; summonMummy(m); }
-      }
-      if (m.anim && m.anim.clip === 'summon') m.halt = true; else m.halt = false;
+    case 'casketjack':   // just walks; its mummy waits in the Fallen Casket it becomes (combat.js kill, dropCoffin)
       m.x = m.tx + Math.sin(m.ph * 1.4) * 1.5;
       return true;
-    }
-    case 'coffin': {   // lies still; opens after openIn seconds (Ice holds it shut while frozen: this switch skips a frozen monster)
+    case 'coffin': {   // the Fallen Casket lies still; opens after openIn seconds (Ice holds it shut while frozen: this switch skips a frozen monster)
       m.openT -= dt;
       if (m.openT <= TYPES.coffin.openDur && !m.anim) m.anim = { clip:'open', t:0, dur:TYPES.coffin.openDur };
       if (m.openT <= 0) openCoffin(m);

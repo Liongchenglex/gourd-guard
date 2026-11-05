@@ -110,6 +110,21 @@ export function drawHealZoneFx(g, x, y, w, h, t, k){
   g.restore();
   g.save(); motes(g, x, y, w, h, 7, t, 91, (mx, my, a) => { g.globalAlpha = a * .8; g.fillStyle = '#c8ffc0'; g.fillRect(mx - 4, my - 1.3, 8, 2.6); g.fillRect(mx - 1.3, my - 4, 2.6, 8); }); g.restore();
 }
+/** Plague Doctor 2 (Release 5): the same 3x3, in poison green: a dim bog wash, a ring of ticks and a few mould blotches, all baked into the one sprite; only its alpha pulses live. */
+function rotZoneBack(g, x, y, w, h){
+  const col = '#8fcf3a', cx = x + w / 2, cy = y + h / 2, R = rng(23);
+  zoneBase(g, x, y, w, h, col, 1, 0);
+  g.save(); g.beginPath(); g.roundRect(x, y, w, h, 14); g.clip();
+  for (let i = 0; i < 9; i++){ const bx = x + 14 + R() * (w - 28), by = y + 14 + R() * (h - 28), br = 6 + R() * 12; g.fillStyle = rgba(i % 2 ? '#3f5a1a' : '#a8e05a', .16); g.beginPath(); g.arc(bx, by, br, 0, TAU); g.fill(); }
+  g.restore();
+  g.strokeStyle = rgba(col, .6); g.lineWidth = 1.5; g.beginPath(); g.arc(cx, cy, CS * .95, 0, TAU); g.stroke();
+  g.fillStyle = col;
+  for (let i = 0; i < 12; i++){ const ang = i * TAU / 12, px = cx + Math.cos(ang) * CS * .95, py = cy + Math.sin(ang) * CS * .95; g.beginPath(); g.arc(px, py, i % 3 ? 2 : 3.4, 0, TAU); g.fill(); }
+}
+export function drawRotZoneFx(g, x, y, w, h, t, k){
+  const pulse = .5 + .5 * Math.sin(t * 2.4);
+  blitZone(g, zoneSprite('rot', w, h, k, rotZoneBack), x, y, .75 + .25 * pulse);
+}
 /** Bulwark Knight: steel plates, a riveted rim (baked), a live pulse ring. */
 function bulwarkBack(g, x, y, w, h){
   const col = '#9fb4dc', cx = x + w / 2, cy = y + h / 2;

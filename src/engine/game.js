@@ -36,6 +36,7 @@ import { GOURDS, GOURD_SLOTS, ALLOW_SAME_GOURD } from '../data/gourds.js';
 import { prebakeGourd } from './render/gourd.js';
 import { ROTTEN, ROT_FX, clearHitFlags, rotSnapshot, restoreRot } from './rot.js';
 import { prebakeRot } from './render/rot.js';
+import { markRotZones } from './hollow.js';
 import { updatePoison } from './poison.js';
 import { prebakePoison } from './render/poison.js';
 
@@ -372,7 +373,7 @@ export function repairWall(lane){
 export function update(dt){
   const g = G;
   g.t += dt; g.idle += dt;
-  if (__RELEASE__ >= 5) clearHitFlags();   // rotOnly / cleanOnly hold only while their source sets them again this frame (engine/rot.js)
+  if (__RELEASE__ >= 5){ clearHitFlags(); markRotZones(); }   // rotOnly / cleanOnly hold only while their source sets them again this frame (engine/rot.js); Plague Doctor 2's square (engine/hollow.js)
   if (!g.over){ if (g.mode === 'story') storySpawn(dt); else endlessSpawn(dt); }
   if (!g.over){
     const low = ROWS * COLS - emptyCells().length < 10;

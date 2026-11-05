@@ -911,6 +911,135 @@ def check_same_gourd_flag(browser, url):
 CHECKS.update({'check_same_gourd_flag': check_same_gourd_flag})
 
 
+# ---------- Task 6: Plague Doctor 2 and the Reaper ----------
+R5_NAMES += ('rotdoctor',)
+# A projectile as hitMonster takes it: type t (a pumpkin colour index, or g.ROTTEN), level 5, aimed up lane `lane`.
+HIT_PR = "(t, lane) => ({ x:window.__gg.LANE(lane), y:300, vy:-900, type:t, vis:Math.max(t, 0), lv:5, guar:false, lane, hitWalls:new Set(), grp:{ spawned:false, small:false, kills:0 }, size:1, hit:new Set(), trail:[], r:16, dead:false })"
+# A still monster of the given type with the given health; kept in window.__ms.
+STILL = """([type, lane, p, hp]) => { const g = window.__gg, m = g.spawnMonster(type, lane, false, p); m.sp = 0; m.hp = hp; m.maxHp = hp; m.eat = 0;
+  (window.__ms = window.__ms || []).push(m); return window.__ms.length - 1; }"""
+
+
+def check_rotdoctor(browser, url):
+    if not R5: return
+    page, errors = open_page(browser, url)
+    nm2_start(page, 1); time.sleep(0.3); page.evaluate(PQ)
+    page.evaluate("() => { window.__ms = []; }")
+    d = page.evaluate("() => { const T = window.__gg.TYPES.rotdoctor; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop]; }")
+    ok(d == [4, 0.035, 22, 9, 0.5, 30, 2], f'rotdoctor data: hp 4, sp 0.035, r 22, coins 9, eat 0.5, pts 30, drop 2 {d}')
+    ok(page.evaluate("() => window.__gg.MNAME.rotdoctor") == 'Plague Doctor 2' and 'rot' in page.evaluate("() => window.__gg.MINTRO.rotdoctor || ''").lower(), 'name and intro text')
+    TP = page.evaluate("() => window.__gg.TILE_P()")
+    dr = page.evaluate(STILL, ['rotdoctor', 3, 0.5, 4])
+    a = page.evaluate(STILL, ['ghoul', 2, 0.5, 100])                       # beside it, same height
+    b = page.evaluate(STILL, ['ghoul', 4, 0.5 + TP, 100])                  # one lane over, one tile ahead: still inside the 3x3
+    far_l = page.evaluate(STILL, ['ghoul', 5, 0.5, 100])                   # two lanes away
+    far_p = page.evaluate(STILL, ['ghoul', 3, 0.5 + 1.6 * TP, 100])        # same lane, more than 1.5 tiles ahead
+    time.sleep(0.2)
+    r = page.evaluate(f"() => [{dr}, {a}, {b}, {far_l}, {far_p}].map(i => window.__ms[i].rotOnly)")
+    ok(r == [False, True, True, False, False], f'rotOnly: not the doctor, yes in its 3x3 (beside, a tile ahead), not two lanes away, not 1.6 tiles ahead {r}')
+    hit = lambda t, lane, i: page.evaluate(f"() => {{ const g = window.__gg, m = window.__ms[{i}]; const h0 = m.hp; g.hitMonster(({HIT_PR})({t}, {lane}), m); return m.hp - h0; }}")
+    ok(hit(0, 2, a) == 0, 'a normal pumpkin does nothing to a ghoul beside the doctor')
+    ok(page.evaluate(f"() => window.__gg.G.projs.length >= 0 && window.__ms[{a}].hp") == 100, 'the ghoul keeps its health')
+    ok(hit(page.evaluate("() => window.__gg.ROTTEN"), 2, a) == -1.5, 'a rotten pumpkin takes 1.5 off it')
+    ok(hit(0, 5, far_l) < 0, 'a ghoul two lanes away takes normal damage')
+    ok(hit(0, 3, far_p) < 0, 'a ghoul beyond the zone in the same lane takes normal damage')
+    ok(hit(0, 3, dr) < 0, 'the doctor itself takes normal damage')
+    # the zone is renewed every frame: gone with the doctor
+    page.evaluate(f"() => {{ window.__gg.damage(window.__ms[{dr}], 100, '#fff'); }}")
+    time.sleep(0.2)
+    ok(page.evaluate(f"() => [window.__ms[{dr}].dead, window.__ms[{a}].rotOnly, window.__ms[{b}].rotOnly]") == [True, False, False], 'once the doctor is dead the zone is gone')
+    # a frozen doctor still keeps its zone, and splash/burn cannot hurt a protected monster
+    page.evaluate("() => { window.__ms = []; window.__gg.G.monsters.length = 0; }")
+    dr = page.evaluate(STILL, ['rotdoctor', 3, 0.5, 4]); a = page.evaluate(STILL, ['ghoul', 2, 0.5, 100])
+    page.evaluate(f"() => {{ window.__ms[{dr}].frozenT = 5; window.__ms[{a}].burnLeft = 3; window.__ms[{a}].burnAmt = 1; window.__ms[{a}].burnTick = 0.05; }}")
+    time.sleep(1.0)
+    r = page.evaluate(f"() => [window.__ms[{a}].rotOnly, window.__ms[{a}].hp]")
+    ok(r == [True, 100], f'a frozen doctor still protects, and burning cannot hurt the protected ghoul {r}')
+    time.sleep(0.3)
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_rotdoctor_zone(browser, url):
+    """The doctor's poison zone is a baked sprite: it adds at most one drawImage a frame and nothing live (no stroke, fill, rect, text or gradient)."""
+    if not R5: return
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script("""(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+      for (const k of ['drawImage', 'fill', 'stroke', 'fillRect', 'fillText', 'strokeText', 'createRadialGradient', 'createLinearGradient']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; } })();""")
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    nm2_start(page, 1); time.sleep(0.5); page.evaluate(PQ); page.evaluate("() => { window.__ms = []; }")
+    count = "() => new Promise(res => { window.__gg.G.idle = -1e9; window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 30) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 30, (c.fill || 0) / 30, (c.stroke || 0) / 30, ((c.fillRect || 0) + (c.fillText || 0) + (c.strokeText || 0) + (c.createRadialGradient || 0) + (c.createLinearGradient || 0)) / 30]); } }; requestAnimationFrame(tick); })"
+    page.evaluate(STILL, ['ghoul', 3, 0.5, 4])
+    time.sleep(0.4); base = page.evaluate(count)
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; window.__ms = []; }")
+    page.evaluate(STILL, ['rotdoctor', 3, 0.5, 4])
+    time.sleep(0.4); zone = page.evaluate(count)
+    ok(zone[0] - base[0] <= 1.01, f'the doctor and its zone add at most 1 drawImage over a ghoul ({base[0]:.1f} -> {zone[0]:.1f})')
+    ok(zone[1] <= base[1] + 0.01 and zone[2] <= base[2] + 0.01 and zone[3] <= base[3] + 0.01, f'and nothing live (fill {base[1]:.1f} -> {zone[1]:.1f}, stroke {base[2]:.1f} -> {zone[2]:.1f}, other {base[3]:.1f} -> {zone[3]:.1f})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_reaper(browser, url):
+    if not R5: return
+    page, errors = open_page(browser, url)
+    nm2_start(page, 1); time.sleep(0.3); page.evaluate(PQ)
+    page.evaluate("() => { window.__ms = []; }")
+    d = page.evaluate("() => { const T = window.__gg.TYPES.reaper; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop, T.show, T.hide, T.reap]; }")
+    ok(d == [3, 0.07, 21, 9, 0.5, 28, 2, 3, 4, True], f'reaper data: hp 3, sp 0.07, r 21, coins 9, eat 0.5, pts 28, drop 2, show 3, hide 4, reap {d}')
+    ok(page.evaluate("() => window.__gg.MNAME.reaper") == 'Reaper' and 'reaper' in page.evaluate("() => window.__gg.MINTRO.reaper || ''").lower(), 'name and intro text')
+    # the fade cycle: shown 3 s, hidden 4 s
+    i = page.evaluate(STILL, ['reaper', 3, 0.3, 3])
+    page.evaluate(f"() => {{ const m = window.__ms[{i}]; window.__tr = []; clearInterval(window.__ti); const t0 = performance.now(); let last = m.hidden; window.__ti = setInterval(() => {{ if (m.hidden !== last){{ last = m.hidden; window.__tr.push([m.hidden, (performance.now() - t0) / 1000]); }} }}, 10); }}")
+    time.sleep(7.6)
+    tr = page.evaluate("() => window.__tr")
+    ok(len(tr) >= 2 and tr[0][0] is True and tr[1][0] is False and 2.7 < tr[0][1] < 3.4 and 3.4 < tr[1][1] - tr[0][1] < 4.6, f'shown ~3 s, then hidden ~4 s {tr}')
+    page.evaluate("() => clearInterval(window.__ti)")
+    # three normal hits kill it; a crow bursts out where it fell
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; window.__ms = []; }")
+    i = page.evaluate(STILL, ['reaper', 4, 0.4, 3])
+    r = []
+    for _ in range(3):
+        page.evaluate(f"() => window.__gg.damage(window.__ms[{i}], 1, '#fff')"); r.append(page.evaluate(f"() => window.__ms[{i}].dead"))
+    ok(r == [False, False, True], f'it dies to 3 hits of 1 {r}')
+    c = page.evaluate("() => window.__gg.G.monsters.filter(m => m.type === 'crow' && !m.dead).map(m => [m.lane, m.minion, Math.round(m.p * 100)])")
+    ok(len(c) == 1 and c[0][:2] == [4, True] and 38 <= c[0][2] <= 46, f'a crow (a minion) appears in its lane where it fell (p 0.4) {c}')
+    # at the fence: the swing wears down its fence and both neighbours, nothing else
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; window.__ms = []; for (const w of g.walls) w.hp = w.max; }")
+    i = page.evaluate(STILL, ['reaper', 2, 1, 3]); page.evaluate(f"() => {{ window.__ms[{i}].eat = window.__gg.TYPES.reaper.eat; }}")
+    time.sleep(4.0)
+    w = page.evaluate("() => window.__gg.walls.map(w => +(w.max - w.hp).toFixed(2))")
+    ok(abs(w[1] - 2) < 0.35 and abs(w[2] - 2) < 0.35 and abs(w[3] - 2) < 0.35 and w[0] == 0 and w[4] == 0 and w[5] == 0 and w[6] == 0, f'4 s at fence 3 takes about 2 off fences 2, 3 and 4 and nothing off the rest {w}')
+    # frozen: no swing at all
+    page.evaluate(f"() => {{ const g = window.__gg; for (const w of g.walls) w.hp = w.max; window.__ms[{i}].frozenT = 1.5; }}")
+    time.sleep(1.0)
+    w = page.evaluate("() => window.__gg.walls.map(w => +(w.max - w.hp).toFixed(2))")
+    ok(sum(w) == 0, f'frozen, it does not swing {w}')
+    # a fence at 0 in its own lane lets it through; the neighbours are not touched then
+    page.evaluate(f"() => {{ const g = window.__gg; for (const w of g.walls) w.hp = w.max; window.__ms[{i}].frozenT = 0; g.walls[2].hp = 0; }}")
+    time.sleep(0.5)
+    r = page.evaluate(f"() => [window.__ms[{i}].p > 1.005, window.__gg.walls[1].hp === window.__gg.walls[1].max, window.__gg.walls[3].hp === window.__gg.walls[3].max]")
+    ok(r == [True, True, True], f'a broken fence in its own lane lets it walk through {r}')
+    # at the edge of the field it hits its fence and the one neighbour
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; window.__ms = []; g.G.over = false; for (const w of g.walls) w.hp = w.max; }")
+    j = page.evaluate(STILL, ['reaper', 0, 1, 3]); page.evaluate(f"() => {{ window.__ms[{j}].eat = window.__gg.TYPES.reaper.eat; }}")
+    time.sleep(2.0)
+    w = page.evaluate("() => window.__gg.walls.map(w => +(w.max - w.hp).toFixed(2))")
+    ok(w[0] > 0.7 and w[1] > 0.7 and sum(w[2:]) == 0, f'in lane 0 it hits fences 1 and 2 only {w}')
+    # its chew frames are the reap swing, looping
+    cl = page.evaluate("() => { const c = window.__gg.CHARS.reaper; if (!c) return null; const k = c.clips.chew; return [k.n, k.fps, !!k.once, JSON.stringify(k.pose(0.5)), Object.keys(c.clips).includes('walk')]; }")
+    ok(cl == [10, 14, False, '{"reap":0.5}', True], f'the registry chew clip is the looping reap swing {cl}')
+    ok(page.evaluate("() => !!window.__gg.CHARS.rotdoctor && Object.keys(window.__gg.CHARS.rotdoctor.clips).includes('walk')"), 'the rot doctor is drawn')
+    time.sleep(0.3)
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_rotdoctor': check_rotdoctor, 'check_rotdoctor_zone': check_rotdoctor_zone, 'check_reaper': check_reaper})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

@@ -298,8 +298,8 @@ export const SFX = {
       case 'hauler': case 'bulwark': S('giant', 0.6) || (tone(80, 0.25, 'sawtooth', 0.09, 60), noise(0.15, 0.2, 150, 1)); break;
       case 'mummy': S('cloth', 0.5) || cloth(); S('groan', 0.35, { rate: 1.1, delay: 0.03 }); break;
       case 'firemummy': S('cloth', 0.5) || cloth(); S('groan', 0.35, { rate: 1.1, delay: 0.03 }); noise(0.06, 0.14, 2500, 3, 0.05); break;
-      case 'wisp': case 'wraith': case 'fogwalker': S('ghost', 0.4) || cloth(); break;
-      case 'doctor': case 'sailor': case 'archer': S('human', 0.55) || (noise(0.06, 0.16, 400, 2), noise(0.07, 0.12, 380, 2, 0.1)); break;
+      case 'wisp': case 'wraith': case 'fogwalker': case (__RELEASE__ >= 5 ? 'reaper' : ''): S('ghost', 0.4) || cloth(); break;
+      case 'doctor': case 'sailor': case 'archer': case (__RELEASE__ >= 5 ? 'rotdoctor' : ''): S('human', 0.55) || (noise(0.06, 0.16, 400, 2), noise(0.07, 0.12, 380, 2, 0.1)); break;
       case (__RELEASE__ >= 4 ? 'graveriser' : ''): S('human', 0.45, { rate: 0.85 }) || noise(0.06, 0.16, 400, 2); S('metallight', 0.2, { delay: 0.03 }); break;   // the Grave Riser grunts and its spade rings (Release 4)
       case 'knight': S('clank', 0.5) || clang(); S('human', 0.3, { delay: 0.04 }); break;
       case 'gargoyle': S('metal', 0.55) || (noise(0.1, 0.22, 1200, 1), tone(300, 0.1, 'square', 0.05, 150)); break;
@@ -327,9 +327,9 @@ export const SFX = {
       case 'hauler': S('giantdie', 0.65) || (tone(70, 0.4, 'sawtooth', 0.1, 40), noise(0.3, 0.25, 120, 1)); break;
       case 'bulwark': S('giantdie', 0.6); S('armorbreak', 0.5, { delay: 0.05 }) || noise(0.3, 0.25, 120, 1); break;
       case 'mummy': case 'firemummy': S('ghouldie', 0.55, { rate: 0.85 }) || noise(0.25, 0.2, 500, 0.6, 0, 150); S('dig', 0.35, { delay: 0.1 }); break;
-      case 'wisp': case 'wraith': case 'fogwalker': S('ghostdie', 0.35, { rate: 1.05 }) || noise(0.35, 0.12, 1200, 0.8, 0, 300); break;
+      case 'wisp': case 'wraith': case 'fogwalker': case (__RELEASE__ >= 5 ? 'reaper' : ''): S('ghostdie', 0.35, { rate: 1.05 }) || noise(0.35, 0.12, 1200, 0.8, 0, 300); break;
       case (__RELEASE__ >= 4 ? 'graveriser' : ''): S('humandie', 0.5, { rate: 0.85 }) || noise(0.2, 0.25, 3000, 1, 0.12, 1200); S('dig', 0.35, { delay: 0.15 }); break;   // it falls onto its spade (Release 4)
-      case 'doctor': case 'sailor': case 'archer': S('humandie', 0.55) || (noise(0.07, 0.14, 400, 2), noise(0.2, 0.25, 3000, 1, 0.12, 1200)); break;
+      case 'doctor': case 'sailor': case 'archer': case (__RELEASE__ >= 5 ? 'rotdoctor' : ''): S('humandie', 0.55) || (noise(0.07, 0.14, 400, 2), noise(0.2, 0.25, 3000, 1, 0.12, 1200)); break;
       case 'knight': S('armorbreak', 0.6) || [0, 0.08, 0.18].forEach(d => { tone(600, 0.12, 'square', 0.05, 200, d); noise(0.1, 0.18, 1800, 1.2, d); }); break;
       case 'gargoyle': S('stonebreak', 0.7) || noise(0.3, 0.3, 1000, 0.8, 0, 300); break;
       case 'vampire': S('chuckle', 0.5, { rate: 0.8 }) || (tone(800, 0.5, 'sawtooth', 0.07, 300), noise(0.5, 0.15, 800, 0.7, 0.2, 200)); S('bat', 0.4, { delay: 0.15 }); break;

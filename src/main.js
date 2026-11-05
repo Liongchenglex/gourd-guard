@@ -19,7 +19,7 @@ import { SEED_PACKS } from './data/economy.js';
 import { LEVELS, isOpen, WORLD_LEVELS, RELEASE, typesForNight, NM_BASE, nmNight, NIGHTMARE_LEVELS, levelFor } from './data/worlds/index.js';
 import { PTYPES, RAINBOW, BEIGE, lvStats } from './data/pumpkins.js';
 import { upgradeCost } from './data/economy.js';
-import { BOSS_NAMES, TYPES, ICE_ONLY } from './data/monsters.js';
+import { BOSS_NAMES, TYPES, ICE_ONLY, MNAME, MINTRO } from './data/monsters.js';
 import { QUEST_TYPES, questsFor } from './data/quests.js';
 import { lightFire, lightRandomFires, fireAt, putOut, fireMarkPoints, fireFirst } from './engine/fire.js';
 import { fieldY } from './engine/game.js';
@@ -84,5 +84,5 @@ if (new URLSearchParams(location.search).has('test')){
   window.__gg = { get G(){ return G; }, get grid(){ return grid; }, get graves(){ return graves; }, get walls(){ return walls; }, get state(){ return state; },
     startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair, openPreview, openBook, LEVELS, isOpen, WORLD_LEVELS, damage, lanesOf, continueState, continueNight, isBaked, openShop, RELEASE, PTYPES, RAINBOW, BEIGE, upgradeCost, lvStats, typesForNight, randSprout, hitMonster, TILE_P, BOSS_NAMES, LIT_HALO, CHARS, atlasBytes, setBakeScale, NM_BASE, nmNight, NIGHTMARE_LEVELS,
     ...(__RELEASE__ >= 4 ? { lightFire, lightRandomFires, fireAt, putOut, fireMarkPoints, fieldY, updateHud, TYPES, burnMonster, newCell, prebake, GOURD, isGourd, newGourd, gourdPos, destroyGourd, gourdFill, placeGourdAtStart, spawnSprouts, boardScore, paintPull, update, coachHolds, fireFirst, bestGourdMove, levelFor, questsFor, QUEST_TYPES, ICE_ONLY } : {}),   // fire tiles, the Grave Gourd (Release 4)
-    ...(__RELEASE__ >= 5 ? { gourdsOn, gourdKind, isProtected, placeGourdsAtStart, gourdSnapshot, restoreGourd, GOURDS, setAllowSameGourd, inGraveSquare, gourdIcon, ROTTEN, isRotten, rotCell, hitRule, rotSnapshot, rotSprite, rotIcon, poisonNow, fogged } : {}) };   // Nightmare Foggy Hollow (Release 5): each task adds its test hooks here
+    ...(__RELEASE__ >= 5 ? { gourdsOn, gourdKind, isProtected, placeGourdsAtStart, gourdSnapshot, restoreGourd, GOURDS, setAllowSameGourd, inGraveSquare, gourdIcon, ROTTEN, isRotten, rotCell, hitRule, rotSnapshot, rotSprite, rotIcon, poisonNow, fogged, MNAME, MINTRO } : {}) };   // Nightmare Foggy Hollow (Release 5): each task adds its test hooks here
 }

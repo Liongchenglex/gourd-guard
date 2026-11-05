@@ -12,7 +12,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite } from './tools.js';
-import { castleSprite, coinSprite, discSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
+import { castleSprite, coinSprite, discSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -54,6 +54,7 @@ export function render(){
   if (__RELEASE__ >= 4 && g.fires && g.fires.length) drawFires(g.fires, t);   // fire tiles (Release 4): one baked frame each, under the monsters
   for (const m of g.monsters) if (m.type === 'doctor' && !m.dead && m.p > 0) drawHealZone(m, t);
   for (const m of g.monsters) if (m.type === 'bulwark' && !m.dead && m.p > 0) drawBulwarkZone(m, t);
+  if (__RELEASE__ >= 5) for (const m of g.monsters) if (m.type === 'rotdoctor' && !m.dead && m.p > 0) drawRotZone(m, t);
   drawHexZones(t);
   const ms = g.monsters.slice().sort((a, b) => a.p - b.p);
   const walkerBands = g.monsters.filter(m => m.type === 'fogwalker' && !m.dead && m.p > 0).map(m => [m.p - TYPES.fogwalker.band, m.p + TYPES.fogwalker.band]);
@@ -334,6 +335,11 @@ export function drawHexZones(t){
 export function drawHealZone(m, t){
   const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
   drawHealZoneFx(ctx, x, y, w, h, t, K);
+}
+/** Plague Doctor 2's rot square (Release 5): the same 3 lanes by 3 tile heights, poison green. */
+export function drawRotZone(m, t){
+  const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
+  drawRotZoneFx(ctx, x, y, w, h, t, K);
 }
 /** Scarecrows (world 5 tool): a post with a straw figure and a health bar. */
 export function drawScarecrows(t){ drawScarecrowsFx(ctx, G.scarecrows || [], t, sc => G.monsters.some(m => !m.dead && m.chewing === sc)); }

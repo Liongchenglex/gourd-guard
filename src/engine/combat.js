@@ -18,6 +18,7 @@ import { banner } from '../ui/hud.js';
 import { dropJukebox, jukeboxPoints } from './spawner.js';
 import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
+import { reaperFalls } from './hollow.js';
 import { isProtected } from './gourd.js';
 import { ROTTEN, ROT_FX, hitRule } from './rot.js';
 
@@ -193,6 +194,7 @@ export function kill(m){
   }
   m.dead = true;
   if (__RELEASE__ >= 4 && m.type === 'rooster') lightFire(m.lane, m.p);   // a Cinder Rooster leaves a fire tile where it falls, whatever killed it
+  if (__RELEASE__ >= 5 && m.type === 'reaper') reaperFalls(m);   // a crow bursts out where the Reaper fell (engine/hollow.js)
   if (__RELEASE__ >= 4 && m.type === 'casketjack') dropCoffin(m);   // Casket Jack falls into a field coffin with one last mummy in it (engine/nightmare.js)
   if (hitBy){ const b = hitBy.grp; if (b){ b.kills++; if (b.kills > G.q.best) G.q.best = b.kills; } if (hitBy.type === BROWN && hitBy.size === 2) G.q.brown++; }   // quests: kills in one launch, big Brown kills
   G.kills++; if (!m.minion) G.resolved++;

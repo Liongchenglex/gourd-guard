@@ -5,6 +5,7 @@ import { TYPES, MODS, VARIANTS, BURNS_TO, ICE_ONLY, BURNING_FROM, HUSK_STRIP } f
 import { BURN_EVERY, RAINBOW, GLUE_SLOW } from '../data/pumpkins.js';
 import { glueStep } from './glue.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
+import { updateHollowMonster, reapLanes } from './hollow.js';
 import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike, initFallenGK, updateFallenGK } from './nightmare.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
@@ -228,7 +229,7 @@ export function updateMonster(m, dt){
     m.breach = 0;
     const eaters = G.monsters.filter(o => !o.dead && o.eating && o.lane === m.lane), k = eaters.indexOf(m);
     m.x = m.tx + (k - (eaters.length - 1) / 2) * 15;   // chewers share the wall side by side
-    for (const c of lanesOf(m)) damageWall(c, m.eat * mul * dt);
+    for (const c of (__RELEASE__ >= 5 && m.type === 'reaper' ? reapLanes(m) : lanesOf(m))) damageWall(c, m.eat * mul * dt);   // the Reaper's scythe swing is its chew: its fence and both beside it, continuously (engine/hollow.js)
     if (mul > 0){ SFX.chew(m.type); if (Math.random() < dt * 5) chunk(m.x + rnd(-10, 10), FENCE_Y - 18, '#8a6440', 90); }
     return;
   }
@@ -400,7 +401,7 @@ export function updateMonster(m, dt){
         }
         break;
       }
-      default: if (!(__RELEASE__ >= 4 && updateNightmareMonster(m, dt))) m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
+      default: if (!(__RELEASE__ >= 4 && updateNightmareMonster(m, dt)) && !(__RELEASE__ >= 5 && updateHollowMonster(m, dt))) m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
     }
   }
   if (__RELEASE__ >= 4 && m.rush > 0) sp *= TYPES.rooster.rushMul;

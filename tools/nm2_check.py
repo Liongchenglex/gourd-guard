@@ -16,8 +16,9 @@ MODE = 'on'
 
 
 def nm2_start(page, k, coach=False):
-    """Start Nightmare 2-k (night 1100 + k). The Release 4 gourd coach is marked seen unless coach=True, so the other checks get a plain night."""
-    if not coach: page.evaluate("() => { window.__gg.save.seenGourdCoach = true; }")
+    """Start Nightmare 2-k (night 1100 + k). The Release 4 gourd coach and the Protector coach (N2-5) are marked seen unless coach=True, so the
+    other checks get a plain night."""
+    if not coach: page.evaluate("() => { window.__gg.save.seenGourdCoach = true; window.__gg.save.seenProtectorCoach = true; }")
     start(page, 1100 + k)
 
 
@@ -84,7 +85,8 @@ def check_n2_book(browser, url):
     ok(soon == [True, False], f'the page shows the stamps, not the locked message {soon}')
     if len(pg) == 16:
         ok(not pg[0][0] and all(b[0] for b in pg[1:]), 'only N2-1 is open on a fresh hollow track')
-        ok(sum(1 for b in pg if 'Coming soon' in b[1]) == 15, 'the 15 levels not built yet read "Coming soon"')
+        built = page.evaluate("() => window.__gg.NIGHTMARE_LEVELS[1].length")
+        ok(sum(1 for b in pg if 'Coming soon' in b[1]) == 16 - built, f'the {16 - built} levels not built yet read "Coming soon"')
     # the world 1 page is unchanged
     page.evaluate("() => window.__gg.openBook(0)"); time.sleep(0.6)
     if page.evaluate("() => !document.querySelector('#spread').classList.contains('nightmare')"): page.click('#bBookmark')
@@ -676,6 +678,175 @@ def check_poison_budget(browser, url):
 
 CHECKS.update({'check_poison_cycle': check_poison_cycle, 'check_poison_lines': check_poison_lines, 'check_poison_protect': check_poison_protect,
                'check_poison_landing': check_poison_landing, 'check_poison_continue': check_poison_continue, 'check_poison_budget': check_poison_budget})
+
+# ---------- Task 5: the picker's second gourd slot, and the Protector tutorial on N2-5 ----------
+SHOTS = '/private/tmp/claude-501/-Users-liongchenglex-AI-Projects-gourd-guard/266dc79e-66e5-4953-bf5d-71c03420a12e/scratchpad'
+GPICK = """() => { const q = s => document.querySelector(s), r = e => e && e.getBoundingClientRect(), vis = e => !!e && e.offsetParent !== null && r(e).width > 0, head = q('#ovLoadout .loHead');
+  const slots = [...document.querySelectorAll('#loGourdSlots .gslot')];
+  return { state:window.__gg.state, title:q('#loTitle').textContent, count:q('#loCount').textContent, go:q('#bLoGo').disabled,
+    tiles:[...document.querySelectorAll('#loGourds .pick')].map(b => [b.dataset.gourd, b.getAttribute('aria-pressed'), b.classList.contains('must')]),
+    slots:slots.filter(vis).map(b => b.dataset.gourd || null), slotSize:slots.filter(vis).map(b => [Math.round(r(b).width), Math.round(r(b).height)]),
+    slotMust:slots.filter(vis).map(b => b.classList.contains('must')), first:(q('#loGourdSlot') || {}).id || null,
+    heading:(q('#loGourdSec h3') || {}).textContent || null, label:[...document.querySelectorAll('#ovLoadout .loHead .loLabel')].filter(vis).map(e => e.textContent),
+    teamSlots:document.querySelectorAll('#loTeam .slot').length,
+    headFits:head.scrollHeight <= head.clientHeight + 1, cardFits:(() => { const c = r(q('#ovLoadout .loCard')); return c.top >= 0 && c.bottom <= innerHeight + 1; })(),
+    scrollH:Math.round(r(q('#loScroll')).height) }; }"""
+
+
+def hollow_picker(page, gourds, night=1105):
+    """Open the picker on a hollow night (N2-1 to N2-5 beaten or open) with the given gourds unlocked; both coaches marked seen."""
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 17)}, **{1100 + k: 3 for k in range(1, 5)}})
+    page.evaluate("([gs, n]) => { const g = window.__gg; g.save.gourds = gs; g.save.perksOff = { pick4:true }; g.save.seenGourdCoach = true; g.save.seenProtectorCoach = true; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.beginNight(n); }",
+                  [{k: True for k in gourds}, night]); time.sleep(0.6)
+    return page.evaluate(GPICK)
+
+
+def check_picker_two_gourds(browser, url):
+    """N2-5 offers both gourds once the Protector is unlocked: two tiles, two slots ("Your gourds"), both picked to start. A tile toggles its
+    gourd, a tapped slot empties, Start works with 0, 1 or 2 gourds and the picked kinds (slot order) reach G.gourdKinds."""
+    if not R5: return
+    for h in (844, 664):
+        page, errors = open_page(browser, url, h)
+        u = hollow_picker(page, ['grave', 'protector'])
+        ok(u['state'] == 'loadout' and u['tiles'] == [['grave', 'true', False], ['protector', 'true', False]], f'[{h}] N2-5: two gourd tiles, both picked, neither locked {u["tiles"]}')
+        ok(u['slots'] == ['grave', 'protector'] and u['first'] == 'loGourdSlot', f'[{h}] two slots in the header, Grave then Protector {u["slots"]}')
+        ok(u['label'] == ['Your team', 'Your gourds'] and u['heading'] == 'Gourds · pick up to 2', f'[{h}] "Your gourds" over the slots, "Gourds · pick up to 2" over the tiles {[u["label"], u["heading"]]}')
+        ok('up to 2 gourds' in u['title'] and u['teamSlots'] == 5 and u['go'] is False, f'[{h}] the title asks for up to 2 gourds; 5 team slots; Start enabled {[u["title"], u["teamSlots"], u["go"]]}')
+        ok(all(w >= 44 and hh >= 44 for w, hh in u['slotSize']) and not any(u['slotMust']), f'[{h}] each gourd slot is a 44 px touch target, not locked {u["slotSize"]}')
+        ok(u['headFits'] and u['cardFits'] and u['scrollH'] >= 100, f'[{h}] the header fits and the card fits the screen {[u["headFits"], u["cardFits"], u["scrollH"]]}')
+        if h == 844: page.screenshot(path=os.path.join(SHOTS, 'picker-two-gourds.png'))
+        # the Protector's tile drops it, shows its card; the Grave stays in slot 1
+        page.click('#loGourds .pick[data-gourd="protector"]'); time.sleep(0.2)
+        v = page.evaluate(GPICK); det = page.evaluate("() => document.querySelector('#loDetail').textContent")
+        ok(v['slots'] == ['grave', None] and v['tiles'][1][1] == 'false' and 'Protector Gourd' in det, f'[{h}] tapping the Protector tile drops it and shows its card {[v["slots"], det[:40]]}')
+        if h == 844: page.screenshot(path=os.path.join(SHOTS, 'picker-one-gourd.png'))
+        page.click('#loGourds .pick[data-gourd="protector"]'); time.sleep(0.2)
+        ok(page.evaluate(GPICK)['slots'] == ['grave', 'protector'], f'[{h}] tapping it again picks it back')
+        # a tapped slot empties; the rest close up, in the order picked
+        page.click('#loGourdSlot'); time.sleep(0.2)
+        v = page.evaluate(GPICK)
+        ok(v['slots'] == ['protector', None] and v['tiles'][0][1] == 'false' and v['go'] is False, f'[{h}] tapping slot 1 drops the Grave; the Protector moves up; Start still enabled {v["slots"]}')
+        page.click('#loGourds .pick[data-gourd="grave"]'); time.sleep(0.2)
+        ok(page.evaluate(GPICK)['slots'] == ['protector', 'grave'], f'[{h}] the Grave picked again goes in the free slot (slot order Protector, Grave)')
+        # no gourd at all: Start is never blocked by an empty gourd slot
+        for sel in ('#loGourdSlot', '#loGourdSlot'): page.click(sel); time.sleep(0.15)
+        v = page.evaluate(GPICK)
+        ok(v['slots'] == [None, None] and v['go'] is False and 'gourd' in v['count'].lower(), f'[{h}] both slots empty: Start still enabled, the count line says no gourd {[v["slots"], v["go"], v["count"]]}')
+        page.click('#bLoGo'); time.sleep(0.5)
+        r = page.evaluate("() => [window.__gg.state, window.__gg.G.n, window.__gg.G.gourdKinds, window.__gg.gourdsOn().map(o => o.kind)]")
+        ok(r == ['play', 1105, [], []], f'[{h}] Start with no gourd: N2-5 begins with none on the patch {r}')
+        ok(not errors, f'[{h}] no page errors {errors[:2]}')
+        page.close()
+    # one gourd, and two in a chosen slot order, reach G.gourdKinds
+    page, errors = open_page(browser, url)
+    hollow_picker(page, ['grave', 'protector'])
+    page.click('#loGourds .pick[data-gourd="grave"]'); time.sleep(0.15); page.click('#bLoGo'); time.sleep(0.5)
+    r = page.evaluate("() => [window.__gg.G.gourdKinds, window.__gg.gourdsOn().map(o => [o.kind, o.r, o.c])]")
+    ok(r == [['protector'], [['protector', 2, 3]]], f'Start with the Protector alone: one gourd, in the centre {r}')
+    hollow_picker(page, ['grave', 'protector']); page.click('#bLoGo'); time.sleep(0.5)
+    r = page.evaluate("() => [window.__gg.G.gourdKinds, window.__gg.gourdsOn().map(o => [o.kind, o.r, o.c])]")
+    ok(r == [['grave', 'protector'], [['grave', 2, 1], ['protector', 2, 5]]], f'Start with both: Grave at (2, 1), Protector at (2, 5) {r}')
+    # the Protector not unlocked yet: N2-5 offers the Grave only, as a Release 4 night (one locked slot)
+    u = hollow_picker(page, ['grave'])
+    ok(u['tiles'] == [['grave', 'true', True]] and u['slots'] == ['grave'] and u['slotMust'] == [True], f'Protector locked: one Grave tile and one locked slot {u["tiles"]} {u["slots"]}')
+    ok(u['label'] == ['Your team', 'Your gourd'] and u['heading'] == 'Gourd · pick 1' and u['title'].endswith('and 1 gourd'), f'and the Release 4 words {[u["label"], u["heading"], u["title"]]}')
+    page.click('#bLoGo'); time.sleep(0.5)
+    ok(page.evaluate("() => window.__gg.G.gourdKinds") == ['grave'], 'Start: only the Grave Gourd')
+    # N2-1 (no `gourds` field) offers the Grave only, even with the Protector unlocked
+    u = hollow_picker(page, ['grave', 'protector'], night=1101)
+    ok(u['tiles'] == [['grave', 'true', True]] and u['slots'] == ['grave'], f'N2-1 offers only the Grave Gourd {u["tiles"]}')
+    # the level preview stands the gourds the night will start with
+    page.evaluate("() => { const g = window.__gg; g.save.gourds = { grave:true, protector:true }; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.openPreview(1105); }"); time.sleep(0.5)
+    r = page.evaluate("() => window.__gg.gourdsOn().map(o => [o.kind, o.r, o.c])")
+    ok(r == [['grave', 2, 1], ['protector', 2, 5]], f'the N2-5 preview shows both gourds where the night starts them {r}')
+    page.evaluate("() => { const g = window.__gg; g.save.gourds = { grave:true }; g.openPreview(1105); }"); time.sleep(0.5)
+    r = page.evaluate("() => window.__gg.gourdsOn().map(o => [o.kind, o.r, o.c])")
+    ok(r == [['grave', 2, 3]], f'without the Protector the preview shows the Grave in the centre {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_picker_r4_same(browser, url):
+    """N1-5's picker is Release 4's, even with the Protector unlocked: one gourd tile, one locked slot under "Your gourd", "Gourd · pick 1"."""
+    if MODE not in ('on', 'r4'): return
+    page, errors = open_page(browser, url)
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 6)}})
+    page.evaluate("() => { const g = window.__gg; g.save.gourds = { grave:true, protector:true }; g.save.perksOff = { pick4:true }; g.save.seenGourdCoach = true; g.beginNight(1005); }"); time.sleep(0.6)
+    u = page.evaluate("""() => { const q = s => document.querySelector(s), vis = e => !!e && e.offsetParent !== null;
+      return [window.__gg.state, q('#loTitle').textContent, (q('#loGourdSec h3') || {}).textContent, [...document.querySelectorAll('#loGourds .pick')].map(b => [b.dataset.gourd, b.getAttribute('aria-pressed'), b.classList.contains('must')]),
+        [...document.querySelectorAll('#ovLoadout .gslot')].filter(vis).map(b => [b.id, b.dataset.gourd, b.classList.contains('must')]), [...document.querySelectorAll('#ovLoadout .loHead .loLabel')].filter(vis).map(e => e.textContent), q('#bLoGo').disabled]; }""")
+    ok(u[0] == 'loadout' and u[1] == 'Pick 5 pumpkins and 1 gourd' and u[2] == 'Gourd · pick 1', f'N1-5: the Release 4 title and heading {u[:3]}')
+    ok(u[3] == [['grave', 'true', True]] and u[4] == [['loGourdSlot', 'grave', True]], f'one Grave tile, picked and locked; one locked slot {u[3]} {u[4]}')
+    ok(u[5] == ['Your team', 'Your gourd'] and u[6] is False, f'"Your gourd" (singular); Start enabled {u[5:]}')
+    page.screenshot(path=os.path.join(SHOTS, 'picker-n1-5.png'))
+    page.click('#loGourdSlot'); time.sleep(0.2)
+    v = page.evaluate("() => [document.querySelector('#loGourdSlot').dataset.gourd, document.querySelector('#loDetail').textContent]")
+    ok(v[0] == 'grave' and 'Grave Gourd' in v[1], f'tapping the slot shows its card and never empties it {v[0]}')
+    page.click('#bLoGo'); time.sleep(0.5)
+    r = page.evaluate("() => [window.__gg.state, window.__gg.G.n, window.__gg.G.gourdKinds]")
+    ok(r == ['play', 1005, ['grave']], f'Start begins N1-5 with the Grave Gourd only {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_protector_coach(browser, url):
+    """The Protector tutorial on N2-5 (coach:'protector'): both gourds on a clear patch; a fog row through the Protector's square; the tip
+    explains the shield; the fog rots the rest; the hand slides a rotten one into the square, then holds the Protector; breaking it turns that
+    rot Rainbow; it grows back and the night carries on. Each step waits for what it shows. seenProtectorCoach is set at the end."""
+    if not R5: return
+    STEP = "(s) => { const g = window.__gg; for (let i = 0; i < Math.round(s / 0.05); i++) g.update(0.05); return g.G.coach ? g.G.coach.step : null; }"
+    TIP = "() => document.querySelector('#coachTip').textContent"
+    ROTC = "() => { const g = window.__gg, out = []; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) if (g.isRotten(g.grid[r][c])) out.push([r, c]); return out; }"
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const g = window.__gg; g.save.gourds = { grave:true, protector:true }; g.save.seenGourdCoach = true; g.save.seenProtectorCoach = false; }")
+    page.evaluate("(lo) => window.__gg.startGame('story', 1105, lo, ['grave', 'protector'])", [0, 1, 2, 3, 4]); time.sleep(0.3)
+    d = page.evaluate("() => { const g = window.__gg, w = g.G.poison.warn; return [g.G.coach && g.G.coach.kind, g.G.coach && g.G.coach.step, g.coachHolds(), g.gourdsOn().map(o => [o.kind, o.r, o.c]), w && [w.dir, w.idx], g.grid.flat().filter(x => x && !x.gourd).length]; }")
+    ok(d[:3] == ['protector', 'pshield', True] and d[3] == [['grave', 2, 1], ['protector', 2, 5]], f'N2-5 with the tutorial unseen starts the Protector script, holding, both gourds standing {d[:4]}')
+    ok(d[4] == ['row', [2]] and 0 < d[5] <= 12, f'a clear patch, and the fog warning lies on row 2, through the Protector\'s square {d[4:]}')
+    ok('Protector Gourd' in page.evaluate(TIP) and 'never rot' in page.evaluate(TIP), f'the tip explains the shield {page.evaluate(TIP)[:60]!r}')
+    ok(page.evaluate(STEP, 1.0) == 'pshield' and page.evaluate("() => [window.__gg.G.monsters.length, window.__gg.G.spawned]") == [0, 0], 'it waits for the fog: no monsters')
+    ok(page.evaluate(STEP, 1.5) == 'prot', 'the fog settles: the script moves on')
+    rot = page.evaluate(ROTC)
+    prot = page.evaluate("() => { const g = window.__gg; let n = 0, r = 0; for (let a = 1; a <= 3; a++) for (let b = 4; b <= 6; b++){ const x = g.grid[a][b]; if (x && !x.gourd){ n++; if (g.isRotten(x)) r++; } } return [n, r]; }")
+    ok(rot == [[2, 0], [2, 3]] and prot[0] >= 4 and prot[1] == 0, f'the fog rots the pumpkins on row 2 outside the square, none inside {rot} {prot}')
+    ok('rot' in page.evaluate(TIP).lower(), f'the tip says the rest rotted {page.evaluate(TIP)[:60]!r}')
+    ok(page.evaluate(STEP, 3.5) == 'pslide', 'then the hand shows a rotten one sliding into the square')
+    mv = page.evaluate("() => { const c = window.__gg.G.coach; return c.move && [c.move.dir, c.move.tr, c.move.tc, window.__gg.isRotten(c.move.ref)]; }")
+    ok(mv == ['right', 2, 4, True], f'the move: the rotten pumpkin at (2, 3) right into (2, 4) {mv}')
+    ok(page.evaluate(STEP, 3) == 'pslide', 'it waits for the slide')
+    page.evaluate("() => { const g = window.__gg, c = g.G.coach; g.slideOne(c.move.ref, c.move.dir); }")
+    ok(page.evaluate(STEP, 0.4) == 'phold' and page.evaluate("() => window.__gg.isRotten(window.__gg.grid[2][4])"), 'the rotten one sits in the square: the hand holds the Protector')
+    ok('hold' in page.evaluate(TIP).lower() and 'Rainbow' in page.evaluate(TIP), f'the hold tip names the Rainbows {page.evaluate(TIP)[:60]!r}')
+    ok(page.evaluate(STEP, 3) == 'phold' and page.evaluate("() => !!window.__gg.gourdPos('protector')"), 'it waits for the player to break it')
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos('protector'); g.destroyGourd(g.grid[p.r][p.c]); }")
+    ok(page.evaluate("() => window.__gg.grid[2][4] && window.__gg.grid[2][4].c === window.__gg.RAINBOW"), 'breaking it turns the rotten one in its square Rainbow')
+    ok(page.evaluate(STEP, 0.1) == 'pback' and 'Rainbow' in page.evaluate(TIP), f'the script says so and waits for it to grow back {page.evaluate(TIP)[:50]!r}')
+    ok(page.evaluate(STEP, 4) == 'praise' and page.evaluate("() => !!window.__gg.gourdPos('protector')"), 'it grows back on a sprout; Nice')
+    ok(page.evaluate("() => window.__gg.coachHolds()") is False, 'the praise step lets the night carry on')
+    page.evaluate(STEP, 4)
+    d = page.evaluate("() => [window.__gg.G.coach, window.__gg.save.seenProtectorCoach, window.__gg.G.poison.t > 5 && window.__gg.G.poison.t < 100]")
+    ok(d == [None, True, True], f'the script ends, seenProtectorCoach is set, the level\'s fog clock runs again {d}')
+    page.evaluate("() => { window.__gg.G.spawnTimer = 0; }"); page.evaluate(STEP, 0.5)
+    ok(page.evaluate("() => window.__gg.G.spawned") > 0, 'monsters spawn after the tutorial')
+    # seen: a plain N2-5
+    page.evaluate("(lo) => window.__gg.startGame('story', 1105, lo, ['grave', 'protector'])", [0, 1, 2, 3, 4]); time.sleep(0.2)
+    ok(page.evaluate("() => [window.__gg.G.coach, window.__gg.coachHolds()]") == [None, False], 'a player who has seen it gets a plain N2-5')
+    # the Protector left out: no script, not marked seen; the Grave script does not start either
+    page.evaluate("() => { window.__gg.save.seenProtectorCoach = false; window.__gg.save.seenGourdCoach = false; }")
+    page.evaluate("(lo) => window.__gg.startGame('story', 1105, lo, ['grave'])", [0, 1, 2, 3, 4]); time.sleep(0.2)
+    ok(page.evaluate("() => [window.__gg.G.coach, window.__gg.save.seenProtectorCoach]") == [None, False], 'N2-5 without the Protector: no script, still unseen')
+    page.evaluate("() => { window.__gg.save.seenGourdCoach = true; }")
+    # breaking it early skips to the respawn, and the script still ends
+    page.evaluate("(lo) => window.__gg.startGame('story', 1105, lo, ['grave', 'protector'])", [0, 1, 2, 3, 4]); time.sleep(0.2)
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos('protector'); g.destroyGourd(g.grid[p.r][p.c]); }")
+    ok(page.evaluate(STEP, 0.1) == 'pback', 'breaking the Protector early jumps to the respawn step')
+    ok(page.evaluate(STEP, 10) is None and page.evaluate("() => [window.__gg.save.seenProtectorCoach, !!window.__gg.gourdPos('protector')]") == [True, True], 'and it still finishes with the Protector back')
+    time.sleep(0.4)
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_picker_two_gourds': check_picker_two_gourds, 'check_picker_r4_same': check_picker_r4_same, 'check_protector_coach': check_protector_coach})
 
 
 def main():

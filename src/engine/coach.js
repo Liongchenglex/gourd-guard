@@ -6,6 +6,9 @@
 //   4. praise: a short "Nice!" tip, then the night carries on as normal
 // Release 4 adds a second script on Nightmare 1-5 (`coach:'gourd'`, GOURD_STEPS below): slide the Grave Gourd, watch a sprout fill the space
 // around it, hold it until it breaks (the graves around it clear), and watch it grow back on the next sprout.
+// Release 5 adds a third on Nightmare 2-5 (`coach:'protector'`, PTIPS below): the Protector Gourd shields its square from a fog row, the
+// fog rots the rest, the hand slides a rotten one into the square and holds the Protector until it breaks (that rot turns Rainbow), and it
+// grows back on the next sprout.
 // The hand is one baked sprite blitted with transforms (no painter calls or shadowBlur per frame).
 import { G, grid, graves, setGrid, ROWS, COLS, CS, GX, GY, LANE, FIELD_TOP, FENCE_Y } from './state.js';
 import { newCell, spawnSprouts, planMove, applyMove, revertMove, sameColorSize, findCell, bestLitGroup, resolveMatches } from './board.js';
@@ -13,7 +16,10 @@ import { spawnMonster } from './monsters.js';
 import { scale } from './render/canvas.js';
 import { save, persist } from '../save.js';
 import { $ } from './util.js';
-import { gourdPos, gourdsOn } from './gourd.js';
+import { gourdPos, gourdsOn, squareAround } from './gourd.js';
+import { isRotten } from './rot.js';
+import { poisonNow } from './poison.js';
+import { PTYPES } from '../data/pumpkins.js';
 
 const TIPS = {
   slide: 'Drag a pumpkin to slide it. Line up <b>3 of the same colour</b> to make a bunch.',
@@ -32,8 +38,24 @@ const GTIPS = __RELEASE__ >= 4 ? {
   gback: 'It <b>grows back</b> on the next sprout.',
 } : {};
 
-/** Starts the coach on a fresh 1-1 (call after the board is built), or the gourd script on a Nightmare 1-5 that has not been seen. */
+// The Protector script (Release 5). Steps: pshield (the fog warning lies on a row through the Protector's square; it waits until the fog
+// has settled) -> prot (the rest of the row has rotted) -> pslide (the hand slides a rotten one into the square; skipped when none can get
+// there) -> phold (the hand holds the Protector until it breaks: the rot in its square turns Rainbow) -> pback (it grows back on the next
+// sprout) -> praise. Monsters and sprouts wait (coachHolds), and the level's own fog clock is held while it runs; the script lights its own
+// fog (poisonNow) and runs its own sprout tick. It looks the Protector up by kind (gourdPos('protector')), never the Grave's default.
+const PTIPS = __RELEASE__ >= 5 ? {
+  pshield: 'This is the <b>Protector Gourd</b>. Pumpkins in the <b>3×3 around it never rot</b>. Poison fog is coming!',
+  prot: 'The fog <b>rotted the pumpkins outside</b> its square. Rotten pumpkins heal the monsters they hit.',
+  pslide: 'Rot stays rotten, even in its square. <b>Slide this one in.</b>',
+  phold: '<b>Press and hold</b> the Protector to break it: the rotten pumpkins around it turn <b>Rainbow</b>.',
+  pback: '<b>Rainbow!</b> It grows back on the next sprout.',
+  praise: '<b>Nice!</b> Keep your best pumpkins in its square when the fog comes.',
+} : {};
+
+/** Starts the coach on a fresh 1-1 (call after the board is built), or the gourd script on a Nightmare 1-5 that has not been seen, or the
+ *  Protector script on a Nightmare 2-5 that has not been seen and was started with the Protector. */
 export function startCoach(){
+  if (__RELEASE__ >= 5 && G.mode === 'story' && G.def && G.def.coach === 'protector'){ if (!save.seenProtectorCoach && gourdPos('protector')) startProtectorCoach(); return; }
   if (__RELEASE__ >= 4 && G.mode === 'story' && G.def && G.def.coach === 'gourd' && !save.seenGourdCoach && gourdPos()) return startGourdCoach();
   if (!(G.mode === 'story' && G.n === 1 && !save.seenCoach)) return;
   // a clear patch: greens that touch nothing, plus two in the corner and one that slides in to make three
@@ -84,6 +106,66 @@ function gourdCoachUpdate(c){
   }
 }
 
+/** Protector script start: a clear patch with both gourds where they stand (the level's graves stay). On the Protector's row, outside its
+ *  square: a pumpkin two cells left of it with the cell between left empty (the one the hand slides in once it rots) and one more at the far
+ *  edge; inside its square a ring of pumpkins in three colours (none of them bunch); two more off the row show that the fog keeps to it. */
+function startProtectorCoach(){
+  const pp = gourdPos('protector'), all = gourdsOn();
+  setGrid(Array.from({ length:ROWS }, () => Array(COLS).fill(null)));
+  for (const o of all) grid[o.r][o.c] = o.cell;
+  const cols = G.loadout.filter(t => PTYPES[t] && !PTYPES[t].rainbow && PTYPES[t].key !== 'paint'), col = i => (cols.length ? cols : [0, 1, 2])[i % (cols.length || 3)];
+  const put = (r, c, t) => { if (inGrid(r, c) && !grid[r][c] && !graves[r][c]) grid[r][c] = newCell(t); };
+  const r = pp.r, side = pp.c - 2 >= 0 ? -1 : 1;   // which way the rest of the row lies (left from its start cell (2, 5); a Protector near the left edge mirrors it)
+  put(r, pp.c + 2 * side, col(1));   // slides into the square once it rots (the cell between stays empty)
+  put(r, side < 0 ? 0 : COLS - 1, col(0));
+  for (const [a, b] of squareAround(pp.r, pp.c)) if (!(a === r && b === pp.c + side)) put(a, b, col((a + b) % 2 ? 1 : a === r ? 2 : 0));
+  put(Math.max(0, r - 2), pp.c + 2 * side, col(2)); put(Math.min(ROWS - 1, r + 2), pp.c + 2 * side, col(0));
+  G.poison.t = 1e9;   // the level's own fog waits for the script
+  G.coach = { kind:'protector', step:'pshield', t:0, stepT:0, move:null, ref:null };
+  poisonNow({ dir:'row', idx:[r] }); tip('pshield');
+}
+const inGrid = (r, c) => r >= 0 && r < ROWS && c >= 0 && c < COLS;
+
+/** The slide the hand shows in step pslide: a rotten pumpkin outside the Protector's square that one slide puts inside it. */
+function findRotMove(){
+  const c = G.coach, pp = gourdPos('protector'); c.move = null; if (!pp) return;
+  const inSq = (a, b) => Math.abs(a - pp.r) <= 1 && Math.abs(b - pp.c) <= 1;
+  for (let r = 0; r < ROWS && !c.move; r++) for (let k = 0; k < COLS && !c.move; k++){
+    const cell = grid[r][k]; if (!isRotten(cell) || cell.lit || inSq(r, k)) continue;
+    for (const dir of ['right', 'left', 'up', 'down']){
+      const moves = planMove(r, k, dir); if (!moves) continue;
+      if (inSq(moves[0][2], moves[0][3])){ c.move = { ref:cell, dir, tr:moves[0][2], tc:moves[0][3] }; break; }
+    }
+  }
+}
+const rotInSquare = pp => squareAround(pp.r, pp.c).some(([a, b]) => isRotten(grid[a][b]));
+
+function protectorCoachUpdate(c){
+  const pp = gourdPos('protector'), p = G.poison, go = step => { c.step = step; c.stepT = 0; tip(step); };
+  if (c.step !== 'praise' && p && !p.warn && !p.on) p.t = 1e9;   // the level's fog clock (restarted by a fog lifting) waits until the script ends
+  if (c.step === 'pshield'){
+    if (!pp) go('pback');   // broken before the lesson: carry on from the respawn
+    else if (p && p.on && p.on.age > 1.0) go('prot');   // the fog has settled and the square stayed clean
+    else if (p && !p.warn && !p.on && c.stepT > 0.5) poisonNow({ dir:'row', idx:[pp.r] });   // the warning was refused (a fog already running): try again
+  } else if (c.step === 'prot'){
+    if (!pp) go('pback');
+    else if (c.stepT > 3.0){ findRotMove(); if (c.move) go('pslide'); else { c.ref = grid[pp.r][pp.c]; go('phold'); } }
+  } else if (c.step === 'pslide'){
+    if (!pp) go('pback');
+    else if (rotInSquare(pp)){ c.move = null; c.ref = grid[pp.r][pp.c]; go('phold'); }   // a rotten one sits in its square
+    else if (!c.move || !findCell(c.move.ref) || !isRotten(c.move.ref)){ findRotMove(); if (!c.move){ c.ref = grid[pp.r][pp.c]; go('phold'); } }   // slid elsewhere or crushed: show another, or move on
+  } else if (c.step === 'phold'){
+    if (!pp) go('pback'); else c.ref = grid[pp.r][pp.c];   // any way of breaking it counts (a real hold)
+  } else if (c.step === 'pback'){
+    if (pp && c.stepT > 1.5) go('praise');   // the Rainbows get a moment before the praise
+    else if (!pp && c.stepT > 1.2 && !c.sprouted){ c.sprouted = true; spawnSprouts(); }   // the next sprout tick brings it back
+    else if (!pp && c.sprouted && c.stepT > 2.4){ c.sprouted = false; c.stepT = 1.21; }   // no room on the patch: try the tick again
+  } else if (c.step === 'praise' && c.stepT > 3.5){
+    tip(null); G.coach = null; save.seenProtectorCoach = true; persist(); resolveMatches();
+    if (p) p.t = G.def && G.def.poison ? G.def.poison.every : 0;   // the level's fog clock starts now
+  }
+}
+
 /** A slide that makes a bunch right now: the hand demonstrates this one. */
 function findMove(){
   const c = G.coach; c.move = null;
@@ -109,7 +191,7 @@ function spare(){
 function tip(step){
   const el = $('#coachTip'); if (!el) return;
   if (!step){ el.hidden = true; return; }
-  el.innerHTML = TIPS[step] || GTIPS[step]; el.hidden = false;
+  el.innerHTML = (__RELEASE__ >= 5 && G.coach && G.coach.kind === 'protector' && PTIPS[step]) || TIPS[step] || GTIPS[step]; el.hidden = false;
   el.style.top = Math.round((FENCE_Y - CS * 1.25) * scale) + 'px';
 }
 
@@ -120,6 +202,7 @@ export function coachUpdate(dt){
   const c = G && G.coach; if (!c || G.over) return;
   c.t += dt; c.stepT += dt;
   if (__RELEASE__ >= 4 && c.kind === 'gourd'){ gourdCoachUpdate(c); return; }
+  if (__RELEASE__ >= 5 && c.kind === 'protector'){ protectorCoachUpdate(c); return; }
   const lit = bestLitGroup();
   if (c.step === 'slide'){
     if (lit){   // a bunch formed: send one ghoul down its column
@@ -165,7 +248,7 @@ export function drawCoach(ctx){
   const c = G && G.coach; if (!c || G.over) return;
   const h = hand();
   const blit = (x, y, s, a) => { ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y); ctx.scale(s, s); ctx.drawImage(h, -18, -6, 64, 64); ctx.restore(); };
-  if ((c.step === 'slide' || c.step === 'gslide') && c.move){
+  if ((c.step === 'slide' || c.step === 'gslide' || c.step === 'pslide') && c.move){
     const pos = findCell(c.move.ref); if (!pos) return;
     const [x0, y0] = cellXY(pos.r, pos.c), [x1, y1] = cellXY(c.move.tr, c.move.tc);
     const P = 2.0, u = (c.t % P) / P;   // press 0-.2, drag .2-.65, hold .65-.85, fade .85-1
@@ -175,7 +258,7 @@ export function drawCoach(ctx){
     ctx.strokeRect(GX + pos.c * CS + 5, GY + pos.r * CS + 5, CS - 10, CS - 10);
     ctx.setLineDash([6, 6]); ctx.strokeRect(GX + c.move.tc * CS + 5, GY + c.move.tr * CS + 5, CS - 10, CS - 10); ctx.restore();
     blit(x + 6, y + 4, press, u > .85 ? (1 - u) / .15 : 1);
-  } else if (c.step === 'smash' || c.step === 'ghold'){
+  } else if (c.step === 'smash' || c.step === 'ghold' || c.step === 'phold'){
     const pos = c.ref && findCell(c.ref); if (!pos) return;
     const [x0, y0] = cellXY(pos.r, pos.c), P = 2.2, u = (c.t % P) / P;   // press .0-.1, hold and fill .1-.7, crush flash .7-.85, rest
     const f = u < .1 ? 0 : u < .7 ? (u - .1) / .6 : 1;

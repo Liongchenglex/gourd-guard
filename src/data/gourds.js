@@ -12,3 +12,9 @@ export const GOURDS = __RELEASE__ >= 4 ? {
       lore:'A swan-necked gourd that grew beside the chapel lantern. Rot will not cross the soft light around it.' },
   } : {}),
 } : {};
+/** The picker's gourd slots (Release 5, spec Part 6): a night takes up to this many gourds, each slot any unlocked gourd the night offers
+ *  (a level's `gourds` field; a `gourd:true` night without one offers the Grave Gourd alone). */
+export const GOURD_SLOTS = 2;
+/** May both slots hold the same kind? No for now (owner): the one-line rule to flip later. The picker follows it; the engine would also
+ *  need each gourd's due-back state per cell, not per kind (src/engine/gourd.js), and `nightGourds` (src/engine/game.js) to stop folding. */
+export const ALLOW_SAME_GOURD = false;

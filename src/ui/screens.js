@@ -3,7 +3,7 @@ import { SPAWN_STEPS } from '../data/patterns.js';
 import { NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, prevLevelFor, firstNightOf, typesForNight, gearUnlockNightOf, NIGHTMARE_LEVELS, NM_BOOK_LEVELS, nmNight, nmGateText } from '../data/worlds/index.js';
-import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO } from '../data/monsters.js';
+import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO, PROTECTOR_INTRO } from '../data/monsters.js';
 import { hasFire, nightmareTitle } from '../data/levels.js';
 import { monsterIcon } from '../engine/render/monsters.js';
 import { prebakeAsync } from '../engine/render/anim.js';
@@ -35,7 +35,7 @@ import { QUEST_START, questsFor, questText, questBits, countBits, settleQuests, 
 import { sceneCrop, sceneFull, nightmareKey } from '../engine/render/nightmare/scenes.js';
 import { coachEnd } from '../engine/coach.js';
 import * as EN from '../data/endless.js';
-import { GOURDS } from '../data/gourds.js';
+import { GOURDS, GOURD_SLOTS, ALLOW_SAME_GOURD } from '../data/gourds.js';
 import { gourdIcon } from '../engine/render/gourd.js';
 
 export function showResult(win){
@@ -304,6 +304,7 @@ function startPreviewedNight(){
   if (def.gust && !(prev && prev.gust)) cards.push({ key:'wind', icon:'🍂', title:'Wind', text:WIND_INTRO });
   if (__RELEASE__ >= 4 && hasFire(def) && !hasFire(prev)) cards.push({ key:'fire', icon:'🔥', title:'Fire tiles', text:FIRE_INTRO });   // the nightmare track's first fire (N1-1)
   if (__RELEASE__ >= 4 && def.gourd && !(prev && prev.gourd)) cards.push({ key:'gourd', icon:gourdIcon(160), title:'The Grave Gourd', text:GOURD_INTRO });   // its first night (N1-5)
+  if (__RELEASE__ >= 5 && def.gourd && (def.gourds || []).includes('protector') && save.gourds.protector && !(prev && (prev.gourds || []).includes('protector'))) cards.push({ key:'gourd:protector', icon:gourdIcon(160, 'protector'), title:'The Protector Gourd', text:PROTECTOR_INTRO });   // the first night that offers it (N2-5), once unlocked
   for (const t of def.intro) if (!VARIANTS[t]) cards.push({ key:'m:' + t, icon:monsterIcon(t, 160), title:`New monster: ${MNAME[t] || t}`, text:MINTRO[t] || '' });   // returning variants get no card (owner)
   for (const k of [...new Set([def.boss, def.boss2].filter(Boolean))]) cards.push({ key:`b:${k}:${def.bossForm}`, icon:monsterIcon(k, 200, def.bossForm), title:def.bossForm === 2 ? `${BOSS_NAMES[k]}, full form` : `Boss: ${BOSS_NAMES[k]}`, text:BOSS_INTRO[k][def.bossForm] });
   introQueue = cards.filter(c => !save.seenIntro[c.key]);
@@ -556,15 +557,16 @@ function flipBook(toBestiary){
 function closeBook(){ curBook = null; bookNightmare = false; nightmareBg(null); SFX.ui('back'); openLevels(); }
 
 let loadoutFocus = null;
-/** The gourd pick (Release 4, owner 2026-11-05): the night's gourds and the one picked, kept apart from the pumpkin team. */
-let loadoutGourds = [];
-export let loadoutGourd = null;
+/** The gourd pick (Release 4, owner 2026-11-05; two slots since Release 5): the gourds the night offers, the slots shown, and the kinds
+ *  picked (slot order, at most loadoutGourdSlots), kept apart from the pumpkin team. */
+let loadoutGourds = [], loadoutGourdSlots = 0;
+export let loadoutGourdSel = [];
 /** Pumpkin picking (owner, 2026-09-27): pumpkins in unlock order, a detail card for the focused one (level, ability, lore), then the trophies. */
 /** Pumpkins to pick: 5, or 4 with the 5-20 Focused patch power; never more than the types on offer (a gourd night opens the picker even
  *  with 5 or fewer types, Release 4). */
 const teamSize = () => Math.min(perkOn('pick4') ? 4 : 5, loadoutAvail ? loadoutAvail.length : 5);
 export function openLoadout(avail, next, required, gourds){
-  if (__RELEASE__ >= 4) renderGourds(gourds || []);   // the gourd pick: the Gourds section and the header's Your gourd slot, apart from the pumpkins
+  if (__RELEASE__ >= 4) renderGourds(gourds || []);   // the gourd pick: the Gourds section and the header's gourd slots, apart from the pumpkins
   loadoutAvail = avail; loadoutNext = next; loadoutMust = (required || []).map(m => m.t); loadoutWhy = required || [];
   const pref = [...loadoutMust, ...(save.loadout || []).filter(t => avail.includes(t) && !loadoutMust.includes(t))];
   for (const t of avail) if (pref.length < teamSize() && !pref.includes(t)) pref.push(t);
@@ -572,7 +574,7 @@ export function openLoadout(avail, next, required, gourds){
   const night = t => t < 2 ? 0 : unlockNightOf(PTYPES[t].key);   // Green and Yellow are there from the start
   const order = avail.slice().sort((x, y) => night(x) - night(y) || x - y);
   loadoutFocus = loadoutMust[0] != null ? loadoutMust[0] : order[0];
-  $('#loTitle').textContent = `Pick ${teamSize()} pumpkins` + (__RELEASE__ >= 4 && loadoutGourds.length ? ' and 1 gourd' : '');   // a gourd night asks for both (Release 4)
+  $('#loTitle').textContent = `Pick ${teamSize()} pumpkins` + (__RELEASE__ >= 4 && loadoutGourds.length ? (loadoutGourdSlots > 1 ? ` and up to ${loadoutGourdSlots} gourds` : ' and 1 gourd') : '');   // a gourd night asks for both (Release 4); with a choice of gourds, up to two (Release 5)
   const box = $('#picks'); box.innerHTML = '';
   for (const t of order){
     const b = document.createElement('button'); b.className = 'pick';
@@ -601,51 +603,80 @@ function backToLoadout(){
   for (const b of $('#picks').querySelectorAll('.pick')){ const t = +b.dataset.t, lv = b.querySelector('.lv'); if (lv) lv.textContent = `Lv ${lvOf(t)}`; b.setAttribute('aria-label', `${PTYPES[t].name}, level ${lvOf(t)}`); }
   syncLoadout(); setState('loadout');
 }
-/** The gourd pick (Release 4, owner 2026-11-05; spec Part 3 "A separate pick in the picker"). On a gourd night the Gourds section
- *  ("Gourd · pick 1") holds one tile per gourd and the header shows a "Your gourd" slot set apart from the Your team row, so the two picks
- *  never read as one row. Tapping a tile puts that gourd in the slot and shows its card; the slot never empties (a gourd night needs a
- *  gourd), and with one gourd it starts filled and locked. Built for a choice of one from several later. Story nights hide all of it. */
+/** The gourd pick (Release 4, owner 2026-11-05; spec Part 3 "A separate pick in the picker"; two slots since Release 5, spec Part 6).
+ *  On a gourd night the Gourds section holds one tile per gourd the night offers, and the header shows the gourd slots set apart from the
+ *  Your team row, so the two picks never read as one row. Story nights hide all of it.
+ *  - One gourd offered (Release 4's nights, or the Protector not unlocked yet): "Gourd · pick 1", one "Your gourd" slot, filled and locked;
+ *    tapping the tile or the slot shows its card and never empties it.
+ *  - More offered (N2-5 on): "Gourds · pick up to 2", "Your gourds" over GOURD_SLOTS slots, every offered gourd picked to start. A tile
+ *    toggles its gourd (into the first free slot, the rest in the order picked); a tapped slot empties it. Start never waits for a gourd:
+ *    either or both slots may be left empty (owner: "up to 2"). ALLOW_SAME_GOURD (data/gourds.js) would let a tile fill a second slot. */
 function renderGourds(keys){
   loadoutGourds = keys.filter(k => GOURDS[k]);
-  if (!loadoutGourds.includes(loadoutGourd)) loadoutGourd = loadoutGourds[0] || null;
+  const one = loadoutGourds.length === 1;
+  loadoutGourdSlots = !loadoutGourds.length ? 0 : one ? 1 : Math.min(GOURD_SLOTS, ALLOW_SAME_GOURD ? GOURD_SLOTS : loadoutGourds.length);
+  loadoutGourdSel = loadoutGourds.slice(0, loadoutGourdSlots);   // both start picked (spec: the picker preselects every gourd it offers)
   $('#ovLoadout').classList.toggle('gNight', loadoutGourds.length > 0);
+  $('#ovLoadout').classList.toggle('g2', loadoutGourdSlots > 1);
   let sec = $('#loGourdSec');
-  if (!sec){ sec = document.createElement('section'); sec.className = 'loSec'; sec.id = 'loGourdSec'; sec.innerHTML = '<h3>Gourd \u00b7 pick 1</h3><div class="picks" id="loGourds"></div>'; $('#loScroll').appendChild(sec); }
-  if (!$('#loGourdSlot')){   // the header pair, built once: the team row under its label, then the gourd slot under its own
+  if (!sec){ sec = document.createElement('section'); sec.className = 'loSec'; sec.id = 'loGourdSec'; sec.innerHTML = '<h3></h3><div class="picks" id="loGourds"></div>'; $('#loScroll').appendChild(sec); }
+  sec.querySelector('h3').textContent = loadoutGourdSlots > 1 ? `Gourds · pick up to ${loadoutGourdSlots}` : 'Gourd · pick 1';
+  if (!$('#loGourdSlots')){   // the header pair, built once: the team row under its label, then the gourd slots under their own
     const team = $('#loTeam'), pair = document.createElement('div'); pair.className = 'loPair'; team.before(pair);
     const tg = document.createElement('div'); tg.className = 'loGroup'; tg.innerHTML = '<small class="loLabel" aria-hidden="true">Your team</small>'; tg.appendChild(team);
-    const gg = document.createElement('div'); gg.className = 'loGroup loGourdBox'; gg.innerHTML = '<small class="loLabel" aria-hidden="true">Your gourd</small><button class="slot gslot" id="loGourdSlot"></button>';
+    const gg = document.createElement('div'); gg.className = 'loGroup loGourdBox'; gg.innerHTML = '<small class="loLabel" id="loGourdLabel" aria-hidden="true"></small><div class="gslots" id="loGourdSlots"></div>';
     pair.append(tg, gg);
-    $('#loGourdSlot').onclick = () => { if (!loadoutGourd) return; loadoutFocus = 'gourd:' + loadoutGourd; SFX.ui('locked'); renderDetail(); };   // shows its card; never empties
+  }
+  $('#loGourdLabel').textContent = loadoutGourdSlots > 1 ? 'Your gourds' : 'Your gourd';
+  const slots = $('#loGourdSlots'); slots.innerHTML = '';
+  for (let i = 0; i < Math.max(1, loadoutGourdSlots); i++){   // the first keeps Release 4's id
+    const b = document.createElement('button'); b.className = 'slot gslot'; b.id = i ? 'loGourdSlot' + (i + 1) : 'loGourdSlot'; b.dataset.slot = i;
+    b.onclick = () => {
+      const k = loadoutGourdSel[i]; if (!k) return;
+      loadoutFocus = 'gourd:' + k;
+      if (loadoutGourdSlots < 2){ SFX.ui('locked'); renderDetail(); return; }   // the only gourd: shows its card, never empties
+      loadoutGourdSel.splice(i, 1); SFX.ui('unpick'); syncLoadout();
+    };
+    slots.appendChild(b);
   }
   const box = sec.querySelector('.picks'); box.innerHTML = '';
   sec.hidden = !loadoutGourds.length;
-  const one = loadoutGourds.length === 1;
   for (const k of loadoutGourds){
     const G0 = GOURDS[k];
     const b = document.createElement('button'); b.className = 'pick gtile' + (one ? ' must' : ''); b.dataset.gourd = k;
-    b.appendChild(gourdIcon(96));
+    b.appendChild(gourdIcon(96, k));
     const nm = document.createElement('b'); nm.textContent = G0.name; b.appendChild(nm);
-    const tag = document.createElement('span'); tag.className = 'tag info'; tag.textContent = 'i'; tag.title = 'Your gourd tonight'; b.appendChild(tag);
-    b.setAttribute('aria-label', `${G0.name}, your gourd tonight`);
-    b.onclick = () => { const was = loadoutGourd; loadoutGourd = k; loadoutFocus = 'gourd:' + k; SFX.ui(was === k ? 'tap' : 'pick'); syncLoadout(); };
+    if (one){ const tag = document.createElement('span'); tag.className = 'tag info'; tag.textContent = 'i'; tag.title = 'Your gourd tonight'; b.appendChild(tag); }
+    b.setAttribute('aria-label', one ? `${G0.name}, your gourd tonight` : `${G0.name}, tap to pick or drop`);
+    b.onclick = () => {
+      loadoutFocus = 'gourd:' + k;
+      const has = loadoutGourdSel.includes(k), full = loadoutGourdSel.length >= loadoutGourdSlots;
+      if (one) SFX.ui('tap');   // the night's only gourd stays picked
+      else if (has && (!ALLOW_SAME_GOURD || full)){ loadoutGourdSel.splice(loadoutGourdSel.lastIndexOf(k), 1); SFX.ui('unpick'); }
+      else if (!full){ loadoutGourdSel.push(k); SFX.ui('pick'); }
+      else SFX.ui('locked');   // both slots taken: drop one first
+      syncLoadout();
+    };
     box.appendChild(b);
   }
 }
-/** The header's gourd slot and the tiles' picked state (Release 4). */
+/** The header's gourd slots and the tiles' picked state (Release 4; two slots since Release 5). */
 function renderGourdSlot(){
-  for (const b of document.querySelectorAll('#loGourds .pick')) b.setAttribute('aria-pressed', b.dataset.gourd === loadoutGourd ? 'true' : 'false');
-  const sl = $('#loGourdSlot'); if (!sl) return;
-  sl.innerHTML = ''; sl.classList.toggle('must', loadoutGourds.length === 1); sl.classList.toggle('empty', !loadoutGourd);
-  if (loadoutGourd){ sl.dataset.gourd = loadoutGourd; sl.appendChild(gourdIcon(96)); sl.setAttribute('aria-label', `Your gourd: ${GOURDS[loadoutGourd].name}` + (loadoutGourds.length === 1 ? ', picked for this night' : '')); }
-  else { delete sl.dataset.gourd; sl.setAttribute('aria-label', 'Your gourd: tap a gourd below'); }
+  for (const b of document.querySelectorAll('#loGourds .pick')) b.setAttribute('aria-pressed', loadoutGourdSel.includes(b.dataset.gourd) ? 'true' : 'false');
+  const one = loadoutGourdSlots < 2;
+  document.querySelectorAll('#loGourdSlots .gslot').forEach((sl, i) => {
+    const k = loadoutGourdSel[i];
+    sl.innerHTML = ''; sl.classList.toggle('must', one && !!k); sl.classList.toggle('empty', !k); sl.disabled = !k && !one;
+    if (k){ sl.dataset.gourd = k; sl.appendChild(gourdIcon(96, k)); sl.setAttribute('aria-label', `Your gourd: ${GOURDS[k].name}` + (one ? ', picked for this night' : ', tap to remove')); }
+    else { delete sl.dataset.gourd; sl.setAttribute('aria-label', one ? 'Your gourd: tap a gourd below' : 'Empty gourd slot: tap a gourd below'); }
+  });
 }
 function renderDetail(){
   const t = loadoutFocus, d = $('#loDetail'); if (t == null){ d.innerHTML = ''; return; }
   if (__RELEASE__ >= 4 && typeof t === 'string' && t.startsWith('gourd:')){   // a gourd's card (Release 4)
     const G0 = GOURDS[t.slice(6)]; d.innerHTML = ''; if (!G0) return;
-    d.appendChild(gourdIcon(96));
-    const tx = document.createElement('div'); tx.innerHTML = `<b>${G0.name}</b><small>Your gourd \u00b7 not one of your pumpkins</small><p class="ab"><span class="k">Power:</span> ${G0.power}</p><p class="lo">${G0.lore}</p>`;
+    d.appendChild(gourdIcon(96, G0.key));
+    const tx = document.createElement('div'); tx.innerHTML = `<b>${G0.name}</b><small>${loadoutGourdSlots > 1 ? 'A gourd' : 'Your gourd'} \u00b7 not one of your pumpkins</small><p class="ab"><span class="k">Power:</span> ${G0.power}</p><p class="lo">${G0.lore}</p>`;
     d.appendChild(tx); return;
   }
   const P = PTYPES[t], L = lvOf(t), un = t < 2 ? 1 : unlockNightOf(P.key), where = un === 1 ? 'from the start' : un === Infinity ? '' : `unlocked at ${levelFor(un).label}`;
@@ -695,8 +726,10 @@ export function syncLoadout(){
   for (const b of document.querySelectorAll('#picks .pick')) b.setAttribute('aria-pressed', loadoutSel.has(+b.dataset.t) ? 'true' : 'false');
   const n = loadoutSel.size;
   const min = teamSize();   // 5-20 perk: four colours are enough
-  const gNight = __RELEASE__ >= 4 && loadoutGourds.length > 0, gReady = !gNight || !!loadoutGourd;   // a gourd night also needs its gourd (Release 4)
-  $('#loCount').textContent = n >= min && gReady ? 'Ready. Only the pumpkins you pick will sprout and drop tonight.' : n < min ? `${n} of ${min} ${gNight ? 'pumpkins ' : ''}picked. Tap a pumpkin to pick it and read about it.` : __RELEASE__ >= 4 ? 'Tap a gourd below to pick it.' : '';
+  const gNight = __RELEASE__ >= 4 && loadoutGourds.length > 0, gChoice = __RELEASE__ >= 5 && loadoutGourdSlots > 1;
+  const gReady = !gNight || gChoice || loadoutGourdSel.length > 0;   // a one-gourd night also needs its gourd (Release 4); with a choice (Release 5) every slot may stay empty
+  $('#loCount').textContent = n >= min && gReady ? (gChoice && !loadoutGourdSel.length ? 'Ready, with no gourd tonight. Tap a gourd below to take one along.' : 'Ready. Only the pumpkins you pick will sprout and drop tonight.')
+    : n < min ? `${n} of ${min} ${gNight ? 'pumpkins ' : ''}picked. Tap a pumpkin to pick it and read about it.` : __RELEASE__ >= 4 ? 'Tap a gourd below to pick it.' : '';
   $('#bLoGo').disabled = n < min || !gReady;
   if (__RELEASE__ >= 4) renderGourdSlot();
   const why = loadoutWhy.filter(w => w.why !== 'New this level').map(w => `${PTYPES[w.t].name} is locked in: ${w.why.toLowerCase()}.`).join(' ');
@@ -1068,7 +1101,7 @@ export function wireButtons(){
 
   $('#bLoBack').onclick = () => { if (loadoutFromEndless) openEndless(); else if (loadoutFromPreview) openPreview(previewNight); else setState('title'); };   // back to the level card the night was started from (owner)
 
-  $('#bLoGo').onclick = () => { if ($('#bLoGo').disabled || loadoutSel.size < teamSize()) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo, __RELEASE__ >= 4 ? loadoutGourd : undefined); };   // the gourd pick goes along (Release 4; the engine places def.gourd's one gourd)
+  $('#bLoGo').onclick = () => { if ($('#bLoGo').disabled || loadoutSel.size < teamSize()) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo, __RELEASE__ >= 4 ? loadoutGourdSel.slice() : undefined); };   // the gourd picks go along, in slot order (Release 4: the one Grave Gourd; Release 5: up to two, maybe none); startGame places them
 
   for (const b of document.querySelectorAll('#shopTabs .tab')) b.onclick = () => { SFX.ui('tap'); setShopTab(b.dataset.tab); };
   $('#bSeedAd').onclick = () => watchSeedAd(renderShop);

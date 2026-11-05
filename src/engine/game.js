@@ -32,7 +32,7 @@ import { lightFire, lightRandomFires, fireAhead, burnPumpkin, updateFires } from
 import { updateCrowDives } from './nightmare.js';
 import { prebakeFire } from './render/fire.js';
 import { placeGourdsAtStart, gourdSnapshot, restoreGourd } from './gourd.js';
-import { GOURDS } from '../data/gourds.js';
+import { GOURDS, GOURD_SLOTS } from '../data/gourds.js';
 import { prebakeGourd } from './render/gourd.js';
 import { ROTTEN, ROT_FX, clearHitFlags, rotSnapshot, restoreRot } from './rot.js';
 import { prebakeRot } from './render/rot.js';
@@ -64,7 +64,7 @@ export function makePreview(n){
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def.pattern, def.graves);
   if (def.gravesLayout) applyGravesLayout(def.gravesLayout);
-  if (__RELEASE__ >= 4 && def.gourd) placeGourdsAtStart(['grave']);   // the preview shows the Grave Gourd where the night starts it
+  if (__RELEASE__ >= 4 && def.gourd) placeGourdsAtStart(offeredGourds(def));   // the preview stands the gourds the night starts with (the picker preselects every one it offers) where it starts them
   initWalls();
   resolveMatches();
   setGest(null);
@@ -80,7 +80,7 @@ export function beginNight(n){
   const fireSource = __RELEASE__ >= 4 && (hasFire(def) || def.boss === 'strawlord' || def.boss2 === 'strawlord' || def.boss === 'fallengravekeeper' || def.pool.some(([k]) => k === 'rooster'));   // fire tiles, or something that lights them (the rooster's death, the Strawlord)
   if ((def.pool.some(([k]) => iceKind(k)) || fireSource) && !must.some(m => m.t === 2))   // Ice is locked in wherever Ice-only monsters or fire can be
     must.push({ t:2, why: __RELEASE__ >= 4 && (fireSource || def.pool.some(([k]) => iceKind(k) && k !== 'firemummy')) ? 'Only Ice puts out fire and kills burning monsters' : 'Flaming mummies only die to Ice' });
-  if (av.length > 5 || (__RELEASE__ >= 4 && def.gourd)) openLoadout(av, (lo, gk) => startGame('story', n, lo, gk), must, __RELEASE__ >= 4 && def.gourd ? ['grave'] : null);   // a gourd night always opens the picker, so its Gourds section is seen (Release 4)
+  if (av.length > 5 || (__RELEASE__ >= 4 && def.gourd)) openLoadout(av, (lo, gk) => startGame('story', n, lo, gk), must, __RELEASE__ >= 4 && def.gourd ? offeredGourds(def) : null);   // a gourd night always opens the picker, so its Gourds section is seen (Release 4); the picked kinds come back in slot order (Release 5)
   else startGame('story', n, av);
 }
 
@@ -101,13 +101,23 @@ export function bakeKeys(def){
     ...(__RELEASE__ >= 3 && def.boss === 'hollowking' ? ['hollowking|' + TYPES.hollowking.forms[0]] : []), 'ghoul'];
 }
 
+/** The gourds a night offers in the picker, in slot order (Release 5, spec Part 6): none unless the level has `gourd:true`; there, its
+ *  `gourds` field, or the Grave Gourd alone (Release 4's nights). A kind not unlocked yet (save.gourds) is not offered; the Grave counts as
+ *  unlocked on any gourd night (those nights open only after N1-4, its unlock), so Release 4 plays as before. */
+export function offeredGourds(def){
+  if (!(__RELEASE__ >= 4) || !def || !def.gourd) return [];
+  const list = (__RELEASE__ >= 5 && def.gourds) || ['grave'];
+  return list.filter(k => GOURDS[k] && (k === 'grave' || (save.gourds && save.gourds[k]))).slice(0, GOURD_SLOTS);
+}
+
 /** The gourds a night starts with (Release 4; a list since Release 5): none unless the level has `gourd:true`; there, the picked kinds in slot
- *  order, or ['grave'] when none are passed (Release 4's picker hands over one key, a string). Unknown kinds are dropped (a lower build has no
- *  Protector); two of one kind are folded into one for now (spec Part 6: a one-line rule change here when the owner allows it). */
+ *  order (an empty list: none, the player left both slots empty), or the night's offer when none are passed (Release 4's nights: ['grave']).
+ *  One key, a string, is one kind (Release 4's picker handed one over). Unknown kinds are dropped (a lower build has no Protector); two of one
+ *  kind are folded into one for now (spec Part 6: a one-line rule change here, with ALLOW_SAME_GOURD in data/gourds.js, when the owner allows it). */
 function nightGourds(def, gourds){
   if (!def || !def.gourd) return [];
-  const list = gourds == null ? ['grave'] : typeof gourds === 'string' ? [gourds] : gourds;
-  return [...new Set(list.filter(k => GOURDS[k]))].slice(0, 2);
+  const list = gourds == null ? offeredGourds(def) : typeof gourds === 'string' ? [gourds] : gourds;
+  return [...new Set(list.filter(k => GOURDS[k]))].slice(0, GOURD_SLOTS);
 }
 
 export function startGame(mode, n, loadout, gourds){

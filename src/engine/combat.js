@@ -17,6 +17,7 @@ import { toolsForNight, highestOpen, progressNight } from '../data/worlds/index.
 import { banner } from '../ui/hud.js';
 import { dropJukebox, jukeboxPoints } from './spawner.js';
 import { lightFire } from './fire.js';
+import { dropCoffin } from './nightmare.js';
 
 export function launchGroup(ref){
   if (!ref || !ref.lit || !G || G.over) return;
@@ -175,10 +176,11 @@ export function kill(m){
   }
   m.dead = true;
   if (__RELEASE__ >= 4 && m.type === 'rooster') lightFire(m.lane, m.p);   // a Cinder Rooster leaves a fire tile where it falls, whatever killed it
+  if (__RELEASE__ >= 4 && m.type === 'casketjack') dropCoffin(m);   // Casket Jack falls into a field coffin with one last mummy in it (engine/nightmare.js)
   if (hitBy){ const b = hitBy.grp; if (b){ b.kills++; if (b.kills > G.q.best) G.q.best = b.kills; } if (hitBy.type === BROWN && hitBy.size === 2) G.q.brown++; }   // quests: kills in one launch, big Brown kills
   G.kills++; if (!m.minion) G.resolved++;
   G.score += m.pts;
-  const reward = m.type === 'sack' ? 'sack' : m.type === 'boss' ? 'boss' : m.lastHit === YELLOW ? 'gold' : rollReward();
+  const reward = m.type === 'sack' ? 'sack' : m.type === 'boss' ? 'boss' : (__RELEASE__ >= 4 && TYPES[m.type] && TYPES[m.type].noReward) ? 'none' : m.lastHit === YELLOW ? 'gold' : rollReward();   // none: Casket Jack's field coffin
   const y = mY(m), s = mS(m);
   const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', chameleon:'#6ab04a', rchameleon:'#3a3a4a', mirror:'#c8d8f0', firemummy:'#ff8a3a', fogwalker:'#b8c8d8', witch:'#6a3a8a', bulwark:'#8090a8', turtle:'#4a7a5a', sack:'#b08850', jukebox:'#c0392b', boss:'#6a3a7a' }[m.type] || '#aaa';
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
@@ -192,7 +194,7 @@ export function kill(m){
     const nc = Math.min(m.coins, m.type === 'boss' ? 12 : 5);
     for (let i = 0; i < nc; i++) G.coinFx.push({ sx:m.x + rnd(-12, 12), sy:y + rnd(-10, 10), t:-i * 0.05, dur:0.65 + Math.random() * 0.2 });
   }
-  lootOnKill(m, reward, y);
+  if (reward !== 'none') lootOnKill(m, reward, y);
   if (reward === 'boss') dropPumpkins(m, Math.floor(m.drop));
   else if (reward === 'pumpkin') dropPumpkins(m, Math.max(1, Math.round(m.drop)));
   else if (reward === 'weapon') dropWeapon(m);

@@ -27,7 +27,7 @@ def story_done(upto=20):
 # ---------- Task 1: the track, the book page and the release checks ----------
 def check_r4_absent(browser, url):
     js = bundle_js()
-    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord', 'Grave Gourd', 'e3a43c', 'around your gourd', 'Grave Riser', 'Your gourd', 'and 1 gourd'):
+    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord', 'Grave Gourd', 'e3a43c', 'around your gourd', 'Grave Riser', 'Your gourd', 'and 1 gourd', 'Casket Jack', 'Field Coffin'):
         ok((s in js) == R4, f"{s!r} {'in' if R4 else 'not in'} the bundle")
 
 
@@ -109,7 +109,7 @@ SHOOT = """(type, lane) => { const g = window.__gg, G = g.G;
   return new Promise(res => { let minP = 9; const t0 = performance.now();
     const f = () => { if (!pr.dead && G.projs.includes(pr) && performance.now() - t0 < 3000){ minP = Math.min(minP, (pr.y - F0) / (F1 - F0)); requestAnimationFrame(f); } else setTimeout(() => res([minP, !!pr.dead, !!pr.burned]), 50); };
     f(); }); }"""
-QUIET = "() => { const g = window.__gg, G = g.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.projs.length = 0; G.fires.length = 0; G.fmNext = 99; g.grid.forEach(r => r.fill(null)); }"
+QUIET = "() => { const g = window.__gg, G = g.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.projs.length = 0; G.fires.length = 0; G.fmNext = 99; G.fireTrickleT = 1e9; g.grid.forEach(r => r.fill(null)); }"
 
 
 def fire_night(page):
@@ -405,7 +405,7 @@ def check_hayrick_pin(browser, url):
     hasGourd = page.evaluate("() => !!window.__gg.isGourd")
     ok(page.evaluate("() => { const T = window.__gg.TYPES; return [T.hayrick.hp, T.hayrick.pinT, T.hayrickBurning.rise]; }") == [8, 4, 4], 'hayrick: 8 health, pins for 4 s; hayrickBurning rises after 4 s (data)')
     page.evaluate("""() => { const g = window.__gg; g.grid[1][2] = g.newCell(0); g.grid[4][2] = g.newCell(1); g.grid[4][5] = g.newCell(0);
-      window.__h = g.spawnMonster('hayrick', 2, true, 0.35); window.__h.sp = 0; }""")
+      window.__h = g.spawnMonster('hayrick', 2, true, 0.35); window.__h.sp = 0; window.__h.atFence = false; }""")
     t0 = time.time(); t = None
     while time.time() - t0 < 3:
         if page.evaluate("() => (window.__gg.grid[1][2].pinned || 0)") > 0: t = time.time() - t0; break
@@ -433,7 +433,7 @@ def check_hayrick_pin(browser, url):
     if hasGourd:
         page.evaluate(QUIET)
         page.evaluate("""() => { const g = window.__gg; g.grid[0][2] = g.newCell(0); g.grid[0][2].gourd = true; g.grid[1][2] = g.newCell(1);
-          window.__h = g.spawnMonster('hayrick', 2, true, 0.35); window.__h.sp = 0; }""")
+          window.__h = g.spawnMonster('hayrick', 2, true, 0.35); window.__h.sp = 0; window.__h.atFence = false; }""")
         time.sleep(1.5)
         ok(page.evaluate("() => !(window.__gg.grid[0][2].pinned > 0) && window.__gg.grid[1][2].pinned > 0"), 'with the gourd at (0, 2) the pin goes to the next pumpkin down the column, (1, 2)')
     ok(not errors, f'no page errors {errors[:2]}')
@@ -445,13 +445,13 @@ def check_hayrick_no_target(browser, url):
     if not R4: return
     page, errors = open_page(browser, url)
     fire_night(page)
-    page.evaluate("() => { const g = window.__gg; window.__h = g.spawnMonster('hayrick', 2, true, 0.35); window.__h.sp = 0; window.__h.frozenT = 2; g.grid[4][2] = g.newCell(0); }")
+    page.evaluate("() => { const g = window.__gg; window.__h = g.spawnMonster('hayrick', 2, true, 0.35); window.__h.sp = 0; window.__h.atFence = false; window.__h.frozenT = 2; g.grid[4][2] = g.newCell(0); }")
     time.sleep(1.0)
     ok(not page.evaluate("() => window.__h.thrown"), 'a frozen hayrick does not throw')
     time.sleep(1.6)
     ok(page.evaluate("() => window.__h.thrown") and page.evaluate("() => (window.__gg.grid[4][2].pinned || 0)") > 0, 'once it thaws it throws')
     page.evaluate(QUIET)
-    page.evaluate("() => { const g = window.__gg; window.__h = g.spawnMonster('hayrick', 4, true, 0.35); window.__h.sp = 0; }")
+    page.evaluate("() => { const g = window.__gg; window.__h = g.spawnMonster('hayrick', 4, true, 0.35); window.__h.sp = 0; window.__h.atFence = false; }")
     time.sleep(0.6)
     ok(not page.evaluate("() => window.__h.thrown"), 'an empty column: it has not used its fork')
     page.evaluate("() => { const g = window.__gg; g.grid[2][4] = g.newCell(0); }")
@@ -487,7 +487,7 @@ def check_hayrick_burn(browser, url):
     ok(page.evaluate("() => window.__m.hp") == 5, 'it keeps its health')
     # a burning hayrick sets an ordinary one within a lane and a tile alight
     page.evaluate(QUIET)
-    page.evaluate("""() => { const g = window.__gg; window.__b = g.spawnMonster('hayrickBurning', 3, true, 0.5); window.__b.sp = 0; window.__o = g.spawnMonster('hayrick', 4, true, 0.5); window.__o.sp = 0; window.__f = g.spawnMonster('hayrick', 6, true, 0.5); window.__f.sp = 0; }""")
+    page.evaluate("""() => { const g = window.__gg; window.__b = g.spawnMonster('hayrickBurning', 3, true, 0.5); window.__b.sp = 0; window.__b.atFence = false; window.__o = g.spawnMonster('hayrick', 4, true, 0.5); window.__o.sp = 0; window.__f = g.spawnMonster('hayrick', 6, true, 0.5); window.__f.sp = 0; }""")
     time.sleep(0.5)
     ok(page.evaluate("() => [window.__o.type, window.__f.type]") == ['hayrickBurning', 'hayrick'], 'a burning hayrick ignites an ordinary one in the next lane, not one three lanes away')
     # it throws too (its normal ability); no burning pin
@@ -597,7 +597,7 @@ def strawlord_up(page, k):
     page.evaluate("() => { const G = window.__gg.G; G.sproutT = -999; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }")
     time.sleep(0.3)
     return page.evaluate(f"""() => {{ const g = window.__gg, G = g.G, b = {BOSS}; if (!b) return null;
-      G.spawnTimer = 999; G.monsters.splice(0, G.monsters.length, b); G.fires.length = 0; G.fmNext = 99; b.p = b.hold - 0.01;
+      G.spawnTimer = 999; G.monsters.splice(0, G.monsters.length, b); G.fires.length = 0; G.fmNext = 99; G.fireTrickleT = 1e9; b.p = b.hold - 0.01;
       window.__b = b; window.__maxP = 0; clearInterval(window.__mp); window.__mp = setInterval(() => {{ window.__maxP = Math.max(window.__maxP, window.__b.p); window.__gg.G.spawnTimer = 999; }}, 10);
       return [b.kind, b.hp, b.maxHp, !!b.phase2, b.hold]; }}""")
 
@@ -605,8 +605,8 @@ def strawlord_up(page, k):
 def check_strawlord(browser, url):
     if not R4: return
     page, errors = open_page(browser, url)
-    d = page.evaluate("() => { const T = window.__gg.TYPES, s = T.strawlord, c = T.crow; return s && c ? [s.boss, s.hp, s.form2.hp, s.hold, s.moveEvery, s.flockEvery, s.crows, s.fires2, s.noItems, c.hp, c.sp, c.r, c.flying, c.coins, c.eat, c.pts, c.drop] : null; }")
-    ok(d == [True, 20, 30, 0.12, 8, [6, 4], [3, 5], 2, True, 1, 0.11, 14, True, 2, 0.4, 8, 0], f'Strawlord and crow data {d}')
+    d = page.evaluate("() => { const T = window.__gg.TYPES, s = T.strawlord, c = T.crow; return s && c ? [s.boss, s.hp, s.form2.hp, s.hold, s.moveEvery, s.flockEvery, s.crows, s.trailMax, s.noItems, c.hp, c.sp, c.r, c.flying, c.coins, c.eat, c.pts, c.drop] : null; }")
+    ok(d == [True, 20, 30, 0.12, 8, [6, 4], [3, 5], 4, True, 1, 0.11, 14, True, 2, 0.4, 8, 0], f'Strawlord and crow data {d}')
     ok(page.evaluate("() => [window.__gg.NIGHTMARE_LEVELS[0][3].boss, window.__gg.NIGHTMARE_LEVELS[0][3].bossChest, window.__gg.NIGHTMARE_LEVELS[0][12].boss, window.__gg.NIGHTMARE_LEVELS[0][12].bossForm]") == ['strawlord', 'normal', 'strawlord', 2],
        'N1-4 and N1-13 are Strawlord nights (N1-13 in phase 2), with one normal chest')
     ok(page.evaluate("() => window.__gg.BOSS_NAMES.strawlord") == 'The Strawlord', 'its name on screen is "The Strawlord"')
@@ -621,8 +621,12 @@ def check_strawlord(browser, url):
     cr = page.evaluate(f"() => {CROWS}.map(c => [c.minion, c.lane, c.p])")
     ok(all(c[0] for c in cr) and all(c[2] > 0.1 for c in cr), f'the crows are minions flying down from the Strawlord {cr}')
     time.sleep(2.0)
-    ok(page.evaluate("() => window.__b.lane") != lane0, f'after 8 s it has moved to another lane (from {lane0})')
-    ok(page.evaluate("() => window.__gg.G.fires.length") == 0, 'phase 1 lights no fire')
+    lane1 = page.evaluate("() => window.__b.lane")
+    ok(lane1 != lane0, f'after 8 s it has moved to another lane (from {lane0})')
+    tr = page.evaluate("() => { const g = window.__gg, b = window.__b; return g.G.fires.map(f => [f.lane, Math.abs(f.p - b.p) < g.TILE_P() / 2]); }")
+    step = 1 if lane1 > lane0 else -1
+    want = sorted([lane0 + i * step for i in range(min(abs(lane1 - lane0), 4))])
+    ok(sorted(f[0] for f in tr) == want and all(f[1] for f in tr), f'the move left a fire trail on its row from lane {lane0} towards {lane1}, at most 4, not under it {tr} (want lanes {want})')
     # phase 2 at half health
     page.evaluate(f"() => {{ const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, b.hp - b.maxHp / 2, '#fff'); {CROWS}.forEach(c => c.old = true); window.__f0 = g.G.fires.length; }}")
     time.sleep(0.25)
@@ -630,7 +634,7 @@ def check_strawlord(browser, url):
     ok(p2[0] and p2[1] == 'tear' and p2[2] == 10, f'at half health phase 2 starts and the tear clip plays {p2}')
     time.sleep(4.5)
     r = page.evaluate(f"() => [{CROWS}.filter(c => !c.old).length, window.__gg.G.fires.length - window.__f0]")
-    ok(r[0] >= 3 and r[1] == 2, f'4.5 s into phase 2 it has flocked again (new crows {r[0]}) and lit 2 fire tiles ({r[1]})')
+    ok(r[0] >= 3 and r[1] == 0, f'4.5 s into phase 2 it has flocked again (new crows {r[0]}) and the flock lit no fire ({r[1]})')
     mp, hold = page.evaluate("() => [window.__maxP, window.__b.hold]")
     ok(mp <= hold + 1e-9, f'it never walks past hold (max p {mp:.4f}, hold {hold})')
     # immune to knockback and freeze, through the real hit path: 20 level-5 Ice hits from a 5+ bunch (guar: knockback guaranteed; freeze 50% a hit)
@@ -655,7 +659,7 @@ def check_strawlord(browser, url):
 
 
 def check_strawlord_returns(browser, url):
-    """N1-13 (bossForm 2): it starts already in phase 2 with form2 health, never plays tear, and flocks every 4 s with 2 fires."""
+    """N1-13 (bossForm 2): it starts already in phase 2 with form2 health, never plays tear, and flocks every 4 s; flocks light no fire (owner 2026-11-05)."""
     if not R4: return
     page, errors = open_page(browser, url)
     b = strawlord_up(page, 13)
@@ -665,7 +669,7 @@ def check_strawlord_returns(browser, url):
     ok(page.evaluate("() => !window.__b.anim || window.__b.anim.clip !== 'tear'"), 'no tear clip: it is already off the post')
     time.sleep(4.5)
     r = page.evaluate(f"() => [{CROWS}.length, window.__gg.G.fires.length]")
-    ok(3 <= r[0] <= 5 and r[1] == 2, f'4.5 s on it has flocked once (crows {r[0]}) and lit 2 fires ({r[1]})')
+    ok(3 <= r[0] <= 5 and r[1] == 0, f'4.5 s on it has flocked once (crows {r[0]}) and lit no fire ({r[1]})')
     c0 = page.evaluate("() => window.__gg.save.chests.length")
     page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 999, '#fff'); }"); time.sleep(0.3)
     ch = page.evaluate("() => window.__gg.save.chests.slice(%d).map(c => c.kind)" % c0)
@@ -1076,42 +1080,42 @@ COL_GRAVES = "(c) => window.__gg.graves.map(row => row[c] ? 1 : 0)"
 
 
 def check_grave_riser(browser, url):
+    """It digs a grave on an empty cell anywhere on the patch (owner 2026-11-05: not only its own column); never on a pumpkin, the gourd or a
+    grave; not while frozen or off the field; nothing when the patch is full. The graves stay after it dies."""
     if not R4: return
     page, errors = open_page(browser, url)
     fire_night(page)
     ok(page.evaluate("() => { const T = window.__gg.TYPES.graveriser; return T && [T.hp, T.digEvery]; }") == [3, 7], 'grave riser: 3 health, digs every 7 s (data)')
-    # lane 4: an empty column. lane 2: pumpkins in rows 0-1, a grave in row 2, the gourd in row 3, so row 4 is the only free cell.
-    # lane 6: frozen for its whole dig time. lane 0: not on the field yet (p < 0). lane 1: a column with no riser.
-    page.evaluate("""() => { const g = window.__gg; g.graves.forEach(r => r.fill(false));
-      g.grid[0][2] = g.newCell(0); g.grid[1][2] = g.newCell(1); g.graves[2][2] = true; g.grid[3][2] = g.newGourd();
+    FREE = [[0, 0], [2, 1], [4, 6]]   # none in its own column (4): the grave must go to another column
+    page.evaluate("""(free) => { const g = window.__gg; g.graves.forEach(r => r.fill(false));
+      for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) g.grid[r][c] = g.newCell((r + c) % 2);
+      g.grid[3][3] = g.newGourd(); for (const [r, c] of free) g.grid[r][c] = null;
       const mk = (l, p) => { const m = g.spawnMonster('graveriser', l, true, p); m.sp = 0; return m; };
-      window.__gr = { a:mk(4, 0.3), b:mk(2, 0.3), c:mk(6, 0.3), d:mk(0, -0.04) }; window.__gr.c.frozenT = 9; }""")
+      window.__gr = { a:mk(4, 0.3) }; }""", FREE)
     time.sleep(6.3)
-    ok(sum(page.evaluate(COL_GRAVES, 4)) == 0, 'no grave in column 4 before 7 s')
+    ok(page.evaluate("() => window.__gg.graves.flat().filter(Boolean).length") == 0, 'no grave before 7 s')
     time.sleep(1.2)
-    g4 = page.evaluate(COL_GRAVES, 4)
-    ok(sum(g4) == 1, f'7.5 s on: exactly one grave in column 4 {g4}')
-    ok(page.evaluate("() => window.__gg.grid.every(r => !r[4])"), 'the grave went on an empty cell (no pumpkin was replaced)')
-    g2 = page.evaluate(COL_GRAVES, 2)
-    ok(g2 == [0, 0, 1, 0, 1], f'column 2: the only free cell (row 4) got the grave; pumpkins, the old grave and the gourd untouched {g2}')
-    ok(page.evaluate("() => { const g = window.__gg; return !!g.grid[0][2] && !!g.grid[1][2] && g.isGourd(g.grid[3][2]); }"), 'the pumpkins and the gourd in column 2 are still there')
-    ok(sum(page.evaluate(COL_GRAVES, 6)) == 0, 'a frozen riser does not dig')
-    ok(sum(page.evaluate(COL_GRAVES, 0)) == 0, 'a riser not yet on the field (p < 0) does not dig')
-    ok(sum(page.evaluate(COL_GRAVES, 1)) == 0, 'no grave in a column without a riser')
+    gv = page.evaluate("() => { const out = []; window.__gg.graves.forEach((row, r) => row.forEach((v, c) => { if (v) out.push([r, c]); })); return out; }")
+    ok(len(gv) == 1 and gv[0] in FREE, f'7.5 s on: one grave, on one of the free cells, outside its own column {gv}')
+    ok(page.evaluate("() => { const g = window.__gg; let n = 0; for (const row of g.grid) for (const c of row) if (c) n++; return n; }") == 32 and page.evaluate("() => window.__gg.isGourd(window.__gg.grid[3][3])"),
+       'no pumpkin was replaced and the gourd is untouched')
     ok(page.evaluate("() => { const a = window.__gr.a.anim; return !!a && a.clip === 'dig'; }"), 'the riser plays its dig clip')
-    # it dies: the grave stays, and its die clip plays where it stood
     page.evaluate("() => { const g = window.__gg, m = window.__gr.a; m.lastHit = 0; g.damage(m, 99, '#8fae78'); }")
     ok(page.evaluate("() => window.__gr.a.dead") is True, 'the riser is dead')
     ok(page.evaluate("() => window.__gg.G.vfx.some(v => v.kind === 'clip' && v.key === 'graveriser' && v.clip === 'die')"), 'its die clip plays (a clip effect)')
     time.sleep(0.8)
-    ok(sum(page.evaluate(COL_GRAVES, 4)) == 1, 'after it dies the grave stays')
-    # column 4 full: no new graves
+    ok(page.evaluate("() => window.__gg.graves.flat().filter(Boolean).length") == 1, 'after it dies the grave stays')
+    # frozen, or not on the field yet: no digging
+    page.evaluate("""() => { const g = window.__gg, G = g.G; G.monsters.length = 0; g.graves.forEach(r => r.fill(false)); g.grid.forEach(r => r.fill(null));
+      const a = g.spawnMonster('graveriser', 6, true, 0.3); a.sp = 0; a.frozenT = 9; const b = g.spawnMonster('graveriser', 0, true, -0.04); b.sp = 0; }""")
+    time.sleep(7.6)
+    ok(page.evaluate("() => window.__gg.graves.flat().filter(Boolean).length") == 0, 'a frozen riser and one not yet on the field (p < 0) do not dig')
+    # a full patch: no new graves
     page.evaluate("""() => { const g = window.__gg, G = g.G; G.monsters.length = 0; g.graves.forEach(r => r.fill(false));
-      for (let r = 0; r < 5; r++) g.grid[r][4] = g.newCell(r % 2);
+      for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) g.grid[r][c] = g.newCell((r + c) % 2);
       window.__gf = g.spawnMonster('graveriser', 4, true, 0.3); window.__gf.sp = 0; }""")
     time.sleep(7.6)
-    ok(sum(page.evaluate(COL_GRAVES, 4)) == 0 and page.evaluate("() => window.__gg.grid.every(r => !!r[4])"), 'column 4 full: no new grave, every pumpkin still there')
-    ok(page.evaluate("() => !window.__gg.graves.some(r => r.some(Boolean))"), 'and no grave anywhere else')
+    ok(page.evaluate("() => !window.__gg.graves.some(r => r.some(Boolean)) && window.__gg.grid.every(r => r.every(Boolean))"), 'a full patch: no new grave, every pumpkin still there')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
@@ -1179,7 +1183,7 @@ CHECKS.update({'check_bot_hooks': check_bot_hooks})
 # ---------- Task 12: the real levels N1-1 to N1-15, intro cards, the nightmare bestiary ----------
 NM_NAMES = ['Embers', 'Cockcrow', 'Wrapped in Embers', 'The Strawlord', 'The Grave Gourd', 'The Grave Riser', 'Haystack', 'Corn Maze',
             'Harvest Fire', 'Dawn Chorus', 'The Burning Barn', 'Risen Rows', 'Strawlord Returns', 'Burnt Offerings', 'Eclipse']
-NM_NEW = ['rooster', 'hayrick', 'husker', 'graveriser']   # the new monsters N1-15 brings together
+NM_NEW = ['rooster', 'hayrick', 'husker', 'graveriser', 'crow', 'casketjack']   # the new monsters N1-15 brings together
 LEVELS_JS = """() => { const g = window.__gg; return g.NIGHTMARE_LEVELS[0].map((d, i) => { const L = g.levelFor(1001 + i);
   return { name:d.name, pool:d.pool.map(e => e[0]), weights:d.pool.map(e => e[1]), types:d.pool.every(([k]) => !!g.TYPES[k]), gourd:!!d.gourd, unlockGourds:d.unlockGourds || null,
     boss:d.boss, bossForm:d.bossForm, bossChest:d.bossChest || null, coach:d.coach || null, gravesLayout:d.gravesLayout || null, intro:d.intro || [],
@@ -1206,11 +1210,12 @@ def check_nm_levels(browser, url):
     ok(L[4]['coach'] == 'gourd' and L[4]['gravesLayout'] == [[1, 3], [3, 3], [2, 5], [1, 5], [3, 5]] and L[4]['pool'] == ['ghoul'], f"N1-5 keeps the tutorial: coach, its grave ring, ghouls only {L[4]['coach'], L[4]['gravesLayout'], L[4]['pool']}")
     ok(all('graveriser' in L[k - 1]['pool'] for k in (6, 12, 15)) and not any('graveriser' in L[k]['pool'] for k in range(15) if k + 1 not in (6, 12, 15)), 'the Grave Riser is in N1-6, N1-12 and N1-15 only')
     intros = {k + 1: d['intro'] for k, d in enumerate(L) if d['intro']}
-    ok(intros == {2: ['rooster'], 6: ['graveriser'], 7: ['hayrick'], 8: ['husker']}, f'new monsters are introduced on N1-2, N1-6, N1-7 and N1-8 {intros}')
-    ok(all(t in d['pool'] for d in L for t in d['intro']), 'every introduced monster is in its level pool')
+    ok(intros == {2: ['rooster'], 3: ['casketjack'], 4: ['crow'], 6: ['graveriser'], 7: ['hayrick'], 8: ['husker']}, f'new monsters are introduced on N1-2, N1-3 (Casket Jack), N1-4 (crows), N1-6, N1-7 and N1-8 {intros}')
+    ok(all(t in d['pool'] or (t == 'crow' and d['boss'] == 'strawlord') for d in L for t in d['intro']), 'every introduced monster is in its level pool (the crow on N1-4 comes out of the Strawlord)')
+    ok(all('crow' in L[k - 1]['pool'] for k in (7, 10, 12, 15)) and not any('crow' in L[k - 1]['pool'] for k in range(1, 7)), 'crows are ordinary pool monsters on N1-7, N1-10, N1-12 and N1-15, never before N1-5')
     ok(all(t in L[14]['pool'] for t in NM_NEW), f"N1-15 holds every new monster {L[14]['pool']}")
     ok([m['at'] for m in L[14]['fireMarks']] == [0.33, 0.66, 1], f"N1-15 fire marks at 33%, 66% and 100% {L[14]['fireMarks']}")
-    ok(set(L[13]['pool']) == {'firemummy', 'hayrickBurning', 'huskerBurning'}, f"N1-14 spawns only burning monsters {L[13]['pool']}")
+    ok(set(L[13]['pool']) == {'firemummy', 'hayrickBurning', 'huskerBurning', 'casketjack'}, f"N1-14 spawns burning monsters and Casket Jacks {L[13]['pool']}")
     ok(L[0]['pool'] == ['ghoul', 'bat', 'imp', 'brute'] and len(L[0]['fireLayout']) == 3 and [m['at'] for m in L[0]['fireMarks']] == [0.5], f"N1-1: 3 fire tiles at the start, one mark at 50%, world 1 monsters {L[0]['fireLayout']}")
     ok(len({k for d in L for k in (d['fireStart'], len(d['fireLayout']), sum(m['n'] for m in d['fireMarks']))}) > 3, 'fire amounts vary from level to level')
     lanes11 = {l for l, p in L[10]['fireLayout']}
@@ -1283,7 +1288,7 @@ def check_nm_bestiary(browser, url):
     ok('Cinder Rooster' in names and ['Cinder Rooster' == n for n in names].count(True) == 1, f'the met rooster is listed by name {names}')
     ok(not any(n in names for n in ('Ghoul', 'Bat', 'Mummy')), 'world 1 monsters met in the story are not repeated')
     ok(b[1] and b[1][-1][0] and len(b[1]) >= 10, f'unmet nightmare monsters are silhouettes; the last entry is the Fallen Gravekeeper, still unmet ({len(b[1])} entries)')
-    ok(page.evaluate("() => document.querySelector('#bsCount').textContent").startswith('1 of'), f"one of them met so far ({page.evaluate('() => document.querySelector(`#bsCount`).textContent')})")
+    ok(page.evaluate("() => document.querySelector('#bsCount').textContent").startswith('3 of'), f"three met so far: the rooster, Casket Jack and its coffin ({page.evaluate('() => document.querySelector(`#bsCount`).textContent')})")
     page.click('#bBookmark'); time.sleep(0.8)
     page.evaluate("() => { const p = document.querySelector('#bestiary'); if (p.hidden) document.querySelector('#bBkFlip').click(); }"); time.sleep(0.7)
     t = page.evaluate("() => document.querySelector('#bsTitle').textContent")
@@ -1313,6 +1318,163 @@ def check_nm_prebake(browser, url):
 
 
 CHECKS.update({'check_nm_levels': check_nm_levels, 'check_nm_intros': check_nm_intros, 'check_nm_bestiary': check_nm_bestiary, 'check_nm_prebake': check_nm_prebake})
+
+# ---------- Owner changes, 2026-11-05 ----------
+def check_rooster_hp(browser, url):
+    if not R4: return
+    page, errors = open_page(browser, url)
+    ok(page.evaluate("() => window.__gg.TYPES.rooster.hp") == 3, 'the Cinder Rooster has 3 health')
+    page.close()
+
+
+def check_hayrick_fence(browser, url):
+    """About one Hayrick in three (rolled once) throws its fork at its own fence: a third of the fence's full health, never the last 1."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    T = page.evaluate("() => { const T = window.__gg.TYPES.hayrick; return [T.fenceChance, Math.round(T.fenceHit * 1000) / 1000]; }")
+    ok(T == [0.34, 0.333], f'data: fenceChance 0.34, fenceHit a third {T}')
+    page.evaluate("""() => { const g = window.__gg, w = g.walls[2]; w.hp = w.max; g.grid[1][2] = g.newCell(0);
+      window.__h = g.spawnMonster('hayrick', 2, true, 0.35); window.__h.sp = 0; window.__h.atFence = true; window.__w0 = w.hp; }""")
+    time.sleep(0.5)
+    ok(page.evaluate("() => window.__h.thrown && window.__gg.G.arrows.some(a => a.fork)"), 'it throws: a fork flies down its lane')
+    ok(not (page.evaluate("() => window.__gg.grid[1][2].pinned || 0") > 0), 'the pumpkin in its column is not pinned')
+    time.sleep(1.5)
+    w = page.evaluate("() => { const w = window.__gg.walls[2]; return [w.hp, w.max, window.__w0]; }")
+    ok(abs((w[2] - w[0]) - w[1] / 3) < 0.6, f'the fork takes a third of the fence ({w[2]} -> {w[0]} of {w[1]})')
+    ok(not page.evaluate("() => window.__gg.G.arrows.some(a => a.fork)"), 'the fork has landed')
+    # a fence on 2 health keeps 1; a fence on 1 or less: it pins a pumpkin instead
+    page.evaluate("""() => { const g = window.__gg, w = g.walls[4]; w.hp = 2; window.__k = g.spawnMonster('hayrick', 4, true, 0.35); window.__k.sp = 0; window.__k.atFence = true; }""")
+    time.sleep(1.8)
+    ok(page.evaluate("() => window.__gg.walls[4].hp") == 1, 'a weak fence is left on 1, never broken by the fork')
+    page.evaluate("""() => { const g = window.__gg, w = g.walls[5]; w.hp = 1; g.grid[2][5] = g.newCell(1); window.__q = g.spawnMonster('hayrick', 5, true, 0.35); window.__q.sp = 0; window.__q.atFence = true; }""")
+    time.sleep(0.6)
+    ok(page.evaluate("() => window.__gg.grid[2][5].pinned > 0 && window.__gg.walls[5].hp === 1"), 'with its fence on 1 it pins the pumpkin instead')
+    # the roll: about a third of 300 hayricks aim at the fence
+    n = page.evaluate("""() => { const g = window.__gg; let k = 0; for (let i = 0; i < 300; i++){ const m = g.spawnMonster('hayrick', 0, true, 0.1); m.sp = 0; m.atFence = null;
+      m.p = 0.35; m.dead = true; if (m.atFence == null) m.atFence = Math.random() < g.TYPES.hayrick.fenceChance; if (m.atFence) k++; } return k; }""")
+    ok(60 <= n <= 145, f'about a third aim at the fence ({n} of 300)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fire_trickle(browser, url):
+    """After the first fire mark, one new fire tile every 6 s while fewer than 4 burn; a mark may go past 4, then the trickle waits."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    ok(page.evaluate("() => window.__gg.NIGHTMARE_LEVELS[0][0].fireMarks[0].n") == 4, 'N1-1\'s mark lights 4 tiles (two more than before)')
+    page.evaluate("() => { const G = window.__gg.G; G.fires.length = 0; G.fmNext = 0; G.fireTrickleT = null; }")
+    time.sleep(6.5)
+    ok(page.evaluate("() => window.__gg.G.fires.length") == 0, 'before the first mark: no trickle')
+    page.evaluate("() => { const G = window.__gg.G; G.fmNext = 1; G.fireTrickleT = 0.2; }")
+    time.sleep(0.5)
+    ok(page.evaluate("() => window.__gg.G.fires.length") == 1, 'past the first mark: a new tile lights')
+    page.evaluate("() => { const G = window.__gg.G; G.fireTrickleT = 0.1; }"); time.sleep(0.3)
+    page.evaluate("() => { const G = window.__gg.G; G.fireTrickleT = 0.1; }"); time.sleep(0.3)
+    page.evaluate("() => { const G = window.__gg.G; G.fireTrickleT = 0.1; }"); time.sleep(0.3)
+    ok(page.evaluate("() => window.__gg.G.fires.length") == 4, 'it grows one at a time to 4')
+    page.evaluate("() => { const G = window.__gg.G; G.fireTrickleT = 0.1; }"); time.sleep(0.3)
+    ok(page.evaluate("() => window.__gg.G.fires.length") == 4, 'and never past 4')
+    ok(page.evaluate("() => window.__gg.G.fireTrickleT") > 5, 'the clock restarts at 6 s')
+    page.evaluate("() => { const g = window.__gg; g.lightRandomFires(3); g.G.fireTrickleT = 0.1; }"); time.sleep(0.3)
+    ok(page.evaluate("() => window.__gg.G.fires.length") == 7, 'a mark can light past 4; the trickle then adds nothing')
+    page.evaluate("() => { const g = window.__gg, G = g.G; while (G.fires.length > 3) g.putOut(G.fires[0]); G.fireTrickleT = 0.1; }"); time.sleep(0.3)
+    ok(page.evaluate("() => window.__gg.G.fires.length") == 4, 'once Ice brings it under 4, the trickle starts again')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_crow_strike(browser, url):
+    """A crow that reaches the fence flies into the patch and destroys one pumpkin anywhere, but never the gourd or a pumpkin in its 3×3, nor
+    one the player holds; with nothing it may take it pecks the fence, and flies in once a pumpkin it may take appears."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    nm_start(page, 7); page.evaluate(QUIET)
+    # gourd at (2, 3); its 3x3 full of pumpkins; one more pumpkin far away at (0, 6)
+    page.evaluate("""() => { const g = window.__gg; g.grid[2][3] = g.newGourd();
+      for (let r = 1; r <= 3; r++) for (let c = 2; c <= 4; c++) if (r !== 2 || c !== 3) g.grid[r][c] = g.newCell(0);
+      g.grid[0][6] = g.newCell(1); window.__far = g.grid[0][6];
+      const w = g.walls[1]; w.hp = w.max; window.__c = g.spawnMonster('crow', 1, false, 0.97); }""")
+    time.sleep(1.2)
+    r = page.evaluate("() => { const g = window.__gg; let near = 0; for (let r = 1; r <= 3; r++) for (let c = 2; c <= 4; c++) if (g.grid[r][c]) near++; return [window.__c.dead, !g.grid[0][6], g.isGourd(g.grid[2][3]), near, g.walls[1].hp === g.walls[1].max]; }")
+    ok(r == [True, True, True, 9, True], f'the crow flew over its fence (lane 1) and took the far pumpkin in column 6; the gourd and its 8 neighbours are untouched; the fence was not pecked {r}')
+    # only protected pumpkins left: it pecks the fence
+    page.evaluate("() => { const g = window.__gg, w = g.walls[5]; w.hp = w.max; window.__c2 = g.spawnMonster('crow', 5, false, 0.97); }")
+    time.sleep(1.5)
+    r = page.evaluate("() => { const g = window.__gg; return [window.__c2.dead, window.__c2.eating, g.walls[5].hp < g.walls[5].max]; }")
+    ok(r == [False, True, True], f'with only the gourd\'s square left it pecks the fence {r}')
+    # a pumpkin it may take appears: it leaves the fence and dives
+    page.evaluate("() => { const g = window.__gg; g.grid[4][0] = g.newCell(1); }")
+    time.sleep(1.0)
+    ok(page.evaluate("() => window.__c2.dead && !window.__gg.grid[4][0]"), 'a pumpkin sprouts outside the square: it leaves the fence and takes it')
+    # no gourd (destroyed): every pumpkin may be taken
+    page.evaluate("""() => { const g = window.__gg; g.G.monsters.length = 0; g.grid.forEach(r => r.fill(null)); g.grid[2][2] = g.newCell(0); window.__c4 = g.spawnMonster('crow', 2, false, 0.97); }""")
+    time.sleep(1.0)
+    ok(page.evaluate("() => window.__c4.dead && !window.__gg.grid[2][2]"), 'with the gourd gone, a pumpkin where its square was is taken')
+    # a pool crow counts toward the night once it is gone; it gives no reward
+    ok(page.evaluate("() => window.__gg.G.monsters.every(m => m.type !== 'crow' || m.dead)"), 'the diving crows are off the field')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_casketjack(browser, url):
+    """Casket Jack lets out a mummy (a minion) every 8 s on the field, standing still while its lid is open; where it falls it leaves a field
+    coffin that opens with one last mummy 3 s later, unless a pumpkin smashes it. The coffin gives no reward; Fire is locked on its nights."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    fire_night(page)
+    T = page.evaluate("() => { const T = window.__gg.TYPES; return [T.casketjack.hp, T.casketjack.summonEvery, T.coffin.hp, T.coffin.openIn, !!T.coffin.noReward]; }")
+    ok(T == [6, 8, 1, 3, True], f'data: Casket Jack 6 health, a mummy every 8 s; the coffin 1 health, opens after 3 s, no reward {T}')
+    ok(page.evaluate("() => !!window.__gg.CHARS.casketjack && !!window.__gg.CHARS.coffin && !!window.__gg.CHARS.casketjack.clips.summon && !!window.__gg.CHARS.coffin.clips.open"), 'both are drawn (registry: summon and open clips)')
+    page.evaluate("() => { const g = window.__gg; window.__j = g.spawnMonster('casketjack', 3, false, 0.3); window.__j.sumT = 0.3; }")
+    time.sleep(0.5)
+    s = page.evaluate("() => { const j = window.__j; return [j.anim && j.anim.clip, j.halt]; }")
+    ok(s == ['summon', True], f'it stops for its summon clip {s}')
+    p0 = page.evaluate("() => window.__j.p"); time.sleep(0.2)
+    ok(abs(page.evaluate("() => window.__j.p") - p0) < 1e-6, 'it does not walk while the lid is open')
+    time.sleep(0.7)
+    mu = page.evaluate("() => window.__gg.G.monsters.filter(m => m.type === 'mummy' && !m.dead).map(m => [m.lane, m.minion, m.p > window.__j.p])")
+    ok(mu == [[3, True, True]], f'one mummy steps out in its lane, in front of it, as a minion {mu}')
+    ok(page.evaluate("() => !window.__j.halt && window.__j.sumT > 6"), 'then it walks on; the next summon is 8 s off')
+    # it falls: a field coffin, which opens with a mummy after 3 s
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.filter(m => m.type === 'mummy').forEach(m => m.dead = true); const j = window.__j; j.lastHit = 0; g.damage(j, 99, '#fff'); }")
+    time.sleep(0.2)
+    c = page.evaluate("() => window.__gg.G.monsters.filter(m => m.type === 'coffin' && !m.dead).map(m => [m.lane, m.minion, Math.abs(m.p - window.__j.p) < 0.01])")
+    ok(c == [[3, True, True]], f'it leaves a field coffin where it fell {c}')
+    time.sleep(1.5)
+    ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.type === 'mummy' && !m.dead).length") == 0, 'no mummy yet at 1.5 s')
+    time.sleep(1.7)
+    r = page.evaluate("() => [window.__gg.G.monsters.filter(m => m.type === 'coffin' && !m.dead).length, window.__gg.G.monsters.filter(m => m.type === 'mummy' && !m.dead).map(m => m.minion)]")
+    ok(r == [0, [True]], f'3 s on it bursts open: the coffin is gone and one last mummy (a minion) is out {r}')
+    # smashed in time: no mummy, no coins, no loot
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; window.__co = g.spawnMonster('coffin', 1, true, 0.5); window.__co.openT = 3; window.__c0 = g.G.coins; window.__ch = g.save.chests.length; }")
+    page.evaluate("() => { const g = window.__gg, m = window.__co; m.lastHit = 0; g.damage(m, 1, '#fff'); }")
+    time.sleep(3.3)
+    r = page.evaluate("() => [window.__co.dead, window.__gg.G.monsters.filter(m => m.type === 'mummy' && !m.dead).length, window.__gg.G.coins - window.__c0, window.__gg.G.drops ? window.__gg.G.drops.length : 0]")
+    ok(r[0] and r[1] == 0 and r[2] == 0, f'a smashed coffin lets nothing out and pays nothing {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_nm_new_baked(browser, url):
+    """Nights with Casket Jack bake its coffin and the mummy; crow nights bake the crow."""
+    if not R4: return
+    page, errors = open_page(browser, url)
+    nm_start(page, 3); time.sleep(0.8)
+    ok(page.evaluate("() => ['casketjack', 'coffin', 'mummy'].every(k => window.__gg.isBaked(k))"), 'N1-3 bakes Casket Jack, its coffin and the mummy')
+    page.close()
+    page, errors2 = open_page(browser, url)
+    nm_start(page, 7); time.sleep(0.8)
+    ok(page.evaluate("() => window.__gg.isBaked('crow')"), 'N1-7 bakes the crow')
+    errors += errors2
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_rooster_hp': check_rooster_hp, 'check_hayrick_fence': check_hayrick_fence, 'check_fire_trickle': check_fire_trickle,
+               'check_crow_strike': check_crow_strike, 'check_casketjack': check_casketjack, 'check_nm_new_baked': check_nm_new_baked})
+
 
 
 def main():

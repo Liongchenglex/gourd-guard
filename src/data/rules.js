@@ -31,3 +31,6 @@ export const EMERGENCY_N = 9;
 // Fire tiles (Release 4, Nightmare Pumpkin Patch): random fires (night start, fire marks) light field tiles whose tile-row centre
 // lies in this band of the field (0 = top, 1 = the fence), so a fire is never right at the spawn line or on the wall.
 export const FIRE_P_RANGE = [0.25, 0.8];
+// After a level's first fire mark, fire keeps spreading (owner 2026-11-05): one new random tile every FIRE_TRICKLE_EVERY s while fewer than
+// FIRE_TRICKLE_MAX tiles burn on the field. A fire mark itself may light past that; the trickle then waits until Ice brings it back under.
+export const FIRE_TRICKLE_EVERY = 6, FIRE_TRICKLE_MAX = 4;

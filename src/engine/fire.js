@@ -3,7 +3,7 @@
 // A pumpkin flying up its column that reaches a fire burns up there (no on-hit power); an Ice pumpkin puts it out and stops.
 // Fire never burns out on its own. Every caller gates on `__RELEASE__ >= 4`, so lower builds drop this module.
 
-import { FIRE_P_RANGE, FRENZY_BURST } from '../data/rules.js';
+import { FIRE_P_RANGE, FIRE_TRICKLE_EVERY, FIRE_TRICKLE_MAX, FRENZY_BURST } from '../data/rules.js';
 import { SFX, sample } from './audio.js';
 import { spark } from './combat.js';
 import { mY, TILE_P, lanesOf, burnMonster } from './monsters.js';
@@ -135,6 +135,11 @@ export function dropFireMark(mark){
  *  turns into its burning version, keeping its health. Fire does not hurt or stop any monster; one that is down (rising) is not lit. */
 export function updateFires(dt){
   for (const f of G.fires) f.t += dt;
+  if (G.fmNext > 0){   // past the first fire mark: the fire keeps spreading, one tile at a time, up to FIRE_TRICKLE_MAX on the field
+    if (G.fireTrickleT == null) G.fireTrickleT = FIRE_TRICKLE_EVERY;
+    G.fireTrickleT -= dt;
+    if (G.fireTrickleT <= 0){ G.fireTrickleT = FIRE_TRICKLE_EVERY; if (G.fires.length < FIRE_TRICKLE_MAX) lightRandomFires(1); }
+  }
   if (!G.fires.length) return;
   for (const m of G.monsters) if (!m.dead && !m.hidden && m.rise <= 0 && BURNS_TO[m.type] && fireAt(m.lane, m.p)) burnMonster(m);
 }

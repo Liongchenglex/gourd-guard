@@ -4,7 +4,7 @@
 // Monsters spawned by another (gargoyle, blob) are listed under COMPANIONS so they appear beside their parent.
 
 export const COMPANIONS = { hauler:['gargoyle'], slime:['blob'], vampire:['bat'],
-  ...(__RELEASE__ >= 4 ? { hayrick:['hayrickBurning'], husker:['huskerBare', 'huskerBurning', 'huskerCharred'], strawlord:['crow'] } : {}) };   // Release 4: burning forms and the Strawlord's crows
+  ...(__RELEASE__ >= 4 ? { hayrick:['hayrickBurning'], husker:['huskerBare', 'huskerBurning', 'huskerCharred'], strawlord:['crow'], casketjack:['coffin'] } : {}) };   // Release 4: burning forms, the Strawlord's crows (met first on N1-4), Casket Jack's field coffin
 
 /** The boss waiting at the end of each nightmare book (Release 4), listed last in its nightmare bestiary and never met until its fight is built
  *  (N1-16 is the owner's to design). `icon` draws it as [type, form] meanwhile: the Gravekeeper's full form, shown as a silhouette. */
@@ -62,10 +62,12 @@ export const BESTIARY = {
   ...(__RELEASE__ >= 3 ? { hollowking: { lore:'On All Hallows\u2019 night the fires of the five fallen bosses gathered in one hollow pumpkin. It carved itself a face and crowned itself with thorns.', ability:'Never reaches the wall. Five times he splits off a world boss in his colours and takes no damage until it falls. Wipes a column of your patch, smashes a fence, calls monsters.' } } : {}),
   ...(__RELEASE__ >= 4 ? {   // the nightmare Pumpkin Patch (Release 4)
     rooster:    { lore:'Crowed once at the eclipse and the sun never came back. Its comb still smoulders.', ability:'Crows every few seconds: monsters in its lane and the two beside it sprint. Leaves a fire burning where it falls.' },
-    strawlord:  { lore:'The scarecrow at the edge of the patch, nailed up the night the moon went dark. It got tired of waiting.', ability:'Never reaches the wall. Hops between lanes and looses its crows. At half health it tears free, and every flock sets fire to the field.' },
-    crow:       { lore:'The Strawlord’s flock. They stopped being afraid of it a long time ago.', ability:'Comes only with the Strawlord. Fast and frail: dives down a lane at your wall.' },
-    graveriser: { lore:'The patch’s old gravedigger. Works by lantern light and never asks whose grave it is.', ability:'Every few seconds digs a grave on an empty cell of its own column in your patch. The graves stay after it falls.' },
-    hayrick:    { lore:'The last haystack of the harvest, stitched together by something that wanted a body.', ability:'Tough. Once it throws its pitchfork down its column and pins the first pumpkin there for a few seconds.' },
+    strawlord:  { lore:'The scarecrow at the edge of the patch, nailed up the night the moon went dark. It got tired of waiting.', ability:'Never reaches the wall. Looses its crows, and leaves a trail of fire every time it hops to another lane. At half health it tears free and the crows come faster.' },
+    crow:       { lore:'The Strawlord’s flock. They stopped being afraid of it a long time ago.', ability:'Fast and frail. At the fence it flies over into your patch and destroys a pumpkin, anywhere but the Grave Gourd and the pumpkins around it. With nothing else to take, it pecks the fence.' },
+    graveriser: { lore:'The patch’s old gravedigger. Works by lantern light and never asks whose grave it is.', ability:'Every few seconds digs a grave on an empty cell anywhere in your patch. The graves stay after it falls.' },
+    casketjack: { lore:'A coffin from the farm graveyard that got up and walked. Nobody knows how many are still inside.', ability:'Every few seconds its lid creaks open and a mummy steps out. Where it falls it leaves a coffin.' },
+    coffin:     { name:'Field Coffin', lore:'Casket Jack’s last stop. Something inside is knocking.', ability:'Bursts open with one last mummy a few seconds after Casket Jack falls, unless a pumpkin smashes it first.' },
+    hayrick:    { lore:'The last haystack of the harvest, stitched together by something that wanted a body.', ability:'Tough. Once it throws its pitchfork: usually down its column, pinning the first pumpkin there for a few seconds, but now and then at your fence, taking a third of it.' },
     hayrickBurning:{ lore:'A hayrick that walked through the embers. It burns slowly and does not mind at all.', ability:'Only Ice finishes it. Anything else knocks it down and it rises with 1 health. Sets other hayricks alight.' },
     husker:     { lore:'Grew in the corn maze that nobody came out of. Wears its husk like a coat.', ability:'Its first hit only strips the husk. The bare cob underneath walks faster.' },
     huskerBare: { lore:'What is under the husk: a cob with ideas.', ability:'Walks faster than the husker it came out of.' },

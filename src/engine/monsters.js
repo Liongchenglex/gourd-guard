@@ -5,7 +5,7 @@ import { TYPES, MODS, VARIANTS, BURNS_TO, ICE_ONLY, BURNING_FROM, HUSK_STRIP } f
 import { BURN_EVERY, RAINBOW, GLUE_SLOW } from '../data/pumpkins.js';
 import { glueStep } from './glue.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
-import { updateNightmareMonster, initStrawlord, updateStrawlord } from './nightmare.js';
+import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike } from './nightmare.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
 import { PTYPES } from '../data/pumpkins.js';
@@ -120,6 +120,7 @@ function standsStill(o){
   if (o.type === 'archer') return o.p >= TYPES.archer.hold;
   if (o.type === 'diver') return !o.walker;
   if (o.type === 'sack' || o.type === 'jukebox') return true;
+  if (__RELEASE__ >= 4 && o.type === 'coffin') return true;   // Casket Jack's field coffin lies still: others walk round it
   return false;
 }
 export function aheadLimit(m){
@@ -213,6 +214,7 @@ export function updateMonster(m, dt){
   if (m.type === 'sack'){ updateSack(m, dt, sp); return; }
   if (m.type === 'jukebox') return;   // it only plays: never walks, never chews
   if (m.eating){
+    if (__RELEASE__ >= 4 && m.type === 'crow' && m.frozenT <= 0 && (m.peekT = (m.peekT || 0) - dt) <= 0){ m.peekT = 0.25; if (crowStrike(m)) return; }   // a crow pecking the fence looks over the patch 4 times a second and flies in once a pumpkin it may take is there (engine/nightmare.js)
     m.shield = false;   // a shield knight lowers its shield to chew
     m.reflecting = false;   // a mirror sprite drops its mirror to chew
     const mul = m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1;
@@ -400,9 +402,11 @@ export function updateMonster(m, dt){
     }
   }
   if (__RELEASE__ >= 4 && m.rush > 0) sp *= TYPES.rooster.rushMul;
+  if (__RELEASE__ >= 4 && m.halt) sp = 0;   // Casket Jack stands still while its lid is open (engine/nightmare.js)
   let np = Math.min(m.p + sp * dt, aheadLimit(m));
   if (m.chewing && !m.chewing.dead) np = Math.min(np, m.chewing.p);   // held at a scarecrow
   if (np > m.p) m.p = np;
+  if (__RELEASE__ >= 4 && m.p >= 1 && m.type === 'crow' && crowStrike(m)) return;   // over the fence and into the patch (engine/nightmare.js)
   if (m.p >= 1){ m.p = 1; m.eating = true; if (G.q) G.q.touched[m.type] = true; }   // quests: "do not let a ghoul reach the fence"
 }
 

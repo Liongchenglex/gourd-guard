@@ -25,6 +25,16 @@ function bakeFork(k){
   return { c, k };
 }
 
+/** A Hayrick's fork in flight down its lane at the fence, turning end over end (the same baked sprite, rotated about its middle). */
+export function drawFlyingFork(ctx, x, y, rot){
+  const k = Math.min(2.5, Math.max(0.5, K || 1));
+  if (!sp || spK !== k){ sp = bakeFork(k); spK = k; }
+  const s = CS / 74 * 0.8;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.drawImage(sp.c, -W * s / 2, -H * s * 0.62, W * s, H * s);
+  ctx.restore();
+}
+
 /** The fork over a pinned pumpkin at (x, y): `left` seconds of the pin remain of `max`. */
 export function drawPin(ctx, x, y, left, max){
   const k = Math.min(2.5, Math.max(0.5, K || 1));

@@ -29,6 +29,7 @@ import { openLoadout, setState, showResult } from '../ui/screens.js';
 import { SPROUT_EVERY, FIREWORK_TARGETS, FIREWORK_DAMAGE, EMERGENCY_N } from '../data/rules.js';
 import { startCoach, coachHolds, coachUpdate } from './coach.js';
 import { lightFire, lightRandomFires, fireAhead, burnPumpkin, updateFires } from './fire.js';
+import { updateCrowDives } from './nightmare.js';
 import { prebakeFire } from './render/fire.js';
 import { placeGourdAtStart, gourdSnapshot, restoreGourd } from './gourd.js';
 import { prebakeGourd } from './render/gourd.js';
@@ -68,7 +69,7 @@ export function beginNight(n){
   const av = typesForNight(progressNight(n));   // unlocks are global progress (a nightmare night uses story progress): anything unlocked is usable on any level (owner)
   const def = levelFor(n);
   const must = def.unlockPumpkins.map(k => ({ t:PTYPES.findIndex(p => p.key === k), why:'New this level' })).filter(m => m.t >= 0);   // this level's new pumpkin(s) are locked into the loadout
-  const hasMummies = def.pool.some(([k]) => k === 'mummy' || (VARIANTS[k] && VARIANTS[k].base === 'mummy'));
+  const hasMummies = def.pool.some(([k]) => k === 'mummy' || (__RELEASE__ >= 4 && k === 'casketjack') || (VARIANTS[k] && VARIANTS[k].base === 'mummy'));   // Casket Jack brings mummies
   if (hasMummies && !must.some(m => m.t === 3)) must.push({ t:3, why:'Mummies only die to Fire' });   // owner: Fire is auto-selected and locked on mummy levels
   const iceKind = k => ICE_ONLY.has(k) || (__RELEASE__ >= 4 && ICE_ONLY.has(HUSK_STRIP[k]));   // an Ice-only type, or one whose husk strips to one (the Burning Husker)
   const fireSource = __RELEASE__ >= 4 && (hasFire(def) || def.boss === 'strawlord' || def.boss2 === 'strawlord' || def.pool.some(([k]) => k === 'rooster'));   // fire tiles, or something that lights them (the rooster's death, the Strawlord)
@@ -108,7 +109,7 @@ export function startGame(mode, n, loadout){
     t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], glue:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
     loot:{ chests:0, seeds:0 }, chestDropped:false, continued:false, sackT:0, jukebox:null, jukeboxDone:false, jbNext:0,
-    ...(__RELEASE__ >= 4 ? { fires:[], fmNext:0, fmT:-99, fireBurst:0, fireBurstT:0, burstMinion:false, gourdDue:false } : {}),   // fire tiles and fire marks (src/engine/fire.js); gourdDue: a destroyed Grave Gourd waits for the next sprout tick (src/engine/gourd.js)
+    ...(__RELEASE__ >= 4 ? { fires:[], fmNext:0, fmT:-99, fireBurst:0, fireBurstT:0, fireTrickleT:null, burstMinion:false, gourdDue:false, crowDives:[] } : {}),   // fire tiles and fire marks (src/engine/fire.js); gourdDue: a destroyed Grave Gourd waits for the next sprout tick (src/engine/gourd.js)
   });
   if (mode === 'story' && takeSack()) G.sackT = SACK.spawnAt;
   if (def) prebake(bakeKeys(def));   // bake this level's sprite strips now, not on first sight
@@ -393,6 +394,7 @@ export function update(dt){
   }
   g.projs = g.projs.filter(p => !p.dead);
   if (__RELEASE__ >= 4 && g.fires) updateFires(dt);
+  if (__RELEASE__ >= 4 && g.crowDives && g.crowDives.length) updateCrowDives(dt);   // crows diving into the patch (engine/nightmare.js)
   if (g.fogClear > 0) g.fogClear -= dt;
   for (const mine of g.mines){   // landmines hide on a tile; the first monster to step on one sets off a 3×3 blast (owner)
     const tile = CS / (FIELD_BOT - FIELD_TOP);
@@ -409,7 +411,7 @@ export function update(dt){
   g.mines = g.mines.filter(m => !m.dead);
   for (const a of g.arrows){   // skeleton archers' arrows fly down their lane into the wall
     a.p += a.sp * dt;
-    if (a.p >= 1){ a.dead = true; damageWall(a.lane, a.dmg); for (let i = 0; i < 8; i++) spark(LANE(a.lane), FENCE_Y - 10, a.water ? '#9fe0f0' : '#d8d0c0', 120); SFX.monsterAct(a.water ? 'water' : 'arrow', 'land'); }
+    if (a.p >= 1){ a.dead = true; if (__RELEASE__ >= 4 && a.fork){ const w = walls[a.lane], amt = w ? Math.min(w.max * a.hit, w.hp - 1) : 0; if (amt > 0) damageWall(a.lane, amt); G.shake = Math.max(G.shake || 0, 0.5); } else damageWall(a.lane, a.dmg); for (let i = 0; i < 8; i++) spark(LANE(a.lane), FENCE_Y - 10, a.water ? '#9fe0f0' : '#d8d0c0', 120); SFX.monsterAct(a.water ? 'water' : 'arrow', 'land'); }   // a Hayrick's fork (Release 4): a third of the fence, never the last 1
   }
   g.arrows = g.arrows.filter(a => !a.dead);
   for (const w of g.castles) if (w.flash > 0) w.flash -= dt;

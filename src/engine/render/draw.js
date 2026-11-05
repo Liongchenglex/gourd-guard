@@ -21,7 +21,7 @@ import { TAU, clamp, mulberry } from '../util.js';
 import { save } from '../../save.js';
 import { drawCoach } from '../coach.js';
 import { drawFires, drawFireFx } from './fire.js';
-import { drawPin } from './pin.js';
+import { drawPin, drawFlyingFork } from './pin.js';
 import { drawGourdCell, drawGourdGlow } from './gourd.js';
 
 // ---------- Render ----------
@@ -84,6 +84,7 @@ export function render(){
   if (G.aim === 'repair') drawAimWalls(t);
   updatePaintPull(t);   // marks borrowed pumpkins so drawGrid lights them
   drawGrid(t);
+  if (__RELEASE__ >= 4) drawCrowDives();
   if (__RELEASE__ >= 3 && G.hkTell) drawHkTell(t);
   drawPaintPull(t);
   drawSproutBar();
@@ -335,6 +336,7 @@ export function drawScarecrows(t){ drawScarecrowsFx(ctx, G.scarecrows || [], t, 
 export function drawArrows(t){
   for (const a of G.arrows || []){
     const x = LANE(a.lane), y = FIELD_TOP + a.p * (FIELD_BOT - FIELD_TOP);
+    if (__RELEASE__ >= 4 && a.fork){ drawFlyingFork(ctx, x, y, (a.spin || 0) + t * 14); continue; }   // a Hayrick's fork thrown at the fence
     if (a.mirror){ const sz = CS * 0.5; ctx.drawImage(sprites[a.vis][0], x - sz / 2, y - sz / 2, sz, sz); continue; }   // a reflected pumpkin
     if (a.water){   // divers and Twin Tides hurl water balls: a wobbling blue blob with a highlight and a spray of droplets behind it
       const r = 11 + Math.sin(t * 18 + a.lane) * 1.5, ry = 11 - Math.sin(t * 18 + a.lane) * 1.5;
@@ -536,6 +538,16 @@ export function drawStar(x, y, r, rot){
 }
 
 /** Baked-character effects: a dying monster's last frame popping, or a clip played on its own (the Gravekeeper dissolving). */
+/** Crows over the fence, swooping down onto a pumpkin in the patch (engine/nightmare.js crowStrike): drawn over the patch, one baked frame each. */
+function drawCrowDives(){
+  for (const v of G.vfx || []){
+    if (v.kind !== 'crowdive' || v.t < 0) continue;
+    const p = Math.min(1, v.t / v.dur), x = v.x0 + (v.x1 - v.x0) * p, y = v.y0 + (v.y1 - v.y0) * p * p - Math.sin(p * Math.PI) * 26, k = v.s * (1 - p * 0.2);
+    ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.rotate((v.x1 - v.x0) * 0.002 * (1 - p));
+    drawChar(ctx, {}, 'crow', null, ['walk', Math.floor(G.t * 14) % 6]); ctx.restore();
+  }
+}
+
 function drawVfx(){
   if (!G.vfx) return;
   for (const v of G.vfx){

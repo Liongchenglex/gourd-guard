@@ -27,7 +27,7 @@ def story_done(upto=20):
 # ---------- Task 1: the track, the book page and the release checks ----------
 def check_r4_absent(browser, url):
     js = bundle_js()
-    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord', 'Grave Gourd', 'e3a43c', 'around your gourd', 'Grave Riser'):
+    for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord', 'Grave Gourd', 'e3a43c', 'around your gourd', 'Grave Riser', 'Your gourd', 'and 1 gourd'):
         ok((s in js) == R4, f"{s!r} {'in' if R4 else 'not in'} the bundle")
 
 
@@ -866,9 +866,9 @@ def check_gourd_loadout(browser, url):
     st = page.evaluate("""() => { const s = document.querySelector('#loGourdSec'), b = s && s.querySelector('.pick');
       return [window.__gg.state, !!s && !s.hidden, s ? s.querySelector('h3').textContent : null, b ? [b.textContent.includes('Grave Gourd'), b.getAttribute('aria-pressed'), b.classList.contains('must')] : null,
         document.querySelectorAll('#loTeam .slot:not(.empty)').length, document.querySelector('#loTitle').textContent]; }""")
-    ok(st[0] == 'loadout' and st[1] and st[2] == 'Gourds', f'N1-5 opens the picker with a Gourds section {st[:3]}')
+    ok(st[0] == 'loadout' and st[1] and 'pick 1' in (st[2] or ''), f'N1-5 opens the picker with a Gourds section headed "Gourd · pick 1" {st[:3]}')
     ok(st[3] == [True, 'true', True], f'the Grave Gourd is there, picked and locked {st[3]}')
-    ok(st[4] == 5 and st[5] == 'Pick 5 pumpkins', f'it does not take a pumpkin slot: 5 pumpkins still fill the team {st[4:]}')
+    ok(st[4] == 5 and st[5] == 'Pick 5 pumpkins and 1 gourd', f'it does not take a pumpkin slot: 5 pumpkins still fill the team {st[4:]}')
     page.click('#loGourdSec .pick'); time.sleep(0.2)
     det = page.evaluate("() => document.querySelector('#loDetail').textContent")
     ok('Grave Gourd' in det, f'tapping it shows its card ({det[:60]!r})')
@@ -883,7 +883,7 @@ def check_gourd_loadout(browser, url):
     n = page.evaluate("() => window.__gg.typesForNight(21).length")
     page.evaluate("() => { window.__gg.save.gourds = { grave:true }; window.__gg.save.perksOff = {}; window.__gg.beginNight(1005); }"); time.sleep(0.5)
     st = page.evaluate("() => [window.__gg.state, !document.querySelector('#loGourdSec').hidden, document.querySelector('#loTitle').textContent, document.querySelector('#bLoGo').disabled, document.querySelectorAll('#loTeam .slot').length]")
-    ok(n <= 5 and st == ['loadout', True, f'Pick {n} pumpkins', False, n], f'with {n} types the picker opens on N1-5 with its Gourds section, asks for {n} and can start {st}')
+    ok(n <= 5 and st == ['loadout', True, f'Pick {n} pumpkins and 1 gourd', False, n], f'with {n} types the picker opens on N1-5 with its Gourds section, asks for {n} and can start {st}')
     if st[0] == 'loadout':
         page.click('#bLoGo'); time.sleep(0.5)
         g = page.evaluate("() => [window.__gg.state, window.__gg.G.n, window.__gg.G.loadout.length, !!window.__gg.gourdPos()]")
@@ -962,6 +962,79 @@ def check_gourd_coach(browser, url):
 
 
 CHECKS.update({'check_gourd_coach': check_gourd_coach})
+
+
+# ---------- Task 13: the gourd as its own pick on the picking screen (owner, 2026-11-05) ----------
+SHOT_DIR = os.path.join(os.path.dirname(__file__), '..', '.superpowers', 'sdd', '2026-11-04-release-4-nightmare-patch')
+PICK_UI = """() => { const q = s => document.querySelector(s), r = e => e && e.getBoundingClientRect(), slot = q('#loGourdSlot'), team = q('#loTeam'), head = q('#ovLoadout .loHead');
+  const vis = e => !!e && e.offsetParent !== null && r(e).width > 0;
+  const ts = [...document.querySelectorAll('#loTeam .slot')].map(r), last = ts[ts.length - 1], gs = r(slot);
+  return { state:window.__gg.state, title:q('#loTitle').textContent, slot:vis(slot), inTeam:!!(slot && team.contains(slot)), teamSlots:ts.length,
+    teamGourd:!!team.querySelector('[data-gourd]'), slotGourd:slot ? slot.dataset.gourd || null : null, slotLabel:slot ? slot.getAttribute('aria-label') : null,
+    gap:gs && last ? Math.round(gs.left - last.right) : null, slotW:gs ? Math.round(gs.width) : 0, slotH:gs ? Math.round(gs.height) : 0,
+    label:[...document.querySelectorAll('#ovLoadout .loHead .loLabel')].filter(vis).map(e => e.textContent),
+    heading:(q('#loGourdSec h3') || {}).textContent || null, go:q('#bLoGo').disabled,
+    headFits:head.scrollHeight <= head.clientHeight + 1, cardFits:(() => { const c = r(q('#ovLoadout .loCard')); return c.top >= 0 && c.bottom <= innerHeight + 1; })(),
+    scrollH:Math.round(r(q('#loScroll')).height) }; }"""
+
+
+def gourd_picker(page, stars=100, perks_off=True, night=1005):
+    set_stars(page, {**story_done(stars), **{1000 + k: 3 for k in range(1, 6)}})
+    page.evaluate("([n, off]) => { window.__gg.save.gourds = { grave:true }; window.__gg.save.perksOff = off ? { pick4:true } : {}; window.__gg.beginNight(n); }", [night, perks_off]); time.sleep(0.6)
+    return page.evaluate(PICK_UI)
+
+
+def check_gourd_pick_ui(browser, url):
+    """Task 13: on a gourd night the gourd is its own pick: its own titled slot beside (not in) the team row, its own section count,
+    Start needs the pumpkins and the gourd. Story nights look as before. Fits a 390 px phone at 844 and 664 tall."""
+    if not R4: return
+    for h in (844, 664):
+        page, errors = open_page(browser, url, h)
+        u = gourd_picker(page)
+        ok(u['state'] == 'loadout' and 'pumpkins and 1 gourd' in u['title'], f'[{h}] N1-5 title asks for pumpkins and 1 gourd ({u["title"]!r})')
+        ok(u['slot'] and not u['inTeam'] and u['slotGourd'] == 'grave', f'[{h}] #loGourdSlot is shown, outside #loTeam, holding the Grave Gourd {[u["slot"], u["inTeam"], u["slotGourd"]]}')
+        ok(u['teamSlots'] == 5 and not u['teamGourd'], f'[{h}] #loTeam has exactly 5 slots and no gourd in it {[u["teamSlots"], u["teamGourd"]]}')
+        ok(u['label'] == ['Your team', 'Your gourd'], f'[{h}] the header labels the two picks apart {u["label"]}')
+        ok(u['gap'] is not None and u['gap'] >= 12, f'[{h}] a visible gap between the team row and the gourd slot ({u["gap"]} px)')
+        ok(u['slotW'] >= 44 and u['slotH'] >= 44, f'[{h}] the gourd slot is a 44 px touch target ({u["slotW"]}x{u["slotH"]})')
+        ok(u['heading'] and 'pick 1' in u['heading'], f'[{h}] the Gourds heading counts the pick ({u["heading"]!r})')
+        ok(u['headFits'] and u['cardFits'] and u['scrollH'] >= 100, f'[{h}] the header fits without scrolling and the card fits the screen {[u["headFits"], u["cardFits"], u["scrollH"]]}')
+        ok(u['go'] is False, f'[{h}] Start is enabled with 5 pumpkins and the gourd')
+        if h == 844: page.screenshot(path=os.path.join(SHOT_DIR, 'picker-gourd.png'))
+        # tapping the gourd tile fills the card; tapping the slot does not empty it
+        page.click('#loGourdSec .pick'); time.sleep(0.2)
+        det = page.evaluate("() => document.querySelector('#loDetail').textContent")
+        ok('Grave Gourd' in det, f'[{h}] tapping the gourd tile shows its card ({det[:50]!r})')
+        page.click('#loTeam .slot:not(.must)'); time.sleep(0.1)   # drop one pumpkin (its card shows), then tap the gourd slot
+        page.click('#loGourdSlot'); time.sleep(0.2)
+        v = page.evaluate(PICK_UI); det = page.evaluate("() => document.querySelector('#loDetail').textContent")
+        ok(v['slotGourd'] == 'grave' and 'Grave Gourd' in det, f'[{h}] tapping the gourd slot shows its card and keeps it picked {[v["slotGourd"], det[:30]]}')
+        ok(v['teamSlots'] == 5 and v['go'] is True and 'of 5' in page.evaluate("() => document.querySelector('#loCount').textContent"), f'[{h}] with 4 of 5 pumpkins Start is disabled and the count says so {[v["teamSlots"], v["go"]]}')
+        ok(not errors, f'[{h}] no page errors {errors[:2]}')
+        page.close()
+        # a story night (15, more than 5 types): no gourd slot or labels, title unchanged
+        page, errors = open_page(browser, url, h)
+        s = gourd_picker(page, night=15)
+        ok(s['state'] == 'loadout' and s['title'] == 'Pick 5 pumpkins' and not s['slot'] and s['label'] == [],
+           f'[{h}] story night 15: no gourd slot, no labels, title unchanged {[s["title"], s["slot"], s["label"]]}')
+        if h == 844: page.screenshot(path=os.path.join(SHOT_DIR, 'picker-story.png'))
+        # back to a gourd night after a story night, and again: the slot comes back; Start begins the night with the gourd
+        g = gourd_picker(page)
+        ok(g['slot'] and g['label'] == ['Your team', 'Your gourd'] and g['title'] == 'Pick 5 pumpkins and 1 gourd', f'[{h}] the gourd slot comes back on the next gourd night {[g["slot"], g["label"]]}')
+        page.click('#bLoGo'); time.sleep(0.5)
+        r = page.evaluate("() => [window.__gg.state, window.__gg.G.n, !!window.__gg.gourdPos()]")
+        ok(r == ['play', 1005, True], f'[{h}] Start night begins N1-5 with the gourd {r}')
+        ok(not errors, f'[{h}] no page errors {errors[:2]}')
+        page.close()
+    # world-1-only player: 4 pumpkins and 1 gourd
+    page, errors = open_page(browser, url)
+    u = gourd_picker(page, stars=20, perks_off=False)
+    ok(u['title'] == 'Pick 4 pumpkins and 1 gourd' and u['teamSlots'] == 4 and u['slot'] and u['go'] is False, f'with 4 types: "Pick 4 pumpkins and 1 gourd", 4 team slots plus the gourd slot {[u["title"], u["teamSlots"], u["slot"], u["go"]]}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_gourd_pick_ui': check_gourd_pick_ui})
 
 
 # ---------- Task 10: the Grave Riser ----------

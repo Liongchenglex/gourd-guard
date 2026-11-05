@@ -553,12 +553,15 @@ function flipBook(toBestiary){
 function closeBook(){ curBook = null; bookNightmare = false; nightmareBg(null); SFX.ui('back'); openLevels(); }
 
 let loadoutFocus = null;
+/** The gourd pick (Release 4, owner 2026-11-05): the night's gourds and the one picked, kept apart from the pumpkin team. */
+let loadoutGourds = [];
+export let loadoutGourd = null;
 /** Pumpkin picking (owner, 2026-09-27): pumpkins in unlock order, a detail card for the focused one (level, ability, lore), then the trophies. */
 /** Pumpkins to pick: 5, or 4 with the 5-20 Focused patch power; never more than the types on offer (a gourd night opens the picker even
  *  with 5 or fewer types, Release 4). */
 const teamSize = () => Math.min(perkOn('pick4') ? 4 : 5, loadoutAvail ? loadoutAvail.length : 5);
 export function openLoadout(avail, next, required, gourds){
-  if (__RELEASE__ >= 4) renderGourds(gourds || []);   // the Gourds section: the night's gourds, picked and locked (not one of the pumpkins)
+  if (__RELEASE__ >= 4) renderGourds(gourds || []);   // the gourd pick: the Gourds section and the header's Your gourd slot, apart from the pumpkins
   loadoutAvail = avail; loadoutNext = next; loadoutMust = (required || []).map(m => m.t); loadoutWhy = required || [];
   const pref = [...loadoutMust, ...(save.loadout || []).filter(t => avail.includes(t) && !loadoutMust.includes(t))];
   for (const t of avail) if (pref.length < teamSize() && !pref.includes(t)) pref.push(t);
@@ -566,7 +569,7 @@ export function openLoadout(avail, next, required, gourds){
   const night = t => t < 2 ? 0 : unlockNightOf(PTYPES[t].key);   // Green and Yellow are there from the start
   const order = avail.slice().sort((x, y) => night(x) - night(y) || x - y);
   loadoutFocus = loadoutMust[0] != null ? loadoutMust[0] : order[0];
-  $('#loTitle').textContent = `Pick ${teamSize()} pumpkins`;
+  $('#loTitle').textContent = `Pick ${teamSize()} pumpkins` + (__RELEASE__ >= 4 && loadoutGourds.length ? ' and 1 gourd' : '');   // a gourd night asks for both (Release 4)
   const box = $('#picks'); box.innerHTML = '';
   for (const t of order){
     const b = document.createElement('button'); b.className = 'pick';
@@ -595,30 +598,51 @@ function backToLoadout(){
   for (const b of $('#picks').querySelectorAll('.pick')){ const t = +b.dataset.t, lv = b.querySelector('.lv'); if (lv) lv.textContent = `Lv ${lvOf(t)}`; b.setAttribute('aria-label', `${PTYPES[t].name}, level ${lvOf(t)}`); }
   syncLoadout(); setState('loadout');
 }
-/** The Gourds section of the picker (Release 4): one tile per gourd standing on the patch tonight, shown picked and locked. With one
- *  gourd there is nothing to choose (our call); it does not count toward the pumpkin team. Hidden on nights without a gourd. */
+/** The gourd pick (Release 4, owner 2026-11-05; spec Part 3 "A separate pick in the picker"). On a gourd night the Gourds section
+ *  ("Gourd · pick 1") holds one tile per gourd and the header shows a "Your gourd" slot set apart from the Your team row, so the two picks
+ *  never read as one row. Tapping a tile puts that gourd in the slot and shows its card; the slot never empties (a gourd night needs a
+ *  gourd), and with one gourd it starts filled and locked. Built for a choice of one from several later. Story nights hide all of it. */
 function renderGourds(keys){
+  loadoutGourds = keys.filter(k => GOURDS[k]);
+  if (!loadoutGourds.includes(loadoutGourd)) loadoutGourd = loadoutGourds[0] || null;
+  $('#ovLoadout').classList.toggle('gNight', loadoutGourds.length > 0);
   let sec = $('#loGourdSec');
-  if (!sec){ sec = document.createElement('section'); sec.className = 'loSec'; sec.id = 'loGourdSec'; sec.innerHTML = '<h3>Gourds</h3><div class="picks" id="loGourds"></div>'; $('#loScroll').appendChild(sec); }
+  if (!sec){ sec = document.createElement('section'); sec.className = 'loSec'; sec.id = 'loGourdSec'; sec.innerHTML = '<h3>Gourd \u00b7 pick 1</h3><div class="picks" id="loGourds"></div>'; $('#loScroll').appendChild(sec); }
+  if (!$('#loGourdSlot')){   // the header pair, built once: the team row under its label, then the gourd slot under its own
+    const team = $('#loTeam'), pair = document.createElement('div'); pair.className = 'loPair'; team.before(pair);
+    const tg = document.createElement('div'); tg.className = 'loGroup'; tg.innerHTML = '<small class="loLabel" aria-hidden="true">Your team</small>'; tg.appendChild(team);
+    const gg = document.createElement('div'); gg.className = 'loGroup loGourdBox'; gg.innerHTML = '<small class="loLabel" aria-hidden="true">Your gourd</small><button class="slot gslot" id="loGourdSlot"></button>';
+    pair.append(tg, gg);
+    $('#loGourdSlot').onclick = () => { if (!loadoutGourd) return; loadoutFocus = 'gourd:' + loadoutGourd; SFX.ui('locked'); renderDetail(); };   // shows its card; never empties
+  }
   const box = sec.querySelector('.picks'); box.innerHTML = '';
-  sec.hidden = !keys.length;
-  for (const k of keys){
-    const G0 = GOURDS[k]; if (!G0) continue;
-    const b = document.createElement('button'); b.className = 'pick must'; b.dataset.gourd = k; b.setAttribute('aria-pressed', 'true');
+  sec.hidden = !loadoutGourds.length;
+  const one = loadoutGourds.length === 1;
+  for (const k of loadoutGourds){
+    const G0 = GOURDS[k];
+    const b = document.createElement('button'); b.className = 'pick gtile' + (one ? ' must' : ''); b.dataset.gourd = k;
     b.appendChild(gourdIcon(96));
     const nm = document.createElement('b'); nm.textContent = G0.name; b.appendChild(nm);
-    const tag = document.createElement('span'); tag.className = 'tag info'; tag.textContent = 'i'; tag.title = 'Stands on the patch tonight'; b.appendChild(tag);
-    b.setAttribute('aria-label', `${G0.name}, on the patch tonight`);
-    b.onclick = () => { loadoutFocus = 'gourd:' + k; SFX.ui('locked'); renderDetail(); };
+    const tag = document.createElement('span'); tag.className = 'tag info'; tag.textContent = 'i'; tag.title = 'Your gourd tonight'; b.appendChild(tag);
+    b.setAttribute('aria-label', `${G0.name}, your gourd tonight`);
+    b.onclick = () => { const was = loadoutGourd; loadoutGourd = k; loadoutFocus = 'gourd:' + k; SFX.ui(was === k ? 'tap' : 'pick'); syncLoadout(); };
     box.appendChild(b);
   }
+}
+/** The header's gourd slot and the tiles' picked state (Release 4). */
+function renderGourdSlot(){
+  for (const b of document.querySelectorAll('#loGourds .pick')) b.setAttribute('aria-pressed', b.dataset.gourd === loadoutGourd ? 'true' : 'false');
+  const sl = $('#loGourdSlot'); if (!sl) return;
+  sl.innerHTML = ''; sl.classList.toggle('must', loadoutGourds.length === 1); sl.classList.toggle('empty', !loadoutGourd);
+  if (loadoutGourd){ sl.dataset.gourd = loadoutGourd; sl.appendChild(gourdIcon(96)); sl.setAttribute('aria-label', `Your gourd: ${GOURDS[loadoutGourd].name}` + (loadoutGourds.length === 1 ? ', picked for this night' : '')); }
+  else { delete sl.dataset.gourd; sl.setAttribute('aria-label', 'Your gourd: tap a gourd below'); }
 }
 function renderDetail(){
   const t = loadoutFocus, d = $('#loDetail'); if (t == null){ d.innerHTML = ''; return; }
   if (__RELEASE__ >= 4 && typeof t === 'string' && t.startsWith('gourd:')){   // a gourd's card (Release 4)
     const G0 = GOURDS[t.slice(6)]; d.innerHTML = ''; if (!G0) return;
     d.appendChild(gourdIcon(96));
-    const tx = document.createElement('div'); tx.innerHTML = `<b>${G0.name}</b><small>On the patch tonight \u00b7 not one of your pumpkins</small><p class="ab"><span class="k">Power:</span> ${G0.power}</p><p class="lo">${G0.lore}</p>`;
+    const tx = document.createElement('div'); tx.innerHTML = `<b>${G0.name}</b><small>Your gourd \u00b7 not one of your pumpkins</small><p class="ab"><span class="k">Power:</span> ${G0.power}</p><p class="lo">${G0.lore}</p>`;
     d.appendChild(tx); return;
   }
   const P = PTYPES[t], L = lvOf(t), un = t < 2 ? 1 : unlockNightOf(P.key), where = un === 1 ? 'from the start' : un === Infinity ? '' : `unlocked at ${levelFor(un).label}`;
@@ -668,8 +692,10 @@ export function syncLoadout(){
   for (const b of document.querySelectorAll('#picks .pick')) b.setAttribute('aria-pressed', loadoutSel.has(+b.dataset.t) ? 'true' : 'false');
   const n = loadoutSel.size;
   const min = teamSize();   // 5-20 perk: four colours are enough
-  $('#loCount').textContent = n >= min ? 'Ready. Only the pumpkins you pick will sprout and drop tonight.' : `${n} of ${min} picked. Tap a pumpkin to pick it and read about it.`;
-  $('#bLoGo').disabled = n < min;
+  const gNight = __RELEASE__ >= 4 && loadoutGourds.length > 0, gReady = !gNight || !!loadoutGourd;   // a gourd night also needs its gourd (Release 4)
+  $('#loCount').textContent = n >= min && gReady ? 'Ready. Only the pumpkins you pick will sprout and drop tonight.' : n < min ? `${n} of ${min} ${gNight ? 'pumpkins ' : ''}picked. Tap a pumpkin to pick it and read about it.` : __RELEASE__ >= 4 ? 'Tap a gourd below to pick it.' : '';
+  $('#bLoGo').disabled = n < min || !gReady;
+  if (__RELEASE__ >= 4) renderGourdSlot();
   const why = loadoutWhy.filter(w => w.why !== 'New this level').map(w => `${PTYPES[w.t].name} is locked in: ${w.why.toLowerCase()}.`).join(' ');
   $('#loWhy').textContent = why; $('#loWhy').hidden = !why;
   renderTeam(min);
@@ -1039,7 +1065,7 @@ export function wireButtons(){
 
   $('#bLoBack').onclick = () => { if (loadoutFromEndless) openEndless(); else if (loadoutFromPreview) openPreview(previewNight); else setState('title'); };   // back to the level card the night was started from (owner)
 
-  $('#bLoGo').onclick = () => { if (loadoutSel.size < teamSize()) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo); };
+  $('#bLoGo').onclick = () => { if ($('#bLoGo').disabled || loadoutSel.size < teamSize()) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo, __RELEASE__ >= 4 ? loadoutGourd : undefined); };   // the gourd pick goes along (Release 4; the engine places def.gourd's one gourd)
 
   for (const b of document.querySelectorAll('#shopTabs .tab')) b.onclick = () => { SFX.ui('tap'); setShopTab(b.dataset.tab); };
   $('#bSeedAd').onclick = () => watchSeedAd(renderShop);

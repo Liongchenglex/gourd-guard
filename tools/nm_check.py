@@ -1,6 +1,7 @@
 """Release 4 checks (Nightmare Pumpkin Patch, docs/superpowers/specs/2026-11-04-release-4-nightmare-patch-design.md),
 against a build served by tools/serve_dist.py.
   Playtest build:  npm run build:playtest            then  .venv/bin/python tools/nm_check.py --url http://127.0.0.1:4173/ --expect on
+  Release 4 build: VITE_RELEASE=4 npx vite build      then  ... --expect r4   (all of Release 4, nothing from Release 5)
   Release 3 build: VITE_RELEASE=3 npx vite build      then  ... --expect r3   (nothing from Release 4)
   Release 2 build: VITE_RELEASE=2 npx vite build      then  ... --expect r2   (nothing from Release 4)
   Store build:     npm run build                      then  ... --expect off
@@ -10,7 +11,7 @@ from playwright.sync_api import sync_playwright
 
 from w6_check import open_page, ok, FAILS, start, bundle_js, set_stars
 
-R4 = False   # set by --expect: the build holds Release 4 (playtest)
+R4 = False   # set by --expect: the build holds Release 4 (playtest, or a Release 4 build)
 MODE = 'on'
 
 
@@ -29,6 +30,15 @@ def check_r4_absent(browser, url):
     js = bundle_js()
     for s in ('Embers', 'Cockcrow', 'Burnt Offerings', 'Wildfire!', 'Cinder Rooster', 'Hayrick', 'Corn Husker', 'Strawlord', 'Grave Gourd', 'e3a43c', 'around your gourd', 'Grave Riser', 'Your gourd', 'and 1 gourd', 'Casket Jack', 'Fallen Casket', 'Fallen Gravekeeper', 'Inferno!'):
         ok((s in js) == R4, f"{s!r} {'in' if R4 else 'not in'} the bundle")
+
+
+def check_r5_absent(browser, url):
+    """Below the playtest build no Release 5 name is in the bundle (the full list lives in tools/nm2_check.py)."""
+    if MODE == 'on': return
+    from nm2_check import R5_NAMES
+    js = bundle_js()
+    for s in R5_NAMES:
+        ok(s not in js, f"{s!r} not in the bundle")
 
 
 def check_nm_track(browser, url):
@@ -97,7 +107,7 @@ def check_nm_story_rules(browser, url):
     page.close()
 
 
-CHECKS = {'check_r4_absent': check_r4_absent, 'check_nm_track': check_nm_track, 'check_nm_story_rules': check_nm_story_rules}
+CHECKS = {'check_r4_absent': check_r4_absent, 'check_r5_absent': check_r5_absent, 'check_nm_track': check_nm_track, 'check_nm_story_rules': check_nm_story_rules}
 
 
 # ---------- Task 2: fire tiles and fire marks ----------
@@ -1580,11 +1590,11 @@ CHECKS.update({'check_fallen_gk': check_fallen_gk, 'check_fallen_gk_continue': c
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)
-    ap.add_argument('--expect', choices=['on', 'r3', 'r2', 'off'], required=True)
+    ap.add_argument('--expect', choices=['on', 'r4', 'r3', 'r2', 'off'], required=True)
     ap.add_argument('--only', default=None)
     a = ap.parse_args()
     global R4, MODE
-    MODE = a.expect; R4 = a.expect == 'on'
+    MODE = a.expect; R4 = a.expect in ('on', 'r4')
     with sync_playwright() as p:
         browser = p.chromium.launch(args=os.environ.get('GG_CHROME_ARGS', '').split())   # e.g. GG_CHROME_ARGS=--disable-gpu when the headless GPU process hangs (a sleeping Mac)
         for name, fn in CHECKS.items():

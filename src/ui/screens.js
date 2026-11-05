@@ -2,7 +2,7 @@ import { PERKS, perkEarned, perkOn, perkNight, rented, RENT_COST } from '../data
 import { SPAWN_STEPS } from '../data/patterns.js';
 import { NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
-import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, prevLevelFor, firstNightOf, typesForNight, gearUnlockNightOf, NIGHTMARE_LEVELS, NM_BOOK_LEVELS, nmNight } from '../data/worlds/index.js';
+import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, prevLevelFor, firstNightOf, typesForNight, gearUnlockNightOf, NIGHTMARE_LEVELS, NM_BOOK_LEVELS, nmNight, nmGateText } from '../data/worlds/index.js';
 import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO } from '../data/monsters.js';
 import { hasFire, nightmareTitle } from '../data/levels.js';
 import { monsterIcon } from '../engine/render/monsters.js';
@@ -439,7 +439,10 @@ function applyNightmare(wi){
   const on = bookNightmare;
   spread.classList.toggle('nightmare', on); bm.setAttribute('aria-pressed', on ? 'true' : 'false'); bm.setAttribute('aria-label', on ? 'Leave nightmare mode' : 'Nightmare mode');
   const nmLv = __RELEASE__ >= 4 && on ? NIGHTMARE_LEVELS[wi] : null;   // Release 4: this book's nightmare levels (else "Coming soon")
-  $('#bkLevels').hidden = on && !nmLv; $('#bkStars').hidden = on && !nmLv; $('#bkSoon').hidden = !on || !!nmLv; $('#bBkFlip').hidden = on && !nmLv;
+  const gate = __RELEASE__ >= 5 && nmLv ? nmGateText(wi + 1) : '';   // Release 5: a page whose levels exist but whose gate is shut says what is missing
+  const soon = $('#bkSoon'); if (soon.dataset.soon == null) soon.dataset.soon = soon.innerHTML;
+  soon.innerHTML = gate ? `<b>Locked</b><p>${gate} to open these pages.</p>` : soon.dataset.soon;
+  $('#bkLevels').hidden = on && (!nmLv || !!gate); $('#bkStars').hidden = on && (!nmLv || !!gate); soon.hidden = !on || (!!nmLv && !gate); $('#bBkFlip').hidden = on && !nmLv;
   if (__RELEASE__ >= 4 && nmLv) renderBestiary(wi, true);   // the nightmare edition of the bestiary (openBook drew the story one)
   const theme = levels[0].theme;
   nightmareBg(on ? nightmareKey(theme) : null);

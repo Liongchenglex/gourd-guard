@@ -10,6 +10,7 @@ import world4 from './world4.js';
 import world5 from './world5.js';
 import world6, { releaseOf as w6Release } from './world6.js';
 import nightmare1 from './nightmare1.js';
+import nightmare2 from './nightmare2.js';
 
 // Background themes (index = LevelDef.theme). Drawn by buildBg() in src/engine/render/sprites.js.
 //   sky: [top, middle, horizon] gradient    ground: [field top, field bottom]    grass: tuft / reed colour
@@ -34,6 +35,9 @@ export const WORLDS = [
   // nightmareSky/nightmareAfter in render/nightmare/scenes.js; the palette matches that file's 'patchN' theme.
   ...(__RELEASE__ >= 4 ? [{ name:'Pumpkin Patch: Nightmare', sky:['#050204','#2a0806','#c2410f'], ground:['#2e1a16','#120a08'], grass:'#281512',
     moon:'#1a0808', halo:'#ff7a1a', sil:['#1a0808','#080303'], rim:'#ff8a3a', soil:['#5e3620','#3a1e10','#1a0c06'], mist:null, custom:'nightmare', scene:'patchN', base:0 }] : []),
+  // Foggy Hollow: Nightmare (Release 5): the nightmare book's sickly green moon and poison fog (scene 'fogN' in render/nightmare/scenes.js); palette = that THEMES row.
+  ...(__RELEASE__ >= 5 ? [{ name:'Foggy Hollow: Nightmare', sky:['#020604','#0b1f12','#2f6a3a'], ground:['#16261a','#08110a'], grass:'#132418',
+    moon:'#d8ffb0', halo:'#5aff7a', sil:['#0d2014','#040a06'], rim:'#9aff9a', soil:['#3e4a2c','#232c18','#10150a'], mist:'#5ac07a', custom:'nightmare', scene:'fogN', base:1 }] : []),
 ];
 
 /** Display names for the six worlds (docs/WORLDS.md §3). Worlds without levels yet show as "coming soon". */
@@ -57,7 +61,7 @@ export const LEVELS = ALL_LEVELS.length;
  *  quests live in save.stars / save.quests under that number. NIGHTMARE_LEVELS[w - 1] is world w's nightmare table. */
 export const NM_BASE = 1000;
 export const NM_BOOK_LEVELS = 16;   // stamps on a nightmare book page; levels not built yet show as "Coming soon"
-export const NIGHTMARE_LEVELS = __RELEASE__ >= 4 ? [nightmare1] : [];
+export const NIGHTMARE_LEVELS = __RELEASE__ >= 5 ? [nightmare1, nightmare2] : __RELEASE__ >= 4 ? [nightmare1] : [];
 export const nmNight = (w, k) => NM_BASE + 100 * (w - 1) + k;
 export const isNightmare = n => n > NM_BASE;
 const nmWorld = n => Math.floor((n - NM_BASE - 1) / 100) + 1, nmLevel = n => (n - NM_BASE - 1) % 100 + 1;
@@ -101,6 +105,15 @@ export function typesForNight(n){
   return [...Array(NTYPES).keys()].filter(t => t < 1 || unlockNightOf(PTYPES[t].key) <= n || (BUY_PUMPKIN[PTYPES[t].key] && save[BUY_PUMPKIN[PTYPES[t].key].flag]));   // Paint: once bought, in every level (owner)   // only Green from the start; Yellow unlocks at 1-2 (owner)
 }
 
+/** What world w's nightmare track still needs, or '' (Release 5: the hollow needs the Grave Gourd, which N1-4 unlocks). */
+export function nmGateText(w){
+  if (__RELEASE__ >= 5 && w === 2){
+    if (!save.stars[firstNightOf(2) + WORLD_LEVELS[1].length - 1]) return 'Beat 2-20';
+    if (!save.stars[nmNight(1, 4)]) return 'Beat Nightmare 1-4';
+  }
+  return '';
+}
+
 /** Is story night n open to play? Level 1 of a world opens when the previous world's level 10 has been beaten
  *  (or the level its `opensAfter` names: Hallow's End opens after 5-20, owner 2026-10-31);
  *  every other level opens when the level before it has been beaten. */
@@ -109,7 +122,7 @@ export function isOpen(n){
     if (!nmData(n)) return false;
     if (save.testUnlock) return true;
     const w = nmWorld(n), f = firstNightOf(w);
-    return nmLevel(n) === 1 ? f != null && !!save.stars[f + WORLD_LEVELS[w - 1].length - 1] : !!save.stars[n - 1];
+    return nmLevel(n) === 1 ? f != null && !!save.stars[f + WORLD_LEVELS[w - 1].length - 1] && !nmGateText(w) : !!save.stars[n - 1];
   }
   const d = ALL_LEVELS[n - 1];
   if (!d) return false;

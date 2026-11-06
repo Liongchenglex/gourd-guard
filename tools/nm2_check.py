@@ -1216,6 +1216,177 @@ def check_minipolt(browser, url):
 CHECKS.update({'check_fogwalker2': check_fogwalker2, 'check_comet': check_comet, 'check_minipolt': check_minipolt})
 
 
+# ---------- Task 8: the Lamplighter (mini boss, N2-4 and N2-13) ----------
+R5_NAMES += ('lamplighter',)
+LBOSS = "window.__gg.G.monsters.find(m => m.type === 'boss' && !m.dead)"
+# A game-time log of the boss (window.__b) from now: mood changes [mood, t, flash > 0], lane changes [lane, t] and fog calls [t, dir, n lines, dur],
+# t in game seconds (G.t) since the log started, sampled every 10 ms. Also the highest p it reaches (window.__maxP).
+LLOG = """() => { const g = window.__gg, G = g.G, b = window.__b; const t0 = G.t; window.__ml = []; window.__ll = []; window.__fl = []; window.__maxP = 0;
+  let mood = b.mood, lane = b.lane, warn = null; clearInterval(window.__li);
+  window.__li = setInterval(() => { const B = window.__b, P = window.__gg.G.poison; window.__maxP = Math.max(window.__maxP, B.p); window.__gg.G.spawnTimer = 999;
+    if (B.mood !== mood){ mood = B.mood; window.__ml.push([mood, window.__gg.G.t - t0, B.flash > 0]); }
+    if (B.lane !== lane){ lane = B.lane; window.__ll.push([lane, window.__gg.G.t - t0]); }
+    if (P.warn && P.warn !== warn) window.__fl.push([window.__gg.G.t - t0, P.warn.dir, P.warn.idx.length, P.warn.dur]);
+    warn = P.warn; }, 10); }"""
+
+
+def lamp_up(page, k):
+    """Start Nightmare 2-k, bring its boss in now, stop ordinary spawns and clear the field so only the boss acts, put it just short of hold and
+    stretch the level's own fog clock out of reach (its dur stays), then start LLOG. Returns [kind, hp, maxHp, mood, hold, form] or None."""
+    nm2_start(page, k)
+    page.evaluate("() => { const G = window.__gg.G; G.sproutT = -999; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }")
+    time.sleep(0.3)
+    b = page.evaluate(f"""() => {{ const g = window.__gg, G = g.G, b = {LBOSS}; if (!b) return null;
+      G.spawnTimer = 999; G.monsters.splice(0, G.monsters.length, b); b.p = b.hold - 0.01; window.__b = b;
+      if (G.def.poison) G.def.poison = {{ ...G.def.poison, every:1e9 }}; G.poison.t = 1e9; G.poison.warn = G.poison.on = null;
+      return [b.kind, b.hp, b.maxHp, b.mood, b.hold, b.form]; }}""")
+    if b: page.evaluate(LLOG)
+    return b
+
+
+def wait_for(page, js, limit=60):
+    """Poll (every 0.25 s) until js is truthy, at most `limit` wall seconds; the machine is sometimes heavily loaded, so the checks time in game seconds."""
+    for _ in range(int(limit * 4)):
+        if page.evaluate(js): return True
+        time.sleep(0.25)
+    return False
+
+
+# One hit of type t (a colour index or ROTTEN) on the boss and one plain damage() of 1 (a burn tick, splash or tool: not a rotten pumpkin), in one evaluate:
+# [rotOnly, cleanOnly, hp change from the pumpkin, the float it showed, hp change from the plain damage]
+LHIT = f"""(t) => {{ const g = window.__gg, b = window.__b, n0 = g.G.floats.length, h0 = b.hp; g.hitMonster(({HIT_PR})(t, b.lane), b);
+  const f = g.G.floats.slice(n0).map(x => x.text).find(x => typeof x === 'string') || null, h1 = b.hp; b.lastHit = 0; g.damage(b, 1, '#fff');
+  return [!!b.rotOnly, !!b.cleanOnly, +(h1 - h0).toFixed(2), f, +(b.hp - h1).toFixed(2)]; }}"""
+
+
+def check_lamplighter(browser, url):
+    if not R5: return
+    page, errors = open_page(browser, url)
+    d = page.evaluate("""() => { const T = window.__gg.TYPES.lamplighter; return T ? [T.boss, T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.hold, T.moodEvery, T.driftEvery, T.fogEvery,
+      T.noItems, T.form2.hp, T.form2.moodEvery] : null; }""")
+    ok(d == [True, 24, 32, 0.03, 40, 0, 300, 6, 0.14, 8, 8, 12, True, 34, 6], f'Lamplighter data {d}')
+    ok(page.evaluate("() => window.__gg.BOSS_NAMES.lamplighter") == 'The Lamplighter', 'its name on screen is "The Lamplighter"')
+    intro = page.evaluate("() => window.__gg.BOSS_INTRO.lamplighter || null")
+    ok(bool(intro) and 'rot' in intro['1'].lower() and '2' in intro, f'it has boss intro texts for both forms {intro and list(intro)}')
+    L = page.evaluate("() => [3, 12].map(i => { const d = window.__gg.NIGHTMARE_LEVELS[1][i]; return d && [d.level, d.name, d.boss, d.bossForm, d.bossChest, d.unlockGourds, !!d.gourd, !!d.poison]; })")
+    ok(L[0] == [4, 'The Lamplighter', 'lamplighter', 1, 'normal', ['protector'], True, True], f'N2-4: the Lamplighter, a normal chest, unlocks the Protector, a gourd night with poison {L[0]}')
+    ok(L[1] is not None and L[1][:5] == [13, 'Lamplighter Returns', 'lamplighter', 2, 'normal'], f'N2-13: the Lamplighter in form 2, a normal chest {L[1]}')
+    b = lamp_up(page, 4)
+    ok(b is not None and b[0] == 'lamplighter' and b[1] == b[2] == 24 and b[3] == 'clean' and b[5] == 1, f'on N2-4 it arrives with 24 health in its clean mood {b}')
+    if b is None:
+        page.close(); return
+    # clean mood first: normal pumpkins and plain damage hurt; a rotten one does nothing (no heal either)
+    page.evaluate("() => { window.__b.hp = 20; }")
+    R = page.evaluate("() => window.__gg.ROTTEN")
+    r = page.evaluate(LHIT, R)
+    ok(r[:2] == [False, True] and r[2] == 0 and r[4] == -1, f'clean mood: cleanOnly; a rotten pumpkin does nothing (no heal); plain damage hurts {r}')
+    r = page.evaluate(LHIT, 0)
+    ok(r[2] < 0, f'clean mood: a green hurts {r}')
+    # the mood flips at 8 s (a flash), the lane drifts at 8 s
+    ok(wait_for(page, "() => window.__ml.length >= 1"), 'the mood flips')
+    ml, ll = page.evaluate("() => [window.__ml, window.__ll]")
+    ok(ml[0][0] == 'rot' and 7.6 < ml[0][1] < 8.4 and ml[0][2], f'at about 8 s (game time) it switches to its rot mood, with a flash {ml}')
+    ok(len(ll) >= 1 and ll[0][0] != b[4] and 7.6 < ll[0][1] < 8.4, f'at about 8 s it drifts to another lane {ll}')
+    # rot mood: normal blocked (and every plain damage), rotten -1.5
+    hp0 = page.evaluate("() => window.__b.hp")
+    r = page.evaluate(LHIT, 0)
+    ok(r[:2] == [True, False] and r[2] == 0 and r[3] == 'Blocked' and r[4] == 0, f'rot mood: rotOnly; a green is blocked; plain damage does nothing {r}')
+    r = page.evaluate(LHIT, R)
+    ok(r[2] == -1.5, f'rot mood: a rotten pumpkin takes 1.5 off ({hp0} -> {hp0 + r[2]}) {r}')
+    # the fog call at 12 s: one row or column, with the level's dur
+    ok(wait_for(page, "() => window.__fl.length >= 1"), 'it calls a fog')
+    fl, dur = page.evaluate("() => [window.__fl, window.__gg.G.def.poison.dur]")
+    ok(11.6 < fl[0][0] < 12.4 and fl[0][1] in ('row', 'col') and fl[0][2] == 1 and fl[0][3] == dur, f'at about 12 s it calls a poison fog on one row or column with the level dur {dur} {fl}')
+    # back to clean at 16 s
+    ok(wait_for(page, "() => window.__ml.length >= 2"), 'the mood flips back')
+    ml = page.evaluate("() => window.__ml")
+    ok(ml[1][0] == 'clean' and 15.5 < ml[1][1] < 16.5, f'at about 16 s it is back in its clean mood {ml}')
+    r = page.evaluate(LHIT, 0)
+    ok(r[:2] == [False, True] and r[2] < 0, f'clean again: a green hurts {r}')
+    # immune to knockback and freeze (clean mood, through the real hit path), slowed; then held at the back all along
+    hits = """(m) => { const g = window.__gg, out = { kb:0, frozen:0, slowed:0 };
+      for (let i = 0; i < 20; i++){ const pr = { x:m.x, y:g.fieldY(1), vy:-900, type:2, vis:2, lv:5, guar:true, lane:m.lane, hitWalls:new Set(), grp:{ spawned:false, small:false, kills:0 }, size:1, rot:0, spin:9, hit:new Set(), trail:[], r:16, dead:false };
+        g.hitMonster(pr, m); if (m.kb > 0) out.kb++; if (m.frozenT > 0) out.frozen++; if (m.slowT > 0) out.slowed++; }
+      return out; }"""
+    r = page.evaluate(f"() => {{ const b = window.__b; const h = b.hp; b.hp = 5000; const o = ({hits})(b); b.hp = h; return [o, b.kb || 0, b.frozenT || 0]; }}")
+    ok(r[0]['kb'] == 0 and r[0]['frozen'] == 0 and r[1] == 0 and r[2] == 0 and r[0]['slowed'] > 0, f'20 Ice hits with knockback guaranteed: no knockback, no freeze, but slowed {r}')
+    mp, hold = page.evaluate("() => [window.__maxP, window.__b.hold]")
+    ok(mp <= hold + 1e-9, f'it never walks past hold (max p {mp:.4f}, hold {hold})')
+    # killing it gives exactly one normal chest
+    c0 = page.evaluate("() => window.__gg.save.chests.length")
+    page.evaluate("() => { clearInterval(window.__li); const g = window.__gg, b = window.__b; b.mood = 'clean'; b.rotOnly = false; b.cleanOnly = true; b.lastHit = 0; g.damage(b, 99999, '#fff'); }")
+    time.sleep(0.3)
+    ch = page.evaluate("() => window.__gg.save.chests.slice(%d)" % c0)
+    ok(len(ch) == 1 and ch[0]['kind'] == 'normal' and not ch[0].get('boss'), f'killing it adds exactly one normal chest and no boss item {ch}')
+    ok(page.evaluate("() => window.__gg.G.bossDead"), 'the boss is down (the night can end)')
+    # winning N2-4 unlocks the Protector Gourd
+    page.evaluate("() => { window.__gg.save.gourds.protector = false; }")
+    nm2_start(page, 4); page.evaluate("() => window.__gg.endGame(true)"); time.sleep(1.8)
+    ok(page.evaluate("() => window.__gg.save.gourds.protector") is True, 'winning N2-4 sets save.gourds.protector')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_lamplighter_form2(browser, url):
+    """N2-13 (bossForm 2): 34 health, the mood switches every 6 s; one normal chest."""
+    if not R5: return
+    page, errors = open_page(browser, url)
+    b = lamp_up(page, 13)
+    ok(b is not None and b[0] == 'lamplighter' and b[1] == b[2] == 34 and b[5] == 2, f'on N2-13 it arrives in form 2 with 34 health {b}')
+    if b is None:
+        page.close(); return
+    ok(wait_for(page, "() => window.__ml.length >= 2"), 'the mood flips twice')
+    ml = page.evaluate("() => window.__ml")
+    ok(ml[0][0] == 'rot' and 5.6 < ml[0][1] < 6.4 and ml[1][0] == 'clean' and 11.5 < ml[1][1] < 12.5, f'form 2 switches every 6 s {ml}')
+    c0 = page.evaluate("() => window.__gg.save.chests.length")
+    page.evaluate("() => { clearInterval(window.__li); const g = window.__gg, b = window.__b; b.lastHit = 0; b.rotOnly = false; g.damage(b, 99999, '#fff'); }"); time.sleep(0.3)
+    ch = page.evaluate("() => window.__gg.save.chests.slice(%d).map(c => c.kind)" % c0)
+    ok(ch == ['normal'], f'N2-13 also gives one normal chest {ch}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_lamplighter_continue(browser, url):
+    """A continued night brings it back with its health, its mood and its three clocks where they were."""
+    if not R5: return
+    page, errors = open_page(browser, url)
+    b = lamp_up(page, 4)
+    if b is None:
+        ok(False, 'the Lamplighter arrived'); page.close(); return
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 5, '#fff'); }")
+    ok(wait_for(page, "() => window.__ml.length >= 1"), "it reaches its rot mood")
+    time.sleep(1.0)
+    before = page.evaluate("""() => { clearInterval(window.__li); const g = window.__gg, b = window.__b, s = [b.mood, b.hp, +b.moodT.toFixed(3), +b.driftT.toFixed(3), +b.fogT.toFixed(3)];
+      const c = g.continueState(); g.continueNight(c); return s; }""")
+    time.sleep(0.6)
+    after = page.evaluate(f"() => {{ const b = {LBOSS}; return b ? [b.mood, b.hp, +b.moodT.toFixed(3), +b.driftT.toFixed(3), +b.fogT.toFixed(3), b.kind, !!b.rotOnly, b.p <= 0.05] : null; }}")
+    ok(after is not None and after[:5] == before and after[5] == 'lamplighter' and after[6] and after[7],
+       f'a continued night brings it back in its rot mood with its 19 health and its clocks as they were (they wait while it walks in) {before} -> {after}')
+    ok(before[1] == 19 and before[0] == 'rot', f'(it was hurt to 19 and in its rot mood {before})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_lamplighter_baked(browser, url):
+    """Its frames (both moods, each with a hit) are baked when the night starts, capped like the Strawlord's (under 10 MB at bake scale 2.5)."""
+    if not R5: return
+    page, errors = open_page(browser, url)
+    C = page.evaluate("() => { const C = window.__gg.CHARS.lamplighter; return C ? [Object.keys(C.clips).sort(), C.clips.walk.pose(0).mood, C.clips.rot.pose(0).mood] : null; }")
+    ok(C == [['hit', 'rot', 'rothit', 'walk'], 'clean', 'rot'], f'the Lamplighter bakes walk (the amber clean mood), rot (the green rot mood) and a hit for each {C}')
+    page.evaluate("() => window.__gg.setBakeScale(2.5)")
+    t0 = time.time(); nm2_start(page, 4); dt = time.time() - t0
+    ok(page.evaluate("() => window.__gg.isBaked('lamplighter')"), 'starting N2-4 bakes the Lamplighter')
+    mb = page.evaluate("() => window.__gg.atlasBytes('lamplighter') / 1e6")
+    ok(mb < 10, f'the Lamplighter\'s frames take {mb:.1f} MB at bake scale 2.5 (limit 10)')
+    ok(dt < 3, f'the night opens in {dt:.1f} s')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_lamplighter': check_lamplighter, 'check_lamplighter_form2': check_lamplighter_form2, 'check_lamplighter_continue': check_lamplighter_continue,
+               'check_lamplighter_baked': check_lamplighter_baked})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

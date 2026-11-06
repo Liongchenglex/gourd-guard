@@ -428,6 +428,14 @@ export const SFX = {
       case (__RELEASE__ >= 4 ? 'strawlord:move' : ''): S('whoosh', 0.45, { rate: 0.85 }) || woosh(false, 0.16); S('cloth', 0.3, { delay: 0.05 }); break;
       case (__RELEASE__ >= 4 ? 'strawlord:hit' : ''): S('cloth', 0.5) || cloth(); S('wood', 0.3, { delay: 0.03 }); break;
       case (__RELEASE__ >= 4 ? 'strawlord:die' : ''): S('fire', 0.6) || noise(0.5, 0.3, 600, 0.7); S('woodbreak', 0.6, { delay: 0.1 }); S('roarbig', 0.6, { rate: 1.1, delay: 0.2 }); [0.4, 0.5, 0.6].forEach(d => S('bat', 0.3, { delay: d })); break;
+      // The Lamplighter (Release 5): a ghost's moan and a sputtering lantern; the glass rings when the flame changes colour (higher for clean, lower for rot)
+      case (__RELEASE__ >= 5 ? 'lamplighter:arrive' : ''): S('ghost', 0.6, { rate: 0.7 }) || cloth(); S('torch', 0.5, { delay: 0.3 }); S('darkcast', 0.4, { rate: 0.8, delay: 0.5 }); break;
+      case (__RELEASE__ >= 5 ? 'lamplighter:clean' : ''): S('torch', 0.55) || noise(0.08, 0.2, 2500, 1.5); S('glassping', 0.4, { rate: 1.2, delay: 0.05 }) || bell(660, 0.05, 0.04); break;
+      case (__RELEASE__ >= 5 ? 'lamplighter:rot' : ''): S('torch', 0.55, { rate: 0.8 }) || noise(0.08, 0.2, 1500, 1.5); S('glassping', 0.4, { rate: 0.7, delay: 0.05 }) || bell(330, 0.05, 0.04); S('slime', 0.3, { rate: 0.6, delay: 0.1 }); break;
+      case (__RELEASE__ >= 5 ? 'lamplighter:move' : ''): S('warp', 0.45, { rate: 0.8 }) || woosh(false, 0.16); S('cloth', 0.3, { delay: 0.05 }); break;
+      case (__RELEASE__ >= 5 ? 'lamplighter:fog' : ''): S('hiss', 0.45, { rate: 0.8 }) || noise(0.5, 0.15, 900, 0.8); S('wind', 0.35, { delay: 0.1 }); break;
+      case (__RELEASE__ >= 5 ? 'lamplighter:hit' : ''): S('ghost', 0.45, { rate: 0.9 }) || cloth(); S('metallight', 0.25, { delay: 0.03 }); break;
+      case (__RELEASE__ >= 5 ? 'lamplighter:die' : ''): S('ghostdie', 0.7, { rate: 0.8 }) || noise(0.5, 0.2, 1200, 0.8); S('glass', 0.5, { delay: 0.15 }); S('torch', 0.4, { rate: 0.7, delay: 0.3 }); break;
       case 'hollowking:immune': S('clank', 0.5, { rate: 0.8 }) || tone(300, 0.08, 'square', 0.05); break;
       case 'hollowking:tell': S('darkcast', 0.8, { rate: 0.7 }); S('witchlong', 0.45, { rate: 0.6 }); tone(55, 0.9, 'sawtooth', 0.05, 110); break;
       case 'hollowking:wipe': S('stonecrash', 0.9, { rate: 0.8 }) || noise(0.4, 0.3, 300, 0.7); S('roar', 0.5, { rate: 0.6 }); break;

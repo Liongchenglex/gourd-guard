@@ -1219,26 +1219,28 @@ CHECKS.update({'check_fogwalker2': check_fogwalker2, 'check_comet': check_comet,
 # ---------- Task 8: the Lamplighter (mini boss, N2-4 and N2-13) ----------
 R5_NAMES += ('lamplighter',)
 LBOSS = "window.__gg.G.monsters.find(m => m.type === 'boss' && !m.dead)"
-# A game-time log of the boss (window.__b) from now: mood changes [mood, t, flash > 0], lane changes [lane, t] and fog calls [t, dir, n lines, dur],
+# A game-time log of the boss (window.__b) from now: mood changes [mood, t, flash > 0], lane changes [lane, t] and fog warnings [t, dir, n lines, dur, src]
+# (src 'lamp' for the Lamplighter's call, 'level' for the level's own cycle),
 # t in game seconds (G.t) since the log started, sampled every 10 ms. Also the highest p it reaches (window.__maxP).
 LLOG = """() => { const g = window.__gg, G = g.G, b = window.__b; const t0 = G.t; window.__ml = []; window.__ll = []; window.__fl = []; window.__maxP = 0;
   let mood = b.mood, lane = b.lane, warn = null; clearInterval(window.__li);
   window.__li = setInterval(() => { const B = window.__b, P = window.__gg.G.poison; window.__maxP = Math.max(window.__maxP, B.p); window.__gg.G.spawnTimer = 999;
     if (B.mood !== mood){ mood = B.mood; window.__ml.push([mood, window.__gg.G.t - t0, B.flash > 0]); }
     if (B.lane !== lane){ lane = B.lane; window.__ll.push([lane, window.__gg.G.t - t0]); }
-    if (P.warn && P.warn !== warn) window.__fl.push([window.__gg.G.t - t0, P.warn.dir, P.warn.idx.length, P.warn.dur]);
+    if (P.warn && P.warn !== warn) window.__fl.push([window.__gg.G.t - t0, P.warn.dir, P.warn.idx.length, P.warn.dur, P.warn.src || 'level']);
     warn = P.warn; }, 10); }"""
 
 
-def lamp_up(page, k):
+def lamp_up(page, k, level_clock=None):
     """Start Nightmare 2-k, bring its boss in now, stop ordinary spawns and clear the field so only the boss acts, put it just short of hold and
-    stretch the level's own fog clock out of reach (its dur stays), then start LLOG. Returns [kind, hp, maxHp, mood, hold, form] or None."""
+    stretch the level's own fog clock out of reach (its dur stays), then start LLOG. With level_clock the level's poison cycle is kept as it is
+    and its clock set to level_clock s instead. Returns [kind, hp, maxHp, mood, hold, form] or None."""
     nm2_start(page, k)
     page.evaluate("() => { const G = window.__gg.G; G.sproutT = -999; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }")
     time.sleep(0.3)
     b = page.evaluate(f"""() => {{ const g = window.__gg, G = g.G, b = {LBOSS}; if (!b) return null;
       G.spawnTimer = 999; G.monsters.splice(0, G.monsters.length, b); b.p = b.hold - 0.01; window.__b = b;
-      if (G.def.poison) G.def.poison = {{ ...G.def.poison, every:1e9 }}; G.poison.t = 1e9; G.poison.warn = G.poison.on = null;
+      const lc = {'null' if level_clock is None else level_clock}; if (lc == null && G.def.poison) G.def.poison = {{ ...G.def.poison, every:1e9 }}; G.poison.t = lc == null ? 1e9 : lc; G.poison.warn = G.poison.on = null;
       return [b.kind, b.hp, b.maxHp, b.mood, b.hold, b.form]; }}""")
     if b: page.evaluate(LLOG)
     return b
@@ -1296,7 +1298,7 @@ def check_lamplighter(browser, url):
     # the fog call at 12 s: one row or column, with the level's dur
     ok(wait_for(page, "() => window.__fl.length >= 1"), 'it calls a fog')
     fl, dur = page.evaluate("() => [window.__fl, window.__gg.G.def.poison.dur]")
-    ok(11.6 < fl[0][0] < 12.4 and fl[0][1] in ('row', 'col') and fl[0][2] == 1 and fl[0][3] == dur, f'at about 12 s it calls a poison fog on one row or column with the level dur {dur} {fl}')
+    ok(11.6 < fl[0][0] < 12.4 and fl[0][1] in ('row', 'col') and fl[0][2] == 1 and fl[0][3] == dur and fl[0][4] == 'lamp', f'at about 12 s it calls a poison fog on one row or column with the level dur {dur} {fl}')
     # back to clean at 16 s
     ok(wait_for(page, "() => window.__ml.length >= 2"), 'the mood flips back')
     ml = page.evaluate("() => window.__ml")
@@ -1319,6 +1321,19 @@ def check_lamplighter(browser, url):
     ch = page.evaluate("() => window.__gg.save.chests.slice(%d)" % c0)
     ok(len(ch) == 1 and ch[0]['kind'] == 'normal' and not ch[0].get('boss'), f'killing it adds exactly one normal chest and no boss item {ch}')
     ok(page.evaluate("() => window.__gg.G.bossDead"), 'the boss is down (the night can end)')
+    # with the level's own poison cycle running (N2-4: every 20 s, dur 3; its clock set so its fog settles at 18.5 s): the Lamplighter's calls
+    # are extra and never restart the level clock, so the level's fog warns at 17 s between the Lamplighter's at 12 s and 24 s
+    page2, errors2 = open_page(browser, url)   # a fresh page: the night just won ends itself on a timer
+    b = lamp_up(page2, 4, level_clock=18.5)
+    ev = page2.evaluate("() => [window.__gg.G.def.poison.every, window.__gg.G.def.poison.dur]")
+    ok(b is not None and ev == [20, 3], f'N2-4 with its own fog clock running (every 20, dur 3) {b} {ev}')
+    ok(wait_for(page2, "() => window.__fl.length >= 3", 90), 'three fogs come')
+    fl = page2.evaluate("() => (clearInterval(window.__li), window.__fl)")
+    want = [('lamp', 12), ('level', 17), ('lamp', 24)]
+    ok(len(fl) >= 3 and all(f[4] == s and abs(f[0] - t) < 0.4 for f, (s, t) in zip(fl, want)),
+       f"the Lamplighter's fog at 12 s and 24 s and the level's own at 17 s (its clock ran on under the Lamplighter's fog) {[(round(f[0], 2), f[4]) for f in fl]}")
+    ok(not errors2, f'no page errors {errors2[:2]}')
+    page2.close()
     # winning N2-4 unlocks the Protector Gourd
     page.evaluate("() => { window.__gg.save.gourds.protector = false; }")
     nm2_start(page, 4); page.evaluate("() => window.__gg.endGame(true)"); time.sleep(1.8)

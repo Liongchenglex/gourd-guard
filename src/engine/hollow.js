@@ -18,7 +18,8 @@
 //    rotten ones do (`rotOnly`). markMoods sets the flags in the same frame-start pre-pass as markRotZones (after clearHitFlags, before any monster
 //    updates or flight resolves), and a switch sets them at once too, so a flight, a burn tick and a mine always see the mood it is in. Its own mood
 //    wins over a Plague Doctor 2's square. Every `driftEvery` s it drifts to another lane; every `fogEvery` s it calls poisonNow on one random row or
-//    column (the level's poison.dur), and when a fog is already up it calls as soon as that one lifts. lampSnapshot / restoreLamp carry its mood and
+//    column (the level's poison.dur; tagged src 'lamp', so the level's own fog cycle runs on under it, engine/poison.js), and when a fog is
+//    already up it calls as soon as that one lifts. lampSnapshot / restoreLamp carry its mood and
 //    clocks over a continue (game.js continueState `bossMood`, spawner.js).
 
 import { TYPES } from '../data/monsters.js';
@@ -212,7 +213,7 @@ export function updateLamplighter(m, dt){
   }
   if ((m.fogT -= dt) <= 0){   // one poison fog line on the patch, so there is always rot to answer its rot mood; a fog already up: call when it lifts
     const dir = Math.random() < 0.5 ? 'row' : 'col', idx = [Math.floor(Math.random() * (dir === 'row' ? ROWS : COLS))];
-    if (poisonNow({ dir, idx })){ m.fogT += T.fogEvery; ring(m.x + 20, mY(m) - 60, 40, 'rgba(166,224,74,.85)'); SFX.bossSfx('lamplighter', 'fog'); }
+    if (poisonNow({ dir, idx }, 'lamp')){ m.fogT += T.fogEvery; ring(m.x + 20, mY(m) - 60, 40, 'rgba(166,224,74,.85)'); SFX.bossSfx('lamplighter', 'fog'); }
     else m.fogT = 0;
   }
 }

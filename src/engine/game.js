@@ -37,7 +37,7 @@ import { prebakeGourd } from './render/gourd.js';
 import { ROTTEN, ROT_FX, clearHitFlags, rotSnapshot, restoreRot } from './rot.js';
 import { prebakeRot } from './render/rot.js';
 import { markRotZones, markMoods, lampSnapshot } from './hollow.js';
-import { updatePoison } from './poison.js';
+import { updatePoison, poisonClock } from './poison.js';
 import { prebakePoison } from './render/poison.js';
 
 // ---------- Flow ----------
@@ -550,7 +550,7 @@ export function continueState(){
     hk:__RELEASE__ >= 3 ? hkState() : null,   // the Hollow King's phase and his standing form (Release 3)
     jukebox:{ next:g.jbNext || 0, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null },   // next: drop points already used (one per jukebox dropped)   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
     ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0, bossPhase2:living.map(m => !!m.phase2), gourd:g.def.gourd ? gourdSnapshot() : null } : {}),
-    ...(__RELEASE__ >= 5 ? { bossMood:living.map(lampSnapshot), rot:rotSnapshot(), poison:g.poison ? (g.poison.warn || g.poison.on ? (g.def.poison ? g.def.poison.every : 0) : g.poison.t) : 0 } : {}) };   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
+    ...(__RELEASE__ >= 5 ? { bossMood:living.map(lampSnapshot), rot:rotSnapshot(), poison:poisonClock() } : {}) };   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
 export function continueNight(c){

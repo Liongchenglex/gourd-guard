@@ -5,6 +5,9 @@
 // there rots on landing, not mid-slide (`settled`). One sweep per frame is the whole landing rule; nothing hooks the board.
 // G.poison = { t, warn, on }: t counts down to the next scheduled fog (frozen while one is warning or lying); warn { dir, idx, flow, t, dur };
 // on { dir, idx, flow, t, dur, age }. `poisonNow` lights a chosen (or random) line set at once with the same warning (the Lamplighter, Task 8).
+// One fog at a time: a fog that comes due while another is warning or lying waits for it to lift (so two can come back to back). A fog the
+// Lamplighter calls carries `src:'lamp'` on its warn / on state: it is extra to the level's cycle, so the level clock `t` keeps running under it
+// and is not restarted when it lifts; only a level fog (or the coach's) holds the clock while it lasts and restarts it at `every` when it lifts.
 // Art: render/poison.js (baked). Every caller gates on `__RELEASE__ >= 5`, so lower builds drop this module.
 
 import { POISON_DUR, POISON_WARN } from '../data/rules.js';
@@ -47,11 +50,11 @@ function pickLines(d){
 
 /** Light a fog at once: the warning, then the fog. `lines` is { dir:'row'|'col', idx:[…] }; omitted, the level's own pick (or one random row or column).
  *  False (nothing changes) when a fog is already warning or lying, or the build has no Release 5. */
-export function poisonNow(lines){
+export function poisonNow(lines, src){
   if (!(__RELEASE__ >= 5)) return false;
   const p = G.poison; if (!p || p.warn || p.on) return false;
   const d = G.def && G.def.poison, l = lines || pickLines(d);
-  p.warn = { dir:l.dir, idx:l.idx.slice(), flow:Math.random() < 0.5 ? 1 : -1, t:POISON_WARN, dur:d && d.dur ? d.dur : POISON_DUR };
+  p.warn = { dir:l.dir, idx:l.idx.slice(), flow:Math.random() < 0.5 ? 1 : -1, t:POISON_WARN, dur:d && d.dur ? d.dur : POISON_DUR, ...(src ? { src } : {}) };   // src 'lamp': the Lamplighter's (see the header)
   prebakePoison();   // cached after the first call: a night whose level has no `poison` (the Lamplighter's call) bakes it here, before the arrows are first drawn
   addFloat('Poison fog', W / 2, GY - 30, '#b6f06a', 22, 1.8); SFX.wind('warn');
   return true;
@@ -61,15 +64,24 @@ export function updatePoison(dt){
   if (!(__RELEASE__ >= 5)) return;
   const p = G.poison; if (!p || G.over) return;
   const d = G.def && G.def.poison;
+  let held = false;   // a level fog warning or lying this frame: the level clock waits (as before Release 5's Lamplighter: no tick that frame)
   if (p.on){
     p.on.t -= dt; p.on.age += dt;
     sweep();
-    if (p.on.t <= 0){ p.on = null; p.t = d ? d.every : 0; }
+    held = p.on.src !== 'lamp';
+    if (p.on.t <= 0){ p.on = null; if (held) p.t = d ? d.every : 0; }   // only a level fog restarts the level clock
   } else if (p.warn){
-    p.warn.t -= dt;
-    if (p.warn.t <= 0){ const w = p.warn; p.warn = null; p.on = { dir:w.dir, idx:w.idx, flow:w.flow, t:w.dur, dur:w.dur, age:0 }; sweep(); SFX.extra('rot'); G.shake = Math.max(G.shake, 0.15); }
-  } else if (d){
-    p.t -= dt;
-    if (p.t <= POISON_WARN) poisonNow(pickLines(d));
+    p.warn.t -= dt; held = p.warn.src !== 'lamp';
+    if (p.warn.t <= 0){ const w = p.warn; p.warn = null; p.on = { dir:w.dir, idx:w.idx, flow:w.flow, t:w.dur, dur:w.dur, age:0, ...(w.src ? { src:w.src } : {}) }; sweep(); SFX.extra('rot'); G.shake = Math.max(G.shake, 0.15); }
   }
+  if (d && !held){   // the level clock runs under a Lamplighter fog; a level fog that comes due while one is up waits for it to lift
+    p.t -= dt;
+    if (p.t <= POISON_WARN && !p.warn && !p.on) poisonNow(pickLines(d));
+  }
+}
+/** The level clock to save for a continued night: `every` if a level fog was warning or lying at the loss (it is gone and the clock restarts), else the clock. */
+export function poisonClock(){
+  const p = G.poison; if (!p) return 0;
+  const lvl = (p.warn && p.warn.src !== 'lamp') || (p.on && p.on.src !== 'lamp'), d = G.def && G.def.poison;
+  return lvl ? (d ? d.every : 0) : p.t;
 }

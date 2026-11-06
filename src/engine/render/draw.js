@@ -57,7 +57,7 @@ export function render(){
   if (__RELEASE__ >= 5) for (const m of g.monsters) if (m.type === 'rotdoctor' && !m.dead && m.p > 0) drawRotZone(m, t);
   drawHexZones(t);
   const ms = g.monsters.slice().sort((a, b) => a.p - b.p);
-  const walkerBands = g.monsters.filter(m => m.type === 'fogwalker' && !m.dead && m.p > 0).map(m => [m.p - TYPES.fogwalker.band, m.p + TYPES.fogwalker.band]);
+  const walkerBands = g.monsters.filter(m => (m.type === 'fogwalker' || (__RELEASE__ >= 5 && m.type === 'fogwalker2')) && !m.dead && m.p > 0).map(m => { const b = TYPES[m.type].band; return [m.p - b, m.p + b]; });   // Fogwalker 2's band is two rows (Release 5)
   const mapDef = g.def && !(g.preview && __RELEASE__ >= 2) ? g.def : null;   // Release 2: the level preview shows the map without its fog, so castles and puddles stay visible until the night starts (owner, 2026-10-31)
   const rowBands = ((mapDef && mapDef.fogRows) || []).map(r => [r * TILE_P(), (r + 1) * TILE_P()]);
   const bands = [...((mapDef && mapDef.fog) || []), ...rowBands, ...walkerBands];

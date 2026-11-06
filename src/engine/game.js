@@ -233,7 +233,7 @@ export function bustGrave(r, c, free){
 }
 export function useLantern(){
   if (state !== 'play' || G.over || save.lantern <= 0) return;
-  if (!((G.def && G.def.fog.length) || G.monsters.some(m => m.type === 'fogwalker' && !m.dead))){ addFloat('No fog here', W / 2, GY - 30, '#ffd35a', 18, 1); SFX.bad(); return; }
+  if (!((G.def && G.def.fog.length) || G.monsters.some(m => (m.type === 'fogwalker' || (__RELEASE__ >= 5 && m.type === 'fogwalker2')) && !m.dead))){ addFloat('No fog here', W / 2, GY - 30, '#ffd35a', 18, 1); SFX.bad(); return; }
   save.lantern--; persist(); G.q.tools++;
   G.fogClear = 10; G.flash = 0.4;
   for (let i = 0; i < 20; i++) spark(rnd(40, W - 40), rnd(FIELD_TOP, FENCE_Y), '#ffe27a', 120);

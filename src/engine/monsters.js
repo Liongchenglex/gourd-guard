@@ -5,7 +5,7 @@ import { TYPES, MODS, VARIANTS, BURNS_TO, ICE_ONLY, BURNING_FROM, HUSK_STRIP } f
 import { BURN_EVERY, RAINBOW, GLUE_SLOW } from '../data/pumpkins.js';
 import { glueStep } from './glue.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
-import { updateHollowMonster, reapLanes } from './hollow.js';
+import { updateHollowMonster, reapLanes, initHollowMonster } from './hollow.js';
 import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike, initFallenGK, updateFallenGK } from './nightmare.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
@@ -109,6 +109,7 @@ export function spawnMonster(key, lane, minion, p, formArg){
     const spots = [[lane - 1, 0], [lane + 1, 0], [lane, 0.06], [lane, -0.06]];
     for (const [l, dp] of spots.slice(0, T.bats)) spawnMonster('bat', Math.max(0, Math.min(COLS - 1, l)), true, Math.max(-0.02, m.p + dp));
   }
+  if (__RELEASE__ >= 5) initHollowMonster(m);   // Fogwalker 2's Mossbacks, the comet's cruise, the Mini Poltergeist's timers (engine/hollow.js)
   if (__RELEASE__ >= 3 && type === 'boss' && kind === 'hollowking') initHollowKing(m);
   if (__RELEASE__ >= 4 && type === 'boss' && kind === 'strawlord') initStrawlord(m);
   if (__RELEASE__ >= 4 && type === 'boss' && kind === 'fallengravekeeper') initFallenGK(m);
@@ -127,6 +128,7 @@ function standsStill(o){
 }
 export function aheadLimit(m){
   let limit = 1;
+  if (__RELEASE__ >= 5 && m.dashing) return limit;   // a comet streaking down its lane never stops for anyone (engine/hollow.js)
   const myLanes = lanesOf(m);
   for (const o of G.monsters){
     if (o === m || o.dead || o.p <= m.p || o.eating) continue;   // a monster already at the wall does not block the queue: everyone gets to chew

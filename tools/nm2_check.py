@@ -1043,6 +1043,179 @@ def check_reaper(browser, url):
 CHECKS.update({'check_rotdoctor': check_rotdoctor, 'check_rotdoctor_zone': check_rotdoctor_zone, 'check_reaper': check_reaper})
 
 
+# ---------- Task 7: Fogwalker 2, Wisp Rider 2 and Poltergeist 2 ----------
+R5_NAMES += ('fogwalker2', 'minipolt')
+# A game-time recorder on monster window.__ms[i]: samples [age, p, dashing, eating, hidden, lane] about every 15 ms into window.__rec.
+REC = """(i) => { const m = window.__ms[i]; window.__rec = []; clearInterval(window.__ri); window.__ri = setInterval(() => window.__rec.push([m.age, m.p, !!m.dashing, !!m.eating, !!m.hidden, m.lane]), 15); }"""
+# The game canvas pixels around (lane, p): 56 x 60 logical units.
+SNAP = """([lane, p]) => { const g = window.__gg, cv = document.querySelector('#cv'), k = cv.width / 540, x = Math.round((g.LANE(lane) - 28) * k), y = Math.round((g.fieldY(p) - 34) * k);
+  return Array.from(cv.getContext('2d').getImageData(x, y, Math.round(56 * k), Math.round(60 * k)).data); }"""
+
+
+def mad(a, b):
+    return sum(abs(x - y) for x, y in zip(a, b)) / max(1, len(a))
+
+
+def check_fogwalker2(browser, url):
+    if not R5: return
+    page, errors = open_page(browser, url)
+    nm2_start(page, 1); time.sleep(0.3); page.evaluate(PQ)
+    page.evaluate("() => { window.__ms = []; }")
+    d = page.evaluate("() => { const T = window.__gg.TYPES.fogwalker2, F = window.__gg.TYPES.fogwalker; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop, T.band, F.band]; }")
+    ok(d == [3, 0.045, 24, 9, 0.5, 28, 2, 0.12, 0.06], f'fogwalker2 data: hp 3, sp 0.045, r 24, coins 9, eat 0.5, pts 28, drop 2, band 0.12 (twice the Fogwalker\'s 0.06) {d}')
+    ok(page.evaluate("() => window.__gg.MNAME.fogwalker2") == 'Fogwalker 2' and 'mossback' in page.evaluate("() => window.__gg.MINTRO.fogwalker2 || ''").lower(), 'name and intro text')
+    tp = page.evaluate("() => window.__gg.TILE_P()")
+    ok(1.6 < 2 * d[7] / tp < 2.4, f'its band is about two rows tall ({2 * d[7] / tp:.2f} rows)')
+    # it arrives with a Mossback each side, as minions
+    page.evaluate("() => { const g = window.__gg; window.__f = g.spawnMonster('fogwalker2', 3, false, 0.3); }")
+    r = page.evaluate("() => window.__gg.G.monsters.filter(m => m !== window.__f).map(m => [m.type, m.lane, m.minion, Math.round(m.p * 100)]).sort((a, b) => a[1] - b[1])")
+    ok(r == [['brute', 2, True, 30], ['brute', 4, True, 30]], f'two Mossback minions beside it at its height {r}')
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; window.__f = window.__gg.spawnMonster('fogwalker2', 0, false, 0.3); }")
+    r = page.evaluate("() => window.__gg.G.monsters.filter(m => m !== window.__f).map(m => [m.type, m.lane, m.minion, Math.round(m.p * 100)]).sort((a, b) => a[1] - b[1])")
+    ok(r == [['brute', 0, True, 23], ['brute', 1, True, 30]], f'at the field edge the missing side goes behind it, not off the field {r}')
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; window.__gg.spawnMonster('fogwalker2', 3, true, 0.3); }")
+    ok(page.evaluate("() => window.__gg.G.monsters.length") == 1, 'a Fogwalker 2 that is itself a minion brings no Mossbacks (no chain)')
+    # its fog hides monsters in both of its rows, not beyond; a Lantern shows them
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; window.__ms = []; }")
+    f = page.evaluate(STILL, ['fogwalker2', 3, 0.5, 3])
+    page.evaluate("() => { const ms = window.__gg.G.monsters; for (let i = ms.length - 1; i >= 0; i--) if (ms[i].type === 'brute') ms.splice(i, 1); }")   # keep only the walker: its Mossbacks would hide behind the same fog
+    tp = page.evaluate("() => window.__gg.TILE_P()")
+    spots = {'above': (1, 0.5 - 0.8 * tp), 'below': (5, 0.5 + 0.8 * tp), 'far': (1, 0.5 + 0.2 + 2.2 * tp)}
+    ids = {k: page.evaluate(STILL, ['ghoul', l, p, 100]) for k, (l, p) in spots.items()}
+    time.sleep(0.6)
+    fog = {k: page.evaluate(SNAP, list(v)) for k, v in spots.items()}
+    page.evaluate("() => { window.__gg.G.fogClear = 20; }")
+    time.sleep(0.6)
+    clear = {k: page.evaluate(SNAP, list(v)) for k, v in spots.items()}
+    dif = {k: mad(fog[k], clear[k]) for k in spots}
+    ok(dif['above'] > 30 and dif['below'] > 30 and dif['far'] < 12, f'a ghoul in the row above and the row below is hidden by the fog (the Lantern shows them), one beyond is not (pixel change {dif})')
+    # a Lantern works with only a Fogwalker 2 on the field
+    page.evaluate("() => { const g = window.__gg; g.G.fogClear = 0; g.save.lantern = 2; g.G.def.fog = []; }")
+    page.evaluate("() => window.__gg.useLantern()")
+    r = page.evaluate("() => [window.__gg.G.fogClear > 5, window.__gg.save.lantern]")
+    ok(r == [True, 1], f'the Lantern lights when a Fogwalker 2 is the only fog {r}')
+    # 3 health
+    page.evaluate("() => { window.__gg.G.fogClear = 0; }")
+    r = []
+    for _ in range(3):
+        page.evaluate(f"() => window.__gg.damage(window.__ms[{f}], 1, '#fff')"); r.append(page.evaluate(f"() => window.__ms[{f}].dead"))
+    ok(r == [False, False, True], f'it takes 3 hits {r}')
+    ok(page.evaluate("() => { const c = window.__gg.CHARS.fogwalker2; return c && ['walk', 'chew', 'exhale'].every(k => c.clips[k]); }"), 'it is drawn (walk, chew, exhale clips)')
+    time.sleep(0.3)
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+HITS = "(i) => { const g = window.__gg, m = window.__ms[i]; g.damage(m, 1, '#fff'); return [m.type, m.hp, m.dead, !!m.carrier]; }"
+
+
+def check_comet(browser, url):
+    if not R5: return
+    page, errors = open_page(browser, url)
+    nm2_start(page, 1); time.sleep(0.3); page.evaluate(PQ)
+    page.evaluate("() => { window.__ms = []; }")
+    d = page.evaluate("() => { const T = window.__gg.TYPES.comet; return T && [T.hp, T.sp, T.dashSp, T.cruise, T.r, T.coins, T.eat, T.pts, T.drop]; }")
+    ok(d == [2, 0.06, 0.4, 2, 20, 8, 0.5, 26, 2], f'comet data: hp 2, sp 0.06, dashSp 0.4, cruise 2, r 20, coins 8, eat 0.5, pts 26, drop 2 {d}')
+    ok(page.evaluate("() => window.__gg.MNAME.comet") == 'Wisp Rider 2' and 'streaks' in page.evaluate("() => window.__gg.MINTRO.comet || ''").lower(), 'name and intro text')
+    # cruise, then dash to the fence without stopping, past a ghoul standing in its lane
+    ghoul = page.evaluate(STILL, ['ghoul', 3, 0.55, 100])
+    c = page.evaluate("() => { const m = window.__gg.spawnMonster('comet', 3, false, 0.02); (window.__ms = window.__ms || []).push(m); return window.__ms.length - 1; }")
+    page.evaluate(REC, c)
+    for _ in range(120):
+        time.sleep(0.25)
+        if page.evaluate(f"() => window.__ms[{c}].eating"): break
+    page.evaluate("() => clearInterval(window.__ri)")
+    rec = page.evaluate("() => window.__rec")
+    dash0 = next((r for r in rec if r[2]), None)
+    ok(dash0 is not None and 1.6 < dash0[0] < 2.6, f'it cruises about 2 s on the field, then dashes (dash at age {dash0 and round(dash0[0], 2)})')
+    cr = [r for r in rec if not r[2] and r[1] > 0.03]
+    ok(len(cr) > 3 and (cr[-1][1] - cr[0][1]) / max(1e-6, cr[-1][0] - cr[0][0]) < 0.1, 'it cruises at the slow pace before the dash')
+    dr = [r for r in rec if r[2] and not r[3]]
+    win = [dr[0]] if dr else []   # samples at least 0.1 game seconds apart (a frame is 0.017 s)
+    for r in dr[1:]:
+        if r[0] - win[-1][0] >= 0.1: win.append(r)
+    speeds = [(b[1] - a[1]) / (b[0] - a[0]) for a, b in zip(win, win[1:])]
+    ok(len(speeds) > 5 and min(speeds) > 0.2 and sum(speeds) / len(speeds) > 0.3, f'it dashes without stopping (min {min(speeds, default=0):.2f}, mean {sum(speeds) / max(1, len(speeds)):.2f} of the field a second)')
+    ok(page.evaluate(f"() => [window.__ms[{c}].eating, window.__ms[{c}].p, window.__ms[{ghoul}].dead]") == [True, 1, False], 'it ran past the ghoul standing in its lane and reached the fence (p 1) to chew')
+    # the first hit breaks the wisp: a plain Wisp (a minion) and a walking Imp; health kept
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; window.__ms = []; window.__gg.walls.forEach(w => { w.hp = w.max; }); }")
+    c = page.evaluate(STILL, ['comet', 4, 0.5, 2]); page.evaluate(f"() => {{ window.__ms[{c}].cruiseT = 1e9; }}")
+    r = page.evaluate(HITS, c)
+    ok(r == ['imp', 2, False, False], f'the first hit breaks the wisp and does no damage: the rider walks on as an Imp {r}')
+    w = page.evaluate(f"() => window.__gg.G.monsters.filter(m => m !== window.__ms[{c}]).map(m => [m.type, m.lane, m.minion, Math.round(m.p * 100)])")
+    ok(w == [['wisp', 4, True, 50]], f'a plain Wisp minion is left at its height {w}')
+    imp = page.evaluate(f"() => {{ const m = window.__ms[{c}]; return [m.dashing, m.r, m.sp > 0]; }}")
+    r2 = [page.evaluate(HITS, c), page.evaluate(HITS, c)]
+    ok(r2[0][2] is False and r2[1][2] is True, f'then it takes its 2 health in two hits {r2}')
+    ok(not imp[0], 'the broken rider is not dashing')
+    # a hit during the dash breaks it just the same, and the Imp walks (no longer dashes)
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; window.__ms = []; }")
+    c = page.evaluate(STILL, ['comet', 2, 0.4, 2]); page.evaluate(f"() => {{ const m = window.__ms[{c}]; m.dashing = true; m.sp = 0.4; }}")
+    page.evaluate(HITS, c)
+    ok(page.evaluate(f"() => [window.__ms[{c}].type, window.__ms[{c}].dashing]") == ['imp', False], 'a dashing comet that is hit breaks and stops dashing')
+    ok(page.evaluate("() => { const c = window.__gg.CHARS.comet; return c && ['walk', 'chew', 'dash'].every(k => c.clips[k]) && c.frame({ dashing:true, eating:false, frozenT:0, ph:0.3 }, c.clips)[0] === 'dash' && c.frame({ dashing:true, eating:true, frozenT:0, ph:0.3 }, c.clips) === null; }"), 'it is drawn with the dash clip while dashing, the chew clip at the fence')
+    time.sleep(0.3)
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_minipolt(browser, url):
+    if not R5: return
+    page, errors = open_page(browser, url)
+    nm2_start(page, 1); time.sleep(0.3); page.evaluate(PQ)
+    page.evaluate("() => { window.__ms = []; }")
+    d = page.evaluate("() => { const T = window.__gg.TYPES.minipolt; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop, T.driftEvery, T.vanishEvery, T.vanishFor, T.rotEvery, T.rotN]; }")
+    ok(d == [3, 0.04, 22, 9, 0.5, 28, 2, 5, 7, 2, 6, [1, 2]], f'minipolt data: hp 3, sp 0.04, r 22, coins 9, eat 0.5, pts 28, drop 2, driftEvery 5, vanishEvery 7, vanishFor 2, rotEvery 6, rotN [1, 2] {d}')
+    ok(page.evaluate("() => window.__gg.MNAME.minipolt") == 'Poltergeist 2' and 'rotten' in page.evaluate("() => window.__gg.MINTRO.minipolt || ''").lower(), 'name and intro text')
+    # a Protector Gourd in the middle: its square is never rotted
+    page.evaluate("() => { const g = window.__gg; g.grid[2][3] = g.newGourd('protector'); g.resolveMatches(); }")
+    m = page.evaluate(STILL, ['minipolt', 3, 0.3, 3])
+    page.evaluate(REC, m)
+    page.evaluate(f"() => {{ const m = window.__ms[{m}]; window.__rot = []; clearInterval(window.__rti); let last = 0; window.__rti = setInterval(() => {{ const k = ({ROTTEN_CELLS})().length; if (k !== last) {{ window.__rot.push([m.age, k - last]); last = k; }} }}, 15); }}")
+    for _ in range(80):
+        time.sleep(0.25)
+        if page.evaluate(f"() => window.__ms[{m}].age") > 10: break
+    page.evaluate("() => { clearInterval(window.__ri); clearInterval(window.__rti); }")
+    rec, rot = page.evaluate("() => [window.__rec, window.__rot]")
+    ok(len(rot) >= 1 and 5.9 < rot[0][0] < 7.6 and rot[0][1] in (1, 2), f'at about 6 s it rots 1-2 pumpkins (the cast tell lasts a moment first) {rot}')
+    tr = [(a[0], b[4]) for a, b in zip(rec, rec[1:]) if a[4] != b[4]]
+    ok(len(tr) >= 2 and tr[0][1] is True and tr[1][1] is False and 6.4 < tr[0][0] < 7.8 and 1.5 < tr[1][0] - tr[0][0] < 2.6, f'it vanishes at about 7 s for about 2 s and comes back {tr}')
+    lanes = [(a[0], b[5]) for a, b in zip(rec, rec[1:]) if a[5] != b[5]]
+    ok(len(lanes) >= 1 and abs(lanes[0][1] - 3) == 1 and 4.3 < lanes[0][0] < 6.5, f'it drifts one lane after about 5 s {lanes}')
+    # hidden: nothing can hit it (the projectile test in game.js skips hidden monsters)
+    hid = page.evaluate(f"() => window.__ms[{m}].hidden")
+    # forced casts: 1-2 each, never inside the Protector's square (rows 1-3, columns 2-4)
+    page.evaluate("() => { window.__gg.save.seenHelp = true; }")
+    sizes = []
+    for _ in range(7):
+        n0 = len(page.evaluate(ROTTEN_CELLS))
+        page.evaluate(f"() => {{ const m = window.__ms[{m}]; m.rotT = 0.01; }}")
+        for _ in range(60):
+            time.sleep(0.1)
+            if len(page.evaluate(ROTTEN_CELLS)) != n0: break
+        sizes.append(len(page.evaluate(ROTTEN_CELLS)) - n0)
+    ok(all(x in (1, 2) for x in sizes), f'every cast rots 1 or 2 pumpkins {sizes}')
+    cells = page.evaluate(ROTTEN_CELLS)
+    ok(len(cells) >= 8 and not any(1 <= r <= 3 and 2 <= c <= 4 for r, c in cells), f'none of the {len(cells)} rotten pumpkins is in the Protector square {cells}')
+    # killed during its cast: nothing rots
+    n0 = len(page.evaluate(ROTTEN_CELLS))
+    page.evaluate(f"() => {{ const m = window.__ms[{m}]; m.hidden = false; m.vanish = 100; m.rotT = 0.01; }}")
+    for _ in range(40):
+        time.sleep(0.05)
+        if page.evaluate(f"() => window.__ms[{m}].castT > 0"): break
+    ok(page.evaluate(f"() => window.__ms[{m}].castT > 0 && !!window.__ms[{m}].castCells"), 'it begins a cast (the tell)')
+    page.evaluate(f"() => window.__gg.damage(window.__ms[{m}], 100, '#fff')")
+    time.sleep(0.8)
+    ok(len(page.evaluate(ROTTEN_CELLS)) == n0, 'killed during its cast, nothing rots')
+    ok(page.evaluate("() => { const c = window.__gg.CHARS.minipolt; return c && ['walk', 'chew', 'toss'].every(k => c.clips[k]) && c.clips.toss.once; }"), 'it is drawn (walk, chew and the one-shot toss for the cast)')
+    time.sleep(0.3)
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_fogwalker2': check_fogwalker2, 'check_comet': check_comet, 'check_minipolt': check_minipolt})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

@@ -1,4 +1,4 @@
-// ---------- Nightmare Foggy Hollow: Plague Doctor 2 and the Reaper (Release 5) ----------
+// ---------- Nightmare Foggy Hollow: Plague Doctor 2, the Reaper, Fogwalker 2 and the Mini Poltergeist (Release 5) ----------
 // Ported from the design archive (Toy Plastic, docs/ART_BRIEF.md).
 //   rotdoctor: docs/archive/nightmare-monsters/vampires-doctor/nm_doctor.js, the Rot Doctor. The same stooped walk and censer swing as the Plague
 //              Doctor, but the coat has rotted to a tattered, mould-spotted green-black with ooze dripping from the hem; the mask is cracked and the
@@ -9,11 +9,14 @@
 //              long scythe. It has no feet: it glides, the hem fraying into smoke. Its `chew` clip IS the archive's `reap` sweep, looping (owner:
 //              the Reaper's scythe swing is its chewing at the fence, there is no pause between swings). The archive's single-hack `chew` pose is
 //              still drawn below but not baked. Clips: walk, chew (= reap).
+//   fogwalker2, minipolt: docs/archive/nightmare-monsters/spirits/spirits.js (Fogwalker 2 with its exhale clip; the Mini Poltergeist with orbiting junk and a toss clip,
+//              used as its rot cast). The Comet Rider (Wisp Rider 2) is in chars/hollowcomet.js.
 // Drawn around (0,0) in drawing units with the feet near y = 50. Every clip is baked by render/anim.js, so the glows are fine; nothing random
 // per frame (rng(seed) only).
 
 import { E, PL, RR, S, SM, SO, ell, pal, rgba, rng } from '../paint.js';
 import { TAU } from '../../util.js';
+import { COMET } from './hollowcomet.js';
 
 
 const ease = t => t * t * (3 - 2 * t);
@@ -270,6 +273,189 @@ export function rotDoctor(g, P = {}){
   g.restore();
 }
 
+// ---------- Foggy Hollow spirits: the Mini Poltergeist and Fogwalker 2 (palettes from w2.js) ----------
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+// Foggy Hollow (from w2.js): the Poltergeist's shroud and soul glow, the Fogwalker's robe and lantern
+const SHROUD = pal('#aab5c6'), SHROUDD = pal('#6f7e94'), SPIRIT = pal('#c4dfe8'), TOOTH = pal('#dbe5ec'), SOUL = '#9ef4e2', VOID = '#0a0f18',
+  FOGR = pal('#7a8a9a'), FOGRD = pal('#4f5c6c'), BONE = pal('#dfe2ec'), LAMP = pal('#5b4b3a'), LAMPG = pal('#dcefff'), IRON = pal('#4a4f5c'), BRASS = pal('#c09a3a'), CYAN2 = '#bfefff';
+// junk
+const CHINA = pal('#f2eee6'), CHINAB = pal('#3a78c8'), STEEL = pal('#b9c2cc'), BOOK = pal('#b8323a'), PAGE = pal('#f4ecd4'), WAX = pal('#f1e3bc'),
+  GOLD = pal('#d4a63a'), FRAME = pal('#3a2a44');
+
+function voidFace(g, cave, ex, ey, r, col, flare = 0){
+  S.dot(g, cave, '#0d1420');
+  g.save(); cave(g); g.clip(); const gr = g.createRadialGradient(0, ey, 2, 0, ey, 26); gr.addColorStop(0, rgba(col, .25 + flare * .4)); gr.addColorStop(1, rgba(col, 0)); g.fillStyle = gr; g.fillRect(-40, ey - 40, 80, 80); g.restore();
+  S.glow(g, -ex, ey, r + flare, col); S.glow(g, ex, ey, r + flare, col);
+}
+// ---------- Mini Poltergeist ----------
+// junk, each drawn around (0,0), about 10 units across
+const JUNK = [
+  function teacup(g){ S.part(g, SM([[-7, -4], [7, -4], [5.5, 3], [2, 5.5], [-2, 5.5], [-5.5, 3]], .7), CHINA, { x:0, y:0, r:7 }, { flat:true, lw:1.1 });
+    g.save(); SM([[-7, -4], [7, -4], [5.5, 3], [2, 5.5], [-2, 5.5], [-5.5, 3]], .7)(g); g.clip(); S.dot(g, RR(-8, -1, 16, 2.6, 0), CHINAB.base); g.restore();
+    S.stroke(g, g2 => { g2.beginPath(); g2.ellipse(8, 0, 3, 3.2, 0, -1.6, 1.6); }, CHINA, 1.8, .9); S.dot(g, E(0, -4, 7, 1.8), '#6a4630'); },
+  function fork(g){ S.tube(g, SO([[0, 9], [0, -2]]), STEEL, 2.4); S.part(g, RR(-3.4, -4, 6.8, 3.2, 1.2), STEEL, { x:0, y:-3, r:4 }, { flat:true, mat:'metal', lw:.9 });
+    for (const x of [-2.4, -.8, .8, 2.4]) S.tube(g, SO([[x, -3], [x, -9]]), STEEL, 1); },
+  function book(g){ S.part(g, RR(-6, -7.5, 12, 15, 1.5), BOOK, { x:0, y:0, r:8 }, { flat:true, mat:'leather', lw:1.1 }); S.dot(g, RR(4.5, -6.5, 2.4, 13, .8), PAGE.base); S.dot(g, RR(-6, -7.5, 2.2, 15, 1), BOOK.dark);
+    S.part(g, E(.5, -1, 2.4, 2.4), GOLD, { x:.5, y:-1, r:2.4 }, { flat:true, mat:'metal', lw:.8 }); },
+  function candle(g){ S.part(g, RR(-2.6, -4, 5.2, 11, 1.5), WAX, { x:0, y:1, r:6 }, { flat:true, lw:1 }); S.part(g, E(0, 7, 5.5, 2.2), GOLD, { x:0, y:7, r:5 }, { flat:true, mat:'metal', lw:.9 });
+    S.ln(g, [[0, -4], [0, -6]], { deep:'#2a1a10' }, .8, .9); g.save(); g.shadowColor = '#ffcc60'; g.shadowBlur = 6; S.dot(g, SM([[0, -12], [2, -7.5], [0, -5.5], [-2, -7.5]], .8), '#ffd27a'); g.restore(); S.dot(g, E(0, -7.4, .9, 1.4), '#ffffff'); },
+  function frame(g){ S.part(g, RR(-6.5, -6, 13, 12, 1.5), GOLD, { x:0, y:0, r:8 }, { flat:true, mat:'metal', lw:1 }); S.part(g, RR(-4, -3.6, 8, 7.2, 1), FRAME, { x:0, y:0, r:5 }, { flat:true, lw:.8 });
+    S.dot(g, E(0, -.6, 2, 2.2), SHROUD.light, .8); S.dot(g, E(-.8, -1, .5, .6), '#111'); S.dot(g, E(.8, -1, .5, .6), '#111'); },
+];
+function junkItem(g, i, x, y, s, rot, a = 1){ g.save(); g.globalAlpha *= a; g.translate(x, y); g.rotate(rot); g.scale(s, s); JUNK[i](g); g.restore(); }
+function smallHand(g, x, y, c, dir, curl, k = .55){
+  g.save(); g.translate(x, y); g.scale(k, k);
+  const w = 4, len = 20;
+  for (let i = 0; i < 3; i++){ const ang = dir + (i - 1) * .42, L = len * (i === 1 ? 1 : .85), mx = Math.cos(ang) * L * .5, my = Math.sin(ang) * L * .5, a2 = ang + .25 + curl, tx = mx + Math.cos(a2) * L * .5, ty = my + Math.sin(a2) * L * .5;
+    S.tube(g, SO([[0, 0], [mx, my], [tx, ty]]), c, w); S.claw(g, tx, ty, a2, 5, '#eaf1f6'); }
+  S.part(g, E(0, 0, 8, 7, dir), c, { x:0, y:0, r:8 }, { flat:true, mat:'bone' });
+  g.restore();
+}
+
+export function minipolt(g, P = {}){
+  const w = P.walk, ch = P.chew, ts = P.toss;
+  const ph = (w ?? ch ?? 0) * TAU;
+  const bob = w != null ? Math.sin(ph) * 4 : ch != null ? Math.sin(ph) * 2 : 0, press = ch == null ? 0 : .5 + .5 * Math.sin(ph), sway = w != null ? Math.sin(ph) * .06 : 0;
+  // toss: grab the teacup out of the orbit (0–.35), wind up high (.35–.5), fling it down the lane (.5–.75), settle
+  let tossK = 0, cupHeld = null, cupFly = null, lean = 0, grin = press * .5;
+  let rh = { x:24, y:-12 + Math.sin(ph + 1) * 3, dir:Math.PI / 2 - .5, curl:.2 }, lh = { x:-24, y:-12 + Math.sin(ph) * 3, dir:Math.PI / 2 + .5, curl:.2 };
+  if (ch != null){ rh = { x:14, y:6 + press * 10, dir:Math.PI / 2 - .2, curl:press * .5 }; lh = { x:-14, y:6 + (1 - press) * 10, dir:Math.PI / 2 + .2, curl:(1 - press) * .5 }; }
+  const orbitA = w != null ? -w * TAU : ch != null ? Math.sin(ph) * .4 : 0;
+  if (ts != null){
+    const grab = ease(clamp(ts / .3)), up = ease(clamp((ts - .3) / .2)), fl = ease(clamp((ts - .5) / .2)), back = ease(clamp((ts - .8) / .2));
+    rh = { x:lerp(lerp(24, 30, grab), 12, fl), y:lerp(lerp(-12, -22, grab) - up * 26, 8, fl), dir:lerp(-1.2, Math.PI / 2 - .2, fl), curl:fl < 1 ? .9 : .2 };
+    if (back > 0){ rh = { x:lerp(12, 24, back), y:lerp(8, -12, back), dir:lerp(Math.PI / 2 - .2, Math.PI / 2 - .5, back), curl:.2 }; }
+    lean = up * -.12 + fl * .2 - back * .08; grin = .6 + up * .4; tossK = 1;
+    if (ts < .58) cupHeld = { x:rh.x - 2, y:rh.y - 8, rot:-.4 + up * 1.2 }; else { const u = clamp((ts - .58) / .42); cupFly = { x:lerp(rh.x, 2, u), y:lerp(4, 46, u), rot:2 + u * 6, s:lerp(1.1, .7, u), a:1 - clamp((u - .7) / .3) }; }
+  }
+  S.shadow(g, 0, 52, 20, 4);
+  for (let i = 0; i < 4; i++){ const t = i / 3; puff(g, Math.sin(ph + i * 1.9) * 8 * (t + .3) + (i - 1.5) * 6, 32 + t * 16, 10 - t * 4, .4 - t * .25); }
+  // the orbit: items behind the body are drawn first, the ones in front after
+  const orbit = [];
+  for (let i = 0; i < 5; i++){ if (tossK && i === 0) continue; const a = orbitA + i * TAU / 5 + .5, x = Math.cos(a) * 38, y = -22 + Math.sin(a) * 11 - Math.cos(a) * 4 + bob * .5, s = 1 + Math.sin(a) * .14;
+    orbit.push({ i, x, y, s, rot:a * 1.5 + i, front:Math.sin(a) > 0 }); }
+  for (const o of orbit) if (!o.front) junkItem(g, o.i, o.x, o.y, o.s * .95, o.rot, .8);
+  g.save(); g.translate(0, bob + press * 4); g.translate(0, 20); g.rotate(sway + lean); g.translate(0, -20);
+  // shredded tail strips under the shroud
+  const R = rng(17);
+  for (let i = 0; i < 4; i++){ const bx = -12 + i * 8, L = 26 + R() * 10, wv = Math.sin(ph + i * 1.4) * 5, w0 = 6 + R() * 2;
+    const p = SM([[bx - w0, 0], [bx - w0 * .8 + wv * .3, L * .4], [bx - 2 + wv, L, 1], [bx + 2 + wv * 1.1, L * .75, 1], [bx + w0 * .8 + wv * .3, L * .35], [bx + w0, 0]], .8);
+    S.part(g, p, SHROUD, { x:bx, y:L * .4, r:L * .5 }, { flat:true, mat:'cloth', hx:bx - 2, hy:6 }); S.thread(g, bx - 2 + wv, L, wv > 0 ? 1 : -1, SHROUDD); }
+  // shroud: a round little ghost-sack with a nightcap tip that curls over to one side
+  const hem = tatters(-22, 22, 8, 4, ph, 6), curl = w != null ? Math.sin(ph) * 2 : 0;
+  const torso = SM([[2, -60], [-12, -56], [-21, -46], [-25, -30], [-24, -14], [-22, -2], ...hem, [22, -2], [24, -14], [25, -30], [22, -46], [14, -56], [12, -64], [18 + curl, -70], [24 + curl, -66, 1], [20 + curl, -74], [10, -72], [4, -64]], .8);
+  g.save(); g.shadowColor = rgba(SOUL, .5); g.shadowBlur = 12; S.part(g, torso, SHROUD, { x:0, y:-28, r:36 }, { mat:'cloth', hx:-10, hy:-46 }); g.restore();
+  S.overlay(g, torso, SHROUDD, { x:0, y:-26, r:34 }, .5);
+  g.save(); torso(g); g.clip(); const gr = g.createRadialGradient(0, -14, 2, 0, -14, 28); gr.addColorStop(0, rgba(SOUL, .4)); gr.addColorStop(1, rgba(SOUL, 0)); g.fillStyle = gr; g.fillRect(-40, -80, 80, 100); g.restore();
+  S.crease(g, SO([[-16, -20], [-18, -4]]), SHROUDD, 1.6, .4); S.crease(g, SO([[15, -18], [17, -4]]), SHROUDD, 1.6, .4);
+  for (const [x, y] of hem.filter((p, i) => i % 2 === 0)) S.thread(g, x, y, x < 0 ? -1 : 1, SHROUDD);
+  // stubby torn sleeves to the hands
+  for (const [s, h] of [[-1, lh], [1, rh]]){ const sx = s * 20, sy = -26, wx = h.x - Math.cos(h.dir) * 3, wy = h.y - Math.sin(h.dir) * 3;
+    S.tube(g, SO([[sx, sy], [(sx + wx) / 2 + s * 6, (sy + wy) / 2], [wx, wy]]), SHROUD, 8); S.contact(g, torso, sx, sy, 6, 6, .3); }
+  // face: a big hollow with lopsided blazing eyes (one squinting) and a wide jagged grin
+  const cave = SM([[-17, -30], [-18, -44], [-10, -52], [0, -50], [10, -52], [18, -44], [17, -30], [10, -22], [0, -20], [-10, -22]], .85);
+  S.dot(g, cave, VOID);
+  g.save(); cave(g); g.clip(); const cg = g.createRadialGradient(0, -38, 1, 0, -38, 20); cg.addColorStop(0, rgba(SOUL, .25 + grin * .2)); cg.addColorStop(1, rgba(SOUL, 0)); g.fillStyle = cg; g.fillRect(-30, -60, 60, 50); g.restore();
+  S.stroke(g, SO([[-17, -30], [-18, -44], [-10, -52], [0, -50], [10, -52], [18, -44], [17, -30]]), { deep:SHROUD.light }, 1.6, .45);
+  S.dot(g, E(-8, -40, 5.6, 6.2), '#03060c'); S.dot(g, E(8, -40, 5.6, 5.2), '#03060c');
+  S.glow(g, -8, -39.5, 3.3 + grin * .6, SOUL); S.glow(g, 8, -39, 2.6 + grin * .4, SOUL);
+  S.dot(g, PL([[-15, -48], [-2, -46], [-4, -43.5], [-14, -45]]), SHROUDD.deep, .9); S.dot(g, PL([[15, -45], [3, -44], [4, -41.5], [15, -42.5]]), SHROUDD.deep, .95);   // mismatched scowl: one brow up, one lid down
+  const op = .3 + grin * .7 + press * .4;
+  const mouth = SM([[-14, -33, 1], [-7, -29.5], [0, -29], [7, -29.5], [14, -34, 1], [10, -27 + op * 2], [0, -23.5 + op * 3], [-10, -27 + op * 2]], .8);
+  S.dot(g, mouth, VOID); g.save(); mouth(g); g.clip(); const mg = g.createRadialGradient(0, -25, 1, 0, -26, 12); mg.addColorStop(0, rgba(SOUL, .45)); mg.addColorStop(1, rgba(SOUL, 0)); g.fillStyle = mg; g.fillRect(-16, -38, 32, 18);
+  S.part(g, E(4, -23 + op * 3, 4.5, 3.4), pal('#7fd8c8'), { x:4, y:-23, r:4.5 }, { flat:true, lw:.8 }); g.restore();   // a little ghost-tongue
+  for (const x of [-10.5, -6, -1.5, 3, 7.5, 11.5]){ const yy = -30.5 + Math.abs(x) * .1 - (Math.abs(x) > 10 ? 1.5 : 0); S.dot(g, PL([[x - 1.9, yy], [x + 1.9, yy], [x, yy + 3.6]]), TOOTH.base); }
+  S.ln(g, [[-15, -34.5], [-13, -31.5]], SHROUD, 1, .7); S.ln(g, [[15, -35.5], [13, -32.5]], SHROUD, 1, .7);   // grin dimples
+  // hands, then the cup it holds
+  smallHand(g, lh.x, lh.y, SPIRIT, lh.dir, lh.curl); smallHand(g, rh.x, rh.y, SPIRIT, rh.dir, rh.curl);
+  if (cupHeld) junkItem(g, 0, cupHeld.x, cupHeld.y, 1.1, cupHeld.rot);
+  g.restore();
+  for (const o of orbit) if (o.front) junkItem(g, o.i, o.x, o.y, o.s, o.rot);
+  if (cupFly){ g.save(); g.globalAlpha *= cupFly.a * .5; for (let k = 1; k <= 3; k++) junkItem(g, 0, cupFly.x + (rh.x - cupFly.x) * k * .08, cupFly.y - k * 5, cupFly.s, cupFly.rot - k * .5, .5 - k * .12); g.restore(); junkItem(g, 0, cupFly.x, cupFly.y, cupFly.s, cupFly.rot, cupFly.a); }
+}
+/** The flung teacup on its own, spinning down the lane with a soul-glow trail (the engine's projectile). */
+
+// ---------- Fogwalker 2 ----------
+/** The lantern-cage chest: an iron barrel of curved bars between two banded rims, full of glowing fog. bright 0..1+, breath = fog spilling out. */
+function cage(g, cx, cy, bright, ph, swell = 0){
+  const W = 21 + swell * 2, H = 26 + swell * 2;
+  // its light spills over the robe around it
+  let gr = g.createRadialGradient(cx, cy, 4, cx, cy, 40 + Math.min(1, bright) * 6); gr.addColorStop(0, rgba(LAMPG.base, .45 + bright * .3)); gr.addColorStop(1, rgba(LAMPG.base, 0)); g.fillStyle = gr; g.fillRect(cx - 60, cy - 60, 120, 120);
+  const inside = SM([[cx - W, cy - H * .6], [cx - W * 1.1, cy], [cx - W, cy + H * .6], [cx, cy + H * .72], [cx + W, cy + H * .6], [cx + W * 1.1, cy], [cx + W, cy - H * .6], [cx, cy - H * .72]], .9);
+  g.save(); g.shadowColor = '#dcefff'; g.shadowBlur = 12 + bright * 14; S.dot(g, inside, '#cfe6f6'); g.restore();
+  g.save(); inside(g); g.clip();
+  gr = g.createRadialGradient(cx - 2, cy + 2, 1, cx, cy, W * 1.25); gr.addColorStop(0, '#ffffff'); gr.addColorStop(.45, rgba(LAMPG.base, .95)); gr.addColorStop(1, '#7f9fc0'); g.fillStyle = gr; g.fillRect(cx - 40, cy - 40, 80, 80);
+  for (let i = 0; i < 5; i++){ const t = ((ph / TAU) + i / 5) % 1; puff(g, cx + Math.sin(i * 2.1 + t * TAU) * 10, cy + 14 - t * 30, 6 + t * 5, .5, '#8aa6c0', '#c8dceb'); }   // fog churning inside
+  g.save(); g.shadowColor = CYAN2; g.shadowBlur = 10 + bright * 10; S.dot(g, SM([[cx, cy - 12 - bright * 4], [cx + 5.5, cy + 1], [cx, cy + 6], [cx - 5.5, cy + 1]], .8), '#f6feff'); g.restore();   // the soul flame at its heart
+  S.dot(g, SM([[cx - 2, cy - 4 - bright * 2], [cx + 2.5, cy + 2], [cx - 1, cy + 4], [cx - 3.5, cy + 1]], .8), CYAN2, .9);
+  g.save(); g.fillStyle = 'rgba(255,255,255,.55)'; ell(g, cx - W * .55, cy - H * .25, 2.5, H * .3, .15); g.fill(); g.restore();   // glass glint
+  g.restore();
+  S.stroke(g, inside, LAMP, 2.4, .95);
+  // four curved bars like ribs
+  for (const k of [-.52, 0, .52]){ const bx = cx + k * W; S.tube(g, SO([[bx, cy - H * .66], [bx + k * 7, cy], [bx, cy + H * .66]]), LAMP, 2.4); }
+  for (const [y, s] of [[cy - H * .66, -1], [cy + H * .66, 1]]){ const band = SM([[cx - W - 2, y - 3], [cx, y - 4 + s * 2], [cx + W + 2, y - 3], [cx + W + 2, y + 3], [cx, y + 4 + s * 2], [cx - W - 2, y + 3]], .7);
+    S.part(g, band, LAMP, { x:cx, y, r:W }, { flat:true, mat:'metal', lw:1.3 }); for (const k of [-.7, 0, .7]) S.rivet(g, cx + k * W, y + s * .5, 1.5, BRASS); }
+  S.part(g, SM([[cx - 8, cy - H * .66 - 3], [cx - 5, cy - H * .66 - 9], [cx + 5, cy - H * .66 - 9], [cx + 8, cy - H * .66 - 3]], .6), LAMP, { x:cx, y:cy - H * .7, r:9 }, { flat:true, mat:'metal', lw:1.2 });   // vent cap under the chin
+  return inside;
+}
+
+export function fogwalker2(g, P = {}){
+  const w = P.walk, ch = P.chew, ex = P.exhale;
+  const ph = (w ?? ch ?? 0) * TAU;
+  const step = w != null ? Math.sin(ph) : 0, bob = w != null ? -Math.abs(Math.sin(ph)) * 3 : ch != null ? Math.sin(ph) * 2 : 0, sway = w != null ? step * .035 : 0, press = ch == null ? 0 : .5 + .5 * Math.sin(ph);
+  let inh = 0, blow = 0;
+  if (ex != null){ inh = ex < .3 ? ease(ex / .3) : 1 - ease(clamp((ex - .3) / .2)); blow = clamp((ex - .28) / .72); }
+  const bright = .2 + press * .3 + inh * .3 + (blow > 0 ? Math.sin(blow * Math.PI) * 1 : 0);
+  S.shadow(g, 0, 52, 36, 6);
+  // the big breath: fog billowing out of the cage and rolling down and out across the ground (under the figure's arms)
+  const breath = [];
+  if (blow > 0){ const R = rng(5); for (let i = 0; i < 14; i++){ const a = Math.PI * (.05 + .9 * (i / 13)) + (R() - .5) * .2, d = (16 + R() * 44) * ease(clamp(blow * 1.6 - R() * .3)), rr = 8 + R() * 6 + blow * 8, al = (1 - blow) * (.55 + R() * .3);
+      breath.push([Math.cos(a) * d * 1.15, 6 + Math.sin(a) * d * .5, rr, al]); } }
+  g.save(); g.translate(0, bob + press * 2); g.translate(0, 46); g.rotate(sway); g.scale(1 + inh * .03, 1 + inh * .04); g.translate(0, -46);
+  // wrapped feet peek out under the robe, plodding
+  for (const s of [-1, 1]){ const lift = w != null ? Math.max(0, s * step) * 4 : 0; S.part(g, SM([[s * 6, 40 - lift], [s * 20, 40 - lift], [s * 24, 48 - lift], [s * 4, 49 - lift]], .7), FOGRD, { x:s * 14, y:44, r:10 }, { flat:true, mat:'bandage', lw:1.2 }); }
+  // robe: broad, hunched shoulders humped up behind the head
+  const hem = tatters(-38, 38, 44, 7, ph, 8);
+  const robe = SM([[-30, -60], [-43, -50], [-47, -28], [-42, 0], [-40, 38], ...hem, [40, 38], [42, 0], [47, -28], [43, -50], [30, -60], [14, -68], [0, -70], [-14, -68]], .8);
+  S.part(g, robe, FOGR, { x:0, y:-4, r:52 }, { mat:'cloth', hx:-24, hy:-38 });
+  S.overlay(g, robe, FOGRD, { x:0, y:0, r:50 }, .4);
+  S.crease(g, SO([[-30, 10], [-32, 28], [-30, 42]]), FOGR, 2, .4); S.crease(g, SO([[28, 10], [30, 28], [28, 42]]), FOGR, 2, .4);
+  for (const [x, y] of hem.filter((p, i) => i % 2 === 0)) S.thread(g, x, y, x < 0 ? -1 : 1, FOGR);
+  // the robe falls open over the cage: dark lining, then the cage
+  const open = SM([[-6, -30], [-26, -16], [-30, 14], [-22, 34], [0, 30], [22, 34], [30, 14], [26, -16], [6, -30]], .8);
+  S.part(g, open, FOGRD, { x:0, y:4, r:30 }, { flat:true, mat:'cloth', lw:1.4 });
+  const cy = 8, inside = cage(g, 0, cy, bright, ph, inh * 2 + (ex != null ? 0 : press));
+  S.contact(g, open, 0, -14, 22, 6, .35);
+  // inhale: wisps sucked back into the cage
+  if (inh > 0 && blow < .05) for (let i = 0; i < 6; i++){ const a = i / 6 * TAU, d = 44 * (1 - inh) + 18; puff(g, Math.cos(a) * d, cy + Math.sin(a) * d * .7, 5, inh * .5); }
+  // long arms: hang to the knees and swing heavily; claw down at the wall in turn when chewing; flung back for the breath
+  for (const s of [-1, 1]){
+    let hx = s * 44 - s * step * 0, hy = 30 + s * step * 4, dir = Math.PI / 2 + s * .25;
+    if (w != null){ hx = s * 46; hy = 28 - s * step * 5; }
+    if (ch != null){ const k = s < 0 ? press : 1 - press; hx = s * (30 - k * 6); hy = 26 + k * 14; dir = Math.PI / 2 - s * .2; }
+    if (ex != null){ const o = Math.max(inh, blow > 0 ? Math.sin(Math.min(1, blow * 2) * Math.PI / 2) * (1 - blow) : 0); hx = s * (46 + o * 14); hy = 26 - o * 30; dir = Math.PI / 2 + s * (.25 + o * .9); }
+    const sx = s * 39, sy = -46, ex2 = (sx + hx) / 2 + s * 8, ey = (sy + hy) / 2;
+    S.tube(g, SO([[sx, sy], [ex2, ey], [hx - Math.cos(dir) * 4, hy - Math.sin(dir) * 4]]), FOGR, 10);
+    const a = Math.atan2(hy - ey, hx - ex2); g.save(); g.translate(hx - Math.cos(dir) * 4, hy - Math.sin(dir) * 4); g.rotate(a); S.part(g, SM([[-10, -8], [2, -9], [6, -3, 1], [2, 0, 1], [7, 4, 1], [2, 8], [-10, 8]], .6), FOGR, { x:-2, y:0, r:10 }, { flat:true, mat:'cloth' }); g.restore();
+    bonyHand(g, hx, hy, BONE, dir, 12, 3.2, 6.5);
+  }
+  // fog leaking out between the bars and curling up past the shoulders
+  { const t = (w ?? ch ?? (ex != null ? ex : 0)) % 1; for (let i = 0; i < 8; i++){ const k = (t + i / 8) % 1, s = i % 2 ? 1 : -1, x = s * (20 + k * 18) + Math.sin(i * 1.7 + k * TAU) * 3, y = cy - k * 70; puff(g, x, y, 5 + k * 9, (1 - k) * .85 * (1 - inh * .7) * Math.min(1, k * 5 + .3), '#eef7fc'); } }
+  // hood: low and pushed forward between the shoulders, its brim drooping over a void face
+  g.save(); g.translate(0, 5);
+  const hood = SM([[0, -66], [-14, -62], [-25, -50], [-27, -32], [-21, -16], [0, -10], [21, -16], [27, -32], [25, -50], [14, -62]], .85);
+  S.contact(g, robe, 0, -24, 28, 10, .45);
+  S.part(g, hood, FOGR, { x:0, y:-38, r:28 }, { mat:'cloth', hx:-12, hy:-56 });
+  S.crease(g, SO([[-6, -62], [-2, -54]]), FOGR, 1.6, .4);
+  S.part(g, SM([[-20, -26], [-17, -46], [0, -53], [17, -46], [20, -26], [11, -15], [0, -12], [-11, -15]], .9), FOGRD, { x:0, y:-32, r:20 }, { flat:true, mat:'cloth', noEdge:true });
+  const flare = ch != null ? press * .8 : blow > 0 ? Math.sin(blow * Math.PI) * 1.3 : inh * .4;
+  voidFace(g, SM([[-16, -26], [-13, -43], [0, -49], [13, -43], [16, -26], [9, -16], [0, -14], [-9, -16]], .9), 7, -32, 3.4, CYAN2, flare);
+  S.stroke(g, SO([[-21, -24], [-18, -46], [0, -55], [18, -46], [21, -24]]), { deep:FOGR.light }, 1.6, .4);   // the brim's lit edge
+  g.restore(); g.restore();
+  for (const [x, y, rr, al] of breath) puff(g, x, y, rr, al, '#dbe9f2');
+  if (blow > 0){ const c = Math.sin(blow * Math.PI); puff(g, 0, cy + 10, 26 + blow * 10, c * .75, '#eaf6fc'); }
+}
+
 // ---------- registry ----------
 // Plague Doctor 2 (r 22) keeps the Plague Doctor's scale .62 and dy -10 (its box is widened for the crow and the fog); the Reaper (r 21) is .56 like
 // the Wraith with dy -8, and the archive's wide box so the sweep's crescent fits. The Reaper's chew is the 10-frame reap loop (not `once`).
@@ -277,4 +463,9 @@ const clipOf = (n, fps, key) => ({ n, fps, pose:t => ({ [key]:t }) });
 export const HOLLOW = {
   rotdoctor: { draw:rotDoctor, scale:.62, dy:-10, box:{ x:-70, y:-74, w:140, h:130 }, clips:{ walk:clipOf(8, 7, 'walk'), chew:clipOf(4, 7, 'chew') }, still:{} },
   reaper: { draw:reaper, scale:.56, dy:-8, box:{ x:-96, y:-114, w:190, h:178 }, clips:{ walk:clipOf(8, 8, 'walk'), chew:clipOf(10, 14, 'reap') }, still:{} },
+  // Fogwalker 2 (r 24): the archive's scale .66 (a bigger Fogwalker); its `exhale` plays when it brings its Mossbacks. The Mini Poltergeist (r 22) is small, .5;
+  // its `toss` is the rot cast. The archive's flung-teacup projectile sprite is not ported (the rot puff on each pumpkin is the effect).
+  fogwalker2: { draw:fogwalker2, scale:.66, dy:-11, box:{ x:-84, y:-80, w:168, h:142 }, clips:{ walk:clipOf(8, 7, 'walk'), chew:clipOf(4, 6, 'chew'), exhale:{ n:10, fps:12, once:true, pose:t => ({ exhale:t }) } }, still:{} },
+  minipolt: { draw:minipolt, scale:.5, dy:-10, box:{ x:-52, y:-86, w:104, h:144 }, clips:{ walk:clipOf(12, 10, 'walk'), chew:clipOf(4, 8, 'chew'), toss:{ n:9, fps:14, once:true, pose:t => ({ toss:t }) } }, still:{} },
+  ...COMET,
 };

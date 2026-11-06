@@ -18,7 +18,7 @@ import { banner } from '../ui/hud.js';
 import { dropJukebox, jukeboxPoints } from './spawner.js';
 import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
-import { reaperFalls } from './hollow.js';
+import { reaperFalls, cometBreaks } from './hollow.js';
 import { isProtected } from './gourd.js';
 import { ROTTEN, ROT_FX, hitRule } from './rot.js';
 
@@ -91,6 +91,7 @@ export function damage(m, amt, color, small){
     else { addFloat(`×${m.healHits} more`, m.x, mY(m) - m.r - 34, '#ff6a6a', 16, 0.8); SFX.bossSfx('vampirecount', 'tick'); }
   }
   if (m.carrier){   // wisp rider: the first hit breaks the carrier instead of hurting the rider
+    if (__RELEASE__ >= 5 && m.type === 'comet'){ cometBreaks(m); return; }   // Wisp Rider 2: a plain Wisp and a walking Imp (engine/hollow.js)
     m.carrier = false; m.flash = 0.15; m.sp = TYPES.rider.walkSp * spMulNow() * rnd(0.92, 1.08);
     for (let i = 0; i < 12; i++) spark(m.x, mY(m) - 10, '#cfe8f2', 120); SFX.monsterAct('rider', 'break');
     addFloat('Wisp broken', m.x, mY(m) - m.r - 24, '#cfe8f2', 16, 0.9);

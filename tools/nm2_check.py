@@ -992,8 +992,11 @@ def check_reaper(browser, url):
     ok(page.evaluate("() => window.__gg.MNAME.reaper") == 'Reaper' and 'reaper' in page.evaluate("() => window.__gg.MINTRO.reaper || ''").lower(), 'name and intro text')
     # the fade cycle: shown 3 s, hidden 4 s
     i = page.evaluate(STILL, ['reaper', 3, 0.3, 3])
-    page.evaluate(f"() => {{ const m = window.__ms[{i}]; window.__tr = []; clearInterval(window.__ti); const t0 = performance.now(); let last = m.hidden; window.__ti = setInterval(() => {{ if (m.hidden !== last){{ last = m.hidden; window.__tr.push([m.hidden, (performance.now() - t0) / 1000]); }} }}, 10); }}")
-    time.sleep(7.6)
+    # timed in game seconds (m.age), not wall time, so a slow machine cannot skew it; poll until both changes are seen
+    page.evaluate(f"() => {{ const m = window.__ms[{i}]; window.__tr = []; clearInterval(window.__ti); const t0 = m.age; let last = m.hidden; window.__ti = setInterval(() => {{ if (m.hidden !== last){{ last = m.hidden; window.__tr.push([m.hidden, m.age - t0]); }} }}, 10); }}")
+    for _ in range(60):
+        time.sleep(0.5)
+        if page.evaluate("() => window.__tr.length") >= 2: break
     tr = page.evaluate("() => window.__tr")
     ok(len(tr) >= 2 and tr[0][0] is True and tr[1][0] is False and 2.7 < tr[0][1] < 3.4 and 3.4 < tr[1][1] - tr[0][1] < 4.6, f'shown ~3 s, then hidden ~4 s {tr}')
     page.evaluate("() => clearInterval(window.__ti)")

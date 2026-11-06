@@ -12,7 +12,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite } from './tools.js';
-import { castleSprite, coinSprite, discSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
+import { castleSprite, coinSprite, discSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -55,6 +55,7 @@ export function render(){
   for (const m of g.monsters) if (m.type === 'doctor' && !m.dead && m.p > 0) drawHealZone(m, t);
   for (const m of g.monsters) if (m.type === 'bulwark' && !m.dead && m.p > 0) drawBulwarkZone(m, t);
   if (__RELEASE__ >= 5) for (const m of g.monsters) if (m.type === 'rotdoctor' && !m.dead && m.p > 0) drawRotZone(m, t);
+  if (__RELEASE__ >= 5) for (const m of g.monsters) if (m.type === 'boss' && m.kind === 'fallenpoltergeist' && !m.dead) drawFallenPoltFx(m, t);   // its black fogs and its reaper glow, under the monsters
   drawHexZones(t);
   const ms = g.monsters.slice().sort((a, b) => a.p - b.p);
   const walkerBands = g.monsters.filter(m => (m.type === 'fogwalker' || (__RELEASE__ >= 5 && m.type === 'fogwalker2')) && !m.dead && m.p > 0).map(m => { const b = TYPES[m.type].band; return [m.p - b, m.p + b]; });   // Fogwalker 2's band is two rows (Release 5)
@@ -340,6 +341,13 @@ export function drawHealZone(m, t){
 export function drawRotZone(m, t){
   const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
   drawRotZoneFx(ctx, x, y, w, h, t, K);
+}
+/** The Fallen Poltergeist (Release 5): each black fog it laid (Plague Doctor 2's 3x3, fixed on the field, fading in and out), and while it is reaper a poison-green
+ *  glow behind it. All baked: one drawImage per fog, one for the glow. */
+function drawFallenPoltFx(m, t){
+  const w = CS * 3 * 0.98, h = CS * 3;
+  for (const f of m.fogs || []){ const el = f.dur - f.t, a = Math.max(0, Math.min(1, el / 0.4, f.t / 0.6)); drawBlackFogZoneFx(ctx, LANE(f.lane) - w / 2, mY(f) - h / 2, w, h, t, K, a); }
+  if (m.reaper > 0 && m.p > 0){ const sp = glowSprite(K, '#8cff5c'), r = m.r * 3.2 * mS(m), y = mY(m) - m.r * 0.9; ctx.save(); ctx.globalAlpha = 0.55 + 0.25 * Math.sin(t * 5); ctx.drawImage(sp.c, m.x - r, y - r, r * 2, r * 2); ctx.restore(); }
 }
 /** Scarecrows (world 5 tool): a post with a straw figure and a health bar. */
 export function drawScarecrows(t){ drawScarecrowsFx(ctx, G.scarecrows || [], t, sc => G.monsters.some(m => !m.dead && m.chewing === sc)); }

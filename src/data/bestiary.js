@@ -8,7 +8,7 @@ export const COMPANIONS = { hauler:['gargoyle'], slime:['blob'], vampire:['bat']
 
 /** The boss at the end of each nightmare book (Release 4), listed last in its nightmare bestiary. Once its fight is built (N1-16, the Fallen
  *  Gravekeeper, 2026-11-05) the level lists it like any boss; until then this entry holds its place (an entry may give `icon` [type, form] to draw). */
-export const FALLEN = __RELEASE__ >= 4 ? [{ key:'fallengravekeeper' }] : [];
+export const FALLEN = __RELEASE__ >= 4 ? [{ key:'fallengravekeeper' }, ...(__RELEASE__ >= 5 ? [{ key:'fallenpoltergeist' }] : [])] : [];   // one per nightmare book, by world index (Release 5: the hollow book's, N2-16)
 
 export const BESTIARY = {
   ghoul:      { lore:'Dug itself out of the churchyard the night the moon turned orange. Not bright, but very determined.', ability:'Nothing special. Walks straight down its lane and chews the wall.' },
@@ -74,6 +74,9 @@ export const BESTIARY = {
     huskerBurning:{ lore:'A husker that took a shortcut through the fire.', ability:'Any pumpkin strips its burning husk and leaves the charred cob.' },
     huskerCharred:{ lore:'Blackened to the core and still walking.', ability:'Only Ice finishes it. Anything else knocks it down for a while.' },
     fallengravekeeper:{ lore:'The Gravekeeper, charred under the eclipse. His lantern burns black now.', ability:'Never reaches the wall. Teleports leaving fire behind, raises roosters, Casket Jacks and Grave Risers, slams three fences at once, and three times sets a whole row or column of the field on fire. Crows swoop in all night.' },
+  } : {}),
+  ...(__RELEASE__ >= 5 ? {   // the nightmare Foggy Hollow (Release 5; Task 10 adds its other monsters)
+    fallenpoltergeist:{ lore:'The Poltergeist, left to rot in the poison fog. Its sheet hangs black and wet, and a scythe of shadow follows it.', ability:'Never reaches the wall. Vanishes from lane to lane, swaps your pumpkins and lays black fog where only rotten pumpkins hurt. Twice it shuffles your whole patch and twice it turns reaper: then only three rotten pumpkins hurt it. A Protector square keeps its pumpkins in place.' },
   } : {}),
   twintides:  { lore:'Two serpents hatched from one egg on the night the village drowned. They finish each other’s sentences.', ability:'Never reach the wall. Both must die within a short window or the fallen one rises again.' },
 };

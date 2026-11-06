@@ -125,6 +125,24 @@ export function drawRotZoneFx(g, x, y, w, h, t, k){
   const pulse = .5 + .5 * Math.sin(t * 2.4);
   blitZone(g, zoneSprite('rot', w, h, k, rotZoneBack), x, y, .75 + .25 * pulse);
 }
+/** The Fallen Poltergeist's black fog (Release 5): Plague Doctor 2's square and geometry, darker: a black-green fog wash with curls of black fog and a
+ *  dim poison rim, its own sprite baked once per size (`zoneSprite('blackfog')`). a fades it in and out; only that and the pulse are live. */
+function blackFogBack(g, x, y, w, h){
+  const col = '#5f9a2c', R = rng(41);
+  g.save(); g.beginPath(); g.roundRect(x, y, w, h, 14); g.clip();
+  let gr = g.createRadialGradient(x + w / 2, y + h / 2, 8, x + w / 2, y + h / 2, Math.max(w, h) * .7); gr.addColorStop(0, rgba('#050c07', .62)); gr.addColorStop(1, rgba('#132a18', .38));
+  g.fillStyle = gr; g.fillRect(x, y, w, h);
+  for (let i = 0; i < 14; i++){ const bx = x + 10 + R() * (w - 20), by = y + 10 + R() * (h - 20), br = 10 + R() * 18;
+    gr = g.createRadialGradient(bx, by, 0, bx, by, br); gr.addColorStop(0, rgba(i % 3 ? '#071009' : '#1b3620', .55)); gr.addColorStop(1, rgba('#071009', 0)); g.fillStyle = gr; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.fill(); }
+  g.restore();
+  zoneBase(g, x, y, w, h, col, .8, 0);
+  g.fillStyle = rgba('#8cff5c', .55);
+  for (let i = 0; i < 10; i++){ const px = x + 12 + R() * (w - 24), py = y + 12 + R() * (h - 24); g.beginPath(); g.arc(px, py, 1.4 + R() * 1.4, 0, TAU); g.fill(); }   // poison motes caught in it
+}
+export function drawBlackFogZoneFx(g, x, y, w, h, t, k, a){
+  const pulse = .5 + .5 * Math.sin(t * 2);
+  blitZone(g, zoneSprite('blackfog', w, h, k, blackFogBack), x, y, a * (.8 + .2 * pulse));
+}
 /** Bulwark Knight: steel plates, a riveted rim (baked), a live pulse ring. */
 function bulwarkBack(g, x, y, w, h){
   const col = '#9fb4dc', cx = x + w / 2, cy = y + h / 2;

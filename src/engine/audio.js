@@ -436,6 +436,16 @@ export const SFX = {
       case (__RELEASE__ >= 5 ? 'lamplighter:fog' : ''): S('hiss', 0.45, { rate: 0.8 }) || noise(0.5, 0.15, 900, 0.8); S('wind', 0.35, { delay: 0.1 }); break;
       case (__RELEASE__ >= 5 ? 'lamplighter:hit' : ''): S('ghost', 0.45, { rate: 0.9 }) || cloth(); S('metallight', 0.25, { delay: 0.03 }); break;
       case (__RELEASE__ >= 5 ? 'lamplighter:die' : ''): S('ghostdie', 0.7, { rate: 0.8 }) || noise(0.5, 0.2, 1200, 0.8); S('glass', 0.5, { delay: 0.15 }); S('torch', 0.4, { rate: 0.7, delay: 0.3 }); break;
+      // The Fallen Poltergeist (Release 5): the Poltergeist's voice, lower and wetter; black fog hisses, the reaper's scythe whooshes in
+      case (__RELEASE__ >= 5 ? 'fallenpoltergeist:arrive' : ''): S('teleport', 0.6, { rate: 0.75 }) || tone(300, 0.6, 'sine', 0.09, 700); S('ghost', 0.6, { rate: 0.7, delay: 0.3 }); S('darkcast', 0.45, { rate: 0.7, delay: 0.55 }); break;
+      case (__RELEASE__ >= 5 ? 'fallenpoltergeist:vanish' : ''): S('teleport', 0.55, { rate: 0.85 }) || woosh(false, 0.16); S('hiss', 0.3, { rate: 0.7, delay: 0.05 }); break;
+      case (__RELEASE__ >= 5 ? 'fallenpoltergeist:swap' : ''): S('ghost', 0.5, { rate: 0.85 }); S('teleport', 0.6, { rate: 1 }) || woosh(true, 0.16); break;
+      case (__RELEASE__ >= 5 ? 'fallenpoltergeist:shuffle' : ''): S('reverse', 0.6, { rate: 0.7 }) || noise(0.4, 0.2, 700, 0.7, 0, 250); S('whoosh', 0.55, { rate: 0.7, delay: 0.05 }); S('ghost', 0.5, { rate: 0.75, delay: 0.15 }); break;
+      case (__RELEASE__ >= 5 ? 'fallenpoltergeist:fog' : ''): S('hiss', 0.5, { rate: 0.7 }) || noise(0.5, 0.15, 700, 0.8); S('slime', 0.35, { rate: 0.6, delay: 0.1 }); break;
+      case (__RELEASE__ >= 5 ? 'fallenpoltergeist:reaper' : ''): S('whoosh', 0.6, { rate: 0.6 }) || woosh(false, 0.2); S('darkcast', 0.6, { rate: 0.75, delay: 0.05 }); S('scream', 0.35, { rate: 0.7, delay: 0.2 }); break;
+      case (__RELEASE__ >= 5 ? 'fallenpoltergeist:reaperend' : ''): S('reverse', 0.45, { rate: 0.9 }) || noise(0.2, 0.15, 900, 0.7); S('glassping', 0.3, { rate: 0.8, delay: 0.05 }); break;
+      case (__RELEASE__ >= 5 ? 'fallenpoltergeist:hit' : ''): S('ghost', 0.55, { rate: 0.8 }) || tone(260, 0.2, 'triangle', 0.07, 180); S('slime', 0.25, { delay: 0.03 }); break;
+      case (__RELEASE__ >= 5 ? 'fallenpoltergeist:die' : ''): S('scream', 0.6, { rate: 0.75 }) || tone(600, 1.4, 'sine', 0.1, 120); S('ghostdie', 0.6, { rate: 0.8, delay: 0.4 }); S('hiss', 0.4, { delay: 0.6 }); break;
       case 'hollowking:immune': S('clank', 0.5, { rate: 0.8 }) || tone(300, 0.08, 'square', 0.05); break;
       case 'hollowking:tell': S('darkcast', 0.8, { rate: 0.7 }); S('witchlong', 0.45, { rate: 0.6 }); tone(55, 0.9, 'sawtooth', 0.05, 110); break;
       case 'hollowking:wipe': S('stonecrash', 0.9, { rate: 0.8 }) || noise(0.4, 0.3, 300, 0.7); S('roar', 0.5, { rate: 0.6 }); break;

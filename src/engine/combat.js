@@ -18,7 +18,7 @@ import { banner } from '../ui/hud.js';
 import { dropJukebox, jukeboxPoints } from './spawner.js';
 import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
-import { reaperFalls, cometBreaks } from './hollow.js';
+import { reaperFalls, cometBreaks, fpAfterHit, fpReaperHit } from './hollow.js';
 import { isProtected } from './gourd.js';
 import { ROTTEN, ROT_FX, hitRule } from './rot.js';
 
@@ -102,6 +102,7 @@ export function damage(m, amt, color, small){
   addFloat(fmt(amt), m.x + rnd(-8, 8), mY(m) - m.r * mS(m) - 14, color || '#fff', small ? 16 : 23, 0.8);
   if (m.hp <= 0.001) kill(m);
   else if (__RELEASE__ >= 3 && m.kind === 'hollowking') hkAfterHit(m);
+  else if (__RELEASE__ >= 5 && m.kind === 'fallenpoltergeist') fpAfterHit(m);   // a reaper mark crossed: its phase starts on this hit (engine/hollow.js)
 }
 
 export function dropHop(d){ return d.t < 0.45 ? Math.sin(d.t / 0.45 * Math.PI) * 26 : Math.sin(G.t * 3 + d.ph) * 2; }
@@ -341,7 +342,7 @@ function rotHitNow(pr, m, rule){
   const y = mY(m);
   for (let k = 0; k < 10; k++) chunk(pr.x, pr.y, k % 3 ? ROT_FX.base : ROT_FX.mould, 180);   // a rotten splat
   m.lastHit = ROTTEN; m.lastHitLv = 1; m.lastHitAlt = -1;
-  if (rule === 'hurt'){ rotDmg = true; try { damage(m, ROT_DMG, ROT_FX.spark); } finally { rotDmg = false; } }
+  if (rule === 'hurt'){ rotDmg = true; try { damage(m, ROT_DMG, ROT_FX.spark); } finally { rotDmg = false; } if (__RELEASE__ >= 5 && m.reaper > 0) fpReaperHit(m); }   // a Fallen Poltergeist's reaper phase counts each rotten pumpkin
   else {
     const was = m.hp; m.hp = Math.min(m.maxHp, m.hp + ROT_HEAL); m.flash = 0.06;
     for (let k = 0; k < 5; k++) spark(m.x, y - 8, ROT_FX.spark, 80);

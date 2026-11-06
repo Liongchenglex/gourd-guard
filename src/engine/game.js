@@ -36,7 +36,7 @@ import { GOURDS, GOURD_SLOTS, ALLOW_SAME_GOURD } from '../data/gourds.js';
 import { prebakeGourd } from './render/gourd.js';
 import { ROTTEN, ROT_FX, clearHitFlags, rotSnapshot, restoreRot } from './rot.js';
 import { prebakeRot } from './render/rot.js';
-import { markRotZones, markMoods, lampSnapshot } from './hollow.js';
+import { markRotZones, markMoods, markFallenPolt, lampSnapshot } from './hollow.js';
 import { updatePoison, poisonClock } from './poison.js';
 import { prebakePoison } from './render/poison.js';
 
@@ -373,7 +373,7 @@ export function repairWall(lane){
 export function update(dt){
   const g = G;
   g.t += dt; g.idle += dt;
-  if (__RELEASE__ >= 5){ clearHitFlags(); markRotZones(); markMoods(); }   // rotOnly / cleanOnly hold only while their source sets them again this frame (engine/rot.js); Plague Doctor 2's square, then the Lamplighter's mood (engine/hollow.js)
+  if (__RELEASE__ >= 5){ clearHitFlags(); markRotZones(); markMoods(); markFallenPolt(); }   // rotOnly / cleanOnly hold only while their source sets them again this frame (engine/rot.js); Plague Doctor 2's square, the Lamplighter's mood, the Fallen Poltergeist's reaper phase and black fogs (engine/hollow.js)
   if (!g.over){ if (g.mode === 'story') storySpawn(dt); else endlessSpawn(dt); }
   if (!g.over){
     const low = ROWS * COLS - emptyCells().length < 10;

@@ -21,17 +21,19 @@
 //    column (the level's poison.dur; tagged src 'lamp', so the level's own fog cycle runs on under it, engine/poison.js), and when a fog is
 //    already up it calls as soon as that one lifts. lampSnapshot / restoreLamp carry its mood and
 //    clocks over a continue (game.js continueState `bossMood`, spawner.js).
+//  - The Fallen Poltergeist (`boss` kind `fallenpoltergeist`, N2-16's boss): see its section at the end (initFallenPolt / updateFallenPolt / markFallenPolt).
 
 import { TYPES } from '../data/monsters.js';
 import { SFX } from './audio.js';
 import { resolveMatches } from './board.js';
 import { addFloat, ring, spark } from './combat.js';
 import { isProtected } from './gourd.js';
-import { mY, spMulNow, spawnMonster, TILE_P } from './monsters.js';
+import { mS, mY, spMulNow, spawnMonster, TILE_P } from './monsters.js';
 import { ROTTEN, rotCell } from './rot.js';
 import { poisonNow } from './poison.js';
-import { COLS, G, GY, CS, LANE, ROWS, grid } from './state.js';
-import { rnd } from './util.js';
+import { COLS, G, GY, CS, LANE, ROWS, W, gest, graves, grid } from './state.js';
+import { rnd, shuffle } from './util.js';
+import { banner } from '../ui/hud.js';
 
 /** Frame start: mark everything inside a standing Plague Doctor 2's square rot-only for this frame. The Frenzy jukebox and the Loot Sack are never
  *  marked: they are reward and event monsters the player must always be able to hit with an ordinary pumpkin. */
@@ -216,4 +218,150 @@ export function updateLamplighter(m, dt){
     if (poisonNow({ dir, idx }, 'lamp')){ m.fogT += T.fogEvery; ring(m.x + 20, mY(m) - 60, 40, 'rgba(166,224,74,.85)'); SFX.bossSfx('lamplighter', 'fog'); }
     else m.fogT = 0;
   }
+}
+
+// ---------- The Fallen Poltergeist (N2-16, the hollow nightmare's boss; spec Part 8) ----------
+// Holds at the back like the Poltergeist (monsters.js stops it exactly at hold), never reaches the wall, immune to knockback and freeze like every boss.
+// Every number is in TYPES.fallenpoltergeist. Its clocks run once it is on the field (p > 0.05).
+//  - Vanish: every `vanishEvery` s it fades out (the teleport clip, left behind as a vfx) and gathers again in another lane (the clip in reverse on arrival).
+//  - Swap: every `swapEvery` s `swapN` pumpkins trade places in a ring, colours kept: never a gourd, never one in a Protector square (isProtected),
+//    never one in flight or in the player's hand.
+//  - Black fog: every `zoneEvery` s a 3x3 zone (Plague Doctor 2's geometry: lanes +-1, 1.5 tiles) is laid on the field around a random monster on the
+//    field (not itself, the jukebox or the Loot Sack) and lies there `zoneFor` s; every monster inside but itself is `rotOnly` (markFallenPolt). With no
+//    monster on the field it lays the fog as soon as one comes.
+//  - Shuffle: at each fraction of its health in `shuffleAt` every pumpkin outside a Protector square moves to a new cell outside one (a random cycle
+//    through those cells, so none stays put), colours kept; gourds, graves and the square stay as they are.
+//  - Reaper phase: at each fraction in `reaperAt` (entered on the hit that crosses it) it is `rotOnly` until `reaperHits` rotten pumpkins have hurt
+//    it (each pumpkin counts; combat.js rotHitNow calls fpReaperHit), then back to normal (rotten pumpkins heal it again).
+//  - Marks spent (`shufDone`, `reapDone`) are counted from its health on its first frame, as the Fallen Gravekeeper's infernos, so a continued night
+//    (spawner.js restores its health right after spawning it) does not replay them. A reaper phase or a black fog in progress at the loss is gone.
+const FP_FOG = '#132a18', FP_BLIGHT = '#8cff5c';
+const sayX = x => Math.max(150, Math.min(W - 150, x));   // a long float over a boss at the field's edge stays on screen
+export const isFallenPolt = m => m.type === 'boss' && m.kind === 'fallenpoltergeist';
+/** Set up a freshly spawned Fallen Poltergeist: every clock full, no fog, not in a reaper phase; its spent marks are counted on its first frame. */
+export function initFallenPolt(m){
+  const T = TYPES.fallenpoltergeist;
+  m.tpT = T.vanishEvery; m.swapT = T.swapEvery; m.zoneT = T.zoneEvery; m.fogs = []; m.reaper = 0; m.shufDone = null; m.reapDone = null;
+}
+/** Frame start (game.js update, after markMoods): its reaper phase, and every monster inside one of its black fogs, rot-only for this frame. */
+export function markFallenPolt(){
+  const ms = G.monsters;
+  for (let i = 0; i < ms.length; i++){
+    const b = ms[i]; if (b.dead || !isFallenPolt(b)) continue;
+    if (b.reaper > 0) b.rotOnly = true;
+    if (!b.fogs.length) continue;
+    const reach = 1.5 * TILE_P();
+    for (const f of b.fogs) for (let j = 0; j < ms.length; j++){
+      const o = ms[j];
+      if (o !== b && !o.dead && o.type !== 'jukebox' && o.type !== 'sack' && Math.abs(o.lane - f.lane) <= 1 && Math.abs(o.p - f.p) <= reach) o.rotOnly = true;
+    }
+  }
+}
+const fpMarks = m => {   // lazily, on its first frame: the shuffles and reaper phases its health is already past
+  if (m.shufDone != null) return;
+  const T = TYPES.fallenpoltergeist;
+  m.shufDone = T.shuffleAt.filter(a => m.hp <= m.maxHp * a).length; m.reapDone = T.reaperAt.filter(a => m.hp <= m.maxHp * a).length;
+};
+const fogPuff = (x, y, n = 14) => { for (let i = 0; i < n; i++) spark(x, y, i % 3 ? FP_FOG : FP_BLIGHT, 150); ring(x, y, 40, 'rgba(140,255,92,.55)'); };
+function enterReaper(m){
+  m.reapDone++; m.reaper = TYPES.fallenpoltergeist.reaperHits; m.rotOnly = true;   // at once: the rest of this frame's hits meet the phase
+  m.anim = { clip:'recolour', t:0, dur:6 / 9 }; m.flash = 0.18;
+  const y = mY(m) - 40;
+  for (let i = 0; i < 18; i++) spark(m.x, y, i % 2 ? FP_BLIGHT : '#1b3620', 180);
+  ring(m.x, y, 50, 'rgba(140,255,92,.9)'); ring(m.x, mY(m), 72, 'rgba(140,255,92,.7)');
+  addFloat('Reaper! Only rotten pumpkins hurt it', sayX(m.x), mY(m) - m.r - 70, '#b6f06a', 17, 1.8);
+  G.shake = Math.max(G.shake || 0, 0.4);
+  SFX.bossSfx('fallenpoltergeist', 'reaper');
+}
+/** After any hit that hurt it (combat.js damage): a reaper mark crossed starts its phase there and then. */
+export function fpAfterHit(m){
+  const T = TYPES.fallenpoltergeist; fpMarks(m);
+  if (!m.reaper && m.reapDone < T.reaperAt.length && m.hp <= m.maxHp * T.reaperAt[m.reapDone]) enterReaper(m);
+}
+/** A rotten pumpkin hurt it (combat.js rotHitNow): one fewer to go in a reaper phase; the last one ends it. */
+export function fpReaperHit(m){
+  if (!(m.reaper > 0) || m.dead) return;
+  m.reaper--;
+  if (m.reaper > 0){ addFloat(`×${m.reaper} more`, m.x, mY(m) - m.r - 34, '#b6f06a', 16, 0.8); return; }
+  m.rotOnly = false;   // back to normal now (a Plague Doctor 2's square or a black fog would mark it again next frame)
+  for (let i = 0; i < 14; i++) spark(m.x, mY(m) - 30, i % 2 ? '#d8ffb0' : FP_FOG, 160);
+  addFloat('The reaper fades', sayX(m.x), mY(m) - m.r - 40, '#d8ffb0', 18, 1.3);
+  SFX.bossSfx('fallenpoltergeist', 'reaperend');
+}
+/** The pumpkins it may move: settled, not a gourd, not in the player's hand, not in a Protector square. */
+function fpMovable(r, c){
+  const cell = grid[r][c];
+  return !!cell && !cell.gourd && !(cell.fly > 0) && !(gest && gest.ref === cell) && !isProtected(r, c);
+}
+const flyFrom = (cell, r0, c0, r1, c1) => { cell.fly = 0.55; cell.ox = LANE(c0) - LANE(c1); cell.oy = (r0 - r1) * CS; };   // it glides from its old cell; landing resolves the bunches (game.js)
+/** Its swap: swapN (fewer when fewer can move, none below two) pumpkins outside any Protector square trade places in a ring, colours kept. */
+export function fpSwap(m){
+  const cells = [];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (fpMovable(r, c)) cells.push([r, c]);
+  const k = Math.min(TYPES.fallenpoltergeist.swapN, cells.length);
+  if (k < 2) return false;
+  const picks = shuffle(cells).slice(0, k), moved = picks.map(([r, c]) => grid[r][c]);
+  for (let q = 0; q < k; q++){   // each pumpkin moves to the next picked cell
+    const [r0, c0] = picks[q], [r1, c1] = picks[(q + 1) % k], cell = moved[q];
+    grid[r1][c1] = cell; flyFrom(cell, r0, c0, r1, c1);
+    fogPuff(LANE(c1), GY + r1 * CS + CS / 2, 6);
+  }
+  m.anim = { clip:'swap', t:0, dur:6 / 10 };
+  addFloat('Swapped!', m.x, mY(m) - m.r - 30, '#b6f06a', 16, 0.9);
+  SFX.bossSfx('fallenpoltergeist', 'swap');
+  return true;
+}
+/** The shuffle: every cell outside a Protector square that holds no gourd, no grave and nothing in flight or in hand takes part; their contents move
+ *  round one random cycle (Sattolo), so every pumpkin among them lands on a new cell. Colours kept. */
+export function fpShuffle(m){
+  const P = [];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
+    const cell = grid[r][c];
+    if (graves[r][c] || isProtected(r, c) || (cell && !fpMovable(r, c))) continue;
+    P.push([r, c]);
+  }
+  if (P.length >= 2){
+    const to = P.map((_, i) => i);
+    for (let i = to.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * i); [to[i], to[j]] = [to[j], to[i]]; }   // Sattolo: one cycle, no cell maps to itself
+    const was = P.map(([r, c]) => grid[r][c]);
+    for (const [r, c] of P) grid[r][c] = null;
+    P.forEach(([r0, c0], i) => { const cell = was[i]; if (!cell) return; const [r1, c1] = P[to[i]]; grid[r1][c1] = cell; flyFrom(cell, r0, c0, r1, c1); });
+  }
+  m.anim = { clip:'swap', t:0, dur:6 / 10 }; G.shake = Math.max(G.shake || 0, 0.6);
+  for (const [r, c] of P) if (grid[r][c]) fogPuff(LANE(c), GY + r * CS + CS / 2, 4);
+  banner('The patch shifts!', 'Every pumpkin outside a Protector square moved.', 2);
+  SFX.bossSfx('fallenpoltergeist', 'shuffle');
+}
+/** The black fog: a 3x3 around a random monster on the field (not itself, the jukebox or the Loot Sack). False when there is none yet. */
+function fpZone(m){
+  const T = TYPES.fallenpoltergeist, opts = G.monsters.filter(o => o !== m && !o.dead && o.type !== 'jukebox' && o.type !== 'sack' && o.p > 0 && o.p < 1);
+  if (!opts.length) return false;
+  const o = opts[Math.floor(Math.random() * opts.length)];
+  m.fogs.push({ lane:o.lane, p:o.p, t:T.zoneFor, dur:T.zoneFor });
+  fogPuff(LANE(o.lane), mY(o), 16); ring(m.x, mY(m) - 40, 40, 'rgba(140,255,92,.8)');
+  m.anim = m.anim || { clip:'recolour', t:0, dur:6 / 9 };
+  SFX.bossSfx('fallenpoltergeist', 'fog');
+  return true;
+}
+/** It vanishes and gathers again in another lane. */
+function fpVanish(m){
+  fogPuff(m.x, mY(m) - 20); if (G.vfx) G.vfx.push({ kind:'clip', key:'fallenpoltergeist', clip:'teleport', x:m.x, y:mY(m), s:mS(m), t:0, dur:0.5 });
+  const opts = [...Array(COLS).keys()].filter(l => l !== m.lane);
+  m.lane = opts[Math.floor(Math.random() * opts.length)]; m.x = m.tx = LANE(m.lane); m.age = 0;   // age 0: the arrival plays the teleport clip in reverse (anim.js)
+  fogPuff(m.x, mY(m) - 20);
+  SFX.bossSfx('fallenpoltergeist', 'vanish');
+}
+/** One frame of the Fallen Poltergeist. */
+export function updateFallenPolt(m, dt){
+  const T = TYPES.fallenpoltergeist;
+  m.x = m.tx + Math.sin(m.ph * 1.2) * 4;
+  fpMarks(m);
+  if (m.fogs.length){ for (const f of m.fogs) f.t -= dt; m.fogs = m.fogs.filter(f => f.t > 0); }
+  if (m.shufDone < T.shuffleAt.length && m.hp <= m.maxHp * T.shuffleAt[m.shufDone]){ m.shufDone++; fpShuffle(m); }
+  fpAfterHit(m);   // a phase due that no hit started (one hit past both marks: the second waits for the first to end)
+  if (m.reaper > 0 && (m.reapPulse = (m.reapPulse || 0) - dt) <= 0){ m.reapPulse = 0.7; ring(m.x, mY(m) - 30, 46, 'rgba(140,255,92,.6)'); }   // a poison pulse while it is reaper
+  if (m.p <= 0.05) return;
+  if ((m.tpT -= dt) <= 0){ m.tpT = T.vanishEvery; fpVanish(m); }
+  if ((m.swapT -= dt) <= 0){ m.swapT = T.swapEvery; fpSwap(m); }
+  if ((m.zoneT -= dt) <= 0){ if (fpZone(m)) m.zoneT = T.zoneEvery; else m.zoneT = 0; }
 }

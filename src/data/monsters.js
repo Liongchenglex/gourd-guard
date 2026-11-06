@@ -129,7 +129,14 @@ export const TYPES = {
     // switches every `moodEvery` s (starting clean): in its clean mood (amber lantern) only normal pumpkins hurt it, in its rot mood (sickly green) only rotten
     // ones do; the wrong kind does nothing (no heal either). Every `driftEvery` s it drifts to another lane; every `fogEvery` s it calls one poison fog row or
     // column on the patch (the level's poison.dur). form2 (N2-13): more health, a faster mood clock. No boss items or costume (noItems).
-    lamplighter: { boss:true, hp:24, r:32, sp:0.03, coins:40, eat:0, pts:300, drop:6, hold:0.14, moodEvery:8, driftEvery:8, fogEvery:12, noItems:true, form2:{ hp:34, moodEvery:6 } } } : {}),
+    lamplighter: { boss:true, hp:24, r:32, sp:0.03, coins:40, eat:0, pts:300, drop:6, hold:0.14, moodEvery:8, driftEvery:8, fogEvery:12, noItems:true, form2:{ hp:34, moodEvery:6 } },
+    // The Fallen Poltergeist (N2-16, the hollow nightmare's boss; spec Part 8; engine/hollow.js updateFallenPolt): holds at `hold` like the Poltergeist. Every
+    // `vanishEvery` s it vanishes and reappears in another lane; every `swapEvery` s `swapN` pumpkins outside any Protector square trade places (colours kept);
+    // every `zoneEvery` s it lays a black fog 3x3 (Plague Doctor 2's square) for `zoneFor` s around a random monster: inside, only rotten pumpkins hurt. At each
+    // fraction in `shuffleAt` every pumpkin outside a Protector square moves to a new cell; at each in `reaperAt` it enters a reaper phase: only rotten pumpkins
+    // hurt it until `reaperHits` of them have. No boss items or costume (noItems).
+    fallenpoltergeist: { boss:true, hp:45, r:34, sp:0.03, coins:50, eat:0, pts:400, drop:6, hold:0.25, vanishEvery:6, swapEvery:8, swapN:3, zoneEvery:12, zoneFor:8,
+      shuffleAt:[0.66, 0.33], reaperAt:[0.5, 0.2], reaperHits:3, noItems:true } } : {}),
 };
 
 /** Modifiers (docs/WORLDS.md §6): data-only stat tweaks any monster can carry. */
@@ -171,14 +178,15 @@ export const ALSO_BAKE = __RELEASE__ >= 4 ? { husker:['huskerBare'], huskerBurni
 /** burning type -> the ordinary type it ignites */
 export const BURNING_FROM = Object.fromEntries(Object.entries(BURNS_TO).map(([a, b]) => [b, a]));
 
-export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch', ...(__RELEASE__ >= 3 ? { hollowking:'The Hollow King' } : {}), ...(__RELEASE__ >= 4 ? { strawlord:'The Strawlord', fallengravekeeper:'The Fallen Gravekeeper' } : {}), ...(__RELEASE__ >= 5 ? { lamplighter:'The Lamplighter' } : {}) };
+export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch', ...(__RELEASE__ >= 3 ? { hollowking:'The Hollow King' } : {}), ...(__RELEASE__ >= 4 ? { strawlord:'The Strawlord', fallengravekeeper:'The Fallen Gravekeeper' } : {}), ...(__RELEASE__ >= 5 ? { lamplighter:'The Lamplighter', fallenpoltergeist:'The Fallen Poltergeist' } : {}) };
 export const BOSS_NAME = BOSS_NAMES.gravekeeper;   // legacy alias used by endless mode
 
 export const MNAME = { sack:'Loot Sack', jukebox:'Jukebox', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss', ...(__RELEASE__ >= 4 ? { rooster:'Cinder Rooster', hayrick:'Hayrick', hayrickBurning:'Burning Hayrick', husker:'Corn Husker', huskerBare:'Bare Cob', huskerBurning:'Burning Husker', huskerCharred:'Charred Cob', crow:'Crow', graveriser:'Grave Riser', casketjack:'Casket Jack', coffin:'Fallen Casket' } : {}), ...(__RELEASE__ >= 5 ? { rotdoctor:'Plague Doctor 2', reaper:'Reaper', fogwalker2:'Fogwalker 2', comet:'Wisp Rider 2', minipolt:'Poltergeist 2' } : {}) };
 
 export const BOSS_INTRO = {
   ...(__RELEASE__ >= 5 ? { lamplighter: { 1:'A hooded figure with a ghost lantern, drifting at the back of the field. It switches moods: while its lantern burns amber only normal pumpkins hurt it, while it burns sickly green only rotten ones do. It drifts between lanes and calls poison fog onto your patch. Monsters keep coming until it falls.',
-    2:'Its lantern switches colour faster now: amber, only normal pumpkins hurt it; green, only rotten ones. It still calls poison fog onto your patch. Monsters keep coming until it falls.' } } : {}),
+    2:'Its lantern switches colour faster now: amber, only normal pumpkins hurt it; green, only rotten ones. It still calls poison fog onto your patch. Monsters keep coming until it falls.' },
+    fallenpoltergeist: { 1:'The Poltergeist, rotted through. It vanishes from lane to lane, swaps your pumpkins and lays black fog where only rotten pumpkins hurt. Twice it shuffles your whole patch, and twice it turns reaper: then only rotten pumpkins hurt it, three of them. Rotten pumpkins heal it otherwise. Pumpkins in a Protector square stay put. Monsters keep coming until it falls.' } } : {}),
   ...(__RELEASE__ >= 4 ? { fallengravekeeper: { 1:'The Gravekeeper, charred under the eclipse. He leaves fire wherever he teleports, raises roosters, Casket Jacks and Grave Risers, and slams his spade so fire tears down three fences at once. Three times he sets a whole row or column of the field ablaze, and crows swoop in all night. Monsters keep coming until he falls.' },
     strawlord: { 1:'A giant scarecrow nailed to its post at the back of the field. It flaps its coat open to loose a flock of crows down the field, and every time it hops to another lane it leaves a trail of fire behind it. At half health it tears free and the crows come faster. Monsters keep coming until it falls.',
     2:'It is already off its post: crows every few seconds, and a trail of fire every time it hops to another lane. Monsters keep coming until it falls.' } } : {}),

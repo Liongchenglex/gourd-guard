@@ -10,7 +10,8 @@
 //              the Reaper's scythe swing is its chewing at the fence, there is no pause between swings). The archive's single-hack `chew` pose is
 //              still drawn below but not baked. Clips: walk, chew (= reap).
 //   fogwalker2, minipolt: docs/archive/nightmare-monsters/spirits/spirits.js (Fogwalker 2 with its exhale clip; the Mini Poltergeist with orbiting junk and a toss clip,
-//              used as its rot cast). The Comet Rider (Wisp Rider 2) is in chars/hollowcomet.js, the Lamplighter (the mini boss) in chars/lamplighter.js.
+//              used as its rot cast). The Comet Rider (Wisp Rider 2) is in chars/hollowcomet.js, the Lamplighter (the mini boss) in chars/lamplighter.js,
+//              the Fallen Poltergeist (N2-16's boss) in chars/fallenpolt.js.
 // Drawn around (0,0) in drawing units with the feet near y = 50. Every clip is baked by render/anim.js, so the glows are fine; nothing random
 // per frame (rng(seed) only).
 
@@ -18,6 +19,7 @@ import { E, PL, RR, S, SM, SO, ell, pal, rgba, rng } from '../paint.js';
 import { TAU } from '../../util.js';
 import { COMET } from './hollowcomet.js';
 import { LAMPLIGHTER } from './lamplighter.js';
+import { FALLENPOLT } from './fallenpolt.js';
 
 
 const ease = t => t * t * (3 - 2 * t);
@@ -470,4 +472,5 @@ export const HOLLOW = {
   minipolt: { draw:minipolt, scale:.5, dy:-10, box:{ x:-52, y:-86, w:104, h:144 }, clips:{ walk:clipOf(12, 10, 'walk'), chew:clipOf(4, 8, 'chew'), toss:{ n:9, fps:14, once:true, pose:t => ({ toss:t }) } }, still:{} },
   ...COMET,
   ...LAMPLIGHTER,
+  ...FALLENPOLT,   // the Fallen Poltergeist, N2-16's boss (fallenpolt.js)
 };

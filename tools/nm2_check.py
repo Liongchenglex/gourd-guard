@@ -592,6 +592,39 @@ def check_poison_protect(browser, url):
     page.close()
 
 
+def check_protector_break_fog(browser, url):
+    """Controller ruling (final review): a Protector broken while a fog lies over its square spares the square until that fog lifts (its new Rainbows
+    and the other pumpkins there stay clean); the next fog rots them as usual."""
+    if not R5: return
+    page, errors = open_page(browser, url)
+    two_gourds(page)
+    page.evaluate(FULL)
+    SQR = "() => [[1, 4], [1, 5], [1, 6], [2, 4], [2, 6], [3, 4], [3, 5], [3, 6]].map(([r, c]) => { const x = window.__gg.grid[r][c]; return x ? (window.__gg.isRotten(x) ? 'rot' : x.c === window.__gg.RAINBOW ? 'rb' : 'ok') : null; })"
+    page.evaluate("""() => { const g = window.__gg, G = g.G; G.def.poison = null; G.poison.t = 1e9; G.poison.warn = G.poison.on = null;
+      g.grid[1][4] = g.newCell(g.ROTTEN); g.grid[3][6] = g.newCell(g.ROTTEN); g.resolveMatches(); g.poisonNow({ dir:'row', idx:[1, 2, 3] }); }""")
+    ok(wait_for(page, "() => !!window.__gg.G.poison.on", 10), 'a fog lies over rows 1-3, the whole Protector square')
+    page.evaluate("() => { window.__gg.G.poison.on.t = 60; }"); time.sleep(0.4)
+    r = page.evaluate(SQR)
+    ok(r == ['rot', 'ok', 'ok', 'ok', 'ok', 'ok', 'ok', 'rot'], f'under the fog the square stays clean but for the two rotten placed there {r}')
+    ok(page.evaluate("() => window.__gg.isRotten(window.__gg.grid[2][3])"), 'outside the square the fog rots')
+    r = page.evaluate(f"() => {{ const g = window.__gg; g.destroyGourd(g.grid[2][5]); return [g.gourdPos('protector'), ({SQR})()]; }}")
+    ok(r[0] is None and r[1] == ['rb', 'ok', 'ok', 'ok', 'ok', 'ok', 'ok', 'rb'], f'breaking the Protector under the fog: the two rotten turn Rainbow {r}')
+    time.sleep(1.0)
+    r = page.evaluate(SQR)
+    ok(r == ['rb', 'ok', 'ok', 'ok', 'ok', 'ok', 'ok', 'rb'], f'a second later, the fog still lying, the Rainbows and the other pumpkins of the square are not rotten {r}')
+    ok(page.evaluate("() => !!window.__gg.G.poison.on && !window.__gg.isProtected(2, 4)"), '(the fog still lies, and nothing protects the square any more)')
+    page.evaluate("() => { window.__gg.G.poison.on.t = 0.05; }"); time.sleep(0.4)
+    r = page.evaluate(f"() => [window.__gg.G.poison.on, ({SQR})()]")
+    ok(r[0] is None and r[1] == ['rb', 'ok', 'ok', 'ok', 'ok', 'ok', 'ok', 'rb'], f'the fog lifts: the square is still clean {r}')
+    page.evaluate("() => { window.__gg.poisonNow({ dir:'row', idx:[1, 2, 3] }); }")
+    ok(wait_for(page, "() => !!window.__gg.G.poison.on", 10), 'the next fog lies over the same rows')
+    time.sleep(0.4)
+    r = page.evaluate(f"() => [window.__gg.G.poison.on.spared || null, ({SQR})()]")
+    ok(r[0] is None and r[1] == ['rot'] * 8, f'the next fog (started after the break) rots the whole square, Rainbows included {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 def check_poison_landing(browser, url):
     if not R5: return
     page, errors = poison_page()(browser, url)
@@ -676,7 +709,7 @@ def check_poison_budget(browser, url):
     page.close()
 
 
-CHECKS.update({'check_poison_cycle': check_poison_cycle, 'check_poison_lines': check_poison_lines, 'check_poison_protect': check_poison_protect,
+CHECKS.update({'check_poison_cycle': check_poison_cycle, 'check_poison_lines': check_poison_lines, 'check_poison_protect': check_poison_protect, 'check_protector_break_fog': check_protector_break_fog,
                'check_poison_landing': check_poison_landing, 'check_poison_continue': check_poison_continue, 'check_poison_budget': check_poison_budget})
 
 # ---------- Task 5: the picker's second gourd slot, and the Protector tutorial on N2-5 ----------
@@ -1109,6 +1142,22 @@ def check_fogwalker2(browser, url):
 HITS = "(i) => { const g = window.__gg, m = window.__ms[i]; g.damage(m, 1, '#fff'); return [m.type, m.hp, m.dead, !!m.carrier]; }"
 
 
+def check_fogwalker2_quest(browser, url):
+    """N2-9's "Do not let fogwalkers reach the fence" counts a Fogwalker 2 (questAs:'fogwalker'); a ghoul does not."""
+    if not R5: return
+    page, errors = open_page(browser, url)
+    nm2_start(page, 9); time.sleep(0.3); page.evaluate(PQ)
+    ok(page.evaluate("() => window.__gg.questsFor(window.__gg.G.def).some(([t, p]) => t === 'noTouch' && p === 'fogwalker')"), "N2-9 has the quest ['noTouch', 'fogwalker']")
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; g.spawnMonster('ghoul', 1, false, 0.98); }"); time.sleep(0.8)
+    r = page.evaluate("() => { const g = window.__gg, q = g.G.q; return [!!q.touched.ghoul, !!q.touched.fogwalker, g.QUEST_TYPES.noTouch.check({ q }, 'fogwalker').failed]; }")
+    ok(r == [True, False, False], f'a ghoul at the fence does not fail it {r}')
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; g.spawnMonster('fogwalker2', 3, false, 0.98); }"); time.sleep(0.8)
+    r = page.evaluate("() => { const g = window.__gg, q = g.G.q; return [!!q.touched.fogwalker2, !!q.touched.fogwalker, g.QUEST_TYPES.noTouch.check({ q }, 'fogwalker').failed]; }")
+    ok(r == [True, True, True], f'a Fogwalker 2 at the fence fails it, as a fogwalker {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 def check_comet(browser, url):
     if not R5: return
     page, errors = open_page(browser, url)
@@ -1213,7 +1262,7 @@ def check_minipolt(browser, url):
     page.close()
 
 
-CHECKS.update({'check_fogwalker2': check_fogwalker2, 'check_comet': check_comet, 'check_minipolt': check_minipolt})
+CHECKS.update({'check_fogwalker2': check_fogwalker2, 'check_fogwalker2_quest': check_fogwalker2_quest, 'check_comet': check_comet, 'check_minipolt': check_minipolt})
 
 
 # ---------- Task 8: the Lamplighter (mini boss, N2-4 and N2-13) ----------
@@ -1372,9 +1421,12 @@ def check_lamplighter_continue(browser, url):
     ok(wait_for(page, "() => window.__ml.length >= 1"), "it reaches its rot mood")
     time.sleep(1.0)
     before = page.evaluate("""() => { clearInterval(window.__li); const g = window.__gg, b = window.__b, s = [b.mood, b.hp, +b.moodT.toFixed(3), +b.driftT.toFixed(3), +b.fogT.toFixed(3)];
+      window.__hitClip = 0; clearInterval(window.__hw); window.__hw = setInterval(() => { const B = window.__gg.G.monsters.find(m => m.type === 'boss' && !m.dead); if (B && B !== b && B.anim && B.anim.clip === 'hit') window.__hitClip++; }, 5);
       const c = g.continueState(); g.continueNight(c); return s; }""")
     time.sleep(0.6)
     after = page.evaluate(f"() => {{ const b = {LBOSS}; return b ? [b.mood, b.hp, +b.moodT.toFixed(3), +b.driftT.toFixed(3), +b.fogT.toFixed(3), b.kind, !!b.rotOnly, b.p <= 0.05] : null; }}")
+    hc = page.evaluate(f"() => {{ clearInterval(window.__hw); const b = {LBOSS}; return [window.__hitClip, b ? b.seenHp === b.hp : null]; }}")
+    ok(hc == [0, True], f'coming back at 19 health plays no hit clip (seenHp set on restore) {hc}')
     ok(after is not None and after[:5] == before and after[5] == 'lamplighter' and after[6] and after[7],
        f'a continued night brings it back in its rot mood with its 19 health and its clocks as they were (they wait while it walks in) {before} -> {after}')
     ok(before[1] == 19 and before[0] == 'rot', f'(it was hurt to 19 and in its rot mood {before})')
@@ -1565,19 +1617,77 @@ def check_fallen_polt(browser, url):
 
 
 def check_fallen_polt_continue(browser, url):
-    """A continued night brings it back with its health and does not replay the shuffle and reaper phase it already passed."""
+    """A continued night brings it back with its health, its marks spent and a reaper phase in progress with the rotten hits it still needs
+    (controller ruling: losing gives no free pass); a boss healed back above a spent mark does not replay it; an older snapshot without the
+    marks falls back to counting them from its health."""
     if not R5: return
     page, errors = open_page(browser, url)
+    R = page.evaluate("() => window.__gg.ROTTEN")
+    CONT = f"""() => {{ clearInterval(window.__li); clearInterval(window.__fi); const g = window.__gg, c = g.continueState(); window.__snap = JSON.parse(JSON.stringify(c.bossMood)); g.continueNight(c); }}"""
+    BACK = f"() => {{ const b = {LBOSS}; if (b) window.__b = b; return b ? [b.kind, b.hp, b.shufDone, b.reapDone, b.reaper, !!b.rotOnly, (b.fogs || []).length] : null; }}"
+    # 1. lost mid-phase, two rotten hits still needed
     b = fp_up(page)
     if b is None:
         ok(False, 'the Fallen Poltergeist arrived'); page.close(); return
     page.evaluate("() => { const g = window.__gg, b = window.__b; b.tpT = b.swapT = b.zoneT = 999; b.lastHit = 0; g.damage(b, 16, '#fff'); }")   # 29: the 66% shuffle
     time.sleep(0.3)
     before = page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 7, '#fff'); return [b.hp, b.shufDone, b.reapDone, b.reaper]; }")   # 22: in its first reaper phase
-    page.evaluate("() => { clearInterval(window.__li); const g = window.__gg, c = g.continueState(); g.continueNight(c); }"); time.sleep(0.8)
-    after = page.evaluate(f"() => {{ const b = {LBOSS}; return b ? [b.kind, b.hp, b.shufDone, b.reapDone, b.reaper, !!b.rotOnly, (b.fogs || []).length] : null; }}")
-    ok(before == [22, 1, 1, 3] and after == ['fallenpoltergeist', 22, 1, 1, 0, False, 0],
-       f'it comes back with 22 health, its 66% shuffle and its first reaper phase spent (not replayed) {before} -> {after}')
+    h = page.evaluate(FHIT, [R, -1])
+    ok(before == [22, 1, 1, 3] and h[3] == 2 and h[1] == -1.5, f'it is in its first reaper phase and one rotten hit leaves 2 to go {before} {h}')
+    page.evaluate(CONT); time.sleep(0.8)
+    snap = page.evaluate("() => window.__snap")
+    ok(snap == [{'reaper': 2, 'shufDone': 1, 'reapDone': 1}], f'the snapshot holds its reaper phase and marks spent {snap}')
+    after = page.evaluate(BACK)
+    ok(after == ['fallenpoltergeist', 21, 1, 1, 2, True, 0], f'it comes back with 21 health, its marks spent, still reaper with 2 rotten hits to go, rot-only {after}')
+    r = page.evaluate(FHIT, [0, -1])
+    ok(r[0] and r[1] == 0 and r[2] == 'Blocked' and r[3] == 2, f'after the continue a normal pumpkin is still blocked {r}')
+    hits = [page.evaluate(FHIT, [R, -1]) for _ in range(2)]
+    ok([x[1] for x in hits] == [-1.5, -1.5] and [x[3] for x in hits] == [1, 0], f'the 2 rotten hits still needed end the phase {hits}')
+    time.sleep(0.2)
+    r = page.evaluate(FHIT, [R, -1])
+    ok(not r[0] and r[1] == 0.5, f'then it is back to normal: a rotten pumpkin heals it {r}')
+    # 2. healed back above both spent marks, then continued: no shuffle and no reaper phase replays
+    b = fp_up(page)
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.tpT = b.swapT = b.zoneT = 999; b.lastHit = 0; g.damage(b, 16, '#fff'); }"); time.sleep(0.3)
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 7, '#fff'); }")
+    for _ in range(3): page.evaluate(FHIT, [R, -1])
+    time.sleep(0.2)
+    healed = page.evaluate("() => { const b = window.__b; b.hp = 40; return [b.hp, b.shufDone, b.reapDone, b.reaper]; }")   # rotten pumpkins healed it back to 40 of 45
+    ok(healed == [40, 1, 1, 0], f'(it spent the 66% shuffle and the 50% phase, then was healed to 40) {healed}')
+    page.evaluate(CONT); time.sleep(0.8)
+    after = page.evaluate(BACK)
+    ok(after == ['fallenpoltergeist', 40, 1, 1, 0, False, 0], f'it comes back with 40 health and both marks still spent {after}')
+    page.evaluate(f"() => {{ const b = window.__b; b.tpT = b.swapT = b.zoneT = 999; window.__shuf = 0; clearInterval(window.__si); window.__si = setInterval(() => {{ const B = {LBOSS}; if (B && B.anim && B.anim.clip === 'swap') window.__shuf++; }}, 10); }}")
+    r = page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 20, '#fff'); return [b.hp, b.reaper, b.reapDone]; }")   # 20: below 66% and 50%, above 33%
+    time.sleep(0.5)
+    r2 = page.evaluate("() => { const b = window.__b; return [b.shufDone, b.reapDone, b.reaper, !!b.rotOnly, window.__shuf]; }")
+    ok(r == [20, 0, 1] and r2 == [1, 1, 0, False, 0], f'hurt below 66% and 50% again: no shuffle replayed, no reaper phase replayed {r} {r2}')
+    r = page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 6, '#fff'); return [b.hp]; }")   # 14: past 33%
+    time.sleep(0.3)
+    r2 = page.evaluate("() => { clearInterval(window.__si); const b = window.__b; return [b.shufDone, window.__shuf > 0]; }")
+    ok(r == [14] and r2 == [2, True], f'the next mark down (33%) still shuffles {r} {r2}')
+    # 3. an older snapshot (no marks in it): they are counted from its health on its first frame
+    b = fp_up(page)
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.tpT = b.swapT = b.zoneT = 999; b.lastHit = 0; g.damage(b, 16, '#fff'); }"); time.sleep(0.3)
+    page.evaluate("() => { clearInterval(window.__li); clearInterval(window.__fi); const g = window.__gg, c = g.continueState(); c.bossMood = [null]; g.continueNight(c); }"); time.sleep(0.8)
+    after = page.evaluate(BACK)
+    ok(after == ['fallenpoltergeist', 29, 1, 0, 0, False, 0], f'an old snapshot without its marks: they are counted from its 29 health (the 66% shuffle spent) {after}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fallen_polt_cross(browser, url):
+    """The rotten hit that crosses a reaper mark (the boss rot-only in a Plague Doctor 2's square) starts the phase but does not count toward it."""
+    if not R5: return
+    page, errors = open_page(browser, url)
+    b = fp_up(page)
+    if b is None:
+        ok(False, 'the Fallen Poltergeist arrived'); page.close(); return
+    R = page.evaluate("() => window.__gg.ROTTEN")
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.tpT = b.swapT = b.zoneT = 999; b.lastHit = 0; g.damage(b, 21.5, '#fff'); }"); time.sleep(0.3)   # 23.5: past the 66% shuffle, just above 50%
+    r = page.evaluate(f"([t]) => {{ const b = window.__b, h = b.hp, d = [b.reaper, b.reapDone]; b.rotOnly = true; return [h, d, ({FHIT})([t, -1])]; }}", [R])
+    ok(r[0] == 23.5 and r[1] == [0, 0], f'(23.5 health, no phase yet) {r[:2]}')
+    ok(r[2][1] == -1.5 and r[2][3] == 3, f'the rotten hit that crosses 50% starts the phase with all 3 rotten hits still to go {r[2]}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
@@ -1598,7 +1708,8 @@ def check_fallen_polt_baked(browser, url):
     page.close()
 
 
-CHECKS.update({'check_fallen_polt': check_fallen_polt, 'check_fallen_polt_continue': check_fallen_polt_continue, 'check_fallen_polt_baked': check_fallen_polt_baked})
+CHECKS.update({'check_fallen_polt': check_fallen_polt, 'check_fallen_polt_continue': check_fallen_polt_continue, 'check_fallen_polt_cross': check_fallen_polt_cross,
+               'check_fallen_polt_baked': check_fallen_polt_baked})
 
 
 # ---------- Task 10: the real levels N2-1 to N2-16, intro cards, the nightmare bestiary ----------

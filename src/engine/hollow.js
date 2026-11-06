@@ -187,7 +187,7 @@ export function initLamplighter(m){
 export const lampSnapshot = m => isLamp(m) ? { mood:m.mood, moodT:m.moodT, driftT:m.driftT, fogT:m.fogT } : null;
 export function restoreLamp(m, s){
   if (!s || !isLamp(m)) return;
-  m.mood = s.mood === 'rot' ? 'rot' : 'clean'; m.moodT = s.moodT; m.driftT = s.driftT; m.fogT = s.fogT; lampFlags(m);
+  m.mood = s.mood === 'rot' ? 'rot' : 'clean'; m.moodT = s.moodT; m.driftT = s.driftT; m.fogT = s.fogT; m.seenHp = m.hp; lampFlags(m);   // seenHp: its restored health is no hit
 }
 const lampPuff = (m, col) => { const y = mY(m) - 30; for (let i = 0; i < 14; i++) spark(m.x, y, i % 3 ? col : '#2f4a42', 140); ring(m.x, y, 36, 'rgba(200,220,210,.7)'); };
 function switchMood(m){
@@ -233,8 +233,10 @@ export function updateLamplighter(m, dt){
 //    through those cells, so none stays put), colours kept; gourds, graves and the square stay as they are.
 //  - Reaper phase: at each fraction in `reaperAt` (entered on the hit that crosses it) it is `rotOnly` until `reaperHits` rotten pumpkins have hurt
 //    it (each pumpkin counts; combat.js rotHitNow calls fpReaperHit), then back to normal (rotten pumpkins heal it again).
-//  - Marks spent (`shufDone`, `reapDone`) are counted from its health on its first frame, as the Fallen Gravekeeper's infernos, so a continued night
-//    (spawner.js restores its health right after spawning it) does not replay them. A reaper phase or a black fog in progress at the loss is gone.
+//  - A continued night (spawner.js, right after spawning it) brings back its marks spent (`shufDone`, `reapDone`) and a reaper phase in progress with
+//    the rotten hits it still needs (`reaper`): fpSnapshot / restoreFallenPolt, through bossSnapshot / restoreBoss. Losing gives no free pass, and a
+//    boss healed back above a spent mark does not replay it. An older snapshot without them: the marks are counted from its health on its first
+//    frame (fpMarks), as the Fallen Gravekeeper's infernos. A black fog in progress at the loss is gone.
 const FP_FOG = '#132a18', FP_BLIGHT = '#8cff5c';
 const sayX = x => Math.max(150, Math.min(W - 150, x));   // a long float over a boss at the field's edge stays on screen
 export const isFallenPolt = m => m.type === 'boss' && m.kind === 'fallenpoltergeist';
@@ -257,7 +259,16 @@ export function markFallenPolt(){
     }
   }
 }
-const fpMarks = m => {   // lazily, on its first frame: the shuffles and reaper phases its health is already past
+/** What a continued night keeps of it: its marks spent and the rotten hits a reaper phase in progress still needs. */
+export const fpSnapshot = m => isFallenPolt(m) ? { reaper:m.reaper || 0, shufDone:m.shufDone, reapDone:m.reapDone } : null;
+export function restoreFallenPolt(m, s){
+  if (!s || !isFallenPolt(m) || s.shufDone == null || s.reapDone == null) return;   // an older snapshot (or a boss with no frame yet): fpMarks counts them from its health
+  m.shufDone = s.shufDone; m.reapDone = s.reapDone; m.reaper = Math.max(0, s.reaper | 0);
+}
+/** Each living boss's own state for a continued night (continueState().bossMood): a Lamplighter's mood and clocks, a Fallen Poltergeist's marks. */
+export const bossSnapshot = m => lampSnapshot(m) || fpSnapshot(m);
+export function restoreBoss(m, s){ restoreLamp(m, s); restoreFallenPolt(m, s); }
+const fpMarks = m => {   // lazily, on its first frame (a fresh boss, or an older snapshot): the shuffles and reaper phases its health is already past
   if (m.shufDone != null) return;
   const T = TYPES.fallenpoltergeist;
   m.shufDone = T.shuffleAt.filter(a => m.hp <= m.maxHp * a).length; m.reapDone = T.reaperAt.filter(a => m.hp <= m.maxHp * a).length;
@@ -356,7 +367,7 @@ export function updateFallenPolt(m, dt){
   const T = TYPES.fallenpoltergeist;
   m.x = m.tx + Math.sin(m.ph * 1.2) * 4;
   fpMarks(m);
-  if (m.fogs.length){ for (const f of m.fogs) f.t -= dt; m.fogs = m.fogs.filter(f => f.t > 0); }
+  for (let i = m.fogs.length - 1; i >= 0; i--) if ((m.fogs[i].t -= dt) <= 0) m.fogs.splice(i, 1);   // in place: no allocation while a fog lies
   if (m.shufDone < T.shuffleAt.length && m.hp <= m.maxHp * T.shuffleAt[m.shufDone]){ m.shufDone++; fpShuffle(m); }
   fpAfterHit(m);   // a phase due that no hit started (one hit past both marks: the second waits for the first to end)
   if (m.reaper > 0 && (m.reapPulse = (m.reapPulse || 0) - dt) <= 0){ m.reapPulse = 0.7; ring(m.x, mY(m) - 30, 46, 'rgba(140,255,92,.6)'); }   // a poison pulse while it is reaper

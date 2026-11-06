@@ -118,8 +118,11 @@ export function placeGourdAtStart(at = [2, 3]){
 }
 
 /** Release 5: the Protector Gourd has just broken at pos (it is already off the patch): every rotten pumpkin in its 3×3 becomes a Rainbow
- *  (owner). destroyGourd resolves the bunches after. */
+ *  (owner). destroyGourd resolves the bunches after. Broken under a lying poison fog, its square (centre included) is spared until that fog
+ *  lifts (`G.poison.on.spared`, cell r * COLS + c; poison.js sweep skips them); a fog that starts after the break rots them as usual. */
 export function onProtectorBreak(pos){
+  const fog = G.poison && G.poison.on;
+  if (fog){ const sp = fog.spared || (fog.spared = []); for (let a = pos.r - 1; a <= pos.r + 1; a++) for (let b = pos.c - 1; b <= pos.c + 1; b++) if (inside(a, b)) sp[a * COLS + b] = true; }
   for (const [a, b] of squareAround(pos.r, pos.c)){
     const cell = grid[a][b]; if (!isRotten(cell)) continue;
     cell.c = RAINBOW; cell.lit = false; cell.pop = 1;

@@ -342,7 +342,7 @@ function rotHitNow(pr, m, rule){
   const y = mY(m);
   for (let k = 0; k < 10; k++) chunk(pr.x, pr.y, k % 3 ? ROT_FX.base : ROT_FX.mould, 180);   // a rotten splat
   m.lastHit = ROTTEN; m.lastHitLv = 1; m.lastHitAlt = -1;
-  if (rule === 'hurt'){ rotDmg = true; try { damage(m, ROT_DMG, ROT_FX.spark); } finally { rotDmg = false; } if (__RELEASE__ >= 5 && m.reaper > 0) fpReaperHit(m); }   // a Fallen Poltergeist's reaper phase counts each rotten pumpkin
+  if (rule === 'hurt'){ const inPhase = __RELEASE__ >= 5 && m.reaper > 0; rotDmg = true; try { damage(m, ROT_DMG, ROT_FX.spark); } finally { rotDmg = false; } if (inPhase) fpReaperHit(m); }   // a Fallen Poltergeist's reaper phase counts each rotten pumpkin (not the hit that crosses a mark and starts it)
   else {
     const was = m.hp; m.hp = Math.min(m.maxHp, m.hp + ROT_HEAL); m.flash = 0.06;
     for (let k = 0; k < 5; k++) spark(m.x, y - 8, ROT_FX.spark, 80);

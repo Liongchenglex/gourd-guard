@@ -4,7 +4,7 @@
 // rot). While the fog lasts every pumpkin that has finished moving in a fogged cell is rotted too, so a slide, a sprout or a drop that lands
 // there rots on landing, not mid-slide (`settled`). One sweep per frame is the whole landing rule; nothing hooks the board.
 // G.poison = { t, warn, on }: t counts down to the next scheduled fog (frozen while one is warning or lying); warn { dir, idx, flow, t, dur };
-// on { dir, idx, flow, t, dur, age }. `poisonNow` lights a chosen (or random) line set at once with the same warning (the Lamplighter, Task 8).
+// on { dir, idx, flow, t, dur, age, spared? } (spared: cells a Protector broke over while it lay, left clean until it lifts). `poisonNow` lights a chosen (or random) line set at once with the same warning (the Lamplighter, Task 8).
 // One fog at a time: a fog that comes due while another is warning or lying waits for it to lift (so two can come back to back). A fog the
 // Lamplighter calls carries `src:'lamp'` on its warn / on state: it is extra to the level's cycle, so the level clock `t` keeps running under it
 // and is not restarted when it lifts; only a level fog (or the coach's) holds the clock while it lasts and restarts it at `every` when it lifts.
@@ -27,13 +27,14 @@ export function fogged(r, c){
 /** A pumpkin counts as landed when nothing is flying and it has all but slid into place (a slide, push or gust keeps its offset a moment). */
 const settled = cell => !(cell.fly > 0) && Math.abs(cell.ox) + Math.abs(cell.oy) < 6;
 
-/** Rot every settled pumpkin under the fog. True when any turned. */
+/** Rot every settled pumpkin under the fog. True when any turned. A cell in `o.spared` (a Protector broke over it while this fog lay, gourd.js
+ *  onProtectorBreak) is skipped until the fog lifts. */
 function sweep(){
-  const o = G.poison.on; let n = 0;
+  const o = G.poison.on, sp = o.spared; let n = 0;
   const row = o.dir === 'row', len = row ? COLS : ROWS;
   for (let i = 0; i < o.idx.length; i++) for (let k = 0; k < len; k++){
     const r = row ? o.idx[i] : k, c = row ? k : o.idx[i], cell = grid[r][c];
-    if (cell && settled(cell) && rotCell(r, c, false)) n++;
+    if (cell && !(sp && sp[r * COLS + c]) && settled(cell) && rotCell(r, c, false)) n++;
   }
   if (n) resolveMatches();
   return n > 0;

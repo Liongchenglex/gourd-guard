@@ -36,7 +36,7 @@ import { GOURDS, GOURD_SLOTS, ALLOW_SAME_GOURD } from '../data/gourds.js';
 import { prebakeGourd } from './render/gourd.js';
 import { ROTTEN, ROT_FX, clearHitFlags, rotSnapshot, restoreRot } from './rot.js';
 import { prebakeRot } from './render/rot.js';
-import { markRotZones, markMoods, markFallenPolt, lampSnapshot } from './hollow.js';
+import { markRotZones, markMoods, markFallenPolt, bossSnapshot } from './hollow.js';
 import { updatePoison, poisonClock } from './poison.js';
 import { prebakePoison } from './render/poison.js';
 
@@ -550,7 +550,7 @@ export function continueState(){
     hk:__RELEASE__ >= 3 ? hkState() : null,   // the Hollow King's phase and his standing form (Release 3)
     jukebox:{ next:g.jbNext || 0, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null },   // next: drop points already used (one per jukebox dropped)   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
     ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0, bossPhase2:living.map(m => !!m.phase2), gourd:g.def.gourd ? gourdSnapshot() : null } : {}),
-    ...(__RELEASE__ >= 5 ? { bossMood:living.map(lampSnapshot), rot:rotSnapshot(), poison:poisonClock() } : {}) };   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
+    ...(__RELEASE__ >= 5 ? { bossMood:living.map(bossSnapshot), rot:rotSnapshot(), poison:poisonClock() } : {}) };   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
 export function continueNight(c){
@@ -563,7 +563,7 @@ export function continueNight(c){
   if (__RELEASE__ >= 5 && c.poison != null && G.poison) G.poison.t = c.poison;   // the clock to the next fog carries on; a fog warning or lying at the loss is gone
   if (__RELEASE__ >= 5 && c.rot) restoreRot(c.rot);   // the rotten pumpkins lie where they lay (after the gourds)
   if (__RELEASE__ >= 4 && c.bossSpawned && c.bossPhase2) G.bossPhase2 = c.bossPhase2.slice();   // spawner.js puts each returning boss back in its phase
-  if (__RELEASE__ >= 5 && c.bossSpawned && c.bossMood) G.bossMood = c.bossMood.slice();   // and a Lamplighter in its mood, its clocks where they were (Release 5)
+  if (__RELEASE__ >= 5 && c.bossSpawned && c.bossMood) G.bossMood = c.bossMood.slice();   // and a Lamplighter in its mood, its clocks where they were, a Fallen Poltergeist with its marks spent and its reaper phase (Release 5)
   if (c.bossSpawned){ G.bossDead = c.bossDead; G.bossHp = c.bossHp.slice(); G.bossKinds = c.bossKinds ? c.bossKinds.slice() : null; if (c.bossDead) G.bossSpawned = true; }
   if (c.jukebox){
     const next = c.jukebox.next != null ? c.jukebox.next : c.jukebox.done ? 1 : 0;   // an older snapshot said only "done"

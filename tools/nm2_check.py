@@ -1601,6 +1601,178 @@ def check_fallen_polt_baked(browser, url):
 CHECKS.update({'check_fallen_polt': check_fallen_polt, 'check_fallen_polt_continue': check_fallen_polt_continue, 'check_fallen_polt_baked': check_fallen_polt_baked})
 
 
+# ---------- Task 10: the real levels N2-1 to N2-16, intro cards, the nightmare bestiary ----------
+N2_NAMES = ['Rot Mist', 'The Reaper', 'Night Doctors', 'The Lamplighter', 'The Protector Gourd', 'Fog Giants', 'Comet Trail', 'Restless Spirits',
+            'Thick Fog', 'Plague Ward', 'Wisp Storm', 'Haunted Patch', 'Lamplighter Returns', 'The Rot', 'The Long Night', 'The Fallen Poltergeist']
+R5_NAMES += ('Night Doctors', 'Comet Trail', 'Restless Spirits', 'Plague Ward', 'Wisp Storm', 'Haunted Patch', 'Fog Giants', 'Rotten pumpkins')
+N2_NEW = {'reaper': 2, 'rotdoctor': 3, 'fogwalker2': 6, 'comet': 7, 'minipolt': 8}   # each new monster and the level that brings it first (spec Part 7)
+N2_ALSO = {'reaper': ['crow'], 'fogwalker2': ['brute'], 'comet': ['wisp', 'imp']}   # what each brings onto the field (summons and companions)
+N2_LEVELS_JS = """() => { const g = window.__gg; return g.NIGHTMARE_LEVELS[1].map((d, i) => { const L = g.levelFor(1101 + i);
+  return { level:d.level, name:d.name, pool:d.pool.map(e => e[0]), weights:d.pool.map(e => e[1]), types:d.pool.every(([k]) => !!(g.TYPES[k] || g.VARIANTS[k])), gourd:!!d.gourd, gourds:d.gourds || null,
+    unlockGourds:d.unlockGourds || null, boss:d.boss, bossForm:d.bossForm, bossChest:d.bossChest || null, coach:d.coach || null, intro:d.intro || [], poison:d.poison || null,
+    fog:(d.fog || []).length + (d.fogRows || []).length + (d.fogCols || []).length, spawnGap:d.spawnGap, spawnBurst:d.spawnBurst, total:d.total, interval:d.interval,
+    quests:g.questsFor(L), questsOk:g.questsFor(L).every(([t]) => !!g.QUEST_TYPES[t]) }; }); }"""
+
+
+def n2_open_all(page):
+    """Every story level, every Release 4 nightmare level and N2-1 to N2-15 beaten (so all of N2 is open); both gourds unlocked."""
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 17)}, **{1100 + k: 3 for k in range(1, 16)}})
+    page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, protector:true }; s.seenGourdCoach = true; s.seenProtectorCoach = true; }")
+
+
+def check_n2_levels(browser, url):
+    """The 16 designed levels (spec Part 7): names, pools, gourds, bosses, poison fog and pacing are data, and every preview opens."""
+    if not R5: return
+    page, errors = open_page(browser, url)
+    L = page.evaluate(N2_LEVELS_JS)
+    ok(len(L) == 16 and [d['level'] for d in L] == list(range(1, 17)), f'16 hollow nightmare levels in order ({len(L)})')
+    ok([d['name'] for d in L] == N2_NAMES, f"each level has the spec's name {[d['name'] for d in L]}")
+    ok(all(d['pool'] and d['types'] for d in L), 'every pool is non-empty and every pool type exists in TYPES or VARIANTS')
+    intros = {k + 1: d['intro'] for k, d in enumerate(L) if d['intro']}
+    ok(intros == {n: [t] for t, n in N2_NEW.items()}, f'each new monster is introduced on the level that first brings it {intros}')
+    ok(all(t in d['pool'] for d in L for t in d['intro']), 'every introduced monster is in its level pool')
+    early = [(t, k + 1) for k, d in enumerate(L) for t in d['pool'] if t in N2_NEW and k + 1 < N2_NEW[t]]
+    ok(not early, f'no new monster walks in before its introduction {early}')
+    ok(all(t in L[14]['pool'] for t in N2_NEW), f"N2-15 (The Long Night) holds every new monster {L[14]['pool']}")
+    ok(all(d['gourd'] for d in L), 'the Grave Gourd stands on the patch on every level')
+    ok(all(d['gourds'] is None for d in L[:4]) and all(d['gourds'] == ['grave', 'protector'] for d in L[4:]), 'N2-5 and later offer both gourds; N2-1 to N2-4 the Grave Gourd alone')
+    ok(L[3]['boss'] == 'lamplighter' and L[3]['bossForm'] == 1 and L[3]['bossChest'] == 'normal' and L[3]['unlockGourds'] == ['protector'], f"N2-4: the Lamplighter, a normal chest, unlocks the Protector {L[3]['boss'], L[3]['bossChest'], L[3]['unlockGourds']}")
+    ok(L[12]['boss'] == 'lamplighter' and L[12]['bossForm'] == 2 and L[12]['bossChest'] == 'normal', 'N2-13: the Lamplighter in form 2 with a normal chest')
+    ok(L[15]['boss'] == 'fallenpoltergeist' and L[15]['bossChest'] == 'normal', 'N2-16: the Fallen Poltergeist with a normal chest')
+    ok([k + 1 for k, d in enumerate(L) if d['boss']] == [4, 13, 16], 'bosses on N2-4, N2-13 and N2-16 only')
+    ok(L[4]['coach'] == 'protector' and [k + 1 for k, d in enumerate(L) if d['coach']] == [5], 'N2-5 keeps the Protector tutorial (the only coach)')
+    P = [d['poison'] for d in L]
+    ok(all(p and p['every'] > 0 and p['dur'] > 0 and 1 <= p['lines'][0] <= p['lines'][1] <= 2 and set(p['dirs']) <= {'row', 'col'} and p['dirs'] for p in P), f'every level has poison fog of 1-2 rows or columns {P}')
+    cyc = [p['every'] + p['dur'] for p in P]
+    ok(cyc[13] == min(cyc) and cyc[13] < cyc[0] / 2, f'N2-14 (The Rot): the shortest poison cycle, near-constant fog {cyc}')
+    ok(cyc[9] < cyc[0] and P[9]['lines'][1] == 2, f'N2-10 (Plague Ward): fog more often than N2-1, up to two lines {P[9]}')
+    ok(P[3]['every'] == 20 and P[3]['dur'] == 3, f"N2-4 keeps its gentle cycle under the Lamplighter's own calls {P[3]}")
+    ok(L[8]['fog'] > 0 and sum(1 for d in L if d['fog']) == 1, 'N2-9 (Thick Fog) is the night with field fog banks')
+    top = lambda d: d['pool'][d['weights'].index(max(d['weights']))]
+    ok(top(L[9]) == 'rotdoctor' and L[9]['weights'][L[9]['pool'].index('rotdoctor')] >= 8, f"N2-10: many Plague Doctor 2s {list(zip(L[9]['pool'], L[9]['weights']))}")
+    ok(top(L[11]) == 'minipolt', f"N2-12: a Poltergeist 2 swarm {list(zip(L[11]['pool'], L[11]['weights']))}")
+    ok({'comet', 'wisp', 'crow'} <= set(L[10]['pool']), f"N2-11: Wisp Riders 2, Wisps and crows {L[10]['pool']}")
+    ok({'fogwalker2', 'reaper'} <= set(L[8]['pool']), f"N2-9: Fogwalker 2s and Reapers in the fog {L[8]['pool']}")
+    ok({'reaper', 'rotdoctor'} <= set(L[13]['pool']), f"N2-14: Reapers and Plague Doctor 2s {L[13]['pool']}")
+    ok(all(isinstance(d['spawnGap'], (int, float)) and isinstance(d['spawnBurst'], (int, float)) for d in L), 'every level sets spawnGap and spawnBurst')
+    ok(all(d['questsOk'] and len(d['quests']) == 3 for d in L), 'every level has three quests of existing types')
+    ok(len({(d['total'], d['interval'], tuple(d['pool'])) for d in L}) == 16, 'no two levels share pool and pacing (each has its own theme)')
+    n2_open_all(page)
+    for k in range(1, 17):
+        page.evaluate(f"() => {{ document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); window.__gg.openPreview({1100 + k}); }}"); time.sleep(0.25)
+    ok(not errors, f'every preview opens without a page error {errors[:2]}')
+    page.close()
+
+
+def n2_intro_titles(page, n):
+    """Play night n from its preview card and read the intro cards it shows, in order."""
+    page.evaluate(f"() => {{ document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); window.__gg.openPreview({n}); }}"); time.sleep(0.4)
+    page.click('#bPvGo'); time.sleep(0.4)
+    out = []
+    for _ in range(8):
+        if page.evaluate("() => window.__gg.state") != 'intro': break
+        out.append(page.evaluate("() => document.querySelector('#inTitle').textContent"))
+        page.click('#bIntroOk'); time.sleep(0.3)
+    return out
+
+
+def check_n2_intros(browser, url):
+    """First appearances on the hollow track show a card: poison fog and rotten pumpkins (N2-1), each new monster, the Lamplighter (both forms),
+    the Protector Gourd (N2-5) and the Fallen Poltergeist."""
+    if not R5: return
+    page, errors = open_page(browser, url)
+    n2_open_all(page)
+    page.evaluate("() => { window.__gg.save.seenIntro = { quests:true, gourd:true, fog:true }; }")   # the Grave Gourd's card was shown on N1-5, the fog card in world 2
+    txt = page.evaluate("""() => { const g = window.__gg; g.openPreview(1101); document.querySelector('#bPvGo').click();
+      return [document.querySelector('#inTitle').textContent, document.querySelector('#inText').textContent]; }""")
+    ok(txt[0] == 'Poison fog' and 'rotten' in txt[1] and 'row' in txt[1], f'the poison card says the fog rots what lies under it, a row or column at a time {txt}')
+    page.evaluate("() => { window.__gg.save.seenIntro = { quests:true, gourd:true, fog:true }; }")
+    t = {k: n2_intro_titles(page, 1100 + k) for k in (1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 16)}
+    ok('Poison fog' in t[1] and 'Rotten pumpkins' in t[1], f'N2-1 explains poison fog and rotten pumpkins {t[1]}')
+    ok(not any(x in ('Poison fog', 'Rotten pumpkins') for k in (2, 3, 4, 5) for x in t[k]), 'later levels do not repeat them')
+    for k, name in ((2, 'Reaper'), (3, 'Plague Doctor 2'), (6, 'Fogwalker 2'), (7, 'Wisp Rider 2'), (8, 'Poltergeist 2')):
+        ok(any(x.startswith('New monster') and name in x for x in t[k]), f'N2-{k} introduces the {name} {t[k]}')
+    ok(any('Lamplighter' in x and 'full form' not in x for x in t[4]), f'N2-4 introduces the Lamplighter {t[4]}')
+    ok(any('Protector Gourd' in x for x in t[5]), f'N2-5 explains the Protector Gourd {t[5]}')
+    ok(not t[9], f'N2-9 brings nothing new {t[9]}')
+    ok(any('Lamplighter' in x and 'full form' in x for x in t[13]), f'N2-13 shows the Lamplighter\'s form-2 card {t[13]}')
+    ok(any('Fallen Poltergeist' in x for x in t[16]), f'N2-16 introduces the Fallen Poltergeist {t[16]}')
+    rt = page.evaluate("() => { const g = window.__gg; g.save.seenIntro = { quests:true, gourd:true, fog:true, poison:true }; g.openPreview(1101); document.querySelector('#bPvGo').click(); return document.querySelector('#inText').textContent; }")
+    ok('heal' in rt and 'Plague Doctor 2' in rt, f'the rot card says a rotten pumpkin heals what it hits, and names the Plague Doctor 2\'s square ({rt[:90]}...)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_n2_bestiary(browser, url):
+    """The hollow nightmare book's bestiary (Release 5): the new monsters in first-met order with their companions, the Lamplighter, and the
+    Fallen Poltergeist last; story monsters are not repeated. A page whose gate is shut has no bestiary button."""
+    if not R5: return
+    page, errors = open_page(browser, url)
+    # the gate shut (2-20 beaten, N1-4 not): no flip button
+    set_stars(page, story_done())
+    page.evaluate("() => window.__gg.openBook(1)"); time.sleep(0.6)
+    page.click('#bBookmark'); time.sleep(0.8)
+    ok(page.evaluate("() => document.querySelector('#bBkFlip').hidden"), 'a world 2 nightmare page with its gate shut hides the bestiary button')
+    page.evaluate("() => window.__gg.openBook(1)"); time.sleep(0.4)
+    # N2-1 to N2-3 open: the Reaper, its crow and Plague Doctor 2 have been met
+    set_stars(page, {**story_done(), 1004: 3, 1101: 3, 1102: 3})
+    page.evaluate("() => window.__gg.openBook(1)"); time.sleep(0.6)
+    if page.evaluate("() => !document.querySelector('#spread').classList.contains('nightmare')"): page.click('#bBookmark')
+    time.sleep(0.8)
+    ok(page.evaluate("() => !document.querySelector('#bBkFlip').hidden"), 'with the gate open the page has a Bestiary button')
+    page.click('#bBkFlip'); time.sleep(0.7)
+    b = page.evaluate("() => [document.querySelector('#bsTitle').textContent, [...document.querySelectorAll('#bestiary .bs')].map(e => [e.classList.contains('unmet'), e.querySelector('b').textContent, e.querySelector('.ab').textContent, (e.querySelector('.lo') || {}).textContent || ''])]")
+    ok('Nightmare' in b[0] and 'Foggy Hollow' in b[0], f'the page is titled as the hollow nightmare edition ({b[0]!r})')
+    met = [x[1] for x in b[1] if not x[0]]
+    ok(met == ['Reaper', 'Crow', 'Plague Doctor 2'], f'met so far, in order: the Reaper, its crow, Plague Doctor 2 {met}')
+    ok(all(x[2] and x[3] for x in b[1] if not x[0]), 'each met entry has an ability and a lore line')
+    ok(len(b[1]) == 9 and all(x[0] for x in b[1][3:]), f'nine entries, the rest unmet silhouettes ({len(b[1])})')
+    ok(page.evaluate("() => document.querySelector('#bsCount').textContent").startswith('3 of 9'), f"three of nine met ({page.evaluate('() => document.querySelector(`#bsCount`).textContent')})")
+    # everything open: the whole list by name
+    n2_open_all(page)
+    page.evaluate("() => window.__gg.openBook(1)"); time.sleep(0.6)
+    if page.evaluate("() => !document.querySelector('#spread').classList.contains('nightmare')"): page.click('#bBookmark')
+    time.sleep(0.8)
+    page.evaluate("() => { if (document.querySelector('#bestiary').hidden) document.querySelector('#bBkFlip').click(); }"); time.sleep(0.7)
+    names = page.evaluate("() => [...document.querySelectorAll('#bestiary .bs')].map(e => e.classList.contains('unmet') ? null : e.querySelector('b').textContent)")
+    want = ['Reaper', 'Crow', 'Plague Doctor 2', 'The Lamplighter', 'Fogwalker 2', 'Mossback', 'Wisp Rider 2', 'Poltergeist 2', 'The Fallen Poltergeist']
+    ok(names == want, f'the full list in first-met order, the Fallen Poltergeist last {names}')
+    ok(not any(n in names for n in ('Bog Ghoul', 'Wisp', 'Wraith', 'Marsh Imp', 'Swift Bat')), 'story monsters are not repeated')
+    page.evaluate("() => window.__gg.openBook(0)"); time.sleep(0.6)
+    if page.evaluate("() => !document.querySelector('#spread').classList.contains('nightmare')"): page.click('#bBookmark')
+    time.sleep(0.8)
+    page.evaluate("() => { if (document.querySelector('#bestiary').hidden) document.querySelector('#bBkFlip').click(); }"); time.sleep(0.7)
+    w1 = page.evaluate("() => [...document.querySelectorAll('#bestiary .bs b')].map(e => e.textContent)")
+    ok(w1 and w1[-1] == 'The Fallen Gravekeeper' and 'Reaper' not in w1, f'the world 1 nightmare bestiary is unchanged (ends on the Fallen Gravekeeper, no Reaper) {w1[-2:]}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_n2_prebake(browser, url):
+    """Each level bakes what it can spawn when its night starts: its pool, what those monsters bring (the Reaper's crow, Fogwalker 2's
+    Mossbacks, the comet's Wisp and Imp) and its boss; every night starts and runs a moment without a page error."""
+    if not R5: return
+    page, errors = open_page(browser, url)
+    L = page.evaluate(N2_LEVELS_JS)
+    page.evaluate("() => { window.__gg.save.gourds = { grave:true, protector:true }; }")
+    missing = []
+    for k, d in enumerate(L, 1):
+        page.reload(); page.wait_for_function('() => !!window.__gg'); time.sleep(0.3)   # a fresh atlas cache: what is baked is this night's
+        page.evaluate("() => { Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true }); window.__gg.save.gourds = { grave:true, protector:true }; }")
+        nm2_start(page, k)
+        want = {t for t in d['pool'] if t in N2_NEW or t == 'crow'} | {a for t in d['pool'] for a in N2_ALSO.get(t, [])} | ({d['boss']} if d['boss'] else set())
+        got = page.evaluate("(ks) => ks.filter(k => !window.__gg.isBaked(k) && !window.__gg.isBaked(k + '|form2'))", sorted(want))   # a form-2 boss bakes as kind|form2
+        if got: missing.append((k, got))
+        time.sleep(0.4)
+    ok(not missing, f'every level bakes its new monsters, what they bring and its boss at night start {missing}')
+    ok('reaper' in L[1]['pool'] and 'crow' not in L[1]['pool'], f"N2-2's crows come only out of its Reapers (so its crow is baked through ALSO_BAKE) {L[1]['pool']}")
+    ok(not errors, f'no page errors on any night {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_n2_levels': check_n2_levels, 'check_n2_intros': check_n2_intros, 'check_n2_bestiary': check_n2_bestiary, 'check_n2_prebake': check_n2_prebake})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

@@ -4,7 +4,8 @@
 // Monsters spawned by another (gargoyle, blob) are listed under COMPANIONS so they appear beside their parent.
 
 export const COMPANIONS = { hauler:['gargoyle'], slime:['blob'], vampire:['bat'],
-  ...(__RELEASE__ >= 4 ? { hayrick:['hayrickBurning'], husker:['huskerBare', 'huskerBurning', 'huskerCharred'], strawlord:['crow'], casketjack:['coffin'] } : {}) };   // Release 4: burning forms, the Strawlord's crows (met first on N1-4), Casket Jack's Fallen Casket
+  ...(__RELEASE__ >= 4 ? { hayrick:['hayrickBurning'], husker:['huskerBare', 'huskerBurning', 'huskerCharred'], strawlord:['crow'], casketjack:['coffin'] } : {}),   // Release 4: burning forms, the Strawlord's crows (met first on N1-4), Casket Jack's Fallen Casket
+  ...(__RELEASE__ >= 5 ? { reaper:['crow'], fogwalker2:['brute'] } : {}) };   // Release 5: the crow out of a fallen Reaper, Fogwalker 2's Mossbacks (a world 1 monster, new to the hollow's books)
 
 /** The boss at the end of each nightmare book (Release 4), listed last in its nightmare bestiary. Once its fight is built (N1-16, the Fallen
  *  Gravekeeper, 2026-11-05) the level lists it like any boss; until then this entry holds its place (an entry may give `icon` [type, form] to draw). */
@@ -75,7 +76,13 @@ export const BESTIARY = {
     huskerCharred:{ lore:'Blackened to the core and still walking.', ability:'Only Ice finishes it. Anything else knocks it down for a while.' },
     fallengravekeeper:{ lore:'The Gravekeeper, charred under the eclipse. His lantern burns black now.', ability:'Never reaches the wall. Teleports leaving fire behind, raises roosters, Casket Jacks and Grave Risers, slams three fences at once, and three times sets a whole row or column of the field on fire. Crows swoop in all night.' },
   } : {}),
-  ...(__RELEASE__ >= 5 ? {   // the nightmare Foggy Hollow (Release 5; Task 10 adds its other monsters)
+  ...(__RELEASE__ >= 5 ? {   // the nightmare Foggy Hollow (Release 5), in first-met order
+    reaper:     { lore:'A wraith that found the road home and did not like what was waiting there. It picked up the scythe someone left at the crossroads.', ability:'Fades out for longer than a wraith and moves faster; three health. A crow bursts out where it falls. At the fence it swings its scythe without stopping, wearing down its own fence and both beside it.' },
+    rotdoctor:  { lore:'The plague doctor stayed in the fog too long. The censer breathes rot now, and it has given up curing anyone.', ability:'Slow, four health, and it heals nobody. Every monster inside its poison-green 3×3 square can only be hurt by rotten pumpkins. The doctor itself is hurt by anything.' },
+    lamplighter:{ lore:'It lights the lanterns that lead travellers into the hollow. Nobody has ever seen it put one out.', ability:'Never reaches the wall. While its lantern burns amber only normal pumpkins hurt it; while it burns sickly green only rotten ones do. It drifts between lanes and calls poison fog onto your patch.' },
+    fogwalker2: { lore:'The Fogwalker grew tall in the poison fog. Its lantern burns green now, and the Mossbacks of the bog walk at its side.', ability:'Drags a fog bank over two rows and arrives with a Mossback on each side. Three health. A Lantern shows it.' },
+    comet:      { lore:'A marsh goblin whose wisp caught the poison and went wild. Neither of them knows how to stop.', ability:'Cruises for a moment, then streaks down its lane to the fence without stopping. The first hit breaks the wisp: a plain Wisp drifts on and an Imp walks.' },
+    minipolt:   { lore:'A small tantrum the Poltergeist left behind in the fog. It knows one trick: spoiling things.', ability:'Drifts between lanes and vanishes now and then. Every few seconds it turns one or two of your pumpkins rotten, never in a Protector square. Three health.' },
     fallenpoltergeist:{ lore:'The Poltergeist, left to rot in the poison fog. Its sheet hangs black and wet, and a scythe of shadow follows it.', ability:'Never reaches the wall. Vanishes from lane to lane, swaps your pumpkins and lays black fog where only rotten pumpkins hurt. Twice it shuffles your whole patch and twice it turns reaper: then only three rotten pumpkins hurt it. A Protector square keeps its pumpkins in place.' },
   } : {}),
   twintides:  { lore:'Two serpents hatched from one egg on the night the village drowned. They finish each other’s sentences.', ability:'Never reach the wall. Both must die within a short window or the fallen one rises again.' },

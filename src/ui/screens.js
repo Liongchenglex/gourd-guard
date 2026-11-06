@@ -3,7 +3,7 @@ import { SPAWN_STEPS } from '../data/patterns.js';
 import { NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, prevLevelFor, firstNightOf, typesForNight, gearUnlockNightOf, NIGHTMARE_LEVELS, NM_BOOK_LEVELS, nmNight, nmGateText } from '../data/worlds/index.js';
-import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO, PROTECTOR_INTRO } from '../data/monsters.js';
+import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO, PROTECTOR_INTRO, POISON_INTRO, ROT_INTRO } from '../data/monsters.js';
 import { hasFire, nightmareTitle } from '../data/levels.js';
 import { monsterIcon } from '../engine/render/monsters.js';
 import { prebakeAsync } from '../engine/render/anim.js';
@@ -37,6 +37,7 @@ import { coachEnd } from '../engine/coach.js';
 import * as EN from '../data/endless.js';
 import { GOURDS, GOURD_SLOTS, ALLOW_SAME_GOURD } from '../data/gourds.js';
 import { gourdIcon } from '../engine/render/gourd.js';
+import { rotIcon } from '../engine/render/rot.js';
 
 export function showResult(win){
   const g = G, box = $('#rBtns'); box.innerHTML = '';
@@ -303,6 +304,10 @@ function startPreviewedNight(){
   if (def.sea && !(prev && prev.sea)) cards.push({ key:'sea', icon:'🌊', title:'The sea row', text:SEA_INTRO });
   if (def.gust && !(prev && prev.gust)) cards.push({ key:'wind', icon:'🍂', title:'Wind', text:WIND_INTRO });
   if (__RELEASE__ >= 4 && hasFire(def) && !hasFire(prev)) cards.push({ key:'fire', icon:'🔥', title:'Fire tiles', text:FIRE_INTRO });   // the nightmare track's first fire (N1-1)
+  if (__RELEASE__ >= 5 && def.poison && !(prev && prev.poison)){   // the hollow nightmare's first poison fog (N2-1): the fog, then what it leaves behind
+    cards.push({ key:'poison', icon:'☠️', title:'Poison fog', text:POISON_INTRO });
+    cards.push({ key:'rotten', icon:rotIcon(160), title:'Rotten pumpkins', text:ROT_INTRO });
+  }
   if (__RELEASE__ >= 4 && def.gourd && !(prev && prev.gourd)) cards.push({ key:'gourd', icon:gourdIcon(160), title:'The Grave Gourd', text:GOURD_INTRO });   // its first night (N1-5)
   if (__RELEASE__ >= 5 && offeredGourds(def).includes('protector') && !(prev && offeredGourds(prev).includes('protector'))) cards.push({ key:'gourd:protector', icon:gourdIcon(160, 'protector'), title:'The Protector Gourd', text:PROTECTOR_INTRO });   // the first night that offers it (N2-5), once unlocked
   for (const t of def.intro) if (!VARIANTS[t]) cards.push({ key:'m:' + t, icon:monsterIcon(t, 160), title:`New monster: ${MNAME[t] || t}`, text:MINTRO[t] || '' });   // returning variants get no card (owner)
@@ -443,7 +448,7 @@ function applyNightmare(wi){
   const gate = __RELEASE__ >= 5 && nmLv ? nmGateText(wi + 1) : '';   // Release 5: a page whose levels exist but whose gate is shut says what is missing
   const soon = $('#bkSoon'); if (soon.dataset.soon == null) soon.dataset.soon = soon.innerHTML;
   soon.innerHTML = gate ? `<b>Locked</b><p>${gate} to open these pages.</p>` : soon.dataset.soon;
-  $('#bkLevels').hidden = on && (!nmLv || !!gate); $('#bkStars').hidden = on && (!nmLv || !!gate); soon.hidden = !on || (!!nmLv && !gate); $('#bBkFlip').hidden = on && !nmLv;
+  $('#bkLevels').hidden = on && (!nmLv || !!gate); $('#bkStars').hidden = on && (!nmLv || !!gate); soon.hidden = !on || (!!nmLv && !gate); $('#bBkFlip').hidden = on && (!nmLv || !!gate);   // no bestiary behind a shut gate (Release 5)
   if (__RELEASE__ >= 4 && nmLv) renderBestiary(wi, true);   // the nightmare edition of the bestiary (openBook drew the story one)
   const theme = levels[0].theme;
   nightmareBg(on ? nightmareKey(theme) : null);

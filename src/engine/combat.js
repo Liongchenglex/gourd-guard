@@ -1,6 +1,7 @@
 import { TYPES, BOSS_NAMES, ICE_ONLY, HUSK_STRIP } from '../data/monsters.js';
 import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW, TURQUOISE, BROWN, TURQ_FRAC, BROWN_KB, BROWN_SIZE_MULT, PAINT, BEIGE, MAGNET } from '../data/pumpkins.js';
 import { layGlue } from './glue.js';
+import { magnetPull } from './magnet.js';
 import { hkGate, hkAfterHit, onHkFormDown, onKingDown } from './hollowking.js';
 import { SFX, musicStart } from './audio.js';
 import { MUSIC } from '../data/music.js';
@@ -290,6 +291,7 @@ function hitMonsterNow(pr, m){
     addFloat('Reflected!', m.x, y - m.r - 24, '#e8f4ff', 16, 0.9); ring(m.x, y, 34, 'rgba(232,244,255,.9)'); SFX.monsterAct('mirror', 'reflect');
     return;
   }
+  if (__MAGNET__ && pr.type === MAGNET) magnetPull(m, pr.lv);   // Magnet: nearby monsters slide onto this tile, even off walls (Release 6)
   m.lastHit = pr.type; m.lastHitLv = pr.lv; m.lastHitAlt = pr.vis === PAINT && pr.type !== PAINT ? PAINT : -1;
   const hitPower = pumpkinPower(pr);
   if (__RELEASE__ >= 4 && HUSK_STRIP[m.type]) stripHusk(m);   // a Corn Husker's first hit only takes the husk off (Release 4)

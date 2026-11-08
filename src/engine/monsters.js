@@ -4,6 +4,7 @@ import { resolveMatches } from './board.js';
 import { TYPES, MODS, VARIANTS, BURNS_TO, ICE_ONLY, BURNING_FROM, HUSK_STRIP } from '../data/monsters.js';
 import { BURN_EVERY, RAINBOW, GLUE_SLOW } from '../data/pumpkins.js';
 import { glueStep } from './glue.js';
+import { magnetSlide } from './magnet.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
 import { updateHollowMonster, reapLanes, initHollowMonster, initLamplighter, updateLamplighter, initFallenPolt, updateFallenPolt } from './hollow.js';
 import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike, initFallenGK, updateFallenGK } from './nightmare.js';
@@ -17,7 +18,7 @@ import * as E from '../data/endless.js';
 
 // ---------- Monsters ----------
 
-export function mY(m){ return FIELD_TOP + clamp(m.p, -0.1, 1.05) * (FIELD_BOT - FIELD_TOP); }
+export function mY(m){ return FIELD_TOP + (clamp(m.p, -0.1, 1.05) + (__MAGNET__ && m.slideDp ? m.slideDp : 0)) * (FIELD_BOT - FIELD_TOP); }   // slideDp: a Magnet pull still sliding in (engine/magnet.js)
 
 export function mS(m){ return 0.85 + 0.2 * clamp(m.p, 0, 1); }
 
@@ -199,6 +200,7 @@ export function updateMonster(m, dt){
     if (m.rise <= 0){ m.rise = 0; m.hp = (m.type === 'mummy' || ICE_ONLY.has(m.type)) ? 1 : m.maxHp; m.flash = 0.2; addFloat('Rises again', m.x, mY(m) - m.r - 30, '#d8cfb0', 16, 0.9); if (m.type === 'boss') SFX.bossSfx(m.kind, 'revive'); else SFX.monsterAct('mummy', 'rise'); }   // mummies come back with 1 HP (owner)
     return;
   }
+  if (__MAGNET__ && magnetSlide(m, dt)) return;   // pulled by a Magnet hit: sliding onto its tile (engine/magnet.js)
   let sp = m.sp;
   if (m.frozenT > 0){ m.frozenT -= dt; sp = 0; }
   else if (m.slowT > 0){ m.slowT -= dt; sp *= 0.5; }

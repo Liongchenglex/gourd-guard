@@ -21,6 +21,8 @@ The owner builds many ideas ahead of the stores and wants to see all of them on 
 | 3 | Hallow's End 6-17 to 6-20 (the Hollow King) **and** the Beige pumpkin | Built on `dev` (2026-11-02; spec `docs/superpowers/specs/2026-11-02-release-3-design.md`), awaiting the owner's play; not shipped. (The owner merged the old R3 and R4 on 2026-11-02.) |
 | 4 | Nightmare Pumpkin Patch: Nightmare 1-1 to 1-16 (fire tiles, the Cinder Rooster, Hayrick, Corn Husker, Grave Riser, Casket Jack and Crow, the Strawlord mini boss, the Grave Gourd, and the Fallen Gravekeeper on N1-16) | Built on `dev` (2026-11-04; numbers untuned (first draft), see `GAME_DESIGN.md` §11; spec `docs/superpowers/specs/2026-11-04-release-4-nightmare-patch-design.md`), awaiting the owner's play; not shipped. Check with `tools/nm_check.py --expect on\|r4\|r3\|r2\|off` |
 | 5 | Nightmare Foggy Hollow: Nightmare 2-1 to 2-16 (poison fog, rotten pumpkins, the Lamplighter mini boss, the Protector Gourd, the Fallen Poltergeist) | Built on `dev` (2026-11-06), a **beta**: first-guess numbers, no bot balance runs, awaiting the owner's play; not shipped (spec `docs/superpowers/specs/2026-11-05-release-5-nightmare-hollow-design.md`; levels in `nightmare2.js`, rules in `GAME_DESIGN.md` §9 "Nightmare Foggy Hollow"). Check with `tools/nm2_check.py --expect on\|r4\|r3\|r2\|off` (and `tools/nm_check.py --expect on\|r4`) |
+| 6 | A standalone new pumpkin | Being built in a separate session (owner, 2026-11-08); that session fills in this row |
+| 7 | Nightmare Witchwood: Nightmare 3-1 to 3-16 (owner, 2026-11-08) | Planned; built on branch `r7` in its own worktree (`../gourd-guard-r7`), spec to come. Backdrop already designed: `docs/archive/nightmare-worlds/` (grey, dead trees) |
 | … | further nightmare worlds, one per release | Owner to order |
 
 The owner may reorder or regroup releases at any time. When they do, update this table and the tags in the code together.
@@ -31,6 +33,7 @@ The owner may reorder or regroup releases at any time. When they do, update this
 - **`r1-ground-rules`:** the frozen Release 1 branch. The current store builds come from here. Store-only fixes (crashes, typos) for Release 1 go here first, then `git merge r1-ground-rules` into `dev`.
 - **Shipping release N:** cut `release/N` from `dev` and set `STORE_RELEASE = N` there (and on `dev`). Build the iPhone and Android apps from `release/N`. From then on, store fixes for N go on `release/N` and are merged into `dev`.
 - **Never merge `dev` into a release branch.** Never build a store app from `dev`.
+- **Parallel sessions (owner, 2026-11-08):** when several Claude sessions build different releases at once, each one works in its own git worktree on its own branch made from `dev` (for example `r7` in `../gourd-guard-r7`), never in another session's folder. Merge into `dev` one at a time, in release order; before merging, merge the latest `dev` into the branch, settle the shared tables (`WORLDS` / `NIGHTMARE_LEVELS`, monster and pumpkin tables, bestiary, lore, this release table) and re-run the checks. Each worktree builds into its own `dist/` and serves on its own port (not two on 4173). Publish the playtest link only from `dev` after merging, so no release drops off it.
 
 ## How tagging works
 

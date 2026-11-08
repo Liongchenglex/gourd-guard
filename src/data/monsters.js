@@ -137,6 +137,12 @@ export const TYPES = {
     // hurt it until `reaperHits` of them have. No boss items or costume (noItems).
     fallenpoltergeist: { boss:true, hp:45, r:34, sp:0.03, coins:50, eat:0, pts:400, drop:6, hold:0.25, vanishEvery:6, swapEvery:8, swapN:3, zoneEvery:12, zoneFor:8,
       shuffleAt:[0.66, 0.33], reaperAt:[0.5, 0.2], reaperHits:3, noItems:true } } : {}),
+  // Release 7, Nightmare Witchwood (spec Part 3; engine/witchwood.js). The Flask Bearer, a quick little imp, leaves one potion of a random kind on its tile when it
+  // dies (the nearest free tile when that one holds a potion). The Cauldron Toad walks to `tongueHold` of the field and stops there: from then on it lashes its own
+  // fence with its tongue at `eat` a second (its chew from range; a speed potion makes it 1.5x). It drinks potions like any monster; when it dies it bursts and every
+  // potion it drank lands back on the field, one per tile, on the free tiles nearest where it died (ring by ring outwards).
+  ...(__RELEASE__ >= 7 ? { flaskbearer: { hp:2, sp:0.055, r:18, coins:8, eat:0.5, pts:24, drop:2 },
+    toad: { hp:5, sp:0.03, r:24, coins:10, eat:0.5, pts:30, drop:2, tongueHold:0.67 } } : {}),
 };
 
 /** Modifiers (docs/WORLDS.md §6): data-only stat tweaks any monster can carry. */
@@ -181,7 +187,7 @@ export const BURNING_FROM = Object.fromEntries(Object.entries(BURNS_TO).map(([a,
 export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch', ...(__RELEASE__ >= 3 ? { hollowking:'The Hollow King' } : {}), ...(__RELEASE__ >= 4 ? { strawlord:'The Strawlord', fallengravekeeper:'The Fallen Gravekeeper' } : {}), ...(__RELEASE__ >= 5 ? { lamplighter:'The Lamplighter', fallenpoltergeist:'The Fallen Poltergeist' } : {}) };
 export const BOSS_NAME = BOSS_NAMES.gravekeeper;   // legacy alias used by endless mode
 
-export const MNAME = { sack:'Loot Sack', jukebox:'Jukebox', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss', ...(__RELEASE__ >= 4 ? { rooster:'Cinder Rooster', hayrick:'Hayrick', hayrickBurning:'Burning Hayrick', husker:'Corn Husker', huskerBare:'Bare Cob', huskerBurning:'Burning Husker', huskerCharred:'Charred Cob', crow:'Crow', graveriser:'Grave Riser', casketjack:'Casket Jack', coffin:'Fallen Casket' } : {}), ...(__RELEASE__ >= 5 ? { rotdoctor:'Plague Doctor 2', reaper:'Reaper', fogwalker2:'Fogwalker 2', comet:'Wisp Rider 2', minipolt:'Poltergeist 2' } : {}) };
+export const MNAME = { sack:'Loot Sack', jukebox:'Jukebox', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss', ...(__RELEASE__ >= 4 ? { rooster:'Cinder Rooster', hayrick:'Hayrick', hayrickBurning:'Burning Hayrick', husker:'Corn Husker', huskerBare:'Bare Cob', huskerBurning:'Burning Husker', huskerCharred:'Charred Cob', crow:'Crow', graveriser:'Grave Riser', casketjack:'Casket Jack', coffin:'Fallen Casket' } : {}), ...(__RELEASE__ >= 5 ? { rotdoctor:'Plague Doctor 2', reaper:'Reaper', fogwalker2:'Fogwalker 2', comet:'Wisp Rider 2', minipolt:'Poltergeist 2' } : {}), ...(__RELEASE__ >= 7 ? { flaskbearer:'Flask Bearer', toad:'Cauldron Toad' } : {}) };
 
 export const BOSS_INTRO = {
   ...(__RELEASE__ >= 5 ? { lamplighter: { 1:'A hooded figure with a ghost lantern, drifting at the back of the field. It switches moods: while its lantern burns amber only normal pumpkins hurt it, while it burns sickly green only rotten ones do. It drifts between lanes and calls poison fog onto your patch. Monsters keep coming until it falls.',
@@ -248,4 +254,6 @@ export const MINTRO = {
     fogwalker2:'New foe: Fogwalker 2. It drags a fog bank over two rows, hiding everything in them, and it arrives with a Mossback on each side. It takes 3 hits. A Lantern shows it.',
     comet:'New foe: Wisp Rider 2. It cruises for a moment, then streaks straight down its lane and never stops until it chews your fence. The first hit breaks the wisp into a plain Wisp and an Imp on foot.',
     minipolt:'New foe: Poltergeist 2. It drifts between columns and vanishes for a moment, and every few seconds it turns one or two of your pumpkins rotten. Pumpkins in a Protector square are safe.' } : {}),
+  ...(__RELEASE__ >= 7 ? { flaskbearer:'New foe: flask bearers. Quick little imps with bottles on their belts. Where one falls it leaves a potion behind: kill it before it reaches the monsters behind it, or near nobody.',
+    toad:'New foe: cauldron toads. A toad stops a third of the field short of your fence and lashes it with its long tongue from there. It drinks potions like any monster, and when it dies it bursts: every potion it drank lands back on the field around it.' } : {}),
 };

@@ -7,6 +7,7 @@ import { POTION_SPEED } from '../data/rules.js';
 import { glueStep } from './glue.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
 import { updateHollowMonster, reapLanes, initHollowMonster, initLamplighter, updateLamplighter, initFallenPolt, updateFallenPolt } from './hollow.js';
+import { initWitchwoodMonster, updateWitchwoodMonster, toadStop, tongueFree } from './witchwood.js';
 import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike, initFallenGK, updateFallenGK } from './nightmare.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
@@ -111,6 +112,7 @@ export function spawnMonster(key, lane, minion, p, formArg){
     for (const [l, dp] of spots.slice(0, T.bats)) spawnMonster('bat', Math.max(0, Math.min(COLS - 1, l)), true, Math.max(-0.02, m.p + dp));
   }
   if (__RELEASE__ >= 5) initHollowMonster(m);   // Fogwalker 2's Mossbacks, the comet's cruise, the Mini Poltergeist's timers (engine/hollow.js)
+  if (__RELEASE__ >= 7) initWitchwoodMonster(m);   // Nightmare Witchwood's monsters (engine/witchwood.js)
   if (__RELEASE__ >= 3 && type === 'boss' && kind === 'hollowking') initHollowKing(m);
   if (__RELEASE__ >= 4 && type === 'boss' && kind === 'strawlord') initStrawlord(m);
   if (__RELEASE__ >= 4 && type === 'boss' && kind === 'fallengravekeeper') initFallenGK(m);
@@ -225,6 +227,12 @@ export function updateMonster(m, dt){
     m.shield = false;   // a shield knight lowers its shield to chew
     m.reflecting = false;   // a mirror sprite drops its mirror to chew
     const mul = (m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1) * (__RELEASE__ >= 7 && m.drank && m.drank.speed ? POTION_SPEED : 1);   // a speed potion: it chews (and walks through a gap) faster (Release 7, engine/potion.js)
+    if (__RELEASE__ >= 7 && m.tongue){   // the Cauldron Toad lashes its fence from its hold with the same chew (engine/witchwood.js); its fence down, it walks on
+      if (tongueFree(m)) return;
+      damageWall(m.lane, m.eat * mul * dt);
+      if (mul > 0){ SFX.chew(m.type); if (Math.random() < dt * 4) chunk(m.tx + rnd(-10, 10), FENCE_Y - 18, '#8a6440', 90); }
+      return;
+    }
     if (walls[m.lane].hp <= 0){   // the wall is down: it walks through the gap; the night is lost when it is in
       m.breach = (m.breach || 0) + dt * mul;
       m.p = Math.min(1.05, 1 + m.breach * 0.04); SFX.alarm();
@@ -232,7 +240,7 @@ export function updateMonster(m, dt){
       return;
     }
     m.breach = 0;
-    const eaters = G.monsters.filter(o => !o.dead && o.eating && o.lane === m.lane), k = eaters.indexOf(m);
+    const eaters = G.monsters.filter(o => !o.dead && o.eating && o.lane === m.lane && !(__RELEASE__ >= 7 && o.tongue)), k = eaters.indexOf(m);   // a lashing toad keeps its own spot (Release 7)
     m.x = m.tx + (k - (eaters.length - 1) / 2) * 15;   // chewers share the wall side by side
     for (const c of (__RELEASE__ >= 5 && m.type === 'reaper' ? reapLanes(m) : lanesOf(m))) damageWall(c, m.eat * mul * dt);   // the Reaper's scythe swing is its chew: its fence and both beside it, continuously (engine/hollow.js)
     if (mul > 0){ SFX.chew(m.type); if (Math.random() < dt * 5) chunk(m.x + rnd(-10, 10), FENCE_Y - 18, '#8a6440', 90); }
@@ -408,12 +416,13 @@ export function updateMonster(m, dt){
         }
         break;
       }
-      default: if (!(__RELEASE__ >= 4 && updateNightmareMonster(m, dt)) && !(__RELEASE__ >= 5 && updateHollowMonster(m, dt))) m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
+      default: if (!(__RELEASE__ >= 4 && updateNightmareMonster(m, dt)) && !(__RELEASE__ >= 5 && updateHollowMonster(m, dt)) && !(__RELEASE__ >= 7 && updateWitchwoodMonster(m, dt))) m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
     }
   }
   if (__RELEASE__ >= 4 && m.rush > 0) sp *= TYPES.rooster.rushMul;
   if (__RELEASE__ >= 7 && m.drank && m.drank.speed) sp *= POTION_SPEED;   // a speed potion (Release 7, engine/potion.js)
   let np = Math.min(m.p + sp * dt, aheadLimit(m));
+  if (__RELEASE__ >= 7 && m.type === 'toad') np = Math.min(np, toadStop(m));   // the Cauldron Toad stops at its tongue hold while its fence stands (engine/witchwood.js)
   if (m.chewing && !m.chewing.dead) np = Math.min(np, m.chewing.p);   // held at a scarecrow
   if (np > m.p) m.p = np;
   if (__RELEASE__ >= 4 && m.p >= 1 && m.type === 'crow' && crowStrike(m)) return;   // over the fence and into the patch (engine/nightmare.js)

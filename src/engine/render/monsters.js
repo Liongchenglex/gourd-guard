@@ -4,6 +4,7 @@ import { mS, mY } from '../monsters.js';
 import { K, ctx } from './canvas.js';
 import { pipSprite } from './fx.js';
 import { drawPotionIcons } from './potion.js';
+import { drawTongue } from './witchwood.js';
 import { POTION_BULKY_SCALE } from '../../data/rules.js';
 import { FIELD_TOP } from '../state.js';
 import { TYPES, VARIANTS } from '../../data/monsters.js';
@@ -30,6 +31,7 @@ export function drawMonster(m, t){
     if (m.type === 'boss' && !m.demo && m.age < 0.5) cx.globalAlpha = 1;   // the teleport-in clip fades itself
     const tint = m.flash > 0 ? ['#ffffff', 0.85] : blue ? ['#7fd0ff', 0.5] : m.tint && !hasCostume(key, vkeyOf(m, key)) ? [m.tint, 0.45] : null;
     drawChar(cx, m, key, tint);
+    if (__RELEASE__ >= 7 && m.tongue && m.eating && m.frozenT <= 0 && !m.demo) drawTongue(cx, m, s, y);   // the Cauldron Toad's tongue down the lane to its fence (render/witchwood.js)
   } else {
   cx.fillStyle = 'rgba(0,0,0,.35)';
   if (m.type === 'bat') ell(cx, 0, m.r + 18, m.r * 0.6, 4);

@@ -323,6 +323,135 @@ CHECKS.update({'check_potion_place': check_potion_place, 'check_potion_clock': c
                'check_potion_bulwark': check_potion_bulwark, 'check_potion_continue': check_potion_continue, 'check_potion_budget': check_potion_budget})
 
 
+
+# ---------- Task 7: the Flask Bearer and the Cauldron Toad ----------
+def tile_of(page, p):
+    """The tile row that holds field position p, and the field's row count (engine/potion.js rowOf / rows)."""
+    return page.evaluate("(p) => { const tp = window.__gg.TILE_P(), n = Math.max(1, Math.floor(1 / tp)); return [Math.min(n - 1, Math.max(0, Math.floor(p / tp))), n]; }", p)
+
+
+def potions_rc(page):
+    """Every potion as [lane, row, kind]."""
+    return page.evaluate("() => { const tp = window.__gg.TILE_P(); return window.__gg.G.potions.map(o => [o.lane, Math.floor(o.p / tp), o.kind]); }")
+
+
+KILL = "(i) => { const g = window.__gg, m = window.__ms[i]; m.lastHit = m.colourLock != null ? m.colourLock : -1; g.damage(m, 999); return [m.dead, m.hp]; }"   # a hit any colour hex lets through
+NEW = "([k, l, p]) => { const g = window.__gg, m = g.spawnMonster(k, l, false, p); m.sp = 0; window.__ms = window.__ms || []; window.__ms.push(m); return window.__ms.length - 1; }"
+
+
+def check_flaskbearer(browser, url):
+    if not R7: return
+    page, errors = potion_page(browser, url)
+    t = page.evaluate("() => { const T = window.__gg.TYPES.flaskbearer; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop]; }")
+    ok(t == [2, 0.055, 18, 8, 0.5, 24, 2], f'flaskbearer: hp 2, sp 0.055, r 18, coins 8, eat 0.5, pts 24, drop 2 {t}')
+    ok(page.evaluate("() => window.__gg.MNAME.flaskbearer") == 'Flask Bearer', 'its name is the Flask Bearer')
+    row, _ = tile_of(page, 0.5)
+    i = page.evaluate(NEW, ['flaskbearer', 3, 0.5])
+    d = page.evaluate(KILL, i)
+    ps = potions_rc(page)
+    ok(d[0] is True, f'a Flask Bearer dies {d}')
+    ok(len(ps) == 1 and ps[0][:2] == [3, row] and ps[0][2] in ('bulky', 'speed', 'colour'), f'one potion of a random kind on its tile (lane 3, row {row}) {ps}')
+    # its tile is taken: the potion goes to the nearest free tile
+    j = page.evaluate(NEW, ['flaskbearer', 3, 0.5])
+    page.evaluate(KILL, j)
+    ps = potions_rc(page)
+    ok(len(ps) == 2 and max(abs(ps[1][0] - 3), abs(ps[1][1] - row)) == 1, f'its tile taken: the second goes on a tile next to it {ps}')
+    # kinds are random: 30 deaths in a clear field show every kind
+    kinds = page.evaluate("""() => { const g = window.__gg, G = g.G, seen = new Set(); for (let n = 0; n < 30; n++){ G.potions.length = 0;
+      const m = g.spawnMonster('flaskbearer', 2, false, 0.4); m.sp = 0; g.damage(m, 999); for (const o of G.potions) seen.add(o.kind); } return [...seen].sort(); }""")
+    ok(kinds == ['bulky', 'colour', 'speed'], f'its potion is a random kind: all three seen in 30 deaths {kinds}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_toad_tongue(browser, url):
+    if not R7: return
+    page, errors = potion_page(browser, url)
+    t = page.evaluate("() => { const T = window.__gg.TYPES.toad; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop, T.tongueHold]; }")
+    ok(t == [5, 0.03, 24, 10, 0.5, 30, 2, 0.67], f'toad: hp 5, sp 0.03, r 24, coins 10, eat 0.5, pts 30, drop 2, tongueHold 0.67 {t}')
+    ok(page.evaluate("() => window.__gg.MNAME.toad") == 'Cauldron Toad', 'its name is the Cauldron Toad')
+    page.evaluate("() => { for (const w of window.__gg.walls){ w.hp = w.max = 99; } }")
+    i = page.evaluate(NEW, ['toad', 2, 0.55]); page.evaluate("(i) => { window.__ms[i].sp = 0.06; }", i)
+    tt = gwait(page, "() => window.__ms[0].eating", 5)
+    p = page.evaluate("() => window.__ms[0].p")
+    ok(tt is not None and abs(p - 0.67) < 1e-6, f'it walks to 0.67 of the field and stops there, lashing ({tt}, p {p})')
+    page.evaluate("() => { window.__gg.walls[2].hp = 99; window.__pmax = 0; window.__t0 = window.__gg.G.t; }")
+    t0 = page.evaluate("() => window.__gg.G.t")
+    pmax = 0
+    while page.evaluate("() => window.__gg.G.t") - t0 < 4:
+        pmax = max(pmax, page.evaluate("() => window.__ms[0].p")); time.sleep(0.05)
+    lost = page.evaluate("([t0]) => [99 - window.__gg.walls[2].hp, window.__gg.G.t - t0]", [t0])
+    rate = lost[0] / lost[1]
+    ok(abs(rate - 0.5) < 0.05, f'its own fence loses about 2 in 4 s ({lost[0]:.2f} in {lost[1]:.2f} s, {rate:.3f}/s)')
+    ok(pmax <= 0.67 + 1e-6, f'it never moves closer (max p {pmax:.4f})')
+    ok(page.evaluate("() => window.__gg.walls.every((w, c) => c === 2 || w.hp === 99)"), 'no other fence is touched')
+    # speed: 1.5x the tongue
+    page.evaluate("() => { const g = window.__gg; g.drink(window.__ms[0], 'speed', true); g.walls[2].hp = 99; }")
+    t0 = page.evaluate("() => window.__gg.G.t"); gsleep(page, 3)
+    lost = page.evaluate("([t0]) => [99 - window.__gg.walls[2].hp, window.__gg.G.t - t0]", [t0])
+    ok(abs(lost[0] / lost[1] - 0.75) < 0.06, f'with a speed potion 1.5x: {lost[0] / lost[1]:.3f}/s')
+    # frozen: no lash
+    page.evaluate("() => { window.__ms[0].frozenT = 2; window.__gg.walls[2].hp = 99; }"); gsleep(page, 1)
+    ok(page.evaluate("() => window.__gg.walls[2].hp") == 99, 'frozen, it does not lash')
+    page.evaluate("() => { window.__ms[0].frozenT = 0; }")
+    # knocked back: it walks back to 0.67 and lashes again
+    page.evaluate("() => { const m = window.__ms[0]; m.eating = false; m.p = 0.6; }")
+    tt = gwait(page, "() => window.__ms[0].eating", 4)
+    ok(tt is not None and abs(page.evaluate("() => window.__ms[0].p") - 0.67) < 1e-6, f'pushed back it returns to 0.67 and lashes again ({tt})')
+    # its fence down: nothing to lash, it walks on to the gap
+    page.evaluate("() => { window.__gg.walls[2].hp = 0; }")
+    tt = gwait(page, "() => window.__ms[0].p > 0.75", 6)
+    ok(tt is not None, f'with its fence down it walks on toward the gap ({tt})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_toad_burst(browser, url):
+    if not R7: return
+    page, errors = potion_page(browser, url)
+    row, _ = tile_of(page, 0.5)
+    i = page.evaluate(NEW, ['toad', 3, 0.5])
+    page.evaluate("(i) => { const g = window.__gg, m = window.__ms[i]; g.drink(m, 'bulky', true); g.drink(m, 'speed', true); }", i)
+    page.evaluate(KILL, i)
+    ps = potions_rc(page)
+    ok(len(ps) == 2 and sorted(k for *_, k in ps) == ['bulky', 'speed'], f'drank bulky + speed: two potions, of those kinds {ps}')
+    ok(all(max(abs(l - 3), abs(r - row)) <= 1 for l, r, _ in ps) and len({(l, r) for l, r, _ in ps}) == 2, f'on two tiles around its death tile (lane 3, row {row}) {ps}')
+    page.evaluate("() => { window.__gg.G.potions.length = 0; }")
+    j = page.evaluate(NEW, ['toad', 4, 0.4])
+    page.evaluate(KILL, j)
+    ok(potions_rc(page) == [], 'drank none: no potions')
+    k = page.evaluate(NEW, ['toad', 1, 0.3])
+    page.evaluate("(i) => { const g = window.__gg, m = window.__ms[i]; for (const q of g.POTION_KINDS) if (g.canDrink(m, q)) g.drink(m, q, true); }", k)
+    page.evaluate(KILL, k)
+    ps = potions_rc(page)
+    ok(sorted(x[2] for x in ps) == ['bulky', 'colour', 'speed'], f'drank all three: three potions, one of each {ps}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_toad_burst_full(browser, url):
+    if not R7: return
+    page, errors = potion_page(browser, url)
+    for lane, p in ((3, 0.5), (0, 0.02)):
+        page.evaluate("() => { window.__gg.G.potions.length = 0; }")
+        row, nrows = tile_of(page, p)
+        i = page.evaluate(NEW, ['toad', lane, p])
+        # in one go (no frame between, so it drinks nothing on the field): it holds all three, every tile around is full, it dies
+        nb = page.evaluate("""([i, L, R]) => { const g = window.__gg, tp = g.TILE_P(), m = window.__ms[i]; g.drink(m, 'bulky', true); g.drink(m, 'speed', true); g.drink(m, 'colour', true);
+          for (let l = L - 1; l <= L + 1; l++) for (let r = R - 1; r <= R + 1; r++) g.placePotion(l, (r + 0.5) * tp, 'colour', true);
+          const n = g.G.potions.length; m.lastHit = m.colourLock != null ? m.colourLock : -1; g.damage(m, 999); return n; }""", [i, lane, row])
+        ps = potions_rc(page)
+        new = ps[nb:]
+        ok(len(new) == 3 and sorted(k for *_, k in new) == ['bulky', 'colour', 'speed'], f'(lane {lane}, row {row}) every tile around full: still its three potions {new}')
+        ok(all(max(abs(l - lane), abs(r - row)) == 2 for l, r, _ in new), f'one ring further out (two tiles away) {new}')
+        ok(len({(l, r) for l, r, _ in ps}) == len(ps), 'one potion per tile')
+        ok(all(0 <= l < 7 and 0 <= r < nrows for l, r, _ in new), f'all on the field (lanes 0-6, rows 0-{nrows - 1}) {new}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_flaskbearer': check_flaskbearer, 'check_toad_tongue': check_toad_tongue, 'check_toad_burst': check_toad_burst, 'check_toad_burst_full': check_toad_burst_full})
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

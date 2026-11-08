@@ -19,6 +19,7 @@ import { dropJukebox, jukeboxPoints } from './spawner.js';
 import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
 import { reaperFalls, cometBreaks, fpAfterHit, fpReaperHit } from './hollow.js';
+import { witchwoodFalls } from './witchwood.js';
 import { isProtected } from './gourd.js';
 import { ROTTEN, ROT_FX, hitRule } from './rot.js';
 
@@ -197,16 +198,18 @@ export function kill(m){
   m.dead = true;
   if (__RELEASE__ >= 4 && m.type === 'rooster') lightFire(m.lane, m.p);   // a Cinder Rooster leaves a fire tile where it falls, whatever killed it
   if (__RELEASE__ >= 5 && m.type === 'reaper') reaperFalls(m);   // a crow bursts out where the Reaper fell (engine/hollow.js)
+  if (__RELEASE__ >= 7) witchwoodFalls(m);   // the Flask Bearer's potion, the Cauldron Toad's burst (engine/witchwood.js)
   if (__RELEASE__ >= 4 && m.type === 'casketjack') dropCoffin(m);   // Casket Jack falls into a field coffin with one last mummy in it (engine/nightmare.js)
   if (hitBy){ const b = hitBy.grp; if (b){ b.kills++; if (b.kills > G.q.best) G.q.best = b.kills; } if (hitBy.type === BROWN && hitBy.size === 2) G.q.brown++; }   // quests: kills in one launch, big Brown kills
   G.kills++; if (!m.minion) G.resolved++;
   G.score += m.pts;
   const reward = m.type === 'sack' ? 'sack' : m.type === 'boss' ? 'boss' : (__RELEASE__ >= 4 && TYPES[m.type] && TYPES[m.type].noReward) ? 'none' : m.lastHit === YELLOW ? 'gold' : rollReward();   // none: Casket Jack's field coffin
   const y = mY(m), s = mS(m);
-  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', chameleon:'#6ab04a', rchameleon:'#3a3a4a', mirror:'#c8d8f0', firemummy:'#ff8a3a', fogwalker:'#b8c8d8', witch:'#6a3a8a', bulwark:'#8090a8', turtle:'#4a7a5a', sack:'#b08850', jukebox:'#c0392b', boss:'#6a3a7a' }[m.type] || '#aaa';
+  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', chameleon:'#6ab04a', rchameleon:'#3a3a4a', mirror:'#c8d8f0', firemummy:'#ff8a3a', fogwalker:'#b8c8d8', witch:'#6a3a8a', bulwark:'#8090a8', turtle:'#4a7a5a', sack:'#b08850', jukebox:'#c0392b', boss:'#6a3a7a', ...(__RELEASE__ >= 7 ? { flaskbearer:'#8a8a92', toad:'#3a3a42' } : {}) }[m.type] || '#aaa';
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
   ring(m.x, y, m.r * s * 2.2, 'rgba(255,220,150,.8)');
-  if (__RELEASE__ >= 4 && G.vfx && m.type === 'graveriser') G.vfx.push({ kind:'clip', key:'graveriser', clip:'die', x:m.x, y, s, t:0, dur:0.7 });   // it sinks back into the earth, its hat left on the hole (render/chars/graveriser.js)
+  if (__RELEASE__ >= 7 && G.vfx && (m.type === 'flaskbearer' || m.type === 'toad')) G.vfx.push({ kind:'clip', key:m.type, clip:'die', x:m.x, y, s, t:0, dur:m.type === 'toad' ? 0.6 : 0.55 });   // the bottles shatter and it topples / the toad swells and bursts (render/chars/witchwood.js)
+  else if (__RELEASE__ >= 4 && G.vfx && m.type === 'graveriser') G.vfx.push({ kind:'clip', key:'graveriser', clip:'die', x:m.x, y, s, t:0, dur:0.7 });   // it sinks back into the earth, its hat left on the hole (render/chars/graveriser.js)
   else if (G.vfx) G.vfx.push({ kind:'pop', m:{ type:m.type, kind:m.kind, look:m.look, ph:m.ph, eating:m.eating, hop:m.hop, tint:m.tint, age:5, rise:0, flash:0, slowT:0, frozenT:0, r:m.r }, x:m.x, y, s, t:0, dur:0.35 });   // the last frame squashes and fades (baked characters only)
   if (reward === 'boss' || reward === 'coins' || reward === 'gold'){
     const mult = reward === 'gold' ? COIN_MULT[(m.lastHitLv || 1) - 1] : 1;

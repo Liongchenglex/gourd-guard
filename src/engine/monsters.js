@@ -7,7 +7,7 @@ import { POTION_SPEED } from '../data/rules.js';
 import { glueStep } from './glue.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
 import { updateHollowMonster, reapLanes, initHollowMonster, initLamplighter, updateLamplighter, initFallenPolt, updateFallenPolt } from './hollow.js';
-import { initKeepMonster, updateKeepMonster, keepStop, keepParked, keepSpeed, lancerHit, keepTick } from './keep.js';
+import { newCastle, initKeepMonster, updateKeepMonster, keepStop, keepParked, keepSpeed, lancerHit, keepTick } from './keep.js';
 import { initWitchwoodMonster, updateWitchwoodMonster, toadStop, tongueFree } from './witchwood.js';
 import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike, initFallenGK, updateFallenGK } from './nightmare.js';
 import { SFX } from './audio.js';
@@ -523,7 +523,7 @@ function updateVampireCount(m, dt){
       const used = new Set(G.castles.filter(w => !w.dead).map(w => w.lane));
       const free = [...Array(COLS).keys()].filter(l => !used.has(l));
       if (free.length){ const lane = free[Math.floor(Math.random() * free.length)]; const whp = G.mode === 'story' && G.def.castles ? G.def.castles.hp : T.wallHp;
-      G.castles.push({ lane, p:rnd(0.45, 0.7), hp:whp, maxHp:whp, flash:0, dead:false }); ring(LANE(lane), FIELD_TOP + 0.55 * (FIELD_BOT - FIELD_TOP), 40, 'rgba(200,180,220,.9)'); addFloat('A wall rises', m.x, mY(m) - m.r - 30, '#d8cfe0', 16, 1); SFX.bossSfx('vampirecount', 'wall'); m.anim = { clip:'wall', t:0, dur:0.8 }; }
+      { const wp = rnd(0.45, 0.7); G.castles.push(__RELEASE__ >= 8 ? newCastle(lane, wp, 'wall', whp) : { lane, p:wp, hp:whp, maxHp:whp, flash:0, dead:false }); } ring(LANE(lane), FIELD_TOP + 0.55 * (FIELD_BOT - FIELD_TOP), 40, 'rgba(200,180,220,.9)'); addFloat('A wall rises', m.x, mY(m) - m.r - 30, '#d8cfe0', 16, 1); SFX.bossSfx('vampirecount', 'wall'); m.anim = { clip:'wall', t:0, dur:0.8 }; }
     }
   }
   m.healT -= dt;

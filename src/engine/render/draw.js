@@ -24,6 +24,8 @@ import { drawFires, drawFireFx } from './fire.js';
 import { drawPoison } from './poison.js';
 import { drawPin, drawFlyingFork } from './pin.js';
 import { drawNetOver, drawNetFlight } from './nets.js';
+import { pieceFrame, pieceClip } from './castlepieces.js';
+import { CRUMBLE_DUR, CRUMBLE_LINGER } from '../keep.js';
 import { NET_FLY } from '../../data/rules.js';
 import { drawGourdCell, drawGourdGlow } from './gourd.js';
 import { ROTTEN, ROT_FX } from '../rot.js';
@@ -79,6 +81,7 @@ export function render(){
   drawVfx();
   drawTails(t);
   drawCastles(t);
+  if (__RELEASE__ >= 8) drawCrumbles();   // fallen Gatehouses and Archer Towers settling (Release 8)
   drawScarecrows(t);
   drawArrows(t);
   if (bands.length) drawFog(t, bands, g.fogClear > 0);
@@ -314,6 +317,7 @@ export function drawCastles(t){
   for (const w of cs){
     if (w.dead) continue;
     const x = LANE(w.lane), y = castleY(w), hw = CS * 0.46;
+    if (__RELEASE__ >= 8 && w.kind && w.kind !== 'wall'){ drawPiece(w, x, y, t, hw); continue; }   // the Gatehouse and the Archer Tower (Release 8): baked frames
     const sp = castleSprite(K, w.hp / w.maxHp);   // baked hewn stone with crenellations and a portcullis, cracking as it takes damage (render/fx.js)
     ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h);
     const tx = x + sp.w / 2 - 9, ty = y - 27, ga = 0.3 + 0.1 * Math.sin(t * 13 + w.lane * 2) + 0.06 * Math.sin(t * 7.3 + w.lane);   // torch flicker
@@ -322,6 +326,27 @@ export function drawCastles(t){
     const bw = hw * 1.6, bx = x - bw / 2, by = y + 24;
     ctx.fillStyle = 'rgba(0,0,0,.6)'; rrect(ctx, bx - 1, by - 1, bw + 2, 7, 3); ctx.fill();
     ctx.fillStyle = '#d8d0c8'; rrect(ctx, bx, by, Math.max(0, bw * w.hp / w.maxHp), 5, 2.5); ctx.fill();
+  }
+}
+/** A Gatehouse or an Archer Tower (Release 8, render/castlepieces.js): one baked frame of its clip, a white flash over it when hit, the health bar. */
+function drawPiece(w, x, y, t, hw){
+  const f = w.hp / w.maxHp, dmg = f > 0.66 ? 0 : f > 0.33 ? 1 : 2, loop = w.kind === 'gate' ? 'closed' : 'idle';
+  const clip = w.anim ? w.anim.clip : loop, cl = pieceClip(w.kind, clip);
+  const i = w.anim ? Math.floor(w.anim.t * cl.fps) : Math.floor(t * cl.fps + w.lane) % cl.n;   // a clip plays once from its start; the rest loops
+  const sp = pieceFrame(w.kind, clip, i, dmg, K);
+  ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h);
+  if (w.flash > 0){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55; ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  const bw = hw * 1.6, bx = x - bw / 2, by = y + 24;
+  ctx.fillStyle = 'rgba(0,0,0,.6)'; rrect(ctx, bx - 1, by - 1, bw + 2, 7, 3); ctx.fill();
+  ctx.fillStyle = '#d8d0c8'; rrect(ctx, bx, by, Math.max(0, bw * w.hp / w.maxHp), 5, 2.5); ctx.fill();
+}
+/** The heaps of fallen pieces (Release 8): the baked crumble clip, the last frame fading out. */
+export function drawCrumbles(){
+  for (const c of G.crumbles || []){
+    const cl = pieceClip(c.kind, 'crumble'), x = LANE(c.lane), y = FIELD_TOP + c.p * (FIELD_BOT - FIELD_TOP), i = Math.min(cl.n - 1, Math.floor(c.t * cl.fps));
+    const sp = pieceFrame(c.kind, 'crumble', i, 0, K), over = c.t - CRUMBLE_DUR[c.kind];
+    ctx.globalAlpha = over > 0 ? Math.max(0, 1 - over / CRUMBLE_LINGER) : 1;
+    ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h); ctx.globalAlpha = 1;
   }
 }
 /** Bulwark Knight's aura: 3 lanes × 3 tile heights, steel blue. */

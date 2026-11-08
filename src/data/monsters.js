@@ -160,6 +160,9 @@ export const TYPES = {
     bride: { hp:6, sp:0.035, r:22, coins:10, eat:0.5, pts:30, drop:2, veilReach:1, veilAgain:3 } } : {}),
 };
 
+/** Release 8's castle pieces (spec Part 3; engine/keep.js): health as a multiple of the level's castle wall health, and the clocks. */
+export const PIECES = __RELEASE__ >= 8 ? { gateHp:2.5, towerHp:1.5, gateEvery:8, towerShot:5 } : null;
+
 /** Modifiers (docs/WORLDS.md §6): data-only stat tweaks any monster can carry. */
 export const MODS = {
   swift:    { name:'Swift',    desc:'40% faster',           speed:1.4 },

@@ -30,8 +30,9 @@ import { SPROUT_EVERY, FIREWORK_TARGETS, FIREWORK_DAMAGE, EMERGENCY_N, POTION_SP
 import { updatePotions, potionSnapshot, restorePotions } from './potion.js';
 import { prebakePotions } from './render/potion.js';
 import { prebakeWeather } from './render/weather.js';
+import { prebakeCastlePieces } from './render/castlepieces.js';
 import { updateNets, netSnapshot, restoreNets } from './nets.js';
-import { shieldSnapshot, restoreShields, carryCheck } from './keep.js';
+import { shieldSnapshot, restoreShields, carryCheck, newCastle, updateCastlePieces } from './keep.js';
 import { prebakeNets } from './render/nets.js';
 import { startCoach, coachHolds, coachUpdate } from './coach.js';
 import { lightFire, lightRandomFires, fireAhead, burnPumpkin, updateFires } from './fire.js';
@@ -64,7 +65,7 @@ export function makeDemo(){
 export function makePreview(n){
   const def = levelFor(n);
   setG({ q:newQuestCounters(), mode:'demo', preview:true, n, def, world:def.world, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], glue:[], gustT:0, gustDir:null, sproutT:0, aim:null, over:false, spawned:0, bossSpawned:false, hint:null, hintT:0 });
-  if (def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
+  if (def.castlesLayout) for (const [lane, p, kind] of def.castlesLayout) G.castles.push(castleEntry(lane, p, kind, def.castles ? def.castles.hp : 12));
   else if (def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def.puddles) placePuddles(def.puddles);
   if (__RELEASE__ >= 4){ G.fires = []; startFires(def); for (const f of G.fires) f.t = 1; }   // the night's fire tiles at start (random ones land elsewhere in play, as puddles do), fully grown: the preview never runs their clocks
@@ -152,20 +153,21 @@ export function startGame(mode, n, loadout, gourds){
     t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], glue:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
     loot:{ chests:0, seeds:0 }, chestDropped:false, continued:false, sackT:0, jukebox:null, jukeboxDone:false, jbNext:0,
-    ...(__RELEASE__ >= 8 ? { netsFlying:[] } : {}),   // nets in flight (engine/nets.js)
+    ...(__RELEASE__ >= 8 ? { netsFlying:[], crumbles:[] } : {}),   // nets in flight (engine/nets.js)
     ...(__RELEASE__ >= 7 ? { potions:[], bmNext:0, bmT:-99, potionT:def && def.potions ? def.potions.every : 0, drankCarry:null } : {}),   // potions on the field (engine/potion.js): the potions standing, the clock to the next ones, a continued night's drinkers still to come back
     ...(__RELEASE__ >= 5 ? { poison:{ t:def && def.poison ? def.poison.every : 0, warn:null, on:null } } : {}),   // poison fog (engine/poison.js): the clock to the next fog, the warning and the fog lying now
     ...(__RELEASE__ >= 4 ? { fires:[], fmNext:0, fmT:-99, fireBurst:0, fireBurstT:0, fireTrickleT:null, burstMinion:false, gourdDue:false, gourdDueOf:{}, gourdKinds:nightGourds(def, gourds), crowDives:[] } : {}),   // fire tiles and fire marks (src/engine/fire.js); the night's gourds (slot order) and which are due back: gourdDue the Grave Gourd's flag, gourdDueOf the other kinds' (src/engine/gourd.js)
   });
   if (mode === 'story' && takeSack()) G.sackT = SACK.spawnAt;
   if (def) prebake(bakeKeys(def));   // bake this level's sprite strips now, not on first sight
-  if (def && def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
+  if (def && def.castlesLayout) for (const [lane, p, kind] of def.castlesLayout) G.castles.push(castleEntry(lane, p, kind, def.castles ? def.castles.hp : 12));
   else if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def && def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def && def.puddles) placePuddles(def.puddles);
   if (__RELEASE__ >= 4 && def){ startFires(def); if (def.nightmare) prebakeFire(); }   // after the castles, so random fires skip them; the flame strip is baked now, not on first sight
   if (__RELEASE__ >= 5 && def && def.poison) prebakePoison();   // the fog and its warning strips, baked now
   if (__RELEASE__ >= 7 && def && def.nightmare) prebakePotions();   // the three bottles, their icons and the drink puffs (Release 7), baked now
   if (__RELEASE__ >= 8 && def && def.nightmare) prebakeNets();   // the rope net, the crimson one and the net in flight, baked now
+  if (__RELEASE__ >= 8 && def && def.castlesLayout) prebakeCastlePieces(def.castlesLayout);   // the Gatehouse's and the Archer Tower's frames, baked now (render/castlepieces.js)
   if (__RELEASE__ >= 8 && def) prebakeWeather();   // fresh weather timers every night; the Keep storm's rain and bolts baked now (Release 8, render/weather.js)
   if (__RELEASE__ >= 5 && def && def.nightmare) prebakeRot();   // the rotten pumpkin (Release 5), baked now, not on first sight
   if (G.world !== bgWorld) buildBg(G.world);
@@ -282,6 +284,8 @@ export function placeMine(lane, p = 0.93){   // owner: a mine goes on any tile o
   SFX.tool('mine'); G.aim = null; updateHud(true);
   return true;
 }
+/** A castle entry (Release 8 adds its kind, clock and clip: engine/keep.js newCastle; lower builds keep the plain wall). */
+function castleEntry(lane, p, kind, hp){ return __RELEASE__ >= 8 ? newCastle(lane, p, kind, hp) : { lane, p, hp, maxHp:hp, flash:0, dead:false }; }
 /** Castle walls at level start: n distinct random lanes, mid-field. */
 /** Puddles (world 4): n distinct random lanes, mid-field. Crawlers and divers use them. */
 export function placePuddles(n){
@@ -350,7 +354,7 @@ function startFires(def){
 }
 export function raiseCastles(n, hp){
   const lanes = shuffle([...Array(COLS).keys()]).slice(0, n);
-  for (const lane of lanes) G.castles.push({ lane, p:rnd(0.4, 0.72), hp, maxHp:hp, flash:0, dead:false });
+  for (const lane of lanes) G.castles.push(castleEntry(lane, rnd(0.4, 0.72), 'wall', hp));
 }
 /** Bomb: first press arms it (tap the field next), second press or a tap elsewhere cancels. */
 export function useBomb(){
@@ -421,7 +425,7 @@ export function update(dt){
           for (const o of g.monsters.slice()) if (!o.dead && !o.hidden && o.rise <= 0 && Math.abs(o.lane - w.lane) <= 1 && Math.abs(mY(o) - castleY(w)) < CS * 1.2){ o.lastHit = 7; damage(o, POWER[i] / 2, '#ff9a3a', true); }
           for (const w2 of g.castles) if (w2 !== w && !w2.dead && Math.abs(w2.lane - w.lane) === 1 && Math.abs(castleY(w2) - castleY(w)) < CS * 1.2) damageCastle(w2, POWER[i] / 2);
         }
-        if (pr.type !== 4){ pr.dead = true; pr.hit.add(w); }
+        if (pr.type !== 4 || (__RELEASE__ >= 8 && w.kind === 'tower')){ pr.dead = true; pr.hit.add(w); }   // Grey pierces a castle wall, but an Archer Tower stops every colour (Release 8)
       }
       if (pr.dead) continue;
       const targets = g.monsters.filter(m => !m.dead && !(m.rise > 0) && !m.hidden && !pr.hit.has(m) && Math.abs(pr.x - m.x) < m.hw).sort((a, b) => b.p - a.p);
@@ -472,6 +476,7 @@ export function update(dt){
     if (a.p >= 1){ a.dead = true; if (__RELEASE__ >= 4 && a.fork){ const w = walls[a.lane], amt = w ? Math.min(w.max * a.hit, w.hp - 1) : 0; if (amt > 0) damageWall(a.lane, amt); G.shake = Math.max(G.shake || 0, 0.5); } else damageWall(a.lane, a.dmg); for (let i = 0; i < 8; i++) spark(LANE(a.lane), FENCE_Y - 10, a.water ? '#9fe0f0' : '#d8d0c0', 120); SFX.monsterAct(a.water ? 'water' : 'arrow', 'land'); }   // a Hayrick's fork (Release 4): a third of the fence, never the last 1
   }
   g.arrows = g.arrows.filter(a => !a.dead);
+  if (__RELEASE__ >= 8) updateCastlePieces(dt);   // Gatehouse summons, Archer Tower arrows, crumbling heaps (engine/keep.js)
   for (const w of g.castles) if (w.flash > 0) w.flash -= dt;
   g.castles = g.castles.filter(w => !w.dead);
   if (g.def && g.def.gust){   // wind: 2 s of leaves, then the whole patch shifts one cell

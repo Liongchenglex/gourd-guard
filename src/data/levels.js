@@ -30,7 +30,8 @@
  * @property {number[]} [laneWeights]   relative spawn weight per lane (7 numbers); lanes at 0 never spawn
  * @property {number[]} [fogRows]       fogged field rows (tile rows, 0 = top); combined with `fog` bands
  * @property {number[]} [fogCols]       fogged lanes (whole column)
- * @property {Array<[number, number]>} [castlesLayout]  explicit castle walls [lane, p] (overrides `castles.n`; uses `castles.hp`)
+ * @property {Array<[number, number]>} [castlesLayout]  explicit castle walls [lane, p, kind?] (kind 'wall' | Release 8: 'gate' | 'tower'; overrides `castles.n`; uses `castles.hp`)
+ * @property {string[]} [gatePool]  Release 8: monster keys a Gatehouse (castlesLayout kind 'gate') summons from, one every few seconds
  * @property {number} [spawnGap]        overrides the spawn-gap multiplier from rules.js for this level
  * @property {number} [spawnBurst]      overrides the burst chance from rules.js for this level
  * @property {number} [bossHpMul]       boss levels: this level's boss health × this (the boss type's own health is unchanged elsewhere)
@@ -85,7 +86,7 @@ export function expandLevel(def, n){
     boss:def.boss ? def.boss : false, bossForm:def.bossForm || 1, pool:def.pool.map(([t, w]) => [t, w]),
     pattern:def.pattern, graves:def.graves, unlockPumpkins:def.unlockPumpkins || [], unlockGear:def.unlockGear || [],
     intro:def.intro || [], fog:def.fog || [], castles:def.castles || null, puddles:def.puddles || 0, sea:!!def.sea || !!def.shore || !!def.shoreFrac, gust:def.gust || null, gravesLayout:def.gravesLayout || null, laneWeights:def.laneWeights || null,
-    fogRows:def.fogRows || [], fogCols:def.fogCols || [], caps:def.caps || null, spawnGap:def.spawnGap == null ? null : def.spawnGap, spawnBurst:def.spawnBurst == null ? null : def.spawnBurst, bossGap:def.bossGap || null, bossHpMul:def.bossHpMul || null, unlockCopy:def.unlockCopy || null, castlesLayout:def.castlesLayout || null, shore:def.shore || 0, hexAll:def.hexAll || null, quests:def.quests || null, name:def.name || null, introPumpkins:def.introPumpkins || [], puddlesLayout:def.puddlesLayout || null, shoreFrac:def.shoreFrac || 0, boss2:def.boss2 || null, frenzy:!!def.frenzy, frenzyAfterBoss:!!def.frenzyAfterBoss, frenzyAt:def.frenzyAt || 0, frenzyHp:def.frenzyHp || 0, extraChestP:def.extraChestP || 0, bossChests:def.bossChests || 1, worldNo:def.world, levelNo:def.level,
+    fogRows:def.fogRows || [], fogCols:def.fogCols || [], caps:def.caps || null, spawnGap:def.spawnGap == null ? null : def.spawnGap, spawnBurst:def.spawnBurst == null ? null : def.spawnBurst, bossGap:def.bossGap || null, bossHpMul:def.bossHpMul || null, unlockCopy:def.unlockCopy || null, castlesLayout:def.castlesLayout || null, gatePool:def.gatePool || null, shore:def.shore || 0, hexAll:def.hexAll || null, quests:def.quests || null, name:def.name || null, introPumpkins:def.introPumpkins || [], puddlesLayout:def.puddlesLayout || null, shoreFrac:def.shoreFrac || 0, boss2:def.boss2 || null, frenzy:!!def.frenzy, frenzyAfterBoss:!!def.frenzyAfterBoss, frenzyAt:def.frenzyAt || 0, frenzyHp:def.frenzyHp || 0, extraChestP:def.extraChestP || 0, bossChests:def.bossChests || 1, worldNo:def.world, levelNo:def.level,
     ...(__RELEASE__ >= 4 ? { fireStart:def.fireStart || 0, fireLayout:def.fireLayout || null, fireMarks:def.fireMarks || null, bossChest:def.bossChest || null, gourd:!!def.gourd, unlockGourds:def.unlockGourds || [], coach:def.coach || null } : {}),
     ...(__RELEASE__ >= 5 ? { poison:def.poison || null, gourds:def.gourds || null } : {}),
     ...(__RELEASE__ >= 7 ? { potions:def.potions || null, brewMarks:def.brewMarks || null } : {}),

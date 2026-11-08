@@ -478,11 +478,16 @@ def check_lancer_edges(browser, url):
     page.evaluate(STEP, [11, 0.1]); p0 = page.evaluate("() => window.__L.p")
     page.evaluate("() => { window.__L.slowT = 5; }"); page.evaluate(STEP, [1, 0.1]); p1 = page.evaluate("() => window.__L.p")
     ok(abs((p1 - p0) - 0.006) < 1e-6, f'slowed, it charges at half the charge ({p1 - p0:.4f})')
-    # passes a castle wall (Gatehouses arrive in Task 6: a walker passes them too, re-test then)
+    # passes a castle wall
     page.evaluate("() => { window.__gg.G.castles.push({ lane:2, p:0.5, hp:12, maxHp:12, flash:0, dead:false }); }")
     spawn_at(page, 'lancer', 2, 0.1); page.evaluate("() => { window.__L = window.__last; }")
     page.evaluate(STEP, [100, 0.1])
     ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[2].hp") == 10 and page.evaluate("() => window.__gg.G.castles[0].hp") == 12, 'it charges through a castle wall to the fence, the wall untouched')
+    # and through a Gatehouse (Task 6): it stands there untouched, the Lancer reaches the fence
+    page.evaluate("() => { const g = window.__gg; g.G.castles.push(g.newCastle(3, 0.5, 'gate', 12)); }")
+    spawn_at(page, 'lancer', 3, 0.1); page.evaluate("() => { window.__L = window.__last; }")
+    page.evaluate(STEP, [100, 0.1])
+    ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[3].hp") == 10 and page.evaluate("() => window.__gg.G.castles.find(c => c.kind === 'gate').hp") == 30, 'it charges through a Gatehouse to the fence, the gate untouched')
     # a broken fence lets it through
     page.evaluate("() => { window.__gg.walls[4].hp = 0; }")
     spawn_at(page, 'lancer', 4, 0.9); page.evaluate("() => { window.__L = window.__last; }")
@@ -866,9 +871,154 @@ def check_veil_budget(browser, url):
 
 
 
+# ---------- Task 6: the Gatehouse and the Archer Tower ----------
+PR = """([t, lane]) => { const g = window.__gg; const pr = { x:g.LANE(lane), y:g.fieldY(1) + 40, vy:-900, type:t, vis:t, lv:1, guar:false, lane, hitWalls:new Set(), grp:{ spawned:false, small:false, kills:0 }, size:1, rot:0, spin:9, hit:new Set(), trail:[], r:16, dead:false }; g.G.projs.push(pr); window.__pr = pr; return true; }"""
+FLY = "() => { const g = window.__gg; for (let i = 0; i < 200 && !window.__pr.dead; i++) g.update(0.01); return window.__pr.dead; }"
+PUT = "([lane, p, kind]) => { const g = window.__gg; const w = g.newCastle(lane, p, kind, 12); g.G.castles.push(w); window.__w = w; return true; }"
+
+
+def piece_night(browser, url):
+    page, errors = net_night(browser, url); hold(page)
+    page.evaluate("() => { const G = window.__gg.G; G.castles.length = 0; G.arrows.length = 0; for (let l = 0; l < 7; l++) { const w = window.__gg.walls[l]; w.max = 40; w.hp = 40; } }")
+    return page, errors
+
+
+def check_gatehouse(browser, url):
+    if not R8:
+        page, errors = open_page(browser, url)
+        ok(page.evaluate("() => !window.__gg.newCastle && !window.__gg.PIECES"), 'no castle pieces below Release 8')
+        nm = page.evaluate("() => { const g = window.__gg; g.startGame('story', 1, [0, 1, 2, 3]); return g.G.castles.every(c => c.kind === undefined); }")
+        ok(nm, 'a plain castle wall carries no kind below Release 8')
+        page.close(); return
+    page, errors = piece_night(browser, url)
+    ok(page.evaluate("() => window.__gg.PIECES.gateHp === 2.5 && window.__gg.PIECES.gateEvery === 8 && window.__gg.PIECES.towerHp === 1.5 && window.__gg.PIECES.towerShot === 5"), 'the piece numbers are the spec ones')
+    page.evaluate("() => { window.__gg.G.def.gatePool = ['ghoul']; }")
+    page.evaluate(PUT, [3, 0.5, 'gate'])
+    ok(page.evaluate("() => [window.__w.kind, window.__w.hp, window.__w.maxHp]") == ['gate', 30, 30], 'a Gatehouse has 2.5 x the level castle health (12 -> 30)')
+    mine = "() => window.__gg.G.monsters.filter(m => m.fromGate && !m.dead)"
+    page.evaluate(STEP, [75, 0.1])
+    ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.fromGate).length") == 0, 'nothing walks out in the first 7.5 s')
+    page.evaluate(STEP, [10, 0.1])
+    r = page.evaluate("() => window.__gg.G.monsters.filter(m => m.fromGate).map(m => [m.type, m.lane, m.p])")
+    ok(len(r) == 1 and r[0][0] == 'ghoul' and r[0][1] == 3 and 0.5 <= r[0][2] < 0.6, f'at 8 s one monster from the pool walks out of the gate, in its lane {r}')
+    ok(page.evaluate("() => window.__w.anim && window.__w.anim.clip") == 'shut', 'and the gate plays its shut clip')
+    page.evaluate("() => { for (const m of window.__gg.G.monsters) m.sp = 0; }")
+    page.evaluate(STEP, [60, 0.1])
+    ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.fromGate).length") == 1, 'one at a time: still one at 14.5 s')
+    page.evaluate(STEP, [20, 0.1])
+    ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.fromGate).length") == 2, 'the next one at 16 s, no queue')
+    ok(page.evaluate("() => window.__gg.G.monsters.every(m => !m.fromGate || m.minion)"), 'summoned monsters are extras (minions), not part of the night count')
+    # a Green hits the gate, not what stands behind it
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; g.G.def.gatePool = null; }")
+    spawn_at(page, 'ghoul', 3, 0.3, hp=10, sp=0)
+    page.evaluate(PR, [0, 3]); fl = page.evaluate(FLY)
+    ok(fl and page.evaluate("() => window.__w.hp") < 30 and page.evaluate("() => window.__last.hp") == 10, f'a Green stops at the gate and hurts it, the ghoul behind is untouched (gate {page.evaluate("() => window.__w.hp")}/30)')
+    # an empty pool summons nothing
+    page.evaluate(STEP, [100, 0.1])
+    ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.fromGate).length") == 0, 'a level with no gatePool summons nothing')
+    # destroyed: no more
+    page.evaluate("() => { const g = window.__gg; g.G.def.gatePool = ['ghoul']; g.G.monsters.length = 0; g.damageCastle(window.__w, 1000); }")
+    page.evaluate(STEP, [250, 0.1])
+    ok(page.evaluate("() => window.__w.dead") and page.evaluate("() => window.__gg.G.castles.length") == 0 and page.evaluate("() => window.__gg.G.monsters.filter(m => m.fromGate).length") == 0, 'a broken Gatehouse is gone and summons no more')
+    ok(page.evaluate("() => window.__gg.G.crumbles.length") == 0, 'its crumble has played and settled')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_archer_tower(browser, url):
+    if not R8: return
+    page, errors = piece_night(browser, url)
+    page.evaluate(PUT, [4, 0.5, 'tower'])
+    ok(page.evaluate("() => [window.__w.kind, window.__w.hp, window.__w.maxHp]") == ['tower', 18, 18], 'an Archer Tower has 1.5 x the level castle health (12 -> 18)')
+    page.evaluate(STEP, [49, 0.1])
+    ok(page.evaluate("() => window.__gg.G.arrows.length") == 0, 'no arrow in the first 4.9 s')
+    page.evaluate(STEP, [10, 0.1])
+    ok(page.evaluate("() => window.__gg.G.arrows.length") == 1 and page.evaluate("() => window.__gg.G.arrows[0].lane") == 4, 'an arrow leaves at 5 s down its lane')
+    page.evaluate(STEP, [61, 0.1])
+    ok(page.evaluate("() => window.__gg.walls[4].hp") == 34, f'two arrows by 12 s take 3 each from the fence ({page.evaluate("() => window.__gg.walls[4].hp")}/40)')
+    # a fence that is down is not shot at
+    page.evaluate("() => { window.__gg.G.arrows.length = 0; window.__gg.walls[4].hp = 0; }")
+    page.evaluate(STEP, [120, 0.1])
+    ok(page.evaluate("() => window.__gg.G.arrows.length") == 0, 'a fallen fence is not shot at')
+    page.evaluate("() => { window.__gg.walls[4].hp = 40; window.__w.t = 5; }")
+    # Grey stops at a tower (and still passes a plain wall)
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; }")
+    spawn_at(page, 'ghoul', 4, 0.3, hp=10, sp=0)
+    page.evaluate(PR, [4, 4]); fl = page.evaluate(FLY)
+    ok(fl and page.evaluate("() => window.__w.hp") < 18 and page.evaluate("() => window.__last.hp") == 10, 'a Grey stops at the tower and does not reach the archer-side monster behind it')
+    page.evaluate("() => window.__gg.G.castles.push(window.__gg.newCastle(2, 0.5, 'wall', 12))")
+    spawn_at(page, 'ghoul', 2, 0.3, hp=10, sp=0)
+    page.evaluate(PR, [4, 2]); page.evaluate(FLY)
+    ok(page.evaluate("() => window.__gg.G.castles.find(c => c.lane === 2).hp") < 12 and page.evaluate("() => window.__last.hp") < 10, 'a Grey still deals its power to a plain wall and continues to the monster behind')
+    # the fall
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; g.G.arrows.length = 0; g.G.projs.length = 0; window.__w.t = 3; g.damageCastle(window.__w, 1000); }")
+    a = page.evaluate("() => { const m = window.__gg.G.monsters.find(m => m.type === 'archer'); return m ? [m.lane, m.p, m.stunT, m.hp, m.fromTower, m.shootT] : null; }")
+    ok(a is not None and a[0] == 4 and abs(a[1] - 0.5) < 1e-9 and a[2] == 0 and a[4], f'on its fall a Skeleton Archer stands at its p, not stunned {a}')
+    ok(page.evaluate("() => window.__gg.G.crumbles.length") == 1 and page.evaluate("() => window.__gg.G.crumbles[0].kind") == 'tower', 'and the crumble plays')
+    page.evaluate(STEP, [1, 0.1])
+    ok(page.evaluate("() => window.__gg.G.castles.filter(c => c.kind === 'tower').length") == 0, 'the tower is gone')
+    shot = page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 80; i++){ g.update(0.1); if (g.G.arrows.some(a => a.lane === 4)) return i * 0.1; } return -1; }")
+    ok(0 <= shot <= 5.0, f'the archer shoots within its reload ({shot:.1f} s), no daze')
+    page.evaluate(STEP, [20, 0.1])
+    ok(page.evaluate("() => { const m = window.__gg.G.monsters.find(m => m.type === 'archer'); return !!m && m.p === 0.5; }"), 'and it holds there like any archer')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_castle_pieces_continue(browser, url):
+    """A continued night rebuilds castles from the level as it does walls: pieces come back with their kind, full health and a fresh clock."""
+    if not R8: return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true, seenGourdCoach:true })")
+    page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; window.__L0 = [L.castlesLayout, L.castles, L.gatePool]; L.castles = { n:3, hp:12 }; L.castlesLayout = [[2, 0.5, 'gate'], [4, 0.5, 'tower'], [6, 0.4]]; L.gatePool = ['ghoul']; }")
+    nm4_start(page, 1); time.sleep(0.4); hold(page)
+    page.evaluate("() => { const G = window.__gg.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; }")
+    c = page.evaluate("() => window.__gg.G.castles.map(c => [c.lane, c.kind, c.hp, c.maxHp])")
+    ok(c == [[2, 'gate', 30, 30], [4, 'tower', 18, 18], [6, 'wall', 12, 12]], f'castlesLayout kinds build the pieces {c}')
+    page.evaluate(STEP, [30, 0.1])
+    page.evaluate("() => { const g = window.__gg; g.G.castles[0].hp = 7; g.damageCastle(g.G.castles[1], 1000); }")
+    page.evaluate(STEP, [3, 0.1])
+    st = page.evaluate("() => { const g = window.__gg, c = g.continueState(); return c ? 1 : 0; }")
+    ok(st == 1, 'the lost night can be continued')
+    page.evaluate("() => { const g = window.__gg; g.continueNight(g.continueState()); }"); time.sleep(0.4); hold(page)
+    page.evaluate("() => { const G = window.__gg.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; }")
+    c = page.evaluate("() => window.__gg.G.castles.map(c => [c.lane, c.kind, c.hp, c.maxHp, c.t])")
+    ok([x[:4] for x in c] == [[2, 'gate', 30, 30], [4, 'tower', 18, 18], [6, 'wall', 12, 12]] and 7 < c[0][4] <= 8 and 4 < c[1][4] <= 5, f'the pieces come back as walls do: their kind, full health, a fresh clock {c}')
+    page.evaluate(STEP, [85, 0.1])
+    ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.fromGate).length") == 1, 'and the returned Gatehouse summons on its fresh clock')
+    page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; [L.castlesLayout, L.castles, L.gatePool] = window.__L0; }")
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_castle_pieces_budget(browser, url):
+    """Pieces are baked frames: a Gatehouse and a Tower add at most 2 drawImage calls a frame (plus the two health-bar fills each), no stroke or gradient."""
+    if not R8: return
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script("""(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+      for (const k of ['drawImage', 'fill', 'stroke', 'fillRect', 'createRadialGradient', 'createLinearGradient']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; } })();""")
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    nm4_start(page, 1); time.sleep(1.0)
+    page.evaluate(NQ); page.evaluate("() => { window.__gg.G.castles.length = 0; window.__gg.G.def.gatePool = null; }")
+    time.sleep(0.5)
+    count = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 30) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 30, (c.fill || 0) / 30, (c.stroke || 0) / 30, ((c.createRadialGradient || 0) + (c.createLinearGradient || 0)) / 30]); } }; requestAnimationFrame(tick); })"
+    base = page.evaluate(count)
+    page.evaluate("() => { const g = window.__gg; g.G.castles.push(g.newCastle(2, 0.5, 'gate', 12), g.newCastle(4, 0.5, 'tower', 12)); }")
+    time.sleep(1.2)   # the frames bake on first sight
+    lit = page.evaluate(count)
+    ok(lit[0] - base[0] <= 2.1, f'a Gatehouse and a Tower add at most 2 drawImage calls a frame ({base[0]:.1f} -> {lit[0]:.1f})')
+    ok(lit[2] <= base[2] + 0.1 and lit[3] <= base[3] + 0.1, f'and no stroke or gradient (stroke {base[2]:.1f} -> {lit[2]:.1f}, gradients {base[3]:.1f} -> {lit[3]:.1f})')
+    ok(lit[1] - base[1] <= 4.1, f'the health bars are the only fills ({base[1]:.1f} -> {lit[1]:.1f})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 CHECKS = {'check_r8_absent': check_r8_absent, 'check_n4_track': check_n4_track, 'check_n4_weather': check_n4_weather, 'check_n4_book': check_n4_book,
           'check_net_rules': check_net_rules, 'check_net_cap': check_net_cap, 'check_net_free_neighbour': check_net_free_neighbour, 'check_net_hint_wind': check_net_hint_wind, 'check_net_continue': check_net_continue, 'check_net_budget': check_net_budget, 'check_lobber': check_lobber, 'check_lobber_continue': check_lobber_continue, 'check_lancer': check_lancer, 'check_lancer_edges': check_lancer_edges, 'check_lancer_ride': check_lancer_ride, 'check_marshal': check_marshal, 'check_marshal_continue': check_marshal_continue, 'check_marshal_budget': check_marshal_budget,
-          'check_glutton': check_glutton, 'check_bride': check_bride, 'check_glutton_bride': check_glutton_bride, 'check_shield_all_sources': check_shield_all_sources, 'check_shield_continue': check_shield_continue, 'check_veil_budget': check_veil_budget}
+          'check_glutton': check_glutton, 'check_bride': check_bride, 'check_glutton_bride': check_glutton_bride, 'check_shield_all_sources': check_shield_all_sources, 'check_shield_continue': check_shield_continue, 'check_veil_budget': check_veil_budget,
+          'check_gatehouse': check_gatehouse, 'check_archer_tower': check_archer_tower, 'check_castle_pieces_continue': check_castle_pieces_continue, 'check_castle_pieces_budget': check_castle_pieces_budget}
 
 
 def main():

@@ -10,7 +10,7 @@
 //    and freeze still scale from the boosted speed). Reaching the fence it takes `fenceHit` of the fence's full health, never the last 1 (the Hayrick's
 //    fork rule; a fence at 1 or less takes nothing) and is gone with no kill reward (lancerHit). A broken fence: it walks through like any monster.
 //    It never queues: it rides through the monsters ahead in its lane (monsters.js aheadLimit), while others still queue behind it. A Lancer that is at a
-//    fence which was down and is back up strikes at once (monsters.js, the eating branch). Castle walls never stop a monster, and it passes them. Gatehouses (Task 6) do not stop a walker either: keep it that way when they land.
+//    fence which was down and is back up strikes at once (monsters.js, the eating branch). Castle walls never stop a monster, and it passes them. A Gatehouse does not stop a walker either (check_lancer_edges).
 //  - The Storm Marshal (`marshal`): a clock of `rallyEvery` s; at zero he raises his sword for `rallyLast` s. At the start of the rally every monster in
 //    his square (his lane and one either side, 1.5 tiles up and down) that was never rallied gets `rallyHp` times its health, current and max, once ever
 //    (`m.rallied`); while the sword is up (and he is walking) monsters in the square move `rallySp` times faster (keepSpeed). Bosses, mini bosses (also
@@ -36,12 +36,12 @@
 //    the field that is not veiled (a boss is 'boss:kind'), in reach or not; if none stands there she veils by her own rule. Once every unbeaten
 //    monster is back (G.spawned >= G.def.total, carryCheck each frame) the red nets nobody came back for become ordinary.
 
-import { TYPES } from '../data/monsters.js';
+import { TYPES, PIECES } from '../data/monsters.js';
 import { SFX } from './audio.js';
-import { addFloat, ring, spark, chunk } from './combat.js';
-import { mS, mY } from './monsters.js';
+import { addFloat, ring, spark, chunk, castleY } from './combat.js';
+import { mS, mY, spawnMonster } from './monsters.js';
 import { throwNet, redNetsOf } from './nets.js';
-import { CS, COLS, G, FENCE_Y, ROWS, grid, walls } from './state.js';
+import { CS, COLS, G, FENCE_Y, ROWS, grid, walls, LANE } from './state.js';
 import { rnd } from './util.js';
 import { damageWall } from './walls.js';
 
@@ -140,6 +140,63 @@ export function updateKeepMonster(m, dt){
     }
   }
   return false;
+}
+
+// ---------- castle pieces: the Gatehouse and the Archer Tower ----------
+// A piece is a castle wall (G.castles entry) with a `kind` ('wall' by default) and a clock `t`; `castlesLayout` entries are [lane, p, kind?].
+// Monsters walk through every piece as through a wall; pumpkins stop at all of them (game.js: only a tower also stops Grey).
+//  - 'gate': hp 2.5x the level's castle hp. Its clock `t` counts down GATE_EVERY s; GATE_OPEN s before zero the `open` clip plays, at zero one monster
+//    from `def.gatePool` (a random entry) walks out in front of it (spawnMonster, a minion: an extra that does not count toward the night) and `shut`
+//    plays. One at a time: a new clock starts at once, nothing queues. Broken: no more. A level with no pool summons nothing.
+//  - 'tower': hp 1.5x. Every TOWER_SHOT s an arrow goes down its lane (G.arrows, the Skeleton Archer's, 3 wall damage; held while the fence is down, as
+//    the archer does); `shoot` plays TOWER_LEAD s before it leaves. Dead: the `crumble` sprite plays (G.crumbles) and a real Skeleton Archer stands on
+//    the rubble at its p, holding and shooting at once on the tower's own clock, not stunned.
+//  - A continued night rebuilds castles from the level as it does walls: pieces come back with their kind, full health and a fresh clock.
+const GATE_OPEN = 1, TOWER_LEAD = 0.25, GATE_SHUT = 9 / 16, TOWER_DRAW = 6 / 14;
+export const CRUMBLE_DUR = { gate:14 / 12, tower:16 / 12 }, CRUMBLE_LINGER = 1.5;
+
+/** A castle entry (game.js, monsters.js): kind 'wall' | 'gate' | 'tower'; `hp` is the level's castle wall health. */
+export function newCastle(lane, p, kind, hp){
+  const mul = kind === 'gate' ? PIECES.gateHp : kind === 'tower' ? PIECES.towerHp : 1, h = hp * mul;
+  return { lane, p, hp:h, maxHp:h, flash:0, dead:false, kind:kind || 'wall', t:kind === 'gate' ? PIECES.gateEvery : kind === 'tower' ? PIECES.towerShot : 0, anim:null };
+}
+
+/** Every frame of a night (game.js update): each piece's clock and clips, and the crumbling heaps. */
+export function updateCastlePieces(dt){
+  for (const w of G.castles){
+    if (w.dead || w.kind === 'wall' || !w.kind) continue;
+    if (w.anim){ w.anim.t += dt; if (w.anim.t >= w.anim.dur) w.anim = null; }
+    if (G.over) continue;
+    w.t -= dt;
+    if (w.kind === 'gate'){
+      if (w.t <= GATE_OPEN && !w.opening && G.def && G.def.gatePool && G.def.gatePool.length){ w.opening = true; w.anim = { clip:'open', t:0, dur:GATE_OPEN }; SFX.monsterAct('gate', 'open'); }
+      if (w.t <= 0){
+        w.t = PIECES.gateEvery; w.opening = false;
+        const pool = G.def && G.def.gatePool;
+        if (pool && pool.length){
+          const m = spawnMonster(pool[Math.floor(Math.random() * pool.length)], w.lane, true, Math.min(0.97, w.p + 0.03));
+          m.fromGate = true; w.anim = { clip:'shut', t:0, dur:GATE_SHUT }; SFX.monsterAct('gate', 'shut');
+          ring(LANE(w.lane), castleY(w), 40, 'rgba(255,170,90,.8)'); for (let i = 0; i < 6; i++) spark(LANE(w.lane), castleY(w) + 6, '#d8c8b0', 80);
+        }
+      }
+    } else if (w.kind === 'tower'){
+      if (w.t <= TOWER_LEAD && !w.drawing && walls[w.lane].hp > 0){ w.drawing = true; w.anim = { clip:'shoot', t:0, dur:TOWER_DRAW }; }
+      if (w.t <= 0){
+        w.t = PIECES.towerShot; w.drawing = false;
+        if (walls[w.lane].hp > 0){ G.arrows.push({ lane:w.lane, p:w.p + 0.03, sp:0.4, dmg:TYPES.archer.arrow, dead:false }); SFX.monsterAct('archer', 'shoot'); }
+      }
+    }
+  }
+  const cr = G.crumbles; if (cr){ for (const c of cr) c.t += dt; for (let i = cr.length - 1; i >= 0; i--) if (cr[i].t > CRUMBLE_DUR[cr[i].kind] + CRUMBLE_LINGER) cr.splice(i, 1); }
+}
+
+/** damageCastle (combat.js), once a gate or a tower is broken: its crumble plays, and a tower's archer fights on from the rubble at once. */
+export function pieceFalls(w){
+  if (G.crumbles) G.crumbles.push({ kind:w.kind, lane:w.lane, p:w.p, t:0 });
+  if (w.kind !== 'tower') return;
+  const a = spawnMonster('archer', w.lane, true, w.p);
+  a.shootT = Math.max(0.5, w.t);   // the tower's own reload carries on; stunT stays 0
+  a.fromTower = true;
 }
 
 // ---------- the Blood Glutton, the Bat Bride and the shield door ----------

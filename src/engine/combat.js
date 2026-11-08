@@ -20,7 +20,7 @@ import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
 import { reaperFalls, cometBreaks, fpAfterHit, fpReaperHit } from './hollow.js';
 import { witchwoodFalls } from './witchwood.js';
-import { shieldedNow, shieldPuff, keepFalls } from './keep.js';
+import { shieldedNow, shieldPuff, keepFalls, pieceFalls } from './keep.js';
 import { inWartSquare, isProtected } from './gourd.js';
 import { ROTTEN, ROT_FX, hitRule } from './rot.js';
 
@@ -377,7 +377,7 @@ export function damageCastle(w, amt){
   const y = castleY(w);
   addFloat(fmt(amt), LANE(w.lane) + rnd(-8, 8), y - 30, '#d8d0c8', 16, 0.7);
   for (let i = 0; i < 6; i++) chunk(LANE(w.lane), y, '#8a8d96', 160);
-  if (w.hp <= 0.001){ w.dead = true; for (let i = 0; i < 22; i++) chunk(LANE(w.lane), y, i % 2 ? '#8a8d96' : '#55585f', 260); ring(LANE(w.lane), y, 44, 'rgba(220,220,230,.9)'); SFX.wallDown('castle'); G.shake = Math.max(G.shake, 0.5); }
+  if (w.hp <= 0.001){ w.dead = true; for (let i = 0; i < 22; i++) chunk(LANE(w.lane), y, i % 2 ? '#8a8d96' : '#55585f', 260); ring(LANE(w.lane), y, 44, 'rgba(220,220,230,.9)'); SFX.wallDown('castle'); G.shake = Math.max(G.shake, 0.5); if (__RELEASE__ >= 8 && w.kind && w.kind !== 'wall') pieceFalls(w); }
   else SFX.wallHit('castle');
 }
 

@@ -1499,6 +1499,295 @@ CHECKS = {'check_r8_absent': check_r8_absent, 'check_n4_track': check_n4_track, 
           'check_fallen_count': check_fallen_count, 'check_fc_nets': check_fc_nets, 'check_fc_trance': check_fc_trance, 'check_fc_bolt': check_fc_bolt, 'check_fc_veiled': check_fc_veiled, 'check_fallen_count_continue': check_fallen_count_continue, 'check_fallen_count_baked': check_fallen_count_baked, 'check_fc_budget': check_fc_budget}
 
 
+# ---------- Task 7: the Crookneck Gourd, the picker with four gourds, the N4-3 tutorial ----------
+R8_NAMES += ['Breaks nets', 'seenCrookneckCoach']   # the Crookneck's role line and its coach flag ('Crookneck Gourd' and its lime are listed above)
+SHOTS8 = '/private/tmp/claude-501/-Users-liongchenglex-AI-Projects-gourd-guard/a8c35601-34ce-46bc-bbf6-44770d21f8f8/scratchpad'
+ALL4 = ['grave', 'protector', 'wartling', 'crookneck']
+GON8 = "() => window.__gg.gourdsOn().map(o => [o.kind, o.r, o.c])"
+# Quiet the night as NQ does, but keep the gourds standing.
+CQ = """() => { const g = window.__gg, G = g.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.projs.length = 0; G.netsFlying = []; G.idle = -1e9; G.hint = null; G.drops.length = 0;
+  g.graves.forEach(r => r.fill(false)); g.grid.forEach(row => row.forEach((c, i) => { if (!(c && c.gourd)) row[i] = null; }));
+  window.__put = (r, c, col, net) => { const x = g.newCell(col); if (net) x.net = net; g.grid[r][c] = x; return x; }; g.resolveMatches(); }"""
+PT = "(k) => window.__gg.PTYPES.findIndex(p => p.key === k)"
+
+
+def crook_night(page, kinds, k=3, quiet=True):
+    """Start N4-k with the given gourds (slot order), every gourd unlocked and every gourd coach marked seen; paused (only the check's steps advance it)."""
+    page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true, crookneck:true }; s.seenGourdCoach = true; s.seenProtectorCoach = true; s.seenWartlingCoach = true; s.seenCrookneckCoach = true; }")
+    page.evaluate("([n, lo, gk]) => window.__gg.startGame('story', n, lo, gk)", [1300 + k, [0, 1, 2, 3, 4], kinds]); time.sleep(0.3)
+    hold(page)
+    if quiet: page.evaluate(CQ)
+
+
+def check_crook_no_net(browser, url):
+    if not R8: return
+    page, errors = open_page(browser, url)
+    crook_night(page, ['crookneck'])
+    ok(page.evaluate(GON8) == [['crookneck', 2, 3]], f'the Crookneck alone starts in the centre {page.evaluate(GON8)}')
+    page.evaluate("() => { const p = window.__put, g = window.__gg; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) if (!g.grid[r][c]) p(r, c, (r + c * 2) % 5); }")
+    sq = page.evaluate("() => { const g = window.__gg, out = []; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) out.push([r, c, g.inCrookSquare(r, c), g.canNet(r, c)]); return out; }")
+    inside = [(r, c) for r, c, i, _ in sq if i]
+    ok(sorted(inside) == sorted([(r, c) for r in (1, 2, 3) for c in (2, 3, 4)]), f'inCrookSquare: its own cell and its 3x3 only {inside}')
+    ok(all(not n for r, c, i, n in sq if i), 'canNet is false for every cell in the square')
+    edge = [(r, c) for r in (1, 2, 3) for c in (1, 5)] + [(r, c) for r in (0, 4) for c in (2, 3, 4)]
+    ok(all(n for r, c, i, n in sq if (r, c) in edge), f'and true just outside it {[(r, c, n) for r, c, i, n in sq if (r, c) in edge]}')
+    ok(page.evaluate("() => [window.__gg.inGraveSquare(2, 3), window.__gg.isProtected(2, 3), window.__gg.inWartSquare(2, 3)]") == [False, False, False], 'it is no Grave, Protector or Wartling square')
+    page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 15; i++) g.throwNet(50, 50, 'net', 7); for (let i = 0; i < 20; i++) g.updateNets(0.1); }")
+    cells = page.evaluate("() => window.__gg.netSnapshot().cells.map(c => [c[0], c[1]])")
+    ok(len(cells) >= 10 and not any(1 <= r <= 3 and 2 <= c <= 4 for r, c in cells), f'fifteen throws: none lands in its square ({len(cells)} landed)')
+    # a net aimed at a cell the gourd then slides next to fizzles on landing
+    page.evaluate(CQ)
+    page.evaluate("() => { const p = window.__put, g = window.__gg; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) if (!g.grid[r][c]) p(r, c, (r + c * 2) % 5); g.G.netsFlying = [{ x:50, y:50, kind:'net', by:null, r:2, c:5, t:0.3 }]; }")
+    page.evaluate("() => { const g = window.__gg, x = g.grid[2][3]; g.grid[2][3] = g.grid[2][4]; g.grid[2][4] = x; g.updateNets(0.5); }")   # the gourd steps right: (2, 5) is in its square now
+    ok(page.evaluate("() => [window.__gg.netCount(), window.__gg.G.netsFlying.length]") == [0, 0], 'a net in flight to a cell that comes into the square fizzles')
+    # a netted pumpkin the gourd slides next to keeps its net
+    page.evaluate("() => { const g = window.__gg; g.grid[2][6].net = 'net'; const x = g.grid[2][4]; g.grid[2][4] = g.grid[2][5]; g.grid[2][5] = x; }")
+    ok(page.evaluate("() => [window.__gg.inCrookSquare(2, 6), window.__gg.grid[2][6].net]") == [True, 'net'], 'a netted pumpkin that ends up in the square keeps its net')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_crook_group(browser, url):
+    if not R8: return
+    page, errors = open_page(browser, url)
+    crook_night(page, ['crookneck'])
+    ok(page.evaluate("() => window.__gg.CROOK") == -3, 'CROOK is the pseudo-colour -3')
+    # one pumpkin alone: nothing lights
+    page.evaluate("() => { window.__A = window.__put(1, 2, 0); window.__gg.resolveMatches(); }")
+    ok(page.evaluate("() => [window.__A.lit, Object.keys(window.__gg.G.groups).length]") == [False, 0], 'one pumpkin alone in the square does not light')
+    # one in and one just outside: nothing
+    page.evaluate("() => { window.__put(0, 4, 2); window.__gg.resolveMatches(); }")
+    ok(page.evaluate("() => window.__A.lit") is False, 'one in the square and one outside it: nothing lights')
+    # a Green and an Ice in the square, not touching: they light as one group
+    page.evaluate("() => { const g = window.__gg; g.grid[0][4] = null; window.__B = window.__put(3, 4, 2); g.resolveMatches(); }")
+    gr = page.evaluate("() => Object.values(window.__gg.G.groups).map(x => [x.color, x.size, !!x.crook])")
+    ok(page.evaluate("() => [window.__A.lit, window.__B.lit]") == [True, True] and gr == [[-3, 2, True]], f'a Green and an Ice in the square light as one crook group {gr}')
+    ok(page.evaluate("() => window.__gg.grid[2][3].lit") is False, 'the gourd itself does not light')
+    page.evaluate("() => window.__gg.launchGroup(window.__A)")
+    pr = page.evaluate("() => window.__gg.G.projs.map(p => [p.lane, p.type, p.vis]).sort((a, b) => a[0] - b[0])")
+    ok(pr == [[2, 0, 0], [4, 2, 2]], f'they launch together, each up its own column as itself {pr}')
+    ok(page.evaluate("() => [window.__gg.grid[1][2], window.__gg.grid[3][4], !!window.__gg.grid[2][3].gourd]") == [None, None, True], 'their cells are empty; the gourd stays')
+    # a bunch of three inside the square: launched once each
+    page.evaluate(CQ)
+    page.evaluate("() => { const p = window.__put; for (const c of [2, 3, 4]) p(1, c, 0); window.__gg.resolveMatches(); window.__gg.launchGroup(window.__gg.grid[1][3]); }")
+    ok(page.evaluate("() => window.__gg.G.projs.map(p => p.lane).sort()") == [2, 3, 4], 'a green bunch of three in the square: three projectiles, none twice')
+    # a gourd that is not a Crookneck makes no group
+    page.evaluate("() => { const g = window.__gg; g.startGame('story', 1303, [0, 1, 2, 3, 4], ['wartling']); }"); time.sleep(0.2); hold(page); page.evaluate(CQ)
+    page.evaluate("() => { window.__A = window.__put(1, 2, 0); window.__put(3, 4, 2); window.__gg.resolveMatches(); }")
+    ok(page.evaluate("() => window.__A.lit") is False, 'a Wartling square makes no mixed group')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_crook_launch_mix(browser, url):
+    """Rainbow, Paint, Brown, Turquoise and a netted pumpkin in the square each launch once as themselves (a Rainbow flies as Green), at
+    their own levels; a square cell also in a 3-bunch reaching outside launches once and the whole bunch goes too, whichever cell is
+    flicked. (Magnet is not on this branch.)"""
+    if not R8: return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => Object.assign(window.__gg.save.lv, { green:1, yellow:4, ice:3, fire:2, turquoise:2, brown:3, paint:2 })")
+    crook_night(page, ['crookneck'])
+    K = page.evaluate("() => { const P = window.__gg.PTYPES, f = k => P.findIndex(p => p.key === k); return { green:f('green'), yellow:f('yellow'), ice:f('ice'), fire:f('fire'), turq:f('turquoise'), brown:f('brown'), paint:f('paint'), rainbow:window.__gg.RAINBOW }; }")
+    SET = """(K) => { const p = window.__put;
+      p(1, 2, K.rainbow); p(1, 3, K.paint); p(1, 4, K.brown); p(2, 2, K.green, 'net'); p(2, 4, K.turq); p(3, 2, K.ice); p(3, 3, K.fire); p(3, 4, K.yellow);
+      p(4, 4, K.yellow); p(4, 5, K.yellow); window.__gg.resolveMatches(); }"""
+    for flick, label in (((3, 2), 'flicking the Ice in the square'), ((4, 5), 'flicking the Yellow bunch outside the square')):
+        page.evaluate(CQ); page.evaluate(SET, K)
+        lit = page.evaluate("() => window.__gg.grid.flat().filter(x => x && !x.gourd && x.lit).length")
+        ok(lit == 10, f'{label}: all ten light (eight in the square, two Yellows outside) ({lit})')
+        page.evaluate("([r, c]) => window.__gg.launchGroup(window.__gg.grid[r][c])", list(flick))
+        pr = page.evaluate("() => window.__gg.G.projs.map(p => [p.lane, p.vis, p.type, p.lv, p.size])")
+        got = sorted([tuple(p[:4]) for p in pr])
+        want = sorted([(2, K['rainbow'], K['green'], 1), (3, K['paint'], K['paint'], 2), (4, K['brown'], K['brown'], 3), (2, K['green'], K['green'], 1),
+                       (4, K['turq'], K['turq'], 2), (2, K['ice'], K['ice'], 3), (3, K['fire'], K['fire'], 2), (4, K['yellow'], K['yellow'], 4),
+                       (4, K['yellow'], K['yellow'], 4), (5, K['yellow'], K['yellow'], 4)])
+        ok(got == want, f'{label}: ten projectiles, each once as itself at its own level (Rainbow as Green) {got}')
+        left = page.evaluate("() => window.__gg.grid.flat().filter(x => x && !x.gourd).length")
+        ok(left == 0 and page.evaluate("() => window.__gg.netCount()") == 0, f'{label}: the patch is empty but for the gourd, the net went with its pumpkin ({left} left)')
+    # Paint pulls as usual: a Paint bunch in the square pulls its touching pumpkins, and each pumpkin still goes once
+    page.evaluate(CQ)
+    page.evaluate("(K) => { const p = window.__put; for (const c of [2, 3, 4]) p(1, c, K.paint); p(0, 3, K.ice); p(3, 2, K.fire); window.__gg.resolveMatches(); window.__gg.launchGroup(window.__gg.grid[1][3]); }", K)
+    pr = page.evaluate("() => window.__gg.G.projs.map(p => [p.lane, p.vis])")
+    ok(len(pr) == 5 and sorted(pr) == sorted([[2, K['paint']], [3, K['paint']], [4, K['paint']], [3, K['ice']], [2, K['fire']]]), f'a Paint bunch in the square: three Paints, the Ice it pulls from outside and the Fire in the square, each once {pr}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_crook_break(browser, url):
+    if not R8: return
+    page, errors = open_page(browser, url)
+    crook_night(page, ['crookneck'])
+    page.evaluate("() => { const p = window.__put, g = window.__gg; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) if (!g.grid[r][c]) p(r, c, (r + c * 2) % 5); }")
+    spawn_at(page, 'glutton', 3, 0.4, sp=0); page.evaluate("() => { window.__U = window.__last; }")
+    page.evaluate(STEP, [10, 0.1])
+    ok(page.evaluate("() => window.__gg.redNetsOf(window.__U)") == 2, 'the Glutton has two red nets on the patch')
+    page.evaluate("""() => { const g = window.__gg; let n = 0;
+      for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) if (n < 6 && !(r === 0 && c === 0) && g.canNet(r, c)){ g.grid[r][c].net = 'net'; n++; } }""")
+    ok(page.evaluate("() => window.__gg.netCount()") == 8, f'eight nets on the patch, two red ({page.evaluate("() => window.__gg.netCount()")})')
+    page.evaluate("() => window.__gg.throwNet(50, 50, 'net', 9)")
+    page.evaluate("() => window.__gg.damage(window.__U, 3)")
+    ok(page.evaluate("() => window.__U.hp") == 8, 'shielded by its red nets: no damage')
+    r = page.evaluate("() => { const g = window.__gg, p = g.gourdPos('crookneck'); return g.destroyGourd(g.grid[p.r][p.c]); }")
+    ok(r is True, 'destroyGourd breaks the Crookneck')
+    ok(page.evaluate("() => [window.__gg.netCount(), window.__gg.G.netsFlying.length, window.__gg.redNetsOf(window.__U)]") == [0, 0, 0], 'every net is gone, red too, and the one in flight')
+    page.evaluate("() => window.__gg.damage(window.__U, 3)")
+    ok(page.evaluate("() => window.__U.hp") == 5, f'the Glutton then takes damage ({page.evaluate("() => window.__U.hp")})')
+    ok(page.evaluate("() => [window.__gg.gourdPos('crookneck'), !!window.__gg.G.gourdDueOf.crookneck]") == [None, True], 'the Crookneck is due back')
+    page.evaluate("() => { const g = window.__gg; g.grid[0][0] = null; g.spawnSprouts(); }")
+    ok(page.evaluate("() => !!window.__gg.gourdPos('crookneck')") is True, 'it comes back on the next sprout tick')
+    # a continued night keeps it
+    page.evaluate("() => { const g = window.__gg, c = g.continueState(); window.__snap = JSON.parse(JSON.stringify(c.gourd)); g.continueNight(c); }"); time.sleep(0.3)
+    ok(page.evaluate("() => [window.__snap[0].kind, window.__gg.G.gourdKinds, window.__gg.gourdsOn().map(o => o.kind)]") == ['crookneck', ['crookneck'], ['crookneck']], 'a continued night keeps the Crookneck')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def keep_picker(page, gourds, night=1303, seen=True):
+    """Open the picker on N4-k with the given gourds unlocked (every earlier night beaten), the gourd coaches seen (the Crookneck's as `seen`)."""
+    from nm3_check import gpick
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 17)}, **{1100 + k: 3 for k in range(1, 17)}, **{1200 + k: 3 for k in range(1, 17)}, **{1300 + k: 3 for k in range(1, 3)}})
+    page.evaluate("([gs, n, seen]) => { const g = window.__gg; g.save.gourds = gs; g.save.perksOff = { pick4:true }; g.save.seenGourdCoach = true; g.save.seenProtectorCoach = true; g.save.seenWartlingCoach = true; g.save.seenCrookneckCoach = seen; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.beginNight(n); }",
+                  [{k: True for k in gourds}, night, seen]); time.sleep(0.6)
+    return page.evaluate(gpick())
+
+
+def check_picker_four_gourds(browser, url):
+    """N4-3 offers four gourds, two slots, the Crookneck locked into slot 1 (gourdLock); the other slot is a free pick of the other three. The
+    N3-5 and N2-5 pickers are unchanged with the Crookneck unlocked."""
+    if not R8: return
+    from nm3_check import gpick
+    page, errors = open_page(browser, url)
+    u = keep_picker(page, ['grave', 'protector', 'wartling'])
+    ok(u['state'] == 'loadout' and [t[0] for t in u['tiles']] == ALL4, f'N4-3: four gourd tiles in unlock order {u["tiles"]}')
+    ok(u['slots'] == ['crookneck', 'grave'] and u['slotMust'] == [True, False], f'two slots: the Crookneck locked in slot 1, the Grave in slot 2 {u["slots"]} {u["slotMust"]}')
+    ok([t[2] for t in u['tiles']] == [False, False, False, True], f'only the Crookneck tile is locked {u["tiles"]}')
+    ok(u['heading'] == 'Gourds · pick up to 2' and all(w >= 44 and hh >= 44 for w, hh in u['slotSize']) and u['headFits'] and u['cardFits'], f'"pick up to 2", 44 px slots, the header and card fit {u}')
+    page.click('#loGourdSlot'); time.sleep(0.2)
+    ok(page.evaluate(gpick())['slots'] == ['crookneck', 'grave'], 'tapping the locked slot keeps it')
+    det = page.evaluate("() => document.querySelector('#loDetail').textContent")
+    ok('Crookneck Gourd' in det and 'net' in det.lower(), f'and shows its card {det[:80]!r}')
+    page.click('#loGourds .pick[data-gourd="crookneck"]'); time.sleep(0.2)
+    ok(page.evaluate(gpick())['slots'] == ['crookneck', 'grave'], 'tapping its tile keeps it too')
+    page.click('#loGourds .pick[data-gourd="wartling"]'); time.sleep(0.2)
+    ok(page.evaluate(gpick())['slots'] == ['crookneck', 'wartling'], 'a third gourd replaces the free slot, never the locked one')
+    page.screenshot(path=os.path.join(SHOTS8, 'crookneck-picker.png'))
+    page.click('#loGourdSlot2'); time.sleep(0.2)
+    ok(page.evaluate(gpick())['slots'] == ['crookneck', None], 'the free slot empties when tapped')
+    page.click('#loGourds .pick[data-gourd="protector"]'); time.sleep(0.2)
+    ok(page.evaluate(gpick())['slots'] == ['crookneck', 'protector'], 'a tile fills it again')
+    page.click('#bLoGo'); time.sleep(0.5)
+    r = page.evaluate("() => [window.__gg.state, window.__gg.G.n, window.__gg.G.gourdKinds, window.__gg.gourdsOn().map(o => o.kind).sort()]")
+    ok(r[:3] == ['play', 1303, ['crookneck', 'protector']] and r[3] == ['crookneck', 'protector'], f'Start: the Crookneck and the Protector stand on the patch {r}')
+    # N3-5 and N2-5 unchanged with the Crookneck unlocked
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 17)}, **{1100 + k: 3 for k in range(1, 17)}, **{1200 + k: 3 for k in range(1, 5)}})
+    page.evaluate("() => { const g = window.__gg; g.save.gourds = { grave:true, protector:true, wartling:true, crookneck:true }; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.beginNight(1205); }"); time.sleep(0.6)
+    u = page.evaluate(gpick())
+    ok([t[0] for t in u['tiles']] == ['grave', 'protector', 'wartling'] and u['slots'] == ['grave', 'protector'] and not any(t[2] for t in u['tiles']), f'N3-5 still offers three gourds, two picked, none locked {u["tiles"]}')
+    page.evaluate("() => { const g = window.__gg; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.beginNight(1105); }"); time.sleep(0.6)
+    u = page.evaluate(gpick())
+    ok([t[0] for t in u['tiles']] == ['grave', 'protector'] and u['slots'] == ['grave', 'protector'], f'N2-5 still offers two gourds, both picked {u["tiles"]}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_crook_coach(browser, url):
+    """The Crookneck tutorial on N4-3 (coach:'crookneck'): slide it; launch a mixed group from its square; a net lands next to it, not inside;
+    hold it until it breaks and every net goes; Nice; the night carries on. Each step waits for its action."""
+    if not R8: return
+    ST = "(s) => { const g = window.__gg; for (let i = 0; i < Math.round(s / 0.05); i++) g.update(0.05); return g.G.coach ? g.G.coach.step : null; }"
+    TIP = "() => document.querySelector('#coachTip').textContent"
+    CP = "() => { const p = window.__gg.gourdPos('crookneck'); return p && [p.r, p.c]; }"
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true, crookneck:true }; s.seenGourdCoach = true; s.seenProtectorCoach = true; s.seenWartlingCoach = true; s.seenCrookneckCoach = false; }")
+    page.evaluate("(lo) => window.__gg.startGame('story', 1303, lo, ['crookneck', 'grave'])", [0, 1, 2, 3, 4]); time.sleep(0.3); hold(page)
+    d = page.evaluate("() => { const g = window.__gg; return [g.G.coach && g.G.coach.kind, g.G.coach && g.G.coach.step, g.coachHolds(), g.gourdsOn().map(o => o.kind).sort(), g.grid.flat().filter(x => x && !x.gourd).length]; }")
+    ok(d[:4] == ['crookneck', 'cslide', True, ['crookneck', 'grave']] and d[4] == 0, f'N4-3 with the tutorial unseen starts the Crookneck script on a clear patch {d}')
+    ok('Crookneck Gourd' in page.evaluate(TIP), f'the tip names it {page.evaluate(TIP)[:60]!r}')
+    ok(page.evaluate(ST, 2) == 'cslide' and page.evaluate("() => [window.__gg.G.monsters.length, window.__gg.G.spawned, window.__gg.G.netsFlying.length]") == [0, 0, 0], 'it waits for the slide: no monsters, no nets')
+    mv = page.evaluate("() => { const c = window.__gg.G.coach; return c.move && [c.move.dir, c.move.ref.gourd]; }")
+    ok(mv and mv[1] == 'crookneck', f'the hand slides the Crookneck {mv}')
+    page.evaluate("() => { const g = window.__gg, c = g.G.coach; g.slideOne(c.move.ref, c.move.dir); }")
+    ok(page.evaluate(ST, 0.4) == 'claunch', 'slid: the launch step')
+    d = page.evaluate("""() => { const g = window.__gg, p = g.gourdPos('crookneck'), out = [];
+      for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++){ const x = g.grid[r][c]; if (x && !x.gourd) out.push([x.c, x.lit, g.inCrookSquare(r, c)]); } return out; }""")
+    ok(len(d) >= 2 and len({x[0] for x in d}) >= 2 and all(x[1] and x[2] for x in d), f'a mixed group (two colours or more) lights in its square {d}')
+    ok('any colour' in page.evaluate(TIP).lower(), f'the tip says any colour {page.evaluate(TIP)[:80]!r}')
+    ok(page.evaluate(ST, 2) == 'claunch', 'it waits for the launch')
+    page.evaluate("() => { const g = window.__gg; g.launchGroup(g.bestLitGroup()); }")
+    n = page.evaluate("() => window.__gg.G.projs.length")
+    ok(n == len(d), f'the whole group flies ({n})')
+    st = page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 80 && g.G.coach.step === 'claunch'; i++) g.update(0.05); return [g.G.coach.step, g.G.netsFlying.length]; }")
+    ok(st == ['cnet', 2], f'every pumpkin gone: the net step, two nets in the air ({st})')
+    ok('net' in page.evaluate(TIP).lower(), f'the tip is about nets {page.evaluate(TIP)[:80]!r}')
+    st = page.evaluate(ST, 2)
+    nets = page.evaluate("() => window.__gg.netSnapshot().cells.map(c => [c[0], c[1], window.__gg.inCrookSquare(c[0], c[1])])")
+    ok(st == 'chold' and len(nets) >= 1 and not any(x[2] for x in nets), f'a net lands next to it, not inside; then the hold step {st} {nets}')
+    cp = page.evaluate(CP)
+    ok(any(abs(r - cp[0]) <= 2 and abs(c - cp[1]) <= 2 for r, c, _ in nets), f'next to its square {cp} {nets}')
+    ok('hold' in page.evaluate(TIP).lower(), f'the hold tip {page.evaluate(TIP)[:60]!r}')
+    ok(page.evaluate(ST, 3) == 'chold', 'it waits for the break')
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos('crookneck'); g.destroyGourd(g.grid[p.r][p.c]); }")
+    ok(page.evaluate("() => window.__gg.netCount()") == 0, 'breaking it clears every net')
+    ok(page.evaluate(ST, 0.1) == 'praise' and 'Nice' in page.evaluate(TIP), f'Nice {page.evaluate(TIP)[:50]!r}')
+    ok(page.evaluate("() => window.__gg.coachHolds()") is False, 'the praise step lets the night carry on')
+    page.evaluate(ST, 4)
+    ok(page.evaluate("() => [window.__gg.G.coach, window.__gg.save.seenCrookneckCoach]") == [None, True], 'the script ends and seenCrookneckCoach is set')
+    page.evaluate("() => { window.__gg.G.spawnTimer = 0; }"); page.evaluate(ST, 0.5)
+    ok(page.evaluate("() => window.__gg.G.spawned") > 0, 'monsters spawn after the tutorial')
+    # seen: a plain N4-3; without the Crookneck: no script, still unseen
+    page.evaluate("(lo) => window.__gg.startGame('story', 1303, lo, ['crookneck', 'grave'])", [0, 1, 2, 3, 4]); time.sleep(0.2)
+    ok(page.evaluate("() => [window.__gg.G.coach, window.__gg.coachHolds()]") == [None, False], 'a player who has seen it gets a plain N4-3')
+    page.evaluate("() => { window.__gg.save.seenCrookneckCoach = false; }")
+    page.evaluate("(lo) => window.__gg.startGame('story', 1303, lo, ['grave', 'protector'])", [0, 1, 2, 3, 4]); time.sleep(0.2)
+    ok(page.evaluate("() => [window.__gg.G.coach, window.__gg.save.seenCrookneckCoach]") == [None, False], 'N4-3 started without the Crookneck: no script, still unseen')
+    # broken early: it grows back and the lesson goes on from the net
+    page.evaluate("(lo) => window.__gg.startGame('story', 1303, lo, ['crookneck', 'grave'])", [0, 1, 2, 3, 4]); time.sleep(0.2); hold(page)
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos('crookneck'); g.destroyGourd(g.grid[p.r][p.c]); }")
+    ok(page.evaluate(ST, 0.1) == 'cback', 'breaking it early jumps to the respawn step')
+    st = page.evaluate(ST, 4)
+    ok(st in ('cnet', 'chold') and page.evaluate(CP) is not None, f'it grows back, then the net lesson {st}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_crook_unlock(browser, url):
+    if not R8: return
+    page, errors = open_page(browser, url)
+    d = page.evaluate("() => { const t = window.__gg.NIGHTMARE_LEVELS[3]; return t[2] && [t[2].gourd, t[2].gourds, t[2].gourdLock, t[2].coach]; }")
+    ok(d == [True, ALL4, 'crookneck', 'crookneck'], f'N4-3 (data): a gourd night offering all four, the Crookneck locked, its coach {d}')
+    ok(page.evaluate("() => window.__gg.GOURDS.crookneck && [window.__gg.GOURDS.crookneck.name, window.__gg.GOURDS.crookneck.role]") == ['Crookneck Gourd', 'Breaks nets'], 'GOURDS.crookneck: name and role')
+    keep_picker(page, ['grave', 'protector', 'wartling'], night=1302)
+    ok(not page.evaluate("() => !!window.__gg.save.gourds.crookneck"), 'opening N4-2 does not give it')
+    keep_picker(page, ['grave', 'protector', 'wartling'], night=1303)
+    ok(page.evaluate("() => window.__gg.save.gourds.crookneck") is True, 'opening N4-3 gives save.gourds.crookneck')
+    ok(page.evaluate("() => JSON.parse(localStorage.getItem('gourdguard.v1')).gourds.crookneck") is True, 'and it is saved')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_crook_art(browser, url):
+    """The Crookneck's baked art: a lime picker icon, a strip saved for the owner, and a patch shot; its square glow is one baked tile."""
+    if not R8: return
+    import base64
+    page, errors = open_page(browser, url)
+    crook_night(page, ['grave', 'crookneck'], quiet=False)
+    px = page.evaluate("() => { const c = window.__gg.gourdIcon(96, 'crookneck'), d = c.getContext('2d').getImageData(0, 0, 96, 96).data; let n = 0, v = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200){ n++; if (d[i + 1] > d[i + 2] + 40 && d[i + 1] >= d[i] - 10) v++; } return [n, v]; }")
+    ok(px[0] > 1500 and px[1] > px[0] * 0.3, f'the icon is a solid, mostly lime gourd {px}')
+    strip = page.evaluate("""() => { const g = window.__gg, W = 96 * 5, c = document.createElement('canvas'); c.width = W; c.height = 120; const x = c.getContext('2d');
+      x.fillStyle = '#2a2420'; x.fillRect(0, 0, W, 120);
+      ['grave', 'protector', 'wartling', 'crookneck', 'crookneck'].forEach((k, i) => x.drawImage(g.gourdIcon(i === 4 ? 192 : 96, k), i * 96, 12, 96, 96)); return c.toDataURL(); }""")
+    with open(os.path.join(SHOTS8, 'crookneck-strip.png'), 'wb') as f: f.write(base64.b64decode(strip.split(',')[1]))
+    page.evaluate("() => window.__gg.setState('play')"); time.sleep(0.6)
+    page.screenshot(path=os.path.join(SHOTS8, 'crookneck-patch.png'))
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_crook_no_net': check_crook_no_net, 'check_crook_group': check_crook_group, 'check_crook_launch_mix': check_crook_launch_mix,
+               'check_crook_break': check_crook_break, 'check_picker_four_gourds': check_picker_four_gourds, 'check_crook_coach': check_crook_coach,
+               'check_crook_unlock': check_crook_unlock, 'check_crook_art': check_crook_art})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

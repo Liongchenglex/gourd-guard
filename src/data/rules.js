@@ -65,3 +65,6 @@ export const POTION_SPEED = 1.5, POTION_COLOUR_CHAMELEON = 0.1, POTION_BULKY_SCA
 // Nets on the patch (Release 8, Nightmare Crumbling Keep; spec Part 2; src/engine/nets.js). At most NET_CAP nets lie on the patch at once, both
 // kinds together and counting those in flight (owner); a thrown net takes NET_FLY seconds to land (our number).
 export const NET_CAP = 15, NET_FLY = 0.7;
+// The Crookneck Gourd (Release 8, spec Part 5; src/engine/board.js): the pumpkins in its 3×3 light and launch together, any colour, when there
+// are at least CROOK_MIN of them (our call).
+export const CROOK_MIN = 2;

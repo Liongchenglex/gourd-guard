@@ -3,7 +3,7 @@ import { sproutEvery, shoreP, MINE_ARM } from '../game.js';
 import { perkOn } from '../../data/perks.js';
 import { GEAR } from '../../data/shop.js';
 import { PTYPES, RAINBOW, BROWN, PAINT } from '../../data/pumpkins.js';
-import { emptyCells, findCell, groupCells, heldGid, brownSize, paintPull, paintInherit } from '../board.js';
+import { emptyCells, findCell, groupCells, heldGid, launchGids, brownSize, paintPull, paintInherit } from '../board.js';
 import { dropHop, castleY } from '../combat.js';
 import { mS, mY, TILE_P } from '../monsters.js';
 import { K, coinTarget, ctx } from './canvas.js';
@@ -201,6 +201,7 @@ export function drawGraves(){
 export function drawPreview(t){
   const gid = heldGid(); if (gid == null || state !== 'play') return;
   const cols = new Set(groupCells(gid).map(o => o.c));
+  if (__RELEASE__ >= 8) for (const g of launchGids(gid)) if (g !== gid) for (const o of groupCells(g)) cols.add(o.c);   // a Crookneck square goes with the bunches it shares cells with
   for (const c of cols){
     const x = LANE(c);
     let best = null;
@@ -491,7 +492,7 @@ export function drawAimGraves(t){
   }
 }
 export function drawGrid(t){
-  const hg = heldGid(), flying = [];
+  const hg0 = heldGid(), hg = __RELEASE__ >= 8 && hg0 != null ? launchGids(hg0) : hg0, flying = [];   // Release 8: the held group with the Crookneck group it launches with (a list)
   let gourds = null;
   ctx.save();
   ctx.beginPath(); ctx.rect(0, GY - 4, W, ROWS * CS + 8); ctx.clip();
@@ -508,7 +509,7 @@ export function drawGrid(t){
 
 export const LIT_HALO = [[140, 255, 90], [255, 214, 70], [140, 220, 255], [255, 110, 50], [225, 230, 245], [200, 120, 255], [235, 242, 255], [255, 140, 50], [120, 160, 255], [255, 130, 200], [90, 240, 225], [240, 170, 80], [205, 170, 255], ...(__RELEASE__ >= 3 ? [[245, 220, 160]] : []), [255, 230, 140]];   // Beige (Release 3) sits before Rainbow   // ... Brown, Paint (lilac), Rainbow
 export function drawCell(r, c, cell, t, hg){
-  const held = hg != null && cell.lit && cell.gids.includes(hg);
+  const held = hg != null && cell.lit && (Array.isArray(hg) ? cell.gids.some(g => hg.includes(g)) : cell.gids.includes(hg));
   let x = LANE(c) + cell.ox, y = GY + r * CS + CS / 2 + cell.oy;
   let s = (1 + cell.pop * 0.25) * (0.2 + 0.8 * cell.grow);
   const bsz = cell.c === BROWN ? brownSize(cell) : -1;

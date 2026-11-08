@@ -92,7 +92,8 @@ export function beginNight(n){
   const fireSource = __RELEASE__ >= 4 && (hasFire(def) || def.boss === 'strawlord' || def.boss2 === 'strawlord' || def.boss === 'fallengravekeeper' || def.pool.some(([k]) => k === 'rooster'));   // fire tiles, or something that lights them (the rooster's death, the Strawlord)
   if ((def.pool.some(([k]) => iceKind(k)) || fireSource) && !must.some(m => m.t === 2))   // Ice is locked in wherever Ice-only monsters or fire can be
     must.push({ t:2, why: __RELEASE__ >= 4 && (fireSource || def.pool.some(([k]) => iceKind(k) && k !== 'firemummy')) ? 'Only Ice puts out fire and kills burning monsters' : 'Flaming mummies only die to Ice' });
-  if (av.length > 5 || (__RELEASE__ >= 4 && def.gourd)) openLoadout(av, (lo, gk) => startGame('story', n, lo, gk), must, __RELEASE__ >= 4 && def.gourd ? offeredGourds(def) : null, __RELEASE__ >= 4 && def.gourd ? defaultGourds(def) : null);   // a gourd night always opens the picker, so its Gourds section is seen (Release 4); the picked kinds come back in slot order (Release 5)
+  if (__RELEASE__ >= 8 && def.gourd && def.gourdLock && GOURDS[def.gourdLock] && !save.gourds[def.gourdLock]){ save.gourds[def.gourdLock] = true; persist(); }   // N4-3 gives the Crookneck Gourd as the night opens (spec Part 5)
+  if (av.length > 5 || (__RELEASE__ >= 4 && def.gourd)) openLoadout(av, (lo, gk) => startGame('story', n, lo, gk), must, __RELEASE__ >= 4 && def.gourd ? offeredGourds(def) : null, __RELEASE__ >= 4 && def.gourd ? defaultGourds(def) : null, __RELEASE__ >= 8 && def.gourd ? def.gourdLock : null);   // a gourd night always opens the picker, so its Gourds section is seen (Release 4); the picked kinds come back in slot order (Release 5)
   else startGame('story', n, av);
 }
 
@@ -121,7 +122,8 @@ export function bakeKeys(def){
 export function offeredGourds(def){
   if (!(__RELEASE__ >= 4) || !def || !def.gourd) return [];
   const list = (__RELEASE__ >= 5 && def.gourds) || ['grave'];
-  const have = list.filter(k => GOURDS[k] && (k === 'grave' || (save.gourds && save.gourds[k])));
+  const lock = __RELEASE__ >= 8 ? def.gourdLock : null;   // Release 8: N4-3 gives the Crookneck it locks, so it is on offer before the save has it
+  const have = list.filter(k => GOURDS[k] && (k === 'grave' || k === lock || (save.gourds && save.gourds[k])));
   return __RELEASE__ >= 7 ? have : have.slice(0, GOURD_SLOTS);
 }
 /** The gourds a night starts with picked, in slot order (Release 7, spec Part 5): the first GOURD_SLOTS of its offer, in unlock order. On a
@@ -130,6 +132,7 @@ export function offeredGourds(def){
 export function defaultGourds(def){
   const offer = offeredGourds(def), pick = offer.slice(0, GOURD_SLOTS);
   if (__RELEASE__ >= 7 && def && def.coach === 'wartling' && !save.seenWartlingCoach && offer.includes('wartling') && !pick.includes('wartling')) pick[pick.length - 1] = 'wartling';
+  if (__RELEASE__ >= 8 && def && def.gourdLock && offer.includes(def.gourdLock)) return [def.gourdLock, ...offer.filter(k => k !== def.gourdLock)].slice(0, GOURD_SLOTS);   // N4-3: the locked gourd in slot 1, the first other in unlock order in slot 2
   return pick;
 }
 

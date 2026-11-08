@@ -4,7 +4,7 @@ import { layGlue } from './glue.js';
 import { hkGate, hkAfterHit, onHkFormDown, onKingDown } from './hollowking.js';
 import { SFX, musicStart } from './audio.js';
 import { MUSIC } from '../data/music.js';
-import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches, brownSize, paintPull, paintInherit } from './board.js';
+import { emptyCells, flyInto, groupCells, launchGids, primaryGid, randColor, randSprout, resolveMatches, brownSize, paintPull, paintInherit } from './board.js';
 import { TILE_P, mS, mY, spMulNow, spawnMonster, inHexZone, stripHusk } from './monsters.js';
 import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS, walls, FENCE_Y } from './state.js';
 import { TAU, clamp, fmt, rnd } from './util.js';
@@ -39,31 +39,40 @@ function wardLaunch(r, c){
 export function launchGroup(ref){
   if (!ref || !ref.lit || !G || G.over) return;
   const gid = primaryGid(ref), grp = G.groups[gid];
-  const bunch = { spawned:false, small:!!grp && grp.size < 3, kills:0 };   // shared by every projectile of this launch (Purple's one-per-bunch spawn; Turquoise pairs are half power)
   if (!grp) return;
-  const cells = groupCells(gid);
-  if (!cells.length) return;
-  const pulled = paintPull(gid);   // Paint: touching pumpkins of any colour launch with the bunch, each as itself (owner, 2026-10-08)
-  const type = grp.color, lv = __RELEASE__ >= 5 && type === ROTTEN ? 1 : lvOf(type), guar = grp.size + pulled.length >= 5;   // pulled pumpkins count toward the 5+ knockback (owner); rotten (Release 5) has no level
-  const inh = type === PAINT ? paintInherit(pulled) : null;   // Paint takes the power of the colour it borrows most, at Paint's own level (owner, 2026-10-09)
-  for (const { r, c, cell } of cells){
+  // Release 8: a Crookneck square's group goes with every bunch sharing a cell with it (board.js launchGids); bunches claim their cells first,
+  // so a Rainbow in a bunch flies as that bunch's colour, and no cell launches twice. Below Release 8 this is the one group.
+  const gids = __RELEASE__ >= 8 ? launchGids(gid) : [gid];
+  const order = gids.length > 1 ? [...gids.filter(g => !G.groups[g].crook), ...gids.filter(g => G.groups[g].crook)] : gids;
+  const seen = new Set(), sets = [];
+  for (const g of order){ const own = groupCells(g).filter(o => !seen.has(o.cell)); for (const o of own) seen.add(o.cell); sets.push({ grp:G.groups[g], own, g }); }
+  for (const st of sets) st.pulled = paintPull(st.g).filter(o => !seen.has(o.cell) && seen.add(o.cell));   // Paint: touching pumpkins of any colour launch with the bunch, each as itself (owner, 2026-10-08)
+  const nOwn = sets.reduce((a, st) => a + st.own.length, 0), nPulled = sets.reduce((a, st) => a + st.pulled.length, 0);
+  if (!nOwn) return;
+  const bunch = { spawned:false, small:nOwn < 3, kills:0 };   // shared by every projectile of this launch (Purple's one-per-bunch spawn; Turquoise pairs are half power)
+  const guar = nOwn + nPulled >= 5;   // pulled pumpkins count toward the 5+ knockback (owner)
+  const fly = (r, c, cell, type, lv) => {
     const x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;
     const ward = __RELEASE__ >= 5 && wardLaunch(r, c);   // from a Protector Gourd's square (Release 5)
     const wart = __RELEASE__ >= 7 && inWartSquare(r, c);   // from a Wartling Gourd's square (Release 7): double damage
-    G.projs.push({ x, y, vy:-900, type:inh != null ? inh : type, vis:cell.c, lv, guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}), ...(wart ? { wart:true } : {}) });
+    G.projs.push({ x, y, vy:-900, type, vis:cell.c, lv, guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}), ...(wart ? { wart:true } : {}) });
     grid[r][c] = null;
+  };
+  for (const { grp:gp, own, pulled } of sets){
+    if (__RELEASE__ >= 8 && gp.crook){   // a Crookneck group (Release 8): each pumpkin as itself at its own level; a Rainbow as Green
+      for (const { r, c, cell } of own){ const t = cell.c === RAINBOW ? 0 : cell.c; fly(r, c, cell, t, lvOf(t)); }
+      continue;
+    }
+    const type = gp.color, lv = __RELEASE__ >= 5 && type === ROTTEN ? 1 : lvOf(type);   // rotten (Release 5) has no level
+    const inh = type === PAINT ? paintInherit(pulled) : null;   // Paint takes the power of the colour it borrows most, at Paint's own level (owner, 2026-10-09)
+    for (const { r, c, cell } of own) fly(r, c, cell, inh != null ? inh : type, lv);
+    for (const { r, c, cell } of pulled){ const o = cell.c === RAINBOW ? type : cell.c; fly(r, c, cell, o, lvOf(o)); }   // a pulled rainbow flies as Paint
   }
-  for (const { r, c, cell } of pulled){
-    const own = cell.c === RAINBOW ? type : cell.c, x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;   // a pulled rainbow flies as Paint
-    const ward = __RELEASE__ >= 5 && wardLaunch(r, c), wart = __RELEASE__ >= 7 && inWartSquare(r, c);
-    G.projs.push({ x, y, vy:-900, type:own, vis:cell.c, lv:lvOf(own), guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}), ...(wart ? { wart:true } : {}) });
-    grid[r][c] = null;
-  }
-  if (pulled.length) cells.push(...pulled);
-  SFX.launch(cells.length);
-  const skin = save.wardrobe && save.wardrobe.skins[type]; if (skin) SFX.skinLaunch(skin);   // a skin's launch accent, once per flick (owner, 2026-09-27)
-  G.throws += cells.length;
-  if (cells.length >= 5) G.q.big++;   // quests: bunches of 5
+  const n = nOwn + nPulled;
+  SFX.launch(n);
+  const skin = save.wardrobe && save.wardrobe.skins[grp.color]; if (skin) SFX.skinLaunch(skin);   // a skin's launch accent, once per flick (owner, 2026-09-27)
+  G.throws += n;
+  if (n >= 5) G.q.big++;   // quests: bunches of 5
   G.idle = 0; G.hint = null;
   resolveMatches();
 }

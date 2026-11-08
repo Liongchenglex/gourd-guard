@@ -1,6 +1,6 @@
 import { perkOn } from '../data/perks.js';
 import { PATTERNS } from '../data/patterns.js';
-import { SPROUT_COUNT } from '../data/rules.js';
+import { SPROUT_COUNT, CROOK_MIN } from '../data/rules.js';
 import { GEAR } from '../data/shop.js';
 import { PTYPES, RAINBOW, WILD_CHANCE, WILD_CHANCE_PERK, TURQUOISE, BROWN, BROWN_GROW, PAINT, PAINT_PULL } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
@@ -63,6 +63,11 @@ export function initBoard(pi, nGraves){
 }
 
 // Bunches: 3+ touching pumpkins of one color. Rainbows count as any color, except rotten (Release 5): rotten bunches with rotten only.
+// Release 8 (spec Part 5): the pumpkins in a Crookneck Gourd's 3×3 also make one group of any colour, CROOK, when there are CROOK_MIN or more;
+// a pumpkin may be in that group and a bunch at once (launchGids below sends them together).
+
+/** The Crookneck group's pseudo-colour (Release 8): no pumpkin has it; each cell of the group flies as itself (combat.js launchGroup). */
+export const CROOK = -3;
 
 export function computeGroups(gr){
   const groups = [], present = new Set();
@@ -102,7 +107,21 @@ export function computeGroups(gr){
     }
     if (cells.length >= 3 && !cells.some(([a, b]) => used.has(a * COLS + b))) groups.push({ color:0, cells });
   }
+  if (__RELEASE__ >= 8) crookGroups(gr, groups);
   return groups;
+}
+
+/** Release 8: for each Crookneck Gourd standing on `gr`, the pumpkins in its 3×3 that are not flying (gourds left out, and rotten ones: rot
+ *  bunches with rot only, our call), as one group when there are at least CROOK_MIN. */
+function crookGroups(gr, groups){
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
+    const g = gr[r][c]; if (!g || g.gourd !== 'crookneck' || g.fly > 0) continue;
+    const cells = [];
+    for (let a = Math.max(0, r - 1); a <= Math.min(ROWS - 1, r + 1); a++) for (let b = Math.max(0, c - 1); b <= Math.min(COLS - 1, c + 1); b++){
+      const n = gr[a][b]; if (n && !n.fly && !n.gourd && !(__RELEASE__ >= 5 && n.c === ROTTEN)) cells.push([a, b]);
+    }
+    if (cells.length >= CROOK_MIN) groups.push({ color:CROOK, cells, crook:true });
+  }
 }
 
 export function resolveMatches(){
@@ -117,7 +136,7 @@ export function resolveMatches(){
   let sx = 0, sy = 0, n = 0, biggest = 0, fresh = 0;
   for (const g of groups){
     const gid = nextGid(), size = g.cells.length;
-    G.groups[gid] = { color:g.color, size };
+    G.groups[gid] = { color:g.color, size, ...(__RELEASE__ >= 8 && g.crook ? { crook:true } : {}) };
     let changed = false;
     for (const [r, c] of g.cells){
       const cell = grid[r][c], before = was.get(cell) || 0;
@@ -338,6 +357,14 @@ export function primaryGid(ref){
   let gid = ref.gids[0];
   for (const g of ref.gids) if (G.groups[g] && G.groups[gid] && G.groups[g].size > G.groups[gid].size) gid = g;
   return gid;
+}
+
+/** The groups one flick sends (Release 8, spec Part 5): the primary group and, one step out, every Crookneck group sharing a cell with it (a
+ *  bunch pulls in the square it reaches into) or, for a Crookneck group, every bunch sharing a cell with it. Just [gid] otherwise. */
+export function launchGids(gid){
+  const out = [gid], grp = G.groups && G.groups[gid]; if (!(__RELEASE__ >= 8) || !grp) return out;
+  for (const { cell } of groupCells(gid)) for (const g of cell.gids) if (!out.includes(g) && G.groups[g] && (grp.crook || G.groups[g].crook)) out.push(g);
+  return out;
 }
 
 export function groupCells(gid){

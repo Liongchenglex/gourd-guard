@@ -9,8 +9,10 @@
 // its own colour with shield corners, so the two squares read apart.
 // The Wartling Gourd (Release 7, spec Part 5): the archive's Wartling (violet #8a5cc6, a round pear gourd covered in little bumps, faint
 // ribs and a curly stem), with the toy face; its 3×3 glow is violet with a wart at each corner.
-// Only called from code gated on `__RELEASE__ >= 4`; every Protector branch is gated on `>= 5` and every Wartling branch on `>= 7`, so lower
-// builds carry none of their art.
+// The Crookneck Gourd (Release 8, spec Part 5): the archive's Crookneck (lime #b9cf3c, a fat bumpy base whose neck curls over like a
+// shepherd's crook, the stem hanging from the tip), with the toy face; its 3×3 glow is lime with a little crook at each corner.
+// Only called from code gated on `__RELEASE__ >= 4`; every Protector branch is gated on `>= 5`, every Wartling branch on `>= 7` and every
+// Crookneck branch on `>= 8`, so lower builds carry none of their art.
 
 import { E, S, SM, SO, mix, pal, rgba, rng } from './paint.js';
 import { K } from './canvas.js';
@@ -104,7 +106,30 @@ function paintWartling(g){
   S.stroke(g, g2 => { g2.beginPath(); g2.moveTo(x - R * .16 * f.s, ey + R * .32 * f.s); g2.quadraticCurveTo(x, ey + R * .45 * f.s, x + R * .16 * f.s, ey + R * .32 * f.s); }, c, 2.4 * s);
 }
 
-const hueOf = kind => __RELEASE__ >= 5 && kind === 'protector' ? protHue() : __RELEASE__ >= 7 && kind === 'wartling' ? wartShape().hue : GOURD_HUE;
+// The Crookneck Gourd (Release 8): the archive's drawGourd for its SHAPES entry `crookneck`, ported as is. Its data lives inside a function.
+const crookShape = () => ({ hue:'#b9cf3c', body:() => SM(P([[0,.88],[.52,.78],[.68,.42],[.52,.02],[.26,-.22],[.15,-.5],[.2,-.76],[.38,-.84],[.5,-.74],[.66,-.66],[.72,-.84],[.6,-1.04],[.36,-1.14],[.06,-1.08],[-.14,-.84],[-.2,-.5],[-.34,-.2],[-.6,.06],[-.7,.42],[-.52,.78]])),
+  b:{ x:0, y:.34, r:.74 }, hl:[-.3, .1], top:[.7, -.72], stem:.5, face:{ x:-.02, y:.42, s:.86 }, bumps:7 });
+/** The Crookneck at the origin: shadow, body and its curled neck, the bumps on the base, the stem hanging from the tip and the face. */
+function paintCrookneck(g){
+  const sh = crookShape(), c = pal(sh.hue), STEM = pal('#6e4c2a'), body = sh.body(), b = { x:sh.b.x * R, y:sh.b.y * R, r:sh.b.r * R };
+  S.shadow(g, 0, R * .86, R * .86, R * .2);
+  S.part(g, body, c, b, { mat:'pumpkin', hx:sh.hl[0] * R, hy:sh.hl[1] * R });
+  const Rr = rng(5);   // the bumps, the archive's seed: none over the face
+  for (let i = 0; i < sh.bumps; i++){
+    const x = (Rr() - .5) * R, y = R * (.05 + Rr() * .7), r = R * (.04 + Rr() * .03);
+    if (Math.hypot(x, y - R * .42) < R * .32) continue;
+    S.part(g, E(x, y, r, r), { ...c, base:mix(c.base, c.light, .2) }, { x, y, r }, { flat:true, lw:1 });
+  }
+  g.save(); g.translate(sh.top[0] * R, sh.top[1] * R); g.rotate(sh.stem + Math.PI / 2);   // the stem hanging from the tip (the archive's stem(), not curly)
+  S.part(g, SM([[-R * .07, R * .06], [-R * .09, -R * .12], [-R * .02, -R * .26], [R * .1, -R * .3], [R * .12, -R * .2], [R * .06, -R * .12], [R * .07, R * .06]], .8), STEM, { x:0, y:-R * .12, r:R * .2 }, { flat:true, mat:'wood' });
+  g.restore();
+  const f = sh.face, s = R / 40 * f.s, x = f.x * R, ey = f.y * R - R * .1 * f.s, ex = R * .3 * f.s, iris = mix(c.dark, '#7a5a2a', .5);   // the archive's face()
+  S.eye(g, x - ex, ey, 9 * s, 9.5 * s, { lx:.2, iris }); S.eye(g, x + ex, ey, 9 * s, 9.5 * s, { lx:.2, iris });
+  S.blush(g, x, ey + 10 * s, s);
+  S.stroke(g, g2 => { g2.beginPath(); g2.moveTo(x - R * .16 * f.s, ey + R * .32 * f.s); g2.quadraticCurveTo(x, ey + R * .45 * f.s, x + R * .16 * f.s, ey + R * .32 * f.s); }, c, 2.4 * s);
+}
+
+const hueOf = kind => __RELEASE__ >= 5 && kind === 'protector' ? protHue() : __RELEASE__ >= 7 && kind === 'wartling' ? wartShape().hue : __RELEASE__ >= 8 && kind === 'crookneck' ? crookShape().hue : GOURD_HUE;
 const glowCol = kind => mix(hueOf(kind), '#fff6d0', .35);   // the archive's glowOf
 const kOf = () => Math.min(2.5, Math.max(0.5, K || 1));
 const bodies = {}, glows = {};
@@ -113,7 +138,7 @@ function bodySprite(kind = 'grave'){
   const k = kOf(), have = bodies[kind]; if (have && have.k === k) return have;
   const c = document.createElement('canvas'); c.width = Math.ceil(BOX.w * k); c.height = Math.ceil(BOX.h * k);
   const g = c.getContext('2d'); g.scale(k, k); g.translate(BOX.ox, BOX.oy);
-  if (__RELEASE__ >= 5 && kind === 'protector') paintProtector(g); else if (__RELEASE__ >= 7 && kind === 'wartling') paintWartling(g); else paintGourd(g);
+  if (__RELEASE__ >= 5 && kind === 'protector') paintProtector(g); else if (__RELEASE__ >= 7 && kind === 'wartling') paintWartling(g); else if (__RELEASE__ >= 8 && kind === 'crookneck') paintCrookneck(g); else paintGourd(g);
   return (bodies[kind] = { c, k });
 }
 function wardSprite(){
@@ -138,11 +163,17 @@ function glowSprite(kind = 'grave'){
     g.fillStyle = rgba(col, .95);
     for (const [x, y, r] of [[9, 9, 5], [S3 - 9, 9, 5], [9, S3 - 9, 5], [S3 - 9, S3 - 9, 5], [S3 / 2, 4, 3.5], [S3 / 2, S3 - 4, 3.5], [4, S3 / 2, 3.5], [S3 - 4, S3 / 2, 3.5]]){ g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
   }
+  if (__RELEASE__ >= 8 && kind === 'crookneck'){   // a little shepherd's crook at each corner, curling inward
+    g.lineWidth = 3.5; g.lineCap = 'round'; g.strokeStyle = rgba(col, .95); const L = CS * .36, m = 6, hk = CS * .09;
+    for (const [x, y, dx, dy] of [[m, m, 1, 1], [S3 - m, m, -1, 1], [m, S3 - m, 1, -1], [S3 - m, S3 - m, -1, -1]]){
+      g.beginPath(); g.moveTo(x, y + dy * L); g.lineTo(x, y + dy * hk); g.arc(x + dx * hk, y + dy * hk, hk, dx > 0 ? Math.PI : 0, dx > 0 ? 0 : Math.PI, (dx > 0) !== (dy > 0)); g.stroke();   // up the edge, then over in a hook
+    }
+  }
   g.restore();
   return (glows[kind] = { c, k });
 }
 /** Bake them now (night start), not on first sight. */
-export function prebakeGourd(){ bodySprite(); glowSprite(); if (__RELEASE__ >= 5){ bodySprite('protector'); glowSprite('protector'); wardSprite(); } if (__RELEASE__ >= 7){ bodySprite('wartling'); glowSprite('wartling'); } }
+export function prebakeGourd(){ bodySprite(); glowSprite(); if (__RELEASE__ >= 5){ bodySprite('protector'); glowSprite('protector'); wardSprite(); } if (__RELEASE__ >= 7){ bodySprite('wartling'); glowSprite('wartling'); } if (__RELEASE__ >= 8){ bodySprite('crookneck'); glowSprite('crookneck'); } }
 
 /** A gourd in its cell: (x, y) is the cell centre with the slide offsets already in; s the pop/grow scale; ph its own idle phase. The
  *  Protector's ward is blitted behind it with a pulsing alpha. */
@@ -164,7 +195,7 @@ export function drawGourdGlow(ctx, t){
     const x0 = LANE(c0) - CS * 1.5 + cell.ox, y0 = GY + (r0 - 1) * CS + cell.oy;
     const ax = Math.max(x0, GX), ay = Math.max(y0, GY), bx = Math.min(x0 + CS * 3, GX + COLS * CS), by = Math.min(y0 + CS * 3, GY + ROWS * CS);
     if (bx <= ax || by <= ay) continue;
-    ctx.globalAlpha = (0.55 + 0.35 * Math.sin(t * 2 + (kind === 'grave' ? 0 : kind === 'protector' ? 1.6 : 0.8))) * Math.min(1, cell.grow * 1.5);
+    ctx.globalAlpha = (0.55 + 0.35 * Math.sin(t * 2 + (kind === 'grave' ? 0 : kind === 'protector' ? 1.6 : kind === 'crookneck' ? 2.4 : 0.8))) * Math.min(1, cell.grow * 1.5);
     ctx.drawImage(sp.c, (ax - x0) * k, (ay - y0) * k, (bx - ax) * k, (by - ay) * k, ax, ay, bx - ax, by - ay);
   }
   ctx.globalAlpha = 1;

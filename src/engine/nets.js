@@ -8,6 +8,7 @@ import { COLS, G, GY, CS, LANE, ROWS, grid, graves } from './state.js';
 import { NET_CAP, NET_FLY } from '../data/rules.js';
 import { SFX } from './audio.js';
 import { addFloat, spark, ring } from './combat.js';
+import { inCrookSquare } from './gourd.js';   // the Crookneck Gourd's square: no net lands there (spec Part 5)
 
 /** Nets lying on the patch. */
 export function netCount(){
@@ -17,8 +18,6 @@ export function netCount(){
 }
 export const isNetted = cell => !!(cell && cell.net);
 
-// The Crookneck Gourd's square (Task 7, Release 8) is not built yet: nothing is "in a Crookneck square" until `inCrookSquare` lands.
-const inCrookSquare = (r, c) => false;
 
 const free = (r, c, xr = -1, xc = -1) => r >= 0 && r < ROWS && c >= 0 && c < COLS && !graves[r][c] && !(grid[r][c] && grid[r][c].net) && !(r === xr && c === xc);   // on the patch, not a grave, not netted (nor the cell about to be netted)
 const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];

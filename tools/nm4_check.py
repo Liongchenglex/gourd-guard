@@ -419,8 +419,176 @@ def check_lobber_continue(browser, url):
     page.close()
 
 
+# ---------- Task 4: the Storm Lancer and the Storm Marshal ----------
+def spawn_at(page, typ, lane, p, hp=None, sp=0.03):
+    """Spawn a monster at p with a fixed walk speed (no random jitter), optionally a fixed health; stored as window.__M[name]."""
+    return page.evaluate("""([t, l, p, hp, sp]) => { const m = window.__gg.spawnMonster(t, l, true, p); m.sp = sp; if (hp != null) m.hp = m.maxHp = hp; window.__last = m; return true; }""", [typ, lane, p, hp, sp])
+
+
+def hold(page):
+    """Stop the live game loop (state 'pause'): only the steps a check takes advance the night, so the numbers are exact."""
+    page.evaluate("() => window.__gg.setState('pause')")
+
+
+def check_lancer(browser, url):
+    if not R8:
+        page, errors = open_page(browser, url)
+        has = page.evaluate("() => !!window.__gg.TYPES") and page.evaluate("() => !!(window.__gg.TYPES.lancer || window.__gg.TYPES.marshal)")
+        ok(not has, 'no Lancer or Marshal type below Release 8')
+        page.close(); return
+    page, errors = net_night(browser, url); hold(page)
+    T = page.evaluate("() => window.__gg.TYPES.lancer")
+    ok(T['hp'] == 5 and T['charge'] == 4 and T['fenceHit'] == 0.5 and T['sp'] == 0.03 and T['eat'] == 0, f'the lancer numbers are the spec ones {T}')
+    # a full fence loses half; charges at 4x from spawn
+    page.evaluate("() => { const w = window.__gg.walls[3]; w.max = 20; w.hp = 20; window.__c0 = window.__gg.G.coins; window.__k0 = window.__gg.G.kills; window.__d0 = window.__gg.G.drops.length; }")
+    spawn_at(page, 'lancer', 3, -0.02)
+    page.evaluate("() => { window.__L = window.__last; }")
+    page.evaluate(STEP, [1, 0.1])
+    d = page.evaluate("() => window.__L.p") + 0.02
+    ok(abs(d - 0.012) < 1e-6, f'it moves at 4x its walk from the first step (dp {d:.4f}, a walk would be 0.003)')
+    page.evaluate(STEP, [100, 0.1])
+    ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[3].hp") == 10, f'at the fence it takes half: 20/20 -> {page.evaluate("() => window.__gg.walls[3].hp")}/20, and is gone')
+    ok(page.evaluate("() => window.__gg.G.coins") == page.evaluate("() => window.__c0") and page.evaluate("() => window.__gg.G.kills") == page.evaluate("() => window.__k0") and page.evaluate("() => window.__gg.G.drops.length") == page.evaluate("() => window.__d0"), 'no coins, kill or drop for the impact')
+    # never the last 1
+    page.evaluate("() => { window.__gg.walls[4].max = 20; window.__gg.walls[4].hp = 1; window.__gg.walls[5].max = 20; window.__gg.walls[5].hp = 6; }")
+    spawn_at(page, 'lancer', 4, 0.9); page.evaluate("() => { window.__L = window.__last; }")
+    spawn_at(page, 'lancer', 5, 0.9); page.evaluate("() => { window.__L2 = window.__last; }")
+    page.evaluate(STEP, [10, 0.1])
+    ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[4].hp") == 1, 'a fence at 1/20 takes nothing (the lancer is still gone)')
+    ok(page.evaluate("() => window.__L2.dead") and page.evaluate("() => window.__gg.walls[5].hp") == 1, f'a fence at 6/20 loses 5 (not 10): left {page.evaluate("() => window.__gg.walls[5].hp")}')
+    # five hits kill it, and a kill pays
+    spawn_at(page, 'lancer', 2, 0.2); page.evaluate("() => { window.__L = window.__last; window.__c0 = window.__gg.G.coins; }")
+    for i in range(4): page.evaluate("() => window.__gg.damage(window.__L, 1)")
+    ok(not page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__L.hp") == 1, 'four hits leave it on 1')
+    page.evaluate("() => window.__gg.damage(window.__L, 1)")
+    ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.G.coins") > page.evaluate("() => window.__c0"), 'the fifth hit kills it and pays')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_lancer_edges(browser, url):
+    if not R8: return
+    page, errors = net_night(browser, url); hold(page)
+    page.evaluate("() => { for (const l of [1, 2, 3, 4]) { const w = window.__gg.walls[l]; w.max = 20; w.hp = 20; } }")
+    # frozen mid-charge it stops; slowed it charges at half
+    spawn_at(page, 'lancer', 1, 0.2); page.evaluate("() => { window.__L = window.__last; window.__L.frozenT = 2; }")
+    page.evaluate(STEP, [10, 0.1])
+    ok(abs(page.evaluate("() => window.__L.p") - 0.2) < 1e-6, 'frozen mid-charge it stops')
+    page.evaluate(STEP, [11, 0.1]); p0 = page.evaluate("() => window.__L.p")
+    page.evaluate("() => { window.__L.slowT = 5; }"); page.evaluate(STEP, [1, 0.1]); p1 = page.evaluate("() => window.__L.p")
+    ok(abs((p1 - p0) - 0.006) < 1e-6, f'slowed, it charges at half the charge ({p1 - p0:.4f})')
+    # passes a castle wall (Gatehouses arrive in Task 6: a walker passes them too, re-test then)
+    page.evaluate("() => { window.__gg.G.castles.push({ lane:2, p:0.5, hp:12, maxHp:12, flash:0, dead:false }); }")
+    spawn_at(page, 'lancer', 2, 0.1); page.evaluate("() => { window.__L = window.__last; }")
+    page.evaluate(STEP, [100, 0.1])
+    ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[2].hp") == 10 and page.evaluate("() => window.__gg.G.castles[0].hp") == 12, 'it charges through a castle wall to the fence, the wall untouched')
+    # a broken fence lets it through
+    page.evaluate("() => { window.__gg.walls[4].hp = 0; }")
+    spawn_at(page, 'lancer', 4, 0.9); page.evaluate("() => { window.__L = window.__last; }")
+    page.evaluate(STEP, [12, 0.1])
+    ok(not page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__L.eating") and page.evaluate("() => window.__gg.walls[4].hp") == 0, 'a broken fence: it walks through (not removed, no damage)')
+    page.evaluate(STEP, [20, 0.1])
+    ok(page.evaluate("() => window.__gg.G.over"), 'and the night is lost as usual once it is through')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def marshal_scene(browser, url):
+    page, errors = net_night(browser, url); hold(page)
+    spawn_at(page, 'marshal', 3, 0.5, sp=0); page.evaluate("() => { window.__M = window.__last; }")
+    spawn_at(page, 'ghoul', 4, 0.5, hp=3, sp=0); page.evaluate("() => { window.__A = window.__last; }")      # beside him
+    spawn_at(page, 'ghoul', 5, 0.5, hp=3, sp=0); page.evaluate("() => { window.__B = window.__last; }")      # two lanes away
+    spawn_at(page, 'ghoul', 3, 0.8, hp=3, sp=0); page.evaluate("() => { window.__C = window.__last; }")      # same lane, far up the field
+    spawn_at(page, 'marshal', 2, 0.5, sp=0); page.evaluate("() => { window.__M2 = window.__last; }")   # another Marshal beside him
+    return page, errors
+
+
+def dp(page, k):
+    """How far window.__<k> walks in one 0.1 s step at the walk speed 0.03 (it is held still between measurements)."""
+    page.evaluate(f"() => {{ window.__{k}.sp = 0.03; }}"); p0 = page.evaluate(f"() => window.__{k}.p")
+    page.evaluate(STEP, [1, 0.1]); p1 = page.evaluate(f"() => window.__{k}.p")
+    page.evaluate(f"() => {{ window.__{k}.sp = 0; }}")
+    return p1 - p0
+
+
+def check_marshal(browser, url):
+    if not R8: return
+    page, errors = marshal_scene(browser, url)
+    T = page.evaluate("() => window.__gg.TYPES.marshal")
+    ok(T['hp'] == 10 and T['rallyEvery'] == 8 and T['rallyLast'] == 4 and T['rallySp'] == 2 and T['rallyHp'] == 2, f'the marshal numbers are the spec ones {T}')
+    step_p = lambda k: (page.evaluate(STEP, [1, 0.1]), page.evaluate(f"() => window.__{k}.p"))[1]
+    page.evaluate(STEP, [75, 0.1])    # 7.5 s: no rally yet
+    ok(not page.evaluate("() => window.__M.rallying"), 'no rally before 8 s')
+    d1 = dp(page, 'A')
+    ok(abs(d1 - 0.003) < 1e-6, f'before the rally a ghoul beside him walks at x1 ({d1:.4f})')
+    page.evaluate(STEP, [5, 0.1])     # 8.1 s
+    ok(page.evaluate("() => window.__M.rallying"), 'the sword is up at 8 s')
+    ok(page.evaluate("() => [window.__A.hp, window.__A.maxHp, window.__A.rallied]") == [6, 6, True], f'the ghoul beside him goes 3/3 -> {page.evaluate("() => [window.__A.hp, window.__A.maxHp]")}')
+    ok(page.evaluate("() => [window.__B.hp, window.__B.maxHp, !!window.__B.rallied]") == [3, 3, False] and page.evaluate("() => [window.__C.hp, !!window.__C.rallied]") == [3, False], 'a ghoul two lanes away and one far up the lane are untouched')
+    ok(page.evaluate("() => [window.__M2.hp, !!window.__M2.rallied]") == [10, False], 'another Marshal is never rallied')
+    d2 = dp(page, 'A'); db = dp(page, 'B')
+    ok(abs(d2 - 0.006) < 1e-6, f'while it is up the ghoul moves x2 ({d2:.4f})')
+    ok(abs(db - 0.003) < 1e-6, f'the ghoul two lanes away is not hurried ({db:.4f})')
+    page.evaluate(STEP, [40, 0.1])    # 12.3 s: the sword is down
+    ok(not page.evaluate("() => window.__M.rallying"), 'the sword drops after 4 s')
+    d3 = dp(page, 'A')
+    ok(abs(d3 - 0.003) < 1e-6, f'the speed ends with the sword ({d3:.4f}) and the health stays {page.evaluate("() => window.__A.hp")}/{page.evaluate("() => window.__A.maxHp")}')
+    page.evaluate(STEP, [80, 0.1])    # 20.4 s: the second raise
+    ok(page.evaluate("() => [window.__A.hp, window.__A.maxHp]") == [6, 6], 'at the next raise it stays 6/6 (once ever)')
+    # a boss beside him is never boosted
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; }")
+    spawn_at(page, 'marshal', 3, 0.5, sp=0); page.evaluate("() => { window.__M = window.__last; }")
+    page.evaluate("() => { const b = window.__gg.spawnMonster('boss', 3, true, 0.52); b.summon = 999; b.teleport = 999; window.__BO = b; window.__bh = b.hp; }")
+    page.evaluate(STEP, [85, 0.1])
+    ok(page.evaluate("() => window.__M.rallying || window.__M.rallyT < 8") and page.evaluate("() => window.__BO.hp") == page.evaluate("() => window.__bh") and not page.evaluate("() => window.__BO.rallied"), 'a boss in his square is never boosted')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_marshal_continue(browser, url):
+    """A continued night respawns ordinary monsters fresh: `rallied` and the rally clock do not survive, and the continue itself works cleanly."""
+    if not R8: return
+    page, errors = marshal_scene(browser, url)
+    page.evaluate("() => { window.__gg.G.spawned = 5; }")
+    page.evaluate(STEP, [85, 0.1])
+    ok(page.evaluate("() => window.__A.rallied") is True, 'the ghoul was rallied before the loss')
+    page.evaluate("() => { const g = window.__gg, c = g.continueState(); g.continueNight(c); }"); time.sleep(0.3); hold(page)
+    page.evaluate("() => { const g = window.__gg; g.G.spawnTimer = 999; g.G.sproutT = -999; g.G.monsters.length = 0; }")
+    spawn_at(page, 'marshal', 3, 0.5, sp=0); page.evaluate("() => { window.__M = window.__last; }")
+    spawn_at(page, 'ghoul', 4, 0.5, hp=3, sp=0); page.evaluate("() => { window.__A = window.__last; }")
+    ok(page.evaluate("() => [window.__A.hp, !!window.__A.rallied, window.__M.rallying, window.__M.rallyT]") == [3, False, False, 8], 'after the continue a returning ghoul and Marshal start fresh (nothing carried: monsters respawn)')
+    page.evaluate(STEP, [85, 0.1])
+    ok(page.evaluate("() => [window.__A.hp, window.__A.rallied]") == [6, True], 'and the fresh Marshal rallies on a fresh clock')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_marshal_budget(browser, url):
+    """The rally square is one baked sprite: a rallying Marshal adds at most 1 drawImage a frame over a quiet one, and no fill, stroke or gradient."""
+    if not R8: return
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script("""(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+      for (const k of ['drawImage', 'fill', 'stroke', 'fillRect', 'createRadialGradient', 'createLinearGradient']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; } })();""")
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    nm4_start(page, 1); time.sleep(1.0)
+    page.evaluate(NQ)
+    spawn_at(page, 'marshal', 3, 0.5, sp=0); page.evaluate("() => { window.__M = window.__last; window.__M.rallyT = 1e9; }")
+    time.sleep(0.5)
+    count = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 30) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 30, (c.fill || 0) / 30, (c.stroke || 0) / 30, (c.createRadialGradient || 0) / 30]); } }; requestAnimationFrame(tick); })"
+    base = page.evaluate(count)
+    page.evaluate("() => { window.__M.rallying = true; window.__M.rallyLeft = 1e9; }"); time.sleep(0.5)
+    lit = page.evaluate(count)
+    ok(lit[0] - base[0] <= 1.05 and lit[0] - base[0] >= 0.9, f'the rally square costs one drawImage a frame ({base[0]:.1f} -> {lit[0]:.1f})')
+    ok(lit[1] <= base[1] + 0.1 and lit[2] <= base[2] + 0.1 and lit[3] <= base[3] + 0.1, 'and no fill, stroke or gradient')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+
 CHECKS = {'check_r8_absent': check_r8_absent, 'check_n4_track': check_n4_track, 'check_n4_weather': check_n4_weather, 'check_n4_book': check_n4_book,
-          'check_net_rules': check_net_rules, 'check_net_cap': check_net_cap, 'check_net_free_neighbour': check_net_free_neighbour, 'check_net_hint_wind': check_net_hint_wind, 'check_net_continue': check_net_continue, 'check_net_budget': check_net_budget, 'check_lobber': check_lobber, 'check_lobber_continue': check_lobber_continue}
+          'check_net_rules': check_net_rules, 'check_net_cap': check_net_cap, 'check_net_free_neighbour': check_net_free_neighbour, 'check_net_hint_wind': check_net_hint_wind, 'check_net_continue': check_net_continue, 'check_net_budget': check_net_budget, 'check_lobber': check_lobber, 'check_lobber_continue': check_lobber_continue, 'check_lancer': check_lancer, 'check_lancer_edges': check_lancer_edges, 'check_marshal': check_marshal, 'check_marshal_continue': check_marshal_continue, 'check_marshal_budget': check_marshal_budget}
 
 
 def main():

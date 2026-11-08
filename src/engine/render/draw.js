@@ -12,7 +12,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite } from './tools.js';
-import { castleSprite, coinSprite, discSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
+import { castleSprite, coinSprite, discSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -60,6 +60,7 @@ export function render(){
   for (const m of g.monsters) if (m.type === 'doctor' && !m.dead && m.p > 0) drawHealZone(m, t);
   for (const m of g.monsters) if (m.type === 'bulwark' && !m.dead && m.p > 0) drawBulwarkZone(m, t);
   if (__RELEASE__ >= 5) for (const m of g.monsters) if (m.type === 'rotdoctor' && !m.dead && m.p > 0) drawRotZone(m, t);
+  if (__RELEASE__ >= 8) for (const m of g.monsters) if (m.type === 'marshal' && m.rallying && !m.dead) drawRallyZone(m, t);   // the Storm Marshal's rally square, while his sword is up (one baked sprite)
   if (__RELEASE__ >= 5) for (const m of g.monsters) if (m.type === 'boss' && m.kind === 'fallenpoltergeist' && !m.dead) drawFallenPoltFx(m, t);   // its black fogs and its reaper glow, under the monsters
   drawHexZones(t);
   const ms = g.monsters.slice().sort((a, b) => a.p - b.p);
@@ -343,6 +344,11 @@ export function drawHexZones(t){
 export function drawHealZone(m, t){
   const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
   drawHealZoneFx(ctx, x, y, w, h, t, K);
+}
+/** The Storm Marshal's rally square (Release 8): 3 lanes by 3 tile heights, crimson; fades out over the last half second. */
+export function drawRallyZone(m, t){
+  const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
+  drawRallyZoneFx(ctx, x, y, w, h, t, K, Math.min(1, m.rallyLeft / 0.5));
 }
 /** Plague Doctor 2's rot square (Release 5): the same 3 lanes by 3 tile heights, poison green. */
 export function drawRotZone(m, t){

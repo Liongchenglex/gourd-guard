@@ -125,6 +125,21 @@ export function drawRotZoneFx(g, x, y, w, h, t, k){
   const pulse = .5 + .5 * Math.sin(t * 2.4);
   blitZone(g, zoneSprite('rot', w, h, k, rotZoneBack), x, y, .75 + .25 * pulse);
 }
+/** The Storm Marshal's rally square (Release 8): the same 3x3, in command crimson with a faint lightning-blue rim and a ring of pennant ticks, one baked sprite per size; only its alpha pulses. */
+function rallyZoneBack(g, x, y, w, h){
+  const col = '#ff4a5c', cx = x + w / 2, cy = y + h / 2, R = rng(53);
+  zoneBase(g, x, y, w, h, col, 1, 0);
+  g.save(); g.beginPath(); g.roundRect(x, y, w, h, 14); g.clip(); g.strokeStyle = rgba('#9fc0ff', .22); g.lineWidth = 1.2;
+  for (let i = 0; i < 6; i++){ const bx = x + 10 + R() * (w - 20); g.beginPath(); g.moveTo(bx, y); g.lineTo(bx + (R() - .5) * 30, y + h * .45); g.lineTo(bx + (R() - .5) * 30, y + h); g.stroke(); }
+  g.restore();
+  g.strokeStyle = rgba(col, .6); g.lineWidth = 1.5; g.beginPath(); g.arc(cx, cy, CS * .95, 0, TAU); g.stroke();
+  g.fillStyle = col;
+  for (let i = 0; i < 12; i++){ const ang = i * TAU / 12, px = cx + Math.cos(ang) * CS * .95, py = cy + Math.sin(ang) * CS * .95; g.save(); g.translate(px, py); g.rotate(ang); g.beginPath(); g.moveTo(-2, -3); g.lineTo(5, 0); g.lineTo(-2, 3); g.closePath(); g.fill(); g.restore(); }
+}
+export function drawRallyZoneFx(g, x, y, w, h, t, k, a){
+  const pulse = .5 + .5 * Math.sin(t * 4);
+  blitZone(g, zoneSprite('rally', w, h, k, rallyZoneBack), x, y, a * (.75 + .25 * pulse));
+}
 /** The Fallen Poltergeist's black fog (Release 5): Plague Doctor 2's square and geometry, darker: a black-green fog wash with curls of black fog and a
  *  dim poison rim, its own sprite baked once per size (`zoneSprite('blackfog')`). a fades it in and out; only that and the pulse are live. */
 function blackFogBack(g, x, y, w, h){

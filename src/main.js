@@ -6,7 +6,7 @@ import { beginNight, demoUpdate, makeDemo, startGame, update, repairWall, placeM
 import { attachInput } from './engine/input.js';
 import { spawnMonster, lanesOf, TILE_P, burnMonster, applyBulwarks } from './engine/monsters.js';
 import { measureCoin, resize, ctx } from './engine/render/canvas.js';
-import { drawWeather, weatherState, weatherReset, weatherForce } from './engine/render/weather.js';
+import { drawWeather, weatherState, weatherReset, weatherForce, weatherBaked } from './engine/render/weather.js';
 import { isBaked, atlasBytes, setBakeScale, prebake } from './engine/render/anim.js';
 import { render, LIT_HALO } from './engine/render/draw.js';
 import { CHARS } from './engine/render/chars.js';
@@ -92,5 +92,5 @@ if (new URLSearchParams(location.search).has('test')){
     ...(__RELEASE__ >= 4 ? { lightFire, lightRandomFires, fireAt, putOut, fireMarkPoints, fieldY, updateHud, TYPES, burnMonster, newCell, prebake, GOURD, isGourd, newGourd, gourdPos, destroyGourd, gourdFill, placeGourdAtStart, spawnSprouts, boardScore, paintPull, update, coachHolds, fireFirst, bestGourdMove, levelFor, questsFor, QUEST_TYPES, ICE_ONLY } : {}),   // fire tiles, the Grave Gourd (Release 4)
     ...(__RELEASE__ >= 5 ? { gourdsOn, gourdKind, isProtected, placeGourdsAtStart, gourdSnapshot, restoreGourd, GOURDS, setAllowSameGourd, inGraveSquare, gourdIcon, ROTTEN, isRotten, rotCell, hitRule, rotSnapshot, rotSprite, rotIcon, poisonNow, fogged, MNAME, MINTRO, useLantern, BOSS_INTRO, fpSwap, fpShuffle, FALLEN, BESTIARY, VARIANTS } : {}),
     ...(__RELEASE__ >= 7 ? { WORLDS, POTION_KINDS, potionAt, placePotion, placeRandomPotions, canDrink, drink, updatePotions, potionEveryNow, potionSnapshot, restorePotions, potionSprite, potionIcon, FIRE_P_RANGE, applyBulwarks } : {}),
-    ...(__RELEASE__ >= 8 ? { ctx, drawWeather, weatherState, weatherReset, weatherForce } : {}) };   // Nightmare Witchwood (Release 7): each task adds its test hooks here   // Nightmare Foggy Hollow (Release 5): each task adds its test hooks here
+    ...(__RELEASE__ >= 8 ? { ctx, drawWeather, weatherState, weatherReset, weatherForce, weatherBaked } : {}) };   // Nightmare Witchwood (Release 7): each task adds its test hooks here   // Nightmare Foggy Hollow (Release 5): each task adds its test hooks here
 }

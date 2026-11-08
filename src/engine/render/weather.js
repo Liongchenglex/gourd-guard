@@ -2,7 +2,7 @@
 // that flashes now and then. Perf rule (CLAUDE.md): everything is baked once. Two tileable rain sheets (far drops, near drops) scroll down at
 // different speeds, and three forked bolts are baked with their glow; a frame is at most 6 drawImage calls and one fillRect, no paths, no
 // shadowBlur. Drawn behind the monsters and the patch (render() in draw.js), on the `keepN` nightmare scene only.
-import { G, H, W } from '../state.js';
+import { G, H, W, state } from '../state.js';
 import { WORLDS } from '../../data/worlds/index.js';
 import { SFX } from '../audio.js';
 import { bolt } from './nightmare/scenes.js';
@@ -17,6 +17,8 @@ const TIP = '#c8d4ff';
 let far = null, near = null, bolts = null;
 let farY = 0, nearY = 0, flashT = -1, nextT = FLASH_FIRST, double = false, boltIx = 0, thunderT = -1, flash = 0, boltShown = -1;
 let mq = null, last = 0;
+
+function ensureBaked(){ if (!far){ bakeRain(); bakeBolts(); } }
 
 /** Two tileable rain sheets (the far one fine and faint, the near one longer and brighter). Drops are repeated one sheet up and down and to
  *  the sides, so the sheet wraps both ways. */
@@ -52,7 +54,8 @@ const pulse = tau => tau < 0 ? 0 : tau < 0.04 ? tau / 0.04 : tau < 0.34 ? ((0.34
 
 /** Advance the weather by dt seconds and blit it. Called once a frame behind the monsters. */
 export function drawWeather(ctx, dt){
-  if (!far){ bakeRain(); bakeBolts(); }
+  if (!far) ensureBaked();
+  if (state !== 'play' || G.over || document.hidden) dt = 0;   // paused, over or the app asleep: the sky stands still (no rain, flash or thunder timers)
   const calm = reduced();
   if (!calm){
     farY = (farY + FAR_SPEED * dt) % SHEET_H; nearY = (nearY + NEAR_SPEED * dt) % SHEET_H;
@@ -87,5 +90,8 @@ export function drawWeatherFrame(ctx){
 
 // ---- test hooks (src/main.js, ?test only) ----
 export const weatherState = () => ({ far:farY, near:nearY, flash, bolt:boltShown, active:stormOn() });
+/** Called at every night start (game.js): the timers start fresh (no late rumble from the last storm), and on the storm map the sheets and bolts are baked now, not on the first frame. */
+export function prebakeWeather(){ weatherReset(); if (stormOn()) ensureBaked(); }
 export function weatherReset(){ farY = nearY = 0; flashT = -1; flash = 0; thunderT = -1; nextT = FLASH_FIRST + Math.random() * FLASH_SPREAD; boltShown = -1; }
 export function weatherForce(){ trigger(); }
+export const weatherBaked = () => !!far;

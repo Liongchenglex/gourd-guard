@@ -3,10 +3,12 @@ import { SPAWN_STEPS } from '../data/patterns.js';
 import { NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, prevLevelFor, firstNightOf, typesForNight, gearUnlockNightOf, NIGHTMARE_LEVELS, NM_BOOK_LEVELS, nmNight, nmGateText } from '../data/worlds/index.js';
-import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO, PROTECTOR_INTRO, WARTLING_INTRO, CROOK_INTRO, POISON_INTRO, ROT_INTRO } from '../data/monsters.js';
+import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO, PROTECTOR_INTRO, WARTLING_INTRO, CROOK_INTRO, NET_INTRO, TOWER_INTRO, GATE_INTRO, POISON_INTRO, ROT_INTRO } from '../data/monsters.js';
 import { hasFire, nightmareTitle } from '../data/levels.js';
 import { monsterIcon } from '../engine/render/monsters.js';
 import { prebakeAsync } from '../engine/render/anim.js';
+import { pieceFrame } from '../engine/render/castlepieces.js';
+import { K as CK } from '../engine/render/canvas.js';
 import { hollowking } from '../engine/render/chars/hollowking.js';
 import { SFX, ensureAudio, musicStop, musicSync, musicStart, applyVolumes } from '../engine/audio.js';
 import { offeredGourds, bakeKeys, beginEndless, beginNight, continueNight, continueState, makeDemo, makePreview, startGame, useFirework, useRepair, useBuster, useLantern, useMine, useBomb, useScarecrow, useEmergency } from '../engine/game.js';
@@ -262,6 +264,9 @@ export function openPreview(n){
   const info = [];   // no counts here (owner): just what is special
   if (def.boss) info.push(def.boss2 === def.boss ? 'Two pairs of bosses. Monsters keep coming until all fall.' : def.boss2 ? 'Two bosses at once. Monsters keep coming until both fall.' : 'Monsters keep coming until the boss falls.');
   if (def.frenzyAfterBoss) info.push('When the first pair falls, the jukebox drops.');
+  if (__RELEASE__ >= 8 && netsOn(def)) info.push('Monsters throw nets onto your patch: a netted pumpkin only leaves with its bunch.');
+  if (__RELEASE__ >= 8 && pieceOn(def, 'tower')) info.push('Archer Towers shoot down their lanes until they fall.');
+  if (__RELEASE__ >= 8 && pieceOn(def, 'gate')) info.push('Gatehouses send out monsters until they are broken.');
   if (__RELEASE__ >= 4 && def.fireMarks && def.fireMarks.length) info.push('Fire marks on the spawn bar light more fire and bring a horde.');
   if (__RELEASE__ >= 4) for (const k of def.unlockGourds) if (GOURDS[k] && !(save.gourds && save.gourds[k])) info.push(`🎁 Reward: the ${GOURDS[k].name}.`);
   if (!def.nightmare && def.levelNo === 10){ const nextName = WORLD_NAMES[def.worldNo]; info.push(`🎁 Reward: levels 11–20${nextName && WORLD_LEVELS[def.worldNo] && WORLD_LEVELS[def.worldNo].length ? ` and World ${def.worldNo + 1}: ${nextName}` : ''}.`); }
@@ -312,11 +317,23 @@ function startPreviewedNight(){
   if (__RELEASE__ >= 5 && offeredGourds(def).includes('protector') && !(prev && offeredGourds(prev).includes('protector'))) cards.push({ key:'gourd:protector', icon:gourdIcon(160, 'protector'), title:'The Protector Gourd', text:PROTECTOR_INTRO });   // the first night that offers it (N2-5), once unlocked
   if (__RELEASE__ >= 7 && offeredGourds(def).includes('wartling') && !(prev && offeredGourds(prev).includes('wartling'))) cards.push({ key:'gourd:wartling', icon:gourdIcon(160, 'wartling'), title:'The Wartling Gourd', text:WARTLING_INTRO });   // the first night that offers it (N3-5), once unlocked
   if (__RELEASE__ >= 8 && offeredGourds(def).includes('crookneck') && !(prev && offeredGourds(prev).includes('crookneck'))) cards.push({ key:'gourd:crookneck', icon:gourdIcon(160, 'crookneck'), title:'The Crookneck Gourd', text:CROOK_INTRO });   // its first night (N4-3, which gives it)
+  if (__RELEASE__ >= 8 && netsOn(def) && !netsOn(prev)) cards.push({ key:'nets', icon:'🕸️', title:'Nets', text:NET_INTRO });   // the keep nightmare's first nets (N4-1)
+  if (__RELEASE__ >= 8 && pieceOn(def, 'tower') && !pieceOn(prev, 'tower')) cards.push({ key:'piece:tower', icon:pieceIcon('tower'), title:'Archer Tower', text:TOWER_INTRO });   // N4-5
+  if (__RELEASE__ >= 8 && pieceOn(def, 'gate') && !pieceOn(prev, 'gate')) cards.push({ key:'piece:gate', icon:pieceIcon('gate'), title:'Gatehouse', text:GATE_INTRO });   // N4-7
   for (const t of def.intro) if (!VARIANTS[t]) cards.push({ key:'m:' + t, icon:monsterIcon(t, 160), title:`New monster: ${MNAME[t] || t}`, text:MINTRO[t] || '' });   // returning variants get no card (owner)
   for (const k of [...new Set([def.boss, def.boss2].filter(Boolean))]) cards.push({ key:`b:${k}:${def.bossForm}`, icon:monsterIcon(k, 200, def.bossForm), title:def.bossForm === 2 ? `${BOSS_NAMES[k]}, full form` : `Boss: ${BOSS_NAMES[k]}`, text:BOSS_INTRO[k][def.bossForm] });
   introQueue = cards.filter(c => !save.seenIntro[c.key]);
   introNext = () => beginNight(n);
   showNextIntro();
+}
+/** Release 8: a night where monsters throw nets (a netter in its pool, or a boss that nets), and a night with a castle piece of a kind. */
+const NETTERS = __RELEASE__ >= 8 ? ['lobbercart', 'glutton', 'siegetower', 'fallencount'] : [];
+const netsOn = def => !!def && def.nightmare && [...def.pool.map(([k]) => k), def.boss].some(k => NETTERS.includes(k));
+const pieceOn = (def, kind) => !!def && (def.castlesLayout || []).some(e => e[2] === kind);
+/** A castle piece's picture for its intro card: its first baked frame (at the play scale, so no frame is re-baked) copied onto a card-sized canvas. */
+function pieceIcon(kind){
+  const sp = pieceFrame(kind, kind === 'gate' ? 'closed' : 'idle', 0, 0, CK), c = document.createElement('canvas'), s = 150 / sp.h;
+  c.width = Math.ceil(sp.w * s); c.height = 150; c.getContext('2d').drawImage(sp.c, 0, 0, c.width, c.height); return c;
 }
 function showNextIntro(){
   const card = introQueue.shift();

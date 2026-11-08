@@ -105,13 +105,14 @@ export function beginEndless(){
 
 /** The sprite strips a level needs (prebaked when its night starts, and while its preview card is read): its pool, a boss and its minions
  *  (ALSO_BAKE), the jukebox, and on a nightmare night the burning form of every pool type that can catch fire (BURNS_TO), so the first
- *  ignition never hitches (Release 4). */
+ *  ignition never hitches (Release 4), and on a Keep nightmare night a Gatehouse's pool and an Archer Tower's archer (Release 8). */
 export function bakeKeys(def){
   const kinds = [...def.pool.map(([k]) => k), def.boss].filter(Boolean), also = kinds.flatMap(k => (__RELEASE__ >= 4 && ALSO_BAKE[k]) || []);
   return [...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...also,
     ...(__RELEASE__ >= 4 && def.nightmare ? [...kinds, ...also].map(k => BURNS_TO[k]).filter(Boolean) : []),
     ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []),
-    ...(__RELEASE__ >= 3 && def.boss === 'hollowking' ? ['hollowking|' + TYPES.hollowking.forms[0]] : []), 'ghoul'];
+    ...(__RELEASE__ >= 3 && def.boss === 'hollowking' ? ['hollowking|' + TYPES.hollowking.forms[0]] : []),
+    ...(__RELEASE__ >= 8 ? [...(def.gatePool || []).map(k => poolKey(k, VARIANTS)), ...((def.castlesLayout || []).some(e => e[2] === 'tower') ? ['archer'] : [])] : []), 'ghoul'];   // Release 8: what a Gatehouse sends out, the archer a fallen Archer Tower drops
 }
 
 /** The gourds a night offers in the picker, in slot order (Release 5, spec Part 6): none unless the level has `gourd:true`; there, its

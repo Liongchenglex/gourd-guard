@@ -21,7 +21,7 @@ import { SEED_PACKS } from './data/economy.js';
 import { LEVELS, isOpen, WORLD_LEVELS, RELEASE, typesForNight, NM_BASE, nmNight, NIGHTMARE_LEVELS, levelFor, WORLDS } from './data/worlds/index.js';
 import { PTYPES, RAINBOW, BEIGE, lvStats } from './data/pumpkins.js';
 import { upgradeCost } from './data/economy.js';
-import { BOSS_NAMES, BOSS_INTRO, TYPES, ICE_ONLY, MNAME, MINTRO, VARIANTS, PIECES } from './data/monsters.js';
+import { BOSS_NAMES, BOSS_INTRO, TYPES, ICE_ONLY, MNAME, MINTRO, VARIANTS, PIECES, ALSO_BAKE } from './data/monsters.js';
 import { QUEST_TYPES, questsFor } from './data/quests.js';
 import { lightFire, lightRandomFires, fireAt, putOut, fireMarkPoints, fireFirst } from './engine/fire.js';
 import { fieldY, useLantern, gust, useFirework, dropBomb, offeredGourds, defaultGourds } from './engine/game.js';
@@ -101,5 +101,5 @@ if (new URLSearchParams(location.search).has('test')){
     ...(__RELEASE__ >= 5 ? { gourdsOn, gourdKind, isProtected, placeGourdsAtStart, gourdSnapshot, restoreGourd, GOURDS, setAllowSameGourd, inGraveSquare, gourdIcon, ROTTEN, isRotten, rotCell, hitRule, rotSnapshot, rotSprite, rotIcon, poisonNow, fogged, MNAME, MINTRO, useLantern, BOSS_INTRO, fpSwap, fpShuffle, FALLEN, BESTIARY, VARIANTS } : {}),
     ...(__RELEASE__ >= 7 ? { WORLDS, POTION_KINDS, potionAt, placePotion, placeRandomPotions, canDrink, drink, updatePotions, potionEveryNow, potionSnapshot, restorePotions, dropBrewMark, potionSprite, potionIcon, FIRE_P_RANGE, applyBulwarks, inWartSquare, barrierBaked, raiseRoot, inHexZone, layGlue, useFirework, dropBomb, fhBaked:fallenHexBaked, atlas } : {}),   // Nightmare Witchwood (Release 7): each task adds its test hooks here   // Nightmare Foggy Hollow (Release 5): each task adds its test hooks here
     ...(__RELEASE__ >= 8 ? { inCrookSquare, CROOK, launchGids, offeredGourds, defaultGourds, drawGourdGlow } : {}),   // the Crookneck Gourd (Release 8, Task 7)
-    ...(__RELEASE__ >= 8 ? { ctx, drawWeather, weatherState, weatherReset, weatherForce, weatherBaked, netCount, canNet, pickNetCell, throwNet, isNetted, clearNets, redNetsOf, updateNets, netSnapshot, restoreNets, smash, planMove, gust, setState, shieldedNow, veiledNow, keepFalls, useFirework, dropBomb, damageCastle, castleY, newCastle, PIECES, pieceBakeStats, prebakeCastlePieces, resetPieces, kill } : {}) };   // Release 8
+    ...(__RELEASE__ >= 8 ? { ctx, drawWeather, weatherState, weatherReset, weatherForce, weatherBaked, netCount, canNet, pickNetCell, throwNet, isNetted, clearNets, redNetsOf, updateNets, netSnapshot, restoreNets, smash, planMove, gust, setState, shieldedNow, veiledNow, keepFalls, useFirework, dropBomb, damageCastle, castleY, newCastle, PIECES, pieceBakeStats, prebakeCastlePieces, resetPieces, kill, ALSO_BAKE } : {}) };   // Release 8
 }

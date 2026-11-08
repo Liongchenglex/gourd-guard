@@ -39,7 +39,7 @@ def check_r8_absent(browser, url):
     js = bundle_js()
     for s in R8_NAMES:
         ok(s not in js, f"{s!r} not in the bundle")
-    ok('Storm Gate' not in js and 'Beat Nightmare 3-4' not in js, "the N4-1 name and the gate text are not in the bundle")   # ('Crumbling Keep: Nightmare' is the archived scene's name, in since Release 4)
+    ok('Glutton and Bride' not in js and 'Beat Nightmare 3-4' not in js, "the N4-1 name and the gate text are not in the bundle")   # ('Crumbling Keep: Nightmare' is the archived scene's name, in since Release 4)
 
 
 def check_n4_track(browser, url):
@@ -1820,6 +1820,208 @@ def check_crook_art(browser, url):
 CHECKS.update({'check_crook_no_net': check_crook_no_net, 'check_crook_group': check_crook_group, 'check_crook_launch_mix': check_crook_launch_mix,
                'check_crook_break': check_crook_break, 'check_picker_four_gourds': check_picker_four_gourds, 'check_crook_coach': check_crook_coach,
                'check_crook_unlock': check_crook_unlock, 'check_crook_art': check_crook_art})
+
+
+# ---------- Task 10: levels N4-1 to N4-16, intro cards, bestiary, previews ----------
+N4_NAMES = ['Nets and the Lobber Cart', 'Storm Lancer', 'The Crookneck Gourd', 'The Siege Tower', 'Archer Tower', 'Blood Glutton', 'Gatehouse', 'Bat Bride',
+            'Glutton and Bride', 'Marshal rush', 'The tower line', 'Lancer storm', 'Siege Tower 2', 'Fortress', 'The gauntlet', 'The Fallen Count']   # spec Part 6 (and Part 7)
+N4_NEW = {'lobbercart': 1, 'lancer': 2, 'marshal': 4, 'glutton': 6, 'bride': 8}   # each new monster and the level it first walks in on (the Marshal out of N4-4's Siege Tower)
+N4_PIECE_FIRST = {'tower': 5, 'gate': 7}
+N4_LEVELS_JS = """() => { const g = window.__gg; return g.NIGHTMARE_LEVELS[3].map((d, i) => { const L = g.levelFor(1301 + i);
+  return { level:d.level, name:d.name, pool:d.pool.map(e => e[0]), weights:d.pool.map(e => e[1]), types:d.pool.every(([k]) => !!(g.TYPES[k] || g.VARIANTS[k])), gourd:!!d.gourd, gourds:d.gourds || null,
+    gourdLock:d.gourdLock || null, unlockGourds:d.unlockGourds || null, boss:d.boss, bossForm:d.bossForm, bossChest:d.bossChest || null, coach:d.coach || null, intro:d.intro || [],
+    also:d.boss ? (g.ALSO_BAKE[d.boss] || []) : [], layout:d.castlesLayout || [], castles:d.castles || null, gatePool:d.gatePool || null, gateOk:(d.gatePool || []).every(k => !!(g.TYPES[k] || g.VARIANTS[k])), caps:d.caps || null,
+    spawnGap:d.spawnGap, spawnBurst:d.spawnBurst, total:d.total, interval:d.interval, theme:d.theme,
+    quests:g.questsFor(L), questsOk:g.questsFor(L).every(([t, p]) => !!g.QUEST_TYPES[t] && (!['must', 'team'].includes(t) || p.every(k => g.PTYPES.some(q => q.key === k)))) }; }); }"""
+
+
+def n4_open_all(page):
+    """Every story level and every nightmare level of the first three books beaten, N4-1 to N4-15 too (so all of N4 is open); every gourd unlocked."""
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 17)}, **{1100 + k: 3 for k in range(1, 17)}, **{1200 + k: 3 for k in range(1, 17)}, **{1300 + k: 3 for k in range(1, 16)}})
+    page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true, crookneck:true }; s.seenGourdCoach = true; s.seenProtectorCoach = true; s.seenWartlingCoach = true; s.seenCrookneckCoach = true; }")
+
+
+def kinds_of(d):
+    return {e[2] if len(e) > 2 and e[2] else 'wall' for e in d['layout']}
+
+
+def check_n4_levels(browser, url):
+    """The 16 designed levels (spec Parts 6 and 7): names, pools, gourds, bosses, castle pieces and pacing are data, and every preview opens."""
+    if not R8: return
+    from nm3_check import gpick
+    page, errors = open_page(browser, url)
+    L = page.evaluate(N4_LEVELS_JS)
+    ok(len(L) == 16 and [d['level'] for d in L] == list(range(1, 17)), f'16 keep nightmare levels in order ({len(L)})')
+    ok([d['name'] for d in L] == N4_NAMES, f"each level has the spec's name {[d['name'] for d in L]}")
+    ok(all(d['theme'] == 9 for d in L), 'every level is on the thunderstorm Keep map (theme 9)')
+    ok(all(d['pool'] and d['types'] for d in L), 'every pool is non-empty and every pool type exists in TYPES or VARIANTS')
+    intros = {k + 1: d['intro'] for k, d in enumerate(L) if d['intro']}
+    ok(intros == {n: [t] for t, n in N4_NEW.items()}, f'each new monster is introduced on the level that first brings it {intros}')
+    ok(all(t in d['pool'] or t in d['also'] for d in L for t in d['intro']), 'every introduced monster walks in from its level pool or its boss')
+    early = [(t, k + 1) for k, d in enumerate(L) for t in d['pool'] + d['also'] + (d['gatePool'] or []) if t in N4_NEW and k + 1 < N4_NEW[t]]
+    ok(not early, f'no new monster walks in before its introduction {early}')
+    ok(all(t in L[14]['pool'] for t in N4_NEW) and {'gate', 'tower'} <= kinds_of(L[14]), f"N4-15 (The gauntlet) holds every new monster, a Gatehouse and an Archer Tower {L[14]['pool']} {kinds_of(L[14])}")
+    # gourds (spec Part 5): three on offer on N4-1 and N4-2, the Crookneck joins on N4-3 (locked, its coach) and is a free pick from N4-4
+    ok(all(d['gourd'] for d in L), 'every level is a gourd night')
+    ok(all(d['gourds'] == ['grave', 'protector', 'wartling'] for d in L[:2]) and all(d['gourds'] == ALL4 for d in L[2:]), f"N4-1 and N4-2 offer grave, protector and wartling; N4-3 on all four {[d['gourds'] for d in L]}")
+    ok(L[2]['gourdLock'] == 'crookneck' and [k + 1 for k, d in enumerate(L) if d['gourdLock']] == [3], 'the Crookneck is locked into a slot on N4-3 only')
+    ok(L[2]['coach'] == 'crookneck' and [k + 1 for k, d in enumerate(L) if d['coach']] == [3], 'N4-3 keeps the Crookneck tutorial (the only coach)')
+    ok(not any(d['unlockGourds'] for d in L), 'no level unlocks a gourd (N4-3 gives the Crookneck; beating N4-4 does not)')
+    # bosses and chests
+    ok(L[3]['boss'] == 'siegetower' and L[3]['bossForm'] == 1 and L[3]['bossChest'] == 'normal', f"N4-4: the Siege Tower, one normal chest {L[3]['boss'], L[3]['bossForm'], L[3]['bossChest']}")
+    ok(L[12]['boss'] == 'siegetower' and L[12]['bossForm'] == 2 and L[12]['bossChest'] == 'normal', 'N4-13: the Siege Tower in form 2, one normal chest')
+    ok(L[15]['boss'] == 'fallencount' and L[15]['bossChest'] == 'normal', 'N4-16: the Fallen Count, one normal chest')
+    ok([k + 1 for k, d in enumerate(L) if d['boss']] == [4, 13, 16], 'bosses on N4-4, N4-13 and N4-16 only')
+    ok({'glutton', 'bride'} <= set(L[12]['pool']), f"N4-13: Gluttons and Brides with the tower {L[12]['pool']}")
+    ok({'knight', 'vampire'} <= set(L[15]['pool']), f"N4-16: Shield Knights and Vampires walk in during the fight {L[15]['pool']}")
+    # castle pieces
+    first = {kind: next((k + 1 for k, d in enumerate(L) if kind in kinds_of(d)), None) for kind in ('tower', 'gate')}
+    ok(first == N4_PIECE_FIRST, f'the Archer Tower first stands on N4-5, the Gatehouse on N4-7 {first}')
+    ok(all(d['castles'] and d['castles'].get('hp') for d in L if d['layout']), 'every level with castle pieces sets the castle wall health')
+    ok(all(len(e) >= 2 and 0 <= e[0] <= 6 and 0 < e[1] < 1 and (len(e) < 3 or e[2] in ('wall', 'gate', 'tower')) for d in L for e in d['layout']), 'every castle entry is [lane, p, kind?] with a known kind')
+    ok(all(bool(d['gatePool']) == ('gate' in kinds_of(d)) for d in L), f"a gatePool exactly on the Gatehouse levels {[(k + 1, d['gatePool']) for k, d in enumerate(L) if d['gatePool']]}")
+    ok(all(d['gateOk'] and set(d['gatePool'] or []) <= set(d['pool']) for d in L), 'every gatePool monster exists and is in its level pool (so the preview and the bestiary show it)')
+    ok(sum(1 for e in L[4]['layout'] if (e[2:] or ['wall'])[0] == 'tower') == 2 and 'archer' in L[4]['pool'], f"N4-5: two Archer Towers plus Skeleton Archers {L[4]['layout']}")
+    ok(set(L[6]['gatePool'] or []) == {'knight', 'vampire'}, f"N4-7: gates sending out Shield Knights and Vampires {L[6]['gatePool']}")
+    ok({'bulwark', 'marshal'} <= set(L[7]['pool']), f"N4-8: Bulwarks and Marshals for the Bride to veil {L[7]['pool']}")
+    ok({'glutton', 'bride'} <= set(L[8]['pool']), f"N4-9: Gluttons and Brides {L[8]['pool']}")
+    top = lambda d: d['pool'][d['weights'].index(max(d['weights']))]
+    ok(top(L[9]) == 'marshal' and sum(1 for e in L[9]['layout'] if e[2:] == ['gate']) == 2, f"N4-10: Marshals out in force and two Gatehouses {list(zip(L[9]['pool'], L[9]['weights']))} {L[9]['layout']}")
+    tw = sorted(e[0] for e in L[10]['layout'] if e[2:] == ['tower'])
+    ok(tw == list(range(7)) and len({e[1] for e in L[10]['layout']}) == 1 and 'lobbercart' in L[10]['pool'], f"N4-11: a full row of Archer Towers, carts behind {L[10]['layout']}")
+    ok(set(L[11]['pool']) == {'lancer', 'lobbercart'}, f"N4-12: Lancers and carts only {L[11]['pool']}")
+    rows = {round(e[1], 2) for e in L[13]['layout']}
+    ok(len(rows) == 2 and {'gate', 'tower'} <= kinds_of(L[13]), f"N4-14: two rows of walls, Gatehouses and Towers {L[13]['layout']}")
+    ok(L[0]['caps'] and L[0]['caps'].get('lobbercart') == 1 and 'lobbercart' in L[0]['pool'] and {'knight', 'vampire'} <= set(L[0]['pool']), f"N4-1: one cart with Shield Knights and Vampires {L[0]['pool']} {L[0]['caps']}")
+    ok(L[2]['caps'] and L[2]['caps'].get('lobbercart') == 2, f"N4-3: two carts so the gourd matters {L[2]['caps']}")
+    ok(all(not d['caps'] or d['caps'].get('lobbercart', 99) <= 3 for d in L), 'never more than three carts parked on a night')
+    ok(not any(d['layout'] for d in (L[0], L[2], L[15])), 'no castle pieces on N4-1, N4-3 (the net checks and the tutorial run there) or N4-16 (the Count raises his own)')
+    ok(all(isinstance(d['spawnGap'], (int, float)) and isinstance(d['spawnBurst'], (int, float)) for d in L), 'every level sets spawnGap and spawnBurst')
+    ok(all(d['questsOk'] and len(d['quests']) == 3 for d in L), 'every level has three quests of existing types (pumpkins by key)')
+    ok(len({(d['total'], d['interval'], tuple(d['pool'])) for d in L}) == 16, 'no two levels share pool and pacing (each has its own theme)')
+    n4_open_all(page)
+    info = {}
+    for k in range(1, 17):
+        page.evaluate(f"() => {{ document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); window.__gg.openPreview({1300 + k}); }}"); time.sleep(0.25)
+        info[k] = page.evaluate("() => [document.querySelector('#pvTitle').textContent, document.querySelector('#pvInfo').textContent, [...document.querySelectorAll('#pvMonsters small')].map(e => e.textContent)]")
+    ok(info[1][0] == 'Nightmare 4-1', f'the preview is titled Nightmare 4-1 {info[1][0]!r}')
+    ok('Gatehouse' in info[7][1] and 'Archer Tower' in info[5][1] and 'Archer Tower' not in info[7][1], f'the previews say where Gatehouses and Archer Towers stand {info[5][1]!r} {info[7][1]!r}')
+    ok('net' in info[1][1].lower() and 'net' in info[6][1].lower(), f'the previews of netting nights mention the nets {info[1][1]!r}')
+    ok('Lobber Cart' in info[1][2] and 'Storm Lancer' in info[2][2], f'the previews list the new monsters {info[1][2]} {info[2][2]}')
+    ok(not errors, f'every preview opens without a page error {errors[:2]}')
+    # the Crookneck is a free pick from N4-4 on: offered, not locked, not forced into a slot
+    u = keep_picker(page, ['grave', 'protector', 'wartling', 'crookneck'], night=1304)
+    ok(u['state'] == 'loadout' and [t[0] for t in u['tiles']] == ALL4 and not any(t[2] for t in u['tiles']), f'N4-4: four gourd tiles, none locked {u["tiles"]}')
+    ok(u['slots'] == ['grave', 'protector'] and u['slotMust'] == [False, False], f'N4-4: the first two in unlock order picked, both slots free {u["slots"]} {u["slotMust"]}')
+    page.click('#loGourdSlot'); time.sleep(0.2)
+    page.click('#loGourds .pick[data-gourd="crookneck"]'); time.sleep(0.2)
+    ok('crookneck' in page.evaluate(gpick())['slots'], 'the Crookneck can be picked into a free slot on N4-4')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def n4_intro_titles(page, n):
+    """Play night n from its preview card and read the intro cards it shows, in order (as nm2_check's)."""
+    page.evaluate(f"() => {{ document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); window.__gg.openPreview({n}); }}"); time.sleep(0.4)
+    page.click('#bPvGo'); time.sleep(0.4)
+    out = []
+    for _ in range(8):
+        if page.evaluate("() => window.__gg.state") != 'intro': break
+        out.append([page.evaluate("() => document.querySelector('#inTitle').textContent"), page.evaluate("() => document.querySelector('#inText').textContent")])
+        page.click('#bIntroOk'); time.sleep(0.3)
+    return out
+
+
+SEEN_BEFORE_N4 = "() => { window.__gg.save.seenIntro = { quests:true, gourd:true, 'gourd:protector':true, 'gourd:wartling':true, castles:true }; }"   # met on earlier books (the gourds) and in world 4 (castle walls)
+
+
+def check_n4_intros(browser, url):
+    """First appearances on the keep track show a card: Nets (N4-1), each new monster, the Crookneck Gourd (N4-3), the Siege Tower (both forms),
+    the Archer Tower (N4-5), the Gatehouse (N4-7) and the Fallen Count."""
+    if not R8: return
+    page, errors = open_page(browser, url)
+    n4_open_all(page)
+    page.evaluate(SEEN_BEFORE_N4)
+    t = {k: n4_intro_titles(page, 1300 + k) for k in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 16)}
+    T = {k: [x[0] for x in v] for k, v in t.items()}
+    ok(T[1][:1] == ['Nets'], f'N4-1 opens with the Nets card {T[1]}')
+    nt = next((x[1] for x in t[1] if x[0] == 'Nets'), '')
+    ok('slide' in nt and 'fl' in nt and 'bunch' in nt and 'Crookneck' not in nt, f'the Nets card says a netted pumpkin cannot slide but flies with its bunch ({nt[:90]}...)')
+    ok(not any(x == 'Nets' for k in T if k > 1 for x in T[k]), 'later levels do not repeat it')
+    for k, name in ((1, 'Lobber Cart'), (2, 'Storm Lancer'), (4, 'Storm Marshal'), (6, 'Blood Glutton'), (8, 'Bat Bride')):
+        ok(any(x.startswith('New monster') and name in x for x in T[k]), f'N4-{k} introduces the {name} {T[k]}')
+    ok('The Crookneck Gourd' in T[3], f'N4-3 explains the Crookneck Gourd {T[3]}')
+    ok(any('Siege Tower' in x and 'full form' not in x for x in T[4]), f'N4-4 introduces the Siege Tower {T[4]}')
+    ok('Archer Tower' in T[5] and 'Gatehouse' not in T[5], f'N4-5 explains the Archer Tower {T[5]}')
+    ok('Gatehouse' in T[7], f'N4-7 explains the Gatehouse {T[7]}')
+    ok(not T[9] and not T[10], f'N4-9 and N4-10 bring nothing new {T[9]} {T[10]}')
+    ok(any('Siege Tower' in x and 'full form' in x for x in T[13]), f"N4-13 shows the Siege Tower's form-2 card {T[13]}")
+    ok(any('Fallen Count' in x for x in T[16]), f'N4-16 introduces the Fallen Count {T[16]}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_n4_bestiary(browser, url):
+    """The keep nightmare book's bestiary: the new monsters in first-met order (the Marshal beside the Siege Tower that brings him), the Fallen
+    Count last; story monsters (Shield Knight, Bulwark, Vampire, Skeleton Archer) are not repeated. The castle pieces are not monsters and the
+    bestiary lists only monsters (as the castle walls of world 4), so they have no entry."""
+    if not R8: return
+    page, errors = open_page(browser, url)
+    def flip(w):
+        page.evaluate(f"() => window.__gg.openBook({w})"); time.sleep(0.6)
+        if page.evaluate("() => !document.querySelector('#spread').classList.contains('nightmare')"): page.click('#bBookmark')
+        time.sleep(0.8)
+        page.evaluate("() => { if (document.querySelector('#bestiary').hidden) document.querySelector('#bBkFlip').click(); }"); time.sleep(0.7)
+    # N4-1 and N4-2 open: the cart and the lancer met
+    set_stars(page, {**story_done(100), 1204: 3, 1301: 3})
+    flip(3)
+    b = page.evaluate("() => [document.querySelector('#bsTitle').textContent, [...document.querySelectorAll('#bestiary .bs')].map(e => [e.classList.contains('unmet'), e.querySelector('b').textContent, e.querySelector('.ab').textContent, (e.querySelector('.lo') || {}).textContent || ''])]")
+    ok('Nightmare' in b[0] and 'Crumbling Keep' in b[0], f'the page is titled as the keep nightmare edition ({b[0]!r})')
+    met = [x[1] for x in b[1] if not x[0]]
+    ok(met == ['Lobber Cart', 'Storm Lancer'], f'met so far, in order: the Lobber Cart, the Storm Lancer {met}')
+    ok(all(x[2] and x[3] for x in b[1] if not x[0]), 'each met entry has an ability and a lore line')
+    ok(len(b[1]) == 7 and all(x[0] for x in b[1][2:]), f'seven entries, the rest unmet silhouettes ({len(b[1])})')
+    n4_open_all(page); page.evaluate("() => { window.__gg.save.stars['1316'] = 3; }")
+    flip(3)
+    e = page.evaluate("() => [...document.querySelectorAll('#bestiary .bs')].map(e => e.classList.contains('unmet') ? null : [e.querySelector('b').textContent, e.querySelector('.ab').textContent, (e.querySelector('.lo') || {}).textContent || ''])")
+    names = [x and x[0] for x in e]
+    want = ['Lobber Cart', 'Storm Lancer', 'The Siege Tower', 'Storm Marshal', 'Blood Glutton', 'Bat Bride', 'The Fallen Count']
+    ok(names == want, f'the full list in first-met order, the Fallen Count last {names}')
+    ok(all(x and x[1] and x[2] for x in e), 'every entry has an ability and a lore line')
+    ok(not any(n in names for n in ('Shield Knight', 'Bulwark Knight', 'Vampire', 'Skeleton Archer', 'Crypt Ghoul')), 'story monsters are not repeated')
+    ok(page.evaluate("() => window.__gg.FALLEN && window.__gg.FALLEN[3] && window.__gg.FALLEN[3].key") == 'fallencount', 'FALLEN[3] is the Fallen Count')
+    flip(1)
+    w2 = page.evaluate("() => [...document.querySelectorAll('#bestiary .bs b')].map(e => e.textContent)")
+    ok(w2 and w2[-1] == 'The Fallen Poltergeist' and 'Storm Lancer' not in w2, f'the world 2 nightmare bestiary is unchanged {w2[-2:]}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_n4_prebake(browser, url):
+    """Each level bakes what it can spawn when its night starts: its pool, its gate's pool, the Skeleton Archer on an Archer Tower night, its
+    boss and what the boss brings; the castle pieces on a piece night and the nets on every night. Every night starts and runs a moment."""
+    if not R8: return
+    page, errors = open_page(browser, url)
+    L = page.evaluate(N4_LEVELS_JS)
+    missing, pieces = [], []
+    for k, d in enumerate(L, 1):
+        page.reload(); page.wait_for_function('() => !!window.__gg'); time.sleep(0.3)   # a fresh atlas cache: what is baked is this night's
+        page.evaluate("() => { Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true }); const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true, crookneck:true }; s.seenCrookneckCoach = true; }")
+        nm4_start(page, k)
+        want = set(d['pool']) | set(d['gatePool'] or []) | ({'archer'} if 'tower' in kinds_of(d) else set()) | set(d['also']) | ({d['boss']} if d['boss'] else set())
+        got = page.evaluate("""(ks) => { const g = window.__gg, V = g.VARIANTS; return ks.filter(k => { const b = V[k] ? V[k].base : null;   // a variant bakes as base|variant (or its base when it has no art of its own)
+          return !g.isBaked(k) && !g.isBaked(k + '|form2') && !(b && (g.isBaked(b + '|' + k) || g.isBaked(b))); }); }""", sorted(want))
+        if got: missing.append((k, got))
+        st = page.evaluate("() => window.__gg.pieceBakeStats().canvases")
+        if (st > 0) != bool({'gate', 'tower'} & kinds_of(d) or d['boss'] == 'fallencount'): pieces.append((k, st))
+        time.sleep(0.4)
+    ok(not missing, f'every level bakes its monsters, its gate pool, the tower archer and its boss at night start {missing}')
+    ok(not pieces, f'the castle pieces are baked on exactly the piece nights and the Fallen Count\'s {pieces}')
+    ok(not errors, f'no page errors on any night {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_n4_levels': check_n4_levels, 'check_n4_intros': check_n4_intros, 'check_n4_bestiary': check_n4_bestiary, 'check_n4_prebake': check_n4_prebake})
 
 
 def main():

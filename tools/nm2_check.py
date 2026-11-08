@@ -1514,7 +1514,7 @@ def check_fallen_polt(browser, url):
     L = page.evaluate("() => [13, 14, 15].map(i => { const d = window.__gg.NIGHTMARE_LEVELS[1][i]; return d && [d.level, d.name, d.boss, d.bossChest, !!d.gourd, d.gourds, !!d.poison]; })")
     ok(L[0] is not None and L[0][0] == 14 and L[1] is not None and L[1][0] == 15, f'placeholder nights N2-14 and N2-15 exist {L[:2]}')
     ok(L[2] == [16, 'The Fallen Poltergeist', 'fallenpoltergeist', 'normal', True, ['grave', 'protector'], True], f'N2-16: the Fallen Poltergeist, a normal chest, both gourds, steady poison {L[2]}')
-    ok(page.evaluate("() => window.__gg.FALLEN.map(f => f.key)") == ['fallengravekeeper', 'fallenpoltergeist'], 'the world 2 nightmare bestiary ends on it (FALLEN[1])')
+    ok(page.evaluate("() => window.__gg.FALLEN.slice(0, 2).map(f => f.key)") == ['fallengravekeeper', 'fallenpoltergeist'], 'the world 2 nightmare bestiary ends on it (FALLEN[1]; later books add FALLEN[2], FALLEN[3])')
     ok(bool(page.evaluate("() => (window.__gg.BESTIARY.fallenpoltergeist || {}).ability")), 'it has a bestiary entry')
     b = fp_up(page)
     ok(b is not None and b[0] == 'fallenpoltergeist' and b[1] == b[2] == 45, f'on N2-16 it arrives with 45 health {b}')

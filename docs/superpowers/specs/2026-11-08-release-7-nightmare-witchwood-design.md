@@ -10,7 +10,7 @@ Audience and difficulty as Releases 4 and 5: endgame players; very hard. Numbers
 
 ## Goals
 - Nightmare 3-1 to 3-16 (`N3-k`, nights `nmNight(3, k)` = 1200 + k), opened by the world 3 book's demon bookmark.
-- Potions (three kinds), six new monsters (Ash Crone, Blood Coven Witch, Triptych Sprite, Flask Bearer, Cauldron Toad, plus the Treant's roots), the Treant mini boss, the Wartling Gourd and the Fallen Hexwitch boss.
+- Potions (three kinds) with brew marks on the spawn bar, six new monsters (Ash Crone, Blood Coven Witch, Triptych Sprite, Flask Bearer, Cauldron Toad, plus the Treant's roots), the Treant mini boss, the Wartling Gourd and the Fallen Hexwitch boss.
 - Every level has a theme. Art comes from the archive where it exists.
 
 ## Non-goals
@@ -46,6 +46,7 @@ Audience and difficulty as Releases 4 and 5: endgame players; very hard. Numbers
 - **Drinking:** a monster that walks onto a potion's tile drinks it if it may, and the potion **vanishes** (owner). A monster that may not drink walks past and leaves it for the next one.
 - **Who may drink:** any monster, except **bosses, mini bosses and mummies** (owner; one rule beside `hexable()`), and never the **same kind twice**: a monster may hold one of each, so at most bulky + speed + colour (owner). A true Chameleon or Reverse Chameleon may not take the colour potion *(our call: as the witch's hex)*; a monster a witch already hexed may (it is re-hexed, as witches re-hex today) but only once.
 - **The player cannot remove potions** (owner): pumpkins fly over them, tools ignore them.
+- **Brew marks** (owner, 2026-11-08; from N3-6 on, after the Wartling tutorial): checkmarks on the spawn bar, built like Release 4's fire marks (on a level with marks the bar counts monsters that arrived, not kills). Level field `brewMarks: [0.33, 0.66]` *(our numbers: two marks a night)*. When `at × total` monsters have spawned: a banner ("The brew boils!" *(our call)*), a **swoop of crows** (4–6 at once down random lanes *(our number)*, Release 4's crows), and **potions come faster** from then on: the level's `potions.every` is cut by a quarter at each mark (9 s → 6.75 s → about 5 s *(our numbers)*). A passed mark shows ticked; a continued night keeps the marks already passed. Not on the mini boss and boss nights (N3-4, N3-13, N3-16), where the spawn bar follows the boss *(our call)*.
 - **Look:** three baked bottle sprites, each its own shape and glow so they read in grey Witchwood: bulky a round red flask, speed a thin green vial with a bolt, colour a violet bottle with a swirl *(our call; shown to the owner before levels are built on them)*. A monster that drank shows a small bottle icon per potion beside its health pips; a bulky drinker is drawn about 15% bigger *(our call)*.
 
 ## Part 3: New monsters
@@ -109,7 +110,7 @@ From the owner (2026-11-08) and the archive art (`docs/archive/fallen-bosses/`: 
 | 3-15 | The Long Night | The gauntlet: every new monster |
 | 3-16 | The Fallen Hexwitch | The boss (Part 6) |
 
-The Grave Gourd and the Protector Gourd are on offer from N3-1; the Wartling joins from N3-5.
+The Grave Gourd and the Protector Gourd are on offer from N3-1; the Wartling joins from N3-5. Brew marks (Part 2) are on every night from N3-6 except N3-13 and N3-16.
 
 ## Part 8: Checks and docs
 

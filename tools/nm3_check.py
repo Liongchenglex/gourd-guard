@@ -351,11 +351,12 @@ def check_flaskbearer(browser, url):
     ps = potions_rc(page)
     ok(d[0] is True, f'a Flask Bearer dies {d}')
     ok(len(ps) == 1 and ps[0][:2] == [3, row] and ps[0][2] in ('bulky', 'speed', 'colour'), f'one potion of a random kind on its tile (lane 3, row {row}) {ps}')
-    # its tile is taken: the potion goes to the nearest free tile
-    j = page.evaluate(NEW, ['flaskbearer', 3, 0.5])
-    page.evaluate(KILL, j)
+    # its tile is taken: the potion goes to the nearest free tile. Spawned and killed in one go: given a frame on that tile, a Flask Bearer
+    # drinks the potion standing there (as any monster does) and its own would then land on the freed tile.
+    d = page.evaluate("() => { const g = window.__gg, m = g.spawnMonster('flaskbearer', 3, false, 0.5); m.sp = 0; m.lastHit = -1; g.damage(m, 999); return [m.dead, m.drank || null]; }")
     ps = potions_rc(page)
-    ok(len(ps) == 2 and max(abs(ps[1][0] - 3), abs(ps[1][1] - row)) == 1, f'its tile taken: the second goes on a tile next to it {ps}')
+    ok(d == [True, None], f'(the second Flask Bearer died without drinking {d})')
+    ok(len(ps) == 2 and ps[0][:2] == [3, row] and max(abs(ps[1][0] - 3), abs(ps[1][1] - row)) == 1, f'its tile taken: the first potion stays, the second goes on a tile next to it {ps}')
     # kinds are random: 30 deaths in a clear field show every kind
     kinds = page.evaluate("""() => { const g = window.__gg, G = g.G, seen = new Set(); for (let n = 0; n < 30; n++){ G.potions.length = 0;
       const m = g.spawnMonster('flaskbearer', 2, false, 0.4); m.sp = 0; g.damage(m, 999); for (const o of G.potions) seen.add(o.kind); } return [...seen].sort(); }""")

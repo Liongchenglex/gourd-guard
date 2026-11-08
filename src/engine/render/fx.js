@@ -174,6 +174,35 @@ export function drawHexZoneFx(g, x, y, w, h, t, a, k){
   g.restore();
 }
 
+/** The Fallen Hexwitch's undead zone (Release 7): a 5x5 box in ash and blood red, its rune circles, ash motes and grave dust all baked into one
+ *  sprite per size (`zoneSprite('undead')`, prebaked on her night); only its alpha pulses live, one drawImage a zone. */
+function undeadZoneBack(g, x, y, w, h){
+  const col = '#ff2a3a', ash = '#9a9aa2', R = rng(67);
+  g.save(); g.beginPath(); g.roundRect(x, y, w, h, 16); g.clip();
+  let gr = g.createRadialGradient(x + w / 2, y + h / 2, 10, x + w / 2, y + h / 2, Math.max(w, h) * .7); gr.addColorStop(0, rgba('#2a0a10', .34)); gr.addColorStop(1, rgba('#1a1a1e', .2));
+  g.fillStyle = gr; g.fillRect(x, y, w, h);
+  for (let i = 0; i < 16; i++){ const bx = x + 12 + R() * (w - 24), by = y + 12 + R() * (h - 24), br = 10 + R() * 20;
+    gr = g.createRadialGradient(bx, by, 0, bx, by, br); gr.addColorStop(0, rgba(i % 3 ? '#3a3a40' : '#5a0a14', .32)); gr.addColorStop(1, rgba('#3a3a40', 0)); g.fillStyle = gr; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.fill(); }
+  g.restore();
+  zoneBase(g, x, y, w, h, col, .85, 0);
+  g.save(); g.strokeStyle = rgba(ash, .45); g.lineWidth = 2; g.setLineDash([7, 7]); g.beginPath(); g.roundRect(x + 4, y + 4, w - 8, h - 8, 13); g.stroke(); g.restore();
+  for (const [fx, fy, fr] of [[.5, .5, .2], [.24, .24, .1], [.76, .24, .1], [.24, .76, .1], [.76, .76, .1]]){   // a great rune circle and four small ones
+    const cx = x + fx * w, cy = y + fy * h, r = Math.min(w, h) * fr;
+    g.strokeStyle = rgba(col, .5); g.lineWidth = 1.6; g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.stroke();
+    g.beginPath(); for (let k = 0; k < 5; k++){ const a = -Math.PI / 2 + k * TAU * 2 / 5; g.lineTo(cx + Math.cos(a) * r * .8, cy + Math.sin(a) * r * .8); } g.closePath(); g.stroke();
+    g.strokeStyle = rgba(ash, .4); for (let k = 0; k < 12; k++){ const a = k * TAU / 12; g.beginPath(); g.moveTo(cx + Math.cos(a) * r * .86, cy + Math.sin(a) * r * .86); g.lineTo(cx + Math.cos(a) * r * 1.02, cy + Math.sin(a) * r * 1.02); g.stroke(); }
+  }
+  for (let i = 0; i < 22; i++){ const mx = x + 10 + R() * (w - 20), my = y + 10 + R() * (h - 20), a = .35 + R() * .4;   // little skull motes of ash, one with red eyes now and then
+    g.fillStyle = rgba('#d8d4cc', a); ell(g, mx, my, 4, 4.5); g.fill(); g.fillStyle = i % 4 ? rgba('#2a2a30', a) : rgba(col, a + .2); ell(g, mx - 1.6, my - .7, 1.1, 1.3); g.fill(); ell(g, mx + 1.6, my - .7, 1.1, 1.3); g.fill(); }
+}
+const undeadSprite = (w, h, k) => zoneSprite('undead', w, h, k, undeadZoneBack);
+export function drawUndeadZoneFx(g, x, y, w, h, t, a, k){
+  const pulse = .5 + .5 * Math.sin(t * 2.6);
+  blitZone(g, undeadSprite(w, h, k), x, y, a * (.78 + .22 * pulse));
+}
+/** Bake her zone's sprite at size w x h now (render/witchwood.js prebakeFallenHex, at night start). */
+export const prebakeUndeadZone = (w, h, k) => { undeadSprite(w, h, k); };
+
 // ---------- baked field props ----------
 // Each prop is painted once per canvas scale `k` into an offscreen canvas and blitted every frame (60 fps on a phone).
 // A sprite is { c, w, h, ox, oy }: draw it at (x - ox, y - oy, w, h) so its local origin lands on (x, y).
@@ -240,6 +269,44 @@ export function drawBarrierFx(g, x, y, lanes, t, k, s, a){
   g.globalAlpha = ga;
 }
 export const resetCastles = resetProps;
+
+// ---------- the Fallen Hexwitch's altar (Release 7) ----------
+// A low stone altar on a plinth, ash-grey with a bone-white cloth hanging torn down its front, a skull on top with red eyes between two black candles
+// with red flames, and a red rune carved in the stone. Three crack states (0 whole, 1 cracked, 2 shattered and chipped), each baked once per scale;
+// its origin is the middle of its base line. One drawImage an altar a frame.
+export const ALTAR_W = 52, ALTAR_H = 58, ALTAR_STATES = 3;
+function altar(g, st){
+  const ST = { base:'#7c7c84', light:mix('#7c7c84', '#ffffff', .4), dark:mix('#7c7c84', '#141416', .42), deep:mix('#7c7c84', '#060608', .68), rim:mix('#7c7c84', '#ffffff', .6) };
+  const CL = { base:'#d4d0c8', light:mix('#d4d0c8', '#ffffff', .45), dark:mix('#d4d0c8', '#141416', .42), deep:mix('#d4d0c8', '#060608', .68), rim:'#ffffff' };
+  const BONE = { base:'#e6e2da', light:'#ffffff', dark:mix('#e6e2da', '#141416', .42), deep:mix('#e6e2da', '#060608', .68), rim:'#ffffff' };
+  const WAX = { base:'#26262a', light:'#55555c', dark:'#141416', deep:'#060608', rim:'#7a7a80' };
+  S.shadow(g, 0, 1, 30, 7);
+  S.part(g, RR(-26, -12, 52, 13, 3), ST, { x:0, y:-6, r:26 }, { mat:'stone', lw:1.4 });   // plinth
+  S.part(g, RR(-20, -36, 40, 26, 3), ST, { x:0, y:-24, r:22 }, { mat:'stone', lw:1.4 });   // body
+  S.part(g, RR(-25, -42, 50, 8, 3), ST, { x:0, y:-38, r:26 }, { mat:'stone', lw:1.4 });   // top slab
+  S.part(g, PL([[-14, -36], [14, -36], [12, -18], [7, -22], [3, -15], [-2, -21], [-7, -16], [-12, -20]]), CL, { x:0, y:-28, r:14 }, { mat:'cloth', flat:true, lw:1 });   // the torn cloth
+  g.save(); g.shadowColor = '#ff2a3a'; g.shadowBlur = 6; g.strokeStyle = '#ff2a3a'; g.lineWidth = 1.6; g.lineCap = 'round';   // the rune on the cloth
+  g.beginPath(); g.moveTo(0, -33); g.lineTo(0, -22); g.moveTo(-4, -30); g.lineTo(4, -25); g.moveTo(4, -30); g.lineTo(-4, -25); g.stroke(); g.restore();
+  for (const sx of [-1, 1]){   // two black candles with red flames
+    const cx = sx * 17;
+    S.part(g, RR(cx - 3, -56, 6, 14, 2), WAX, { x:cx, y:-49, r:5 }, { flat:true, lw:1 });
+    S.dot(g, E(cx + sx * 2.6, -48, 1.4, 3), '#3a3a40');   // a wax drip
+    g.save(); g.shadowColor = '#ff2a3a'; g.shadowBlur = 8; S.dot(g, PL([[cx - 2.6, -56], [cx, -64], [cx + 2.6, -56]]), '#ff3a3a'); g.restore(); S.dot(g, E(cx, -57.5, 1, 1.6), '#ffd0c0');
+  }
+  S.part(g, SM([[-8, -42], [-9, -50], [-5, -56], [5, -56], [9, -50], [8, -42]]), BONE, { x:0, y:-49, r:9 }, { mat:'bone', lw:1.2 });   // the skull
+  S.dot(g, RR(-5, -44, 10, 3, 1), '#2a2a30');
+  for (const ex of [-3.4, 3.4]){ S.dot(g, E(ex, -49.5, 2.3, 2.6), '#120608'); g.save(); g.shadowColor = '#ff2a3a'; g.shadowBlur = 6; S.dot(g, E(ex, -49.5, 1.1, 1.2), '#ff3a3a'); g.restore(); }
+  if (st >= 1) crack(g, [[-18, -40], [-12, -33], [-14, -26], [-8, -19]], 1.4, .8), crack(g, [[16, -12], [12, -6], [15, -1]], 1.2, .7), crack(g, [[22, -40], [17, -36]], 1.1, .7);
+  if (st >= 2){
+    crack(g, [[6, -42], [9, -34], [5, -28], [10, -20], [7, -12]], 1.6, .9); crack(g, [[-24, -10], [-18, -6], [-21, 0]], 1.4, .85); crack(g, [[-5, -55], [-2, -50]], 1, .8);
+    g.save(); g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000'; g.beginPath(); g.moveTo(25, -42); g.lineTo(18, -42); g.lineTo(25, -34); g.closePath(); g.fill(); g.restore();   // a chipped corner
+    for (const [cx, cy] of [[-30, -2], [30, -1], [26, 0]]) S.part(g, E(cx, cy, 2.6, 1.8), ST, { x:cx, y:cy, r:3 }, { flat:true, mat:'stone', lw:.8 });   // rubble at its foot
+  }
+}
+/** Crack state st (0 whole .. 2 shattered) of the altar, baked at scale k. */
+export function altarSprite(k, st){ k = bakeK(k); return bake(`altar:${k}:${st}`, ALTAR_W + 24, ALTAR_H + 22, ALTAR_W / 2 + 12, ALTAR_H + 12, k, g => altar(g, st)); }
+/** Test hook: [altar frames baked, her zone sizes baked]. */
+export const fallenHexBaked = () => [[...propCache.keys()].filter(k => k.startsWith('altar:')).length, [...propCache.keys()].filter(k => k.startsWith('zone:undead:')).length];
 
 const path = (g, pts) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); };
 /** A groove: a dark line with a lit lower-right lip, so cracks read as depth rather than ink. */

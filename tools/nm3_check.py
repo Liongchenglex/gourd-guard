@@ -1214,6 +1214,302 @@ def check_treant_baked(browser, url):
 CHECKS.update({'check_treant': check_treant, 'check_treant_form2': check_treant_form2, 'check_treant_continue': check_treant_continue, 'check_treant_baked': check_treant_baked})
 
 
+
+# ---------- Task 9: the Fallen Hexwitch (N3-16) ----------
+R7_NAMES += ['fallenhexwitch', 'altarHp']   # her key and data keys
+FH_T = """() => { const T = window.__gg.TYPES.fallenhexwitch; return T ? [T.boss, T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.hold, T.zoneEvery, T.zoneLast, T.potionEvery, T.potionN,
+  T.crowEvery, T.crows, T.smashEvery, T.smashHit, T.glide, T.altarAt, T.altarHp, T.noItems] : null; }"""
+# A pumpkin object (lv 1..5 of `type`) for hitMonster, defined once a page as window.__pr(type, lv, lane).
+PRDEF = """() => { const g = window.__gg; window.__pr = (type, lv, lane) => ({ x:g.LANE(lane), y:g.fieldY(1), vy:-900, type, vis:type, lv, guar:false, lane, hitWalls:new Set(),
+  grp:{ spawned:false, small:false, kills:0 }, size:1, rot:0, spin:9, hit:new Set(), trail:[], r:16, dead:false }); }"""
+ALTAR = "() => { const a = window.__gg.G.altar; return a ? [a.lane, Math.round(a.p * 1000) / 1000, a.hp] : null; }"
+OWNZ = "() => window.__gg.G.hexZones.filter(z => z.src === 'fallenhex').map(z => [z.shape, z.lane, Math.round(z.p * 1000) / 1000, Math.round(z.t * 100) / 100])"
+
+
+def fh_up(page):
+    """Start N3-16, bring the Fallen Hexwitch in now, clear the field so only she acts, stop spawns and sprouts, put her just short of hold with
+    every clock far off, and log her highest p (window.__fmaxP). Returns [kind, hp, maxHp, hold, lane] or None."""
+    nm3_start(page, 16)
+    page.evaluate("() => { const G = window.__gg.G; G.sproutT = -999; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }")
+    time.sleep(0.3)
+    b = page.evaluate(f"""() => {{ const g = window.__gg, G = g.G, b = {TBOSS}; if (!b) return null;
+      G.spawnTimer = 999; G.monsters.splice(0, G.monsters.length, b); b.p = b.hold - 0.01; window.__b = b; G.hexZones.length = 0;
+      if (G.potions) G.potions.length = 0; G.potionT = 1e9; b.zoneT = b.potionT = b.crowT = b.smashT = 1e9;
+      window.__fmaxP = 0; clearInterval(window.__fi); window.__fi = setInterval(() => {{ window.__fmaxP = Math.max(window.__fmaxP, window.__b.p); window.__gg.G.spawnTimer = 999; }}, 10);
+      return [b.kind, b.hp, b.maxHp, b.hold, b.lane]; }}""")
+    page.evaluate(PRDEF)
+    return b
+
+
+def check_fallen_hex(browser, url):
+    """N3-16: her data and level; on forced clocks a 5x5 undead zone (only her own counted), 2-3 potions, 1-3 crows, the fence smash (half, never
+    the last 1) then a glide of 1-2 lanes; altars at 75/50/25% (one at a time, a hit past two marks raises the second when the first falls)."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    ok(page.evaluate(FH_T) == [True, 45, 34, 0.03, 50, 0, 400, 6, 0.28, 12, 10, 8, [2, 3], 6, [1, 3], 10, 0.5, [1, 2], [0.75, 0.5, 0.25], 8, True], f'Fallen Hexwitch data {page.evaluate(FH_T)}')
+    ok(page.evaluate("() => window.__gg.BOSS_NAMES.fallenhexwitch") == 'The Fallen Hexwitch', 'her name on screen is "The Fallen Hexwitch"')
+    intro = page.evaluate("() => (window.__gg.BOSS_INTRO.fallenhexwitch || {})[1] || ''")
+    ok('altar' in intro.lower() and 'potion' in intro.lower(), f'she has a boss intro text {intro[:60]!r}')
+    L = page.evaluate("() => [13, 14, 15].map(i => { const d = window.__gg.NIGHTMARE_LEVELS[2][i]; return d && [d.level, d.boss, d.bossChest, !!d.gourd]; })")
+    ok(L[0] is not None and L[0][0] == 14 and L[1] is not None and L[1][0] == 15, f'placeholder nights N3-14 and N3-15 exist {L[:2]}')
+    ok(L[2] == [16, 'fallenhexwitch', 'normal', True], f'N3-16: the Fallen Hexwitch, a normal chest, gourds {L[2]}')
+    b = fh_up(page)
+    ok(b is not None and b[0] == 'fallenhexwitch' and b[1] == b[2] == 45 and b[3] == 0.28, f'on N3-16 she arrives with 45 health, holding at 0.28 {b}')
+    if b is None:
+        page.close(); return
+    ok(page.evaluate("() => window.__gg.canDrink(window.__b, 'speed')") is False, 'she never drinks a potion')
+    ok(page.evaluate("() => window.__b.hexT == null || window.__b.hexT === 0") and not page.evaluate("() => window.__gg.TYPES.fallenhexwitch.hexEvery"), 'she has no hex clock (no hexing)')
+    # the undead zone: a 5x5 box of her own, 10 s; a Crone's 3x3 does not stop hers; a second while hers stands is not laid
+    page.evaluate("() => { const G = window.__gg.G; G.hexZones.push({ shape:'box', lane:0, p:0.5, t:8 }); window.__b.zoneT = 0.05; }")
+    ok(gwait(page, f"() => ({OWNZ})().length >= 1", 1) is not None, 'she raises an undead zone though an Ash Crone zone stands')
+    z = page.evaluate(OWNZ)
+    ok(len(z) == 1 and z[0][0] == 'box5' and 9.5 < z[0][3] <= 10 and 2 <= z[0][1] <= 4, f'one 5x5 zone (box5) lasting 10 s, all on the field {z}')
+    ok(page.evaluate("() => window.__b.zoneT") > 11, 'her zone clock restarts at 12 s')
+    ok(mon_b(page, "m.anim && m.anim.clip") == 'hex', 'she plays her hex clip')
+    page.evaluate("() => { window.__b.zoneT = 0.05; }"); gsleep(page, 0.3)
+    ok(len(page.evaluate(OWNZ)) == 1, 'with her zone standing the next clock lays no second one')
+    zl, zp = z[0][1], page.evaluate("() => window.__gg.G.hexZones.find(z => z.src === 'fallenhex').p")
+    inz = page.evaluate("""([l, p]) => { const g = window.__gg, G = g.G, tp = g.TILE_P(), crone = G.hexZones.filter(z => z.src !== 'fallenhex'); G.hexZones = G.hexZones.filter(z => z.src === 'fallenhex');
+      const at = (dl, dp) => g.inHexZone({ lane:l + dl, p:p + dp * tp }); const r = [at(0, 0), at(2, 2.4), at(-2, -2.4), at(3, 0), at(-3, 0), at(0, 2.6), at(0, -2.6)]; G.hexZones.push(...crone); return r; }""", [zl, zp])
+    ok(inz == [True, True, True, False, False, False, False], f'inside: lanes +-2 and +-2.5 tiles; outside beyond {inz}')
+    j = page.evaluate(GHOUL, [zl + 1, min(0.9, zp + 0.05), 3, 0])
+    page.evaluate("(i) => { const g = window.__gg, m = window.__ms[i]; m.lastHit = 0; g.damage(m, 99); }", j)
+    ok(mon(page, j, "[m.dead, m.rise > 3.5]") == [False, True], 'a monster killed inside collapses and rises after 4 s')
+    page.evaluate("() => { const G = window.__gg.G; G.hexZones.forEach(z => z.t = 0.05); }"); gsleep(page, 0.2)
+    page.evaluate("() => { const G = window.__gg.G, b = window.__b; G.monsters.splice(0, G.monsters.length, b); window.__ms = []; }")
+    # potions: 2 or 3 on random field tiles, both counts seen
+    counts = set()
+    for _ in range(12):
+        page.evaluate("() => { window.__gg.G.potions.length = 0; window.__b.potionT = 0.02; }")
+        gwait(page, "() => window.__gg.G.potions.length >= 2", 1)
+        gsleep(page, 0.05)
+        counts.add(page.evaluate("() => window.__gg.G.potions.length"))
+    ok(counts == {2, 3}, f'she summons 2 or 3 potions each time, both seen {sorted(counts)}')
+    ok(page.evaluate("() => window.__b.potionT") > 7, 'her potion clock restarts at 8 s')
+    page.evaluate("() => { window.__gg.G.potions.length = 0; window.__b.potionT = 1e9; }")
+    # crows: 1 to 3 at the top of random lanes, minions
+    counts, top = set(), True
+    for _ in range(12):
+        page.evaluate(NO_CROWS); page.evaluate("() => { window.__b.crowT = 0.02; }")
+        gwait(page, f"() => ({CROWS})().length >= 1", 1)
+        c = page.evaluate(CROWS); counts.add(len(c)); top = top and all(x[2] and x[1] < 0.1 for x in c)
+    ok(counts <= {1, 2, 3} and len(counts) >= 2, f'1 to 3 crows each swoop {sorted(counts)}')
+    ok(top, 'they come in at the top of the field, as minions')
+    page.evaluate(NO_CROWS); page.evaluate("() => { window.__b.crowT = 1e9; }")
+    # the smash: half her lane's full health (never the last 1), then 0.45 s later a glide of 1-2 lanes, clamped to the field
+    page.evaluate("() => { const g = window.__gg, b = window.__b; g.walls.forEach(w => w.hp = w.max); b.lane = 3; b.x = b.tx = g.LANE(3); b.smashT = 0.02; }")
+    gwait(page, "() => window.__gg.walls[3].hp < window.__gg.walls[3].max", 1)
+    w = page.evaluate("() => window.__gg.walls.map(w => [w.hp, w.max])")
+    ok(abs((w[3][1] - w[3][0]) - w[3][1] / 2) < 0.3, f'her lane\'s fence loses half its full health {w[3]}')
+    ok(all(w[i][0] == w[i][1] for i in (0, 1, 2, 4, 5, 6)), f'no other fence is touched {w}')
+    ok(page.evaluate("() => window.__b.lane") == 3 and mon_b(page, "m.anim && m.anim.clip") == 'zone', 'she slams her broom (zone clip) and stays put for now')
+    tg = gwait(page, "() => window.__b.lane !== 3", 1)
+    l1 = page.evaluate("() => window.__b.lane")
+    ok(tg is not None and 0.3 < tg < 0.6 and 1 <= abs(l1 - 3) <= 2, f'about 0.45 s later she glides 1-2 lanes ({tg}, lane 3 -> {l1})')
+    gsleep(page, 0.8)
+    ok(page.evaluate("() => Math.abs(window.__b.x - window.__b.tx) < 5"), 'she glides over to her new lane')
+    ok(page.evaluate("() => window.__b.smashT") > 8.5, 'her smash clock restarts at 10 s')
+    lanes = set()
+    for _ in range(8):
+        page.evaluate("() => { const g = window.__gg, b = window.__b; g.walls.forEach(w => w.hp = w.max); g.walls[0].hp = 2; b.lane = 0; b.x = b.tx = g.LANE(0); b.smashT = 0.02; }")
+        gwait(page, "() => window.__b.lane !== 0", 1.5)
+        lanes.add(page.evaluate("() => window.__b.lane"))
+    ok(lanes <= {1, 2} and len(lanes) == 2, f'from the edge lane she glides onto the field, 1 or 2 lanes {sorted(lanes)}')
+    ok(page.evaluate("() => window.__gg.walls[0].hp") == 1, 'a fence on 2 health is left on 1, never broken by the smash')
+    page.evaluate("() => { const g = window.__gg; g.walls.forEach(w => w.hp = w.max); window.__b.smashT = 1e9; }")
+    # the altars
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 12, '#fff'); }")
+    a1 = page.evaluate(ALTAR)
+    hp, bl, done = page.evaluate("() => [window.__b.hp, window.__b.lane, window.__b.altDone]")
+    ok(hp == 33.75 and done == 1, f'a 12-damage hit at full health stops at the 75% mark (33.75) {hp} (marks spent {done})')
+    ok(a1 is not None and a1[0] != bl and a1[1] == 0.15 and a1[2] == 8, f'an altar rises in another lane at the back of the field with 8 health {a1} (her lane {bl})')
+    la = set()
+    for _ in range(10):
+        page.evaluate("() => { window.__gg.G.altar = null; window.__b.altDone = 0; window.__b.hp = 34; window.__gg.damage(window.__b, 1, '#fff'); }")
+        la.add(page.evaluate("() => window.__gg.G.altar.lane"))
+    ok(bl not in la and len(la) >= 3, f'the altar lane is random, never hers {sorted(la)}')
+    page.evaluate("() => { const g = window.__gg; g.G.altar.hp = 8; g.damage(window.__b, 5, '#fff'); }")
+    ok(page.evaluate("() => [window.__b.hp, window.__gg.G.floats.some(f => f.text === 'No damage')]") == [33.75, True], 'while it stands she takes no damage ("No damage")')
+    al = page.evaluate("() => window.__gg.G.altar.lane")
+    page.evaluate("() => { window.__gg.G.altar.hp = 1; }")
+    page.evaluate(TSHOOT, [0, al])
+    ok(page.evaluate(ALTAR) is None, 'a pumpkin up its lane breaks it')
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 5, '#fff'); }")
+    ok(page.evaluate("() => window.__b.hp") == 28.75, 'with the altar broken she can be hurt again')
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 20, '#fff'); }")
+    ok(page.evaluate("() => [window.__b.hp, window.__b.altDone, !!window.__gg.G.altar]") == [22.5, 2, True], 'a 20-damage hit stops at the 50% mark (22.5) and raises the second altar')
+    page.evaluate("() => { const g = window.__gg; g.G.altar = null; g.damage(window.__b, 20, '#fff'); }")
+    ok(page.evaluate("() => [window.__b.hp, window.__b.altDone, !!window.__gg.G.altar]") == [11.25, 3, True], 'then the 25% mark (11.25) and the third altar')
+    page.evaluate("() => { const g = window.__gg; g.G.altar = null; g.damage(window.__b, 5, '#fff'); }"); gsleep(page, 0.3)
+    ok(page.evaluate("() => [window.__b.hp, !!window.__gg.G.altar]") == [6.25, False], 'past the last mark there is never a fourth altar')
+    # a drop past two marks at once (no hit through damage(): the marks are read each frame): the second altar rises once the first falls
+    page.evaluate("() => { const g = window.__gg, b = window.__b; g.G.altar = null; b.altDone = 0; b.hp = 20; }"); gsleep(page, 0.2)
+    ok(page.evaluate("() => [window.__b.altDone, !!window.__gg.G.altar]") == [1, True], 'health past two marks: one altar first')
+    page.evaluate("() => { window.__gg.G.altar.hp = 0.5; }"); page.evaluate(TSHOOT, [0, page.evaluate("() => window.__gg.G.altar.lane")]); gsleep(page, 0.2)
+    ok(page.evaluate("() => [window.__b.altDone, !!window.__gg.G.altar]") == [2, True], 'the second rises when the first falls')
+    page.evaluate("() => { window.__gg.G.altar = null; }"); gsleep(page, 0.2)
+    ok(page.evaluate("() => [window.__b.altDone, !!window.__gg.G.altar]") == [2, False], 'and no third until her health reaches 25%')
+    # immune to knockback and freeze; held at the back
+    r = page.evaluate("""() => { const g = window.__gg, b = window.__b, h = b.hp; b.altDone = 3; g.G.altar = null; b.hp = 5000; let kb = 0, fr = 0;
+      for (let i = 0; i < 20; i++){ const pr = window.__pr(2, 5, b.lane); pr.guar = true; g.hitMonster(pr, b); if (b.kb > 0) kb++; if (b.frozenT > 0) fr++; } b.hp = h; return [kb, fr]; }""")
+    ok(r == [0, 0], f'20 Ice hits with knockback guaranteed: no knockback, no freeze {r}')
+    mp = page.evaluate("() => window.__fmaxP")
+    ok(mp <= 0.28 + 1e-9, f'she never walks past hold (max p {mp:.4f})')
+    # killing her: one normal chest, no boss item, the boss is down
+    page.evaluate("() => { const g = window.__gg; g.G.altar = { lane:(window.__b.lane + 2) % 7, p:0.15, hp:8, t:0 }; }")
+    c0 = page.evaluate("() => window.__gg.save.chests.length")
+    page.evaluate("() => { clearInterval(window.__fi); const g = window.__gg, b = window.__b; g.G.altar = null; b.lastHit = 0; g.damage(b, 99999, '#fff'); }"); time.sleep(0.3)
+    ch = page.evaluate("() => window.__gg.save.chests.slice(%d)" % c0)
+    ok(len(ch) == 1 and ch[0]['kind'] == 'normal' and not ch[0].get('boss'), f'killing her gives one normal chest and no boss item {ch}')
+    ok(page.evaluate("() => window.__gg.G.bossDead"), 'the boss is down')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fh_altar_immune(browser, url):
+    """While an altar stands nothing hurts her: a pumpkin (a Wartling one too), burn, glue, Black's splash, Deep Blue's lightning, a mine, a bomb and
+    a firework. A 20-damage hit at 80% stops at the 75% mark. Only pumpkins hurt the altar (by their power; rot splats on it); tools and area damage
+    skip it; a monster in front of it takes the hit; a Grey pumpkin stops at it."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    b = fh_up(page)
+    if b is None:
+        ok(False, 'the Fallen Hexwitch arrived'); page.close(); return
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lane = 3; b.x = b.tx = g.LANE(3); b.p = b.hold; b.lastHit = 0; g.damage(b, 12, '#fff'); g.G.altar.lane = 0; Object.assign(g.save, { mine:5, bomb:5, fw:5 }); }")
+    H = "() => window.__b.hp"
+    ok(page.evaluate(H) == 33.75 and page.evaluate(ALTAR) == [0, 0.15, 8], f'(set-up: an altar in lane 1, her at 33.75) {page.evaluate(ALTAR)}')
+    page.evaluate("() => { const g = window.__gg, b = window.__b; g.hitMonster(window.__pr(0, 5, b.lane), b); }")
+    ok(page.evaluate(H) == 33.75, 'a pumpkin does nothing to her')
+    page.evaluate("() => { const g = window.__gg, b = window.__b, pr = window.__pr(0, 5, b.lane); pr.wart = true; g.hitMonster(pr, b); }")
+    ok(page.evaluate(H) == 33.75, 'nor a Wartling pumpkin (its double damage too)')
+    page.evaluate("() => { const g = window.__gg, b = window.__b; g.hitMonster(window.__pr(3, 5, b.lane), b); }")
+    ok(page.evaluate("() => window.__b.burnLeft") > 0, '(set-up: a Fire pumpkin sets her burning)')
+    gsleep(page, 3)
+    ok(page.evaluate(H) == 33.75, 'nor her burn')
+    page.evaluate("() => { const g = window.__gg, b = window.__b; g.layGlue(b.lane, b.p, 5); }"); gsleep(page, 2.5)
+    ok(page.evaluate(H) == 33.75, 'nor glue under her')
+    page.evaluate("() => { window.__gg.G.glue.length = 0; }")
+    j = page.evaluate(GHOUL, [4, b[3], 50, 0])
+    page.evaluate("(i) => { const g = window.__gg; g.hitMonster(window.__pr(7, 5, 4), window.__ms[i]); }", j)
+    ok(mon(page, j, "m.hp") < 50 and page.evaluate(H) == 33.75, f'nor Black\'s splash from a ghoul beside her (ghoul {mon(page, j, "m.hp")})')
+    page.evaluate("(i) => { const g = window.__gg; g.hitMonster(window.__pr(8, 5, 4), window.__ms[i]); }", j)
+    ok(page.evaluate(H) == 33.75, 'nor Deep Blue\'s lightning along her row')
+    page.evaluate("() => { const G = window.__gg.G, b = window.__b; G.monsters.splice(0, G.monsters.length, b); window.__ms = []; }")
+    page.evaluate("() => { const g = window.__gg, b = window.__b; g.placeMine(b.lane, b.p); g.G.mines[g.G.mines.length - 1].t = 99; }")
+    j = page.evaluate(GHOUL, [3, b[3], 1, 0])
+    gwait(page, "() => window.__gg.G.mines.length === 0", 1)
+    ok(page.evaluate("() => window.__gg.G.mines.length") == 0 and page.evaluate(H) == 33.75, 'nor a mine going off under her')
+    page.evaluate("() => { const g = window.__gg, b = window.__b; g.dropBomb(b.x, g.fieldY(b.p)); }")
+    ok(page.evaluate(H) == 33.75, 'nor a bomb')
+    page.evaluate("() => { window.__gg.useFirework(); }")
+    ok(page.evaluate(H) == 33.75, 'nor a firework')
+    ok(page.evaluate("() => window.__gg.G.altar && window.__gg.G.altar.hp") == 8, '(the altar is untouched by all that)')
+    # tools and area damage skip the altar
+    page.evaluate("() => { const G = window.__gg.G, b = window.__b; G.monsters.splice(0, G.monsters.length, b); window.__ms = []; }")
+    page.evaluate("() => { const g = window.__gg, a = g.G.altar; g.dropBomb(g.LANE(a.lane), g.fieldY(a.p)); g.useFirework(); g.placeMine(a.lane, a.p); g.G.mines[g.G.mines.length - 1].t = 99; }")
+    j = page.evaluate(GHOUL, [0, 0.15, 1, 0]); gwait(page, "() => window.__gg.G.mines.length === 0", 1)
+    page.evaluate("() => { const G = window.__gg.G, b = window.__b; G.monsters.splice(0, G.monsters.length, b); window.__ms = []; }")
+    j = page.evaluate(GHOUL, [1, 0.15, 50, 0])
+    page.evaluate("(i) => { const g = window.__gg, m = window.__ms[i]; g.hitMonster(window.__pr(7, 5, 1), m); g.hitMonster(window.__pr(8, 5, 1), m); }", j)
+    ok(page.evaluate("() => window.__gg.G.altar.hp") == 8, f'a bomb, a firework, a mine, a splash and lightning beside it leave the altar at 8 ({page.evaluate("() => window.__gg.G.altar.hp")})')
+    page.evaluate("() => { const G = window.__gg.G, b = window.__b; G.monsters.splice(0, G.monsters.length, b); window.__ms = []; }")
+    # pumpkins: a monster in front of it takes the hit; a lone pumpkin chips it by its power; a level-5 one by 2; rot splats; Grey stops there
+    j = page.evaluate(GHOUL, [0, 0.5, 3, 0])
+    page.evaluate(TSHOOT, [0, 0])
+    ok(mon(page, j, "m.hp") == 2 and page.evaluate("() => window.__gg.G.altar.hp") == 8, 'a ghoul in front of the altar takes the hit; the altar none')
+    page.evaluate("() => { const G = window.__gg.G, b = window.__b; G.monsters.splice(0, G.monsters.length, b); window.__ms = []; }")
+    page.evaluate(TSHOOT, [0, 0])
+    ok(page.evaluate("() => window.__gg.G.altar.hp") == 7, f'a level-1 pumpkin takes 1 off it ({page.evaluate("() => window.__gg.G.altar.hp")})')
+    j = page.evaluate(GHOUL, [0, 0.08, 3, 0])
+    r = page.evaluate(TSHOOT, [4, 0])
+    ok(r[0] and page.evaluate("() => window.__gg.G.altar.hp") == 6 and mon(page, j, "m.hp") == 3, 'a Grey pumpkin stops at the altar: the ghoul behind it is untouched')
+    page.evaluate(TSHOOT, [page.evaluate("() => window.__gg.ROTTEN"), 0])
+    ok(page.evaluate("() => window.__gg.G.altar.hp") == 6, 'a rotten pumpkin splats on it and does nothing')
+    page.evaluate("""() => { const g = window.__gg, G = g.G, pr = window.__pr(0, 5, 0); pr.y = g.fieldY(1) + 60; G.projs.push(pr); }"""); gsleep(page, 1)
+    ok(page.evaluate("() => window.__gg.G.altar.hp") == 4, f'a level-5 pumpkin takes 2 ({page.evaluate("() => window.__gg.G.altar.hp")})')
+    page.evaluate("() => { const G = window.__gg.G, b = window.__b; G.monsters.splice(0, G.monsters.length, b); window.__ms = []; }")
+    # 80% then a 20-damage hit: stops at 75%
+    page.evaluate("() => { const g = window.__gg, b = window.__b; g.G.altar = null; b.altDone = 0; b.hp = 36; b.lastHit = 0; g.damage(b, 20, '#fff'); }")
+    ok(page.evaluate("() => [window.__b.hp, !!window.__gg.G.altar]") == [33.75, True], f'a 20-damage hit at 80% stops at 75% and raises an altar {page.evaluate("() => window.__b.hp")}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fallen_hex_continue(browser, url):
+    """A continued night brings her back with her health and her marks spent, a standing altar with its health; an old snapshot counts her marks from her health."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    b = fh_up(page)
+    if b is None:
+        ok(False, 'the Fallen Hexwitch arrived'); page.close(); return
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 12, '#fff'); g.G.altar.hp = 5; window.__al = g.G.altar.lane; }")
+    page.evaluate("() => { clearInterval(window.__fi); const g = window.__gg; g.continueNight(g.continueState()); }"); time.sleep(0.8)
+    after = page.evaluate(f"() => {{ const b = {TBOSS}, a = window.__gg.G.altar; return b ? [b.kind, b.hp, b.altDone, a && a.lane === window.__al, a && a.hp] : null; }}")
+    ok(after == ['fallenhexwitch', 34, 1, True, 5], f'she comes back with 34 health (33.75 rounded up), one mark spent, her altar standing with 5 health {after}')
+    page.evaluate(f"() => {{ const g = window.__gg, b = {TBOSS}; window.__b = b; g.damage(b, 5, '#fff'); }}")
+    ok(page.evaluate("() => window.__b.hp") == 34, 'and still no damage while it stands')
+    # a broken altar and 20 health: two marks spent, no altar comes back, none replayed
+    page.evaluate("() => { const g = window.__gg, b = window.__b; g.G.altar = null; b.hp = 20; b.altDone = 2; g.G.continued = false; }")   # (a continued night cannot be continued again: allow it for the check)
+    page.evaluate("() => { const g = window.__gg; g.continueNight(g.continueState()); }"); time.sleep(0.8)
+    after = page.evaluate(f"() => {{ const b = {TBOSS}; return b ? [b.hp, b.altDone, !!window.__gg.G.altar] : null; }}")
+    ok(after == [20, 2, False], f'with her altar broken she comes back at 20 health, two marks spent, no altar {after}')
+    # an old snapshot with no marks: they are counted from her health on her first frame
+    page.evaluate(f"() => {{ const g = window.__gg; g.G.continued = false; const c = g.continueState(); c.bossMood = [null]; g.continueNight(c); }}"); time.sleep(0.8)
+    after = page.evaluate(f"() => {{ const b = {TBOSS}; return b ? [b.hp, b.altDone, !!window.__gg.G.altar] : null; }}")
+    ok(after == [20, 2, False], f'an old snapshot: her marks are counted from her 20 health, none replayed {after}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fallen_hex_baked(browser, url):
+    """Her frames (walk, hex, zone) are baked when N3-16 starts, under 12 MB at bake scale 2.5, with her crows; the altar's crack states and her
+    5x5 zone are baked then too (not on other nights). An altar and her zone cost a drawImage each a frame and no painting. Strips for the owner."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    C = page.evaluate("() => { const C = window.__gg.CHARS; return C.fallenhexwitch ? [Object.keys(C.fallenhexwitch.clips).sort(), !!C.hexwitch] : null; }")
+    ok(C is not None and C[0] == ['hex', 'walk', 'zone'] and C[1], f'she has her own entry (walk, hex, zone) beside the story Hexwitch {C and C[0]}')
+    page.evaluate("() => window.__gg.setBakeScale(2.5)")
+    nm3_start(page, 1)
+    ok(page.evaluate("() => window.__gg.fhBaked()") == [0, 0], f'a night without her bakes no altar and no 5x5 zone {page.evaluate("() => window.__gg.fhBaked()")}')
+    t0 = time.time(); nm3_start(page, 16); dt = time.time() - t0
+    ok(page.evaluate("() => window.__gg.isBaked('fallenhexwitch') && window.__gg.isBaked('crow')"), 'starting N3-16 bakes her and her crows')
+    ok(not page.evaluate("() => window.__gg.isBaked('hexwitch')"), 'the story Hexwitch atlas is not baked for her')
+    fb = page.evaluate("() => window.__gg.fhBaked()")
+    ok(fb[0] >= 3 and fb[1] >= 1, f'the altar\'s crack states and her 5x5 zone are baked at night start {fb}')
+    mb = page.evaluate("() => window.__gg.atlasBytes('fallenhexwitch') / 1e6")
+    ok(mb < 12, f'her frames take {mb:.1f} MB at bake scale 2.5 (limit 12)')
+    ok(dt < 3, f'the night opens in {dt:.1f} s')
+    os.makedirs(SHOTS, exist_ok=True)
+    strip = page.evaluate("""() => { const A = window.__gg.atlas('fallenhexwitch'), cl = A.clips, names = Object.keys(cl), W = Math.max(...names.map(n => cl[n].c.width)), H = names.reduce((s, n) => s + cl[n].c.height + 8, 8);
+      const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.fillStyle = '#2a2a2e'; x.fillRect(0, 0, W, H); let y = 8;
+      for (const n of names){ x.drawImage(cl[n].c, 0, y); y += cl[n].c.height + 8; } return c.toDataURL(); }""")
+    import base64
+    with open(os.path.join(SHOTS, 'fallenhex.png'), 'wb') as f: f.write(base64.b64decode(strip.split(',')[1]))
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+    # the draw budget: an altar and her 5x5 zone add a drawImage or two each and no fill, stroke or gradient
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script("""(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+      for (const k of ['drawImage', 'fill', 'stroke', 'fillRect', 'createRadialGradient', 'createLinearGradient']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; } })();""")
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    nm3_start(page, 16); time.sleep(3.2)
+    page.evaluate(PQ); page.evaluate("() => { window.__gg.G.hexZones.length = 0; window.__gg.G.altar = null; }")
+    count = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 30) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 30, (c.fill || 0) / 30, (c.stroke || 0) / 30, ((c.createRadialGradient || 0) + (c.createLinearGradient || 0)) / 30]); } }; requestAnimationFrame(tick); })"
+    time.sleep(0.5); base = page.evaluate(count)
+    page.evaluate("() => { const G = window.__gg.G; G.altar = { lane:1, p:0.15, hp:5, t:2 }; G.hexZones.push({ shape:'box5', lane:4, p:0.55, t:9, src:'fallenhex' }); }")
+    time.sleep(0.6); lit = page.evaluate(count)
+    ok(1.5 <= lit[0] - base[0] <= 4.5, f'an altar and her zone add a few drawImage a frame ({base[0]:.1f} -> {lit[0]:.1f})')
+    ok(lit[1] <= base[1] + 0.1 and lit[2] <= base[2] + 0.1 and lit[3] <= base[3] + 0.1, f'and no fill, stroke or gradient (fill {base[1]:.1f} -> {lit[1]:.1f}, stroke {base[2]:.1f} -> {lit[2]:.1f}, gradients {base[3]:.1f} -> {lit[3]:.1f})')
+    page.evaluate("() => { const g = window.__gg, b = g.spawnMonster('boss', 3); b.p = b.hold; b.zoneT = b.potionT = b.crowT = b.smashT = 1e9; b.altDone = 1; }"); time.sleep(0.8)   # her, the altar and her zone, for the owner's shot
+    page.screenshot(path=os.path.join(SHOTS, 'fallenhex-field.png'))
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_fallen_hex': check_fallen_hex, 'check_fh_altar_immune': check_fh_altar_immune, 'check_fallen_hex_continue': check_fallen_hex_continue, 'check_fallen_hex_baked': check_fallen_hex_baked})
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

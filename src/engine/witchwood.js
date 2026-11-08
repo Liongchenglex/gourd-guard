@@ -31,16 +31,18 @@
 //        destroyed the same way or sinks after `rootLast` s.
 //    When the Treant falls every root sinks. A continued night keeps the roots (rootSnapshot / restoreRoots, game.js) and the Treant's clock
 //    (treantSnapshot / restoreTreant, beside the Lamplighter's bossSnapshot in game.js and spawner.js).
+//  - The Fallen Hexwitch (`boss` kind `fallenhexwitch`, N3-16's boss): see its section at the end (initFallenHex / updateFallenHex / fhGate / the altar).
 
 import { TYPES } from '../data/monsters.js';
 import { SFX } from './audio.js';
-import { addFloat, chunk, spark } from './combat.js';
-import { TILE_P, mS, mY } from './monsters.js';
-import { POTION_FX, POTION_KINDS, placePotion, potionAt } from './potion.js';
+import { addFloat, chunk, pumpkinPower, ring, spark } from './combat.js';
+import { TILE_P, mS, mY, spawnMonster } from './monsters.js';
+import { POTION_FX, POTION_KINDS, placePotion, placeRandomPotions, potionAt } from './potion.js';
 import { COLS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, LANE, walls } from './state.js';
-import { shuffle } from './util.js';
+import { fmt, shuffle } from './util.js';
 import { damageWall } from './walls.js';
-import { FIRE_P_RANGE } from '../data/rules.js';
+import { FIRE_P_RANGE, WART_DMG } from '../data/rules.js';
+import { banner } from '../ui/hud.js';
 
 // ---------- shared ----------
 /** Field tile rows (as engine/potion.js): whole tiles between the top of the field and the fence. */
@@ -266,10 +268,168 @@ export function updateRoots(dt){
 export const rootSnapshot = () => (G.roots || []).map(r => ({ lane:r.lane, p:r.p, hp:r.hp, t:r.t, atFence:!!r.atFence }));
 export function restoreRoots(list){ G.roots = (list || []).map(r => ({ lane:r.lane, p:r.p, hp:r.hp, t:r.t, atFence:!!r.atFence })); }
 
+// ---------- The Fallen Hexwitch (N3-16, the witchwood nightmare's boss; spec Part 6) ----------
+// Holds at `hold` like the Fallen Gravekeeper (monsters.js stops her exactly there), immune to knockback and freeze like every boss, never drinks.
+// Every number is in TYPES.fallenhexwitch. Her clocks run once she is on the field (p > 0.05); she does not hex (our reading of the spec).
+//  - Undead zone (zoneEvery): a 5x5 box (G.hexZones shape 'box5': lanes +-2, +-2.5 tiles; inHexZone in monsters.js) for zoneLast s, laid wholly on the
+//    field at a random spot. Her zones carry src 'fallenhex' and she counts only those, so an Ash Crone's 3x3 never stops hers (and the story
+//    Hexwitch's top-up, which counts every zone, never meets hers: they share no night). A second is not laid while hers stands.
+//  - Potions (potionEvery): potionN[0]..potionN[1] on random field tiles (engine/potion.js placeRandomPotions).
+//  - Crows (crowEvery): crows[0]..crows[1] at the top of random lanes (minions), as the Fallen Gravekeeper's.
+//  - Smash (smashEvery): her lane's fence loses smashHit of its full health at once, never its last 1; GLIDE_AFTER s later she glides glide[0]..glide[1]
+//    lanes left or right (clamped to the field; never onto the altar's lane when another choice exists, our call: there she would shield it herself).
+//  - The altar (altarAt, three times a fight): when her health reaches a mark an altar rises (G.altar = { lane, p:ALTAR_P, hp:altarHp, t }) in a random
+//    lane other than hers. While it stands every damage to her is 0 ("No damage" and a dull clink: fhGate, called from damage() in combat.js, so every
+//    source is covered); a hit that would carry her past the next mark stops at it. Only pumpkins hurt the altar (game.js asks altarAhead for every
+//    pumpkin in flight; a monster in front of it in its lane is met first; every pumpkin stops there, Grey too; its hit power, doubled from a Wartling
+//    square; rot splats on it). Tools and area damage only ever look at G.monsters, so they skip it. One altar at a time: health past two marks (a
+//    continued night from an old snapshot) raises the second when the first falls (fhMarks, every frame). altDone, the marks spent, is counted from
+//    her health on her first frame (the Fallen Gravekeeper's lazy count) unless a continued night restores it; a standing altar comes back with its
+//    health (fallenHexSnapshot / restoreFallenHex, through bossMood in game.js and spawner.js). The altar goes when she falls.
+export const ALTAR_P = 0.15;   // where an altar stands: towards the back of the field, behind her hold
+const ALTAR_R = 20, GLIDE_AFTER = 0.45;   // a pumpkin meets the altar this far below its centre; the smash-to-glide delay
+const isFallenHex = m => m.type === 'boss' && m.kind === 'fallenhexwitch';
+const FHT = () => TYPES.fallenhexwitch;
+/** An altar's centre on screen (game pixels). */
+export const altarY = a => FIELD_TOP + a.p * (FIELD_BOT - FIELD_TOP);
+const bloodSparks = (x, y, n, spd = 150) => { for (let i = 0; i < n; i++) spark(x, y, i % 3 ? '#8a8a92' : '#ff2a3a', spd); };
+
+/** Set up a freshly spawned Fallen Hexwitch: every clock full, no glide pending; her marks are counted on her first frame (fhDone). */
+export function initFallenHex(m){
+  const T = FHT();
+  m.zoneT = T.zoneEvery; m.potionT = T.potionEvery; m.crowT = T.crowEvery; m.smashT = T.smashEvery; m.glideT = 0; m.altDone = null; m.bx = m.x;
+}
+const markOf = (m, i) => m.maxHp * FHT().altarAt[i];
+function fhDone(m){ if (m.altDone == null) m.altDone = FHT().altarAt.filter(a => m.hp <= m.maxHp * a + 1e-6).length; }
+/** How much of a hit she takes (combat.js damage(), for every source): none while an altar stands, and never past her next mark. */
+export function fhGate(m, amt){
+  fhDone(m);
+  if (G.altar){
+    m.flash = 0.06;
+    if (!(G.t - (m.immuneT != null ? m.immuneT : -9) < 0.35)){ m.immuneT = G.t; addFloat('No damage', m.x, mY(m) - m.r - 24, '#c8c2b8', 16, 0.7); SFX.bossSfx('fallenhexwitch', 'immune'); }
+    return 0;
+  }
+  if (m.altDone >= FHT().altarAt.length) return amt;
+  const mark = markOf(m, m.altDone);
+  if (m.hp <= mark + 1e-6){ raiseAltar(m); return 0; }   // already at (or past) a mark with no altar up: raise it now, never lock up
+  return Math.min(amt, m.hp - mark);
+}
+/** After a hit that hurt her: reaching a mark raises its altar at once, so the rest of this frame's hits meet it. */
+export function fhAfterHit(m){ fhMarks(m); }
+function fhMarks(m){
+  fhDone(m);
+  if (m.dead || G.altar || m.altDone >= FHT().altarAt.length) return;
+  if (m.hp <= markOf(m, m.altDone) + 1e-6) raiseAltar(m);
+}
+function raiseAltar(m){
+  const opts = [...Array(COLS).keys()].filter(l => l !== m.lane), lane = opts[Math.floor(Math.random() * opts.length)];
+  m.altDone++;
+  const a = { lane, p:ALTAR_P, hp:FHT().altarHp, t:0 };
+  G.altar = a;
+  for (const pr of G.projs || []) if (pr.lane === lane && !pr.dead && pr.y < altarY(a)) (pr.passed || (pr.passed = new Set())).add(a);   // pumpkins already past it fly on
+  const x = LANE(lane), y = altarY(a);
+  for (let i = 0; i < 16; i++) chunk(x, y + 10, i % 2 ? '#55555c' : '#8a8a92', 180);
+  bloodSparks(x, y - 10, 12, 170); ring(x, y, 46, 'rgba(255,42,58,.85)');
+  bloodSparks(m.x, mY(m) - 20, 10, 140);
+  m.anim = { clip:'hex', t:0, dur:6 / 11 }; G.shake = Math.max(G.shake || 0, 0.5);
+  banner('An altar rises!', 'Nothing hurts her while it stands. Break it with pumpkins.', 2.2);
+  SFX.bossSfx('fallenhexwitch', 'altar');
+}
+/** The altar pumpkin pr (flying up its lane) has reached this frame, or null. No allocation (per pumpkin, per frame). */
+export function altarAhead(pr){
+  const a = G.altar;
+  if (!a || a.lane !== pr.lane || pr.hit.has(a) || (pr.passed && pr.passed.has(a))) return null;
+  return pr.y <= altarY(a) + pr.r + ALTAR_R ? a : null;
+}
+/** A pumpkin meets the altar: its hit power off it (doubled from a Wartling square; a rotten one splats and does nothing); the pumpkin stops either way. */
+export function hitAltar(pr, a, rotten){
+  pr.dead = true; pr.hit.add(a);
+  const x = LANE(a.lane), y = altarY(a);
+  if (rotten){ for (let i = 0; i < 8; i++) chunk(x, y, i % 2 ? '#6a7a3a' : '#3a4a1a', 150); SFX.bossSfx('fallenhexwitch', 'altarhit'); return; }
+  const dmg = pumpkinPower(pr) * (pr.wart ? WART_DMG : 1);
+  a.hp -= dmg;
+  addFloat(fmt(dmg), x, y - 34, '#ff8a80', 18, 0.7);
+  for (let i = 0; i < 8; i++) chunk(x, y - 6, i % 2 ? '#6a6a72' : '#3a3a40', 160);
+  if (a.hp <= 0.001) breakAltar(); else SFX.bossSfx('fallenhexwitch', 'altarhit');
+}
+function breakAltar(){
+  const a = G.altar; if (!a) return;
+  G.altar = null;
+  const x = LANE(a.lane), y = altarY(a);
+  for (let i = 0; i < 24; i++) chunk(x, y, i % 3 ? '#6a6a72' : '#2a2a30', 260);
+  bloodSparks(x, y - 12, 14, 220); ring(x, y, 54, 'rgba(255,200,190,.9)');
+  G.shake = Math.max(G.shake || 0, 0.6);
+  banner('The altar breaks!', 'She can be hurt again.', 1.8);
+  SFX.bossSfx('fallenhexwitch', 'altarbreak');
+}
+function fhZone(m){
+  if (G.hexZones.some(z => z.src === 'fallenhex')) return;   // hers still stands
+  const T = FHT(), tp = TILE_P(), lo = Math.min(0.5, 2.5 * tp), hi = Math.max(0.5, 1 - 2.5 * tp);
+  const lane = Math.min(COLS - 1, 2 + Math.floor(Math.random() * Math.max(1, COLS - 4))), p = lo + Math.random() * (hi - lo);   // wholly on the field
+  G.hexZones.push({ shape:'box5', lane, p, t:T.zoneLast, src:'fallenhex' });
+  const y = mY({ p });
+  for (let i = 0; i < 18; i++) spark(LANE(lane) + (Math.random() - 0.5) * 120, y + (Math.random() - 0.5) * 120, i % 2 ? '#8a8a92' : '#ff2a3a', 120);
+  addFloat('Undead zone!', m.x, mY(m) - m.r - 30, '#ff8a80', 18, 1.2);
+  m.anim = { clip:'hex', t:0, dur:6 / 11 };
+  SFX.bossSfx('fallenhexwitch', 'zone');
+}
+function fhPotions(m){
+  const [a, b] = FHT().potionN, n = a + Math.floor(Math.random() * (b - a + 1));
+  placeRandomPotions(n);
+  bloodSparks(m.x - 18, mY(m) + 4, 10, 130);   // the cauldron boils over
+  m.anim = { clip:'hex', t:0, dur:6 / 11 };
+  SFX.bossSfx('fallenhexwitch', 'potions');
+}
+function fhCrows(){
+  const [a, b] = FHT().crows, n = a + Math.floor(Math.random() * (b - a + 1));
+  for (let i = 0; i < n; i++) spawnMonster('crow', Math.floor(Math.random() * COLS), true, -0.02);
+  SFX.bossSfx('fallenhexwitch', 'crows');
+}
+function fhSmash(m){
+  const w = walls[m.lane];
+  if (w){ const amt = Math.min(w.max * FHT().smashHit, w.hp - 1); if (amt > 0) damageWall(m.lane, amt); }
+  bloodSparks(LANE(m.lane), FENCE_Y - 14, 16, 220); ring(LANE(m.lane), FENCE_Y - 10, 44, 'rgba(255,42,58,.8)');
+  for (let i = 0; i < 10; i++) chunk(LANE(m.lane), FENCE_Y - 10, '#6a5040', 200);
+  m.anim = { clip:'zone', t:0, dur:6 / 10 }; m.glideT = GLIDE_AFTER;
+  G.shake = Math.max(G.shake || 0, 0.8);
+  SFX.bossSfx('fallenhexwitch', 'smash');
+}
+function fhGlide(m){
+  const [a, b] = FHT().glide, d = a + Math.floor(Math.random() * (b - a + 1));
+  const opts = [...new Set([m.lane - d, m.lane + d].map(l => Math.max(0, Math.min(COLS - 1, l))))].filter(l => l !== m.lane);
+  const free = opts.filter(l => !G.altar || l !== G.altar.lane), pool = free.length ? free : opts;
+  if (!pool.length) return;
+  m.lane = pool[Math.floor(Math.random() * pool.length)]; m.tx = LANE(m.lane);
+  bloodSparks(m.x, mY(m) - 10, 8, 110);
+  SFX.bossSfx('fallenhexwitch', 'glide');
+}
+/** One frame of the Fallen Hexwitch. */
+export function updateFallenHex(m, dt){
+  const T = FHT();
+  if (m.bx == null) m.bx = m.x;
+  m.bx += (m.tx - m.bx) * Math.min(1, dt * 5); m.x = m.bx + Math.sin(m.ph * 1.3) * 2;   // a slow hover; a glide eases her across
+  fhMarks(m);
+  if (G.altar) G.altar.t += dt;
+  if (m.glideT > 0 && (m.glideT -= dt) <= 0){ m.glideT = 0; fhGlide(m); }
+  if (m.p <= 0.05) return;
+  if ((m.zoneT -= dt) <= 0){ m.zoneT = T.zoneEvery; fhZone(m); }
+  if ((m.potionT -= dt) <= 0){ m.potionT = T.potionEvery; fhPotions(m); }
+  if ((m.crowT -= dt) <= 0){ m.crowT = T.crowEvery; fhCrows(); }
+  if ((m.smashT -= dt) <= 0){ m.smashT = T.smashEvery; fhSmash(m); }
+}
+/** What a continued night keeps of her: her marks spent and a standing altar (its lane and health). */
+export const fallenHexSnapshot = m => isFallenHex(m) ? { altDone:m.altDone, altar:G.altar ? { lane:G.altar.lane, hp:G.altar.hp } : null } : null;
+export function restoreFallenHex(m, s){
+  if (!s || !isFallenHex(m) || s.altDone == null) return;   // an older snapshot (or no frame yet): fhDone counts them from her health
+  m.altDone = s.altDone;
+  G.altar = s.altar ? { lane:s.altar.lane, p:ALTAR_P, hp:s.altar.hp, t:1 } : null;
+}
+
 // ---------- deaths ----------
-/** kill() (combat.js), once a Release 7 monster is truly dead: the Flask Bearer's potion, the toad's burst, the Treant's roots sinking. */
+/** kill() (combat.js), once a Release 7 monster is truly dead: the Flask Bearer's potion, the toad's burst, the Treant's roots sinking, the Fallen Hexwitch's altar. */
 export function witchwoodFalls(m){
   if (isTreant(m)){ for (const r of (G.roots || []).slice()) sinkRoot(r); return; }
+  if (isFallenHex(m)){ G.altar = null; return; }
   if (m.type === 'flaskbearer'){
     dropPotionsNear(m.lane, m.p, [POTION_KINDS[Math.floor(Math.random() * POTION_KINDS.length)]]);
     return;

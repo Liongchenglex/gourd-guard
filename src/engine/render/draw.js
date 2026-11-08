@@ -12,7 +12,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite } from './tools.js';
-import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
+import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawHexBolt, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -27,7 +27,7 @@ import { drawGourdCell, drawGourdGlow } from './gourd.js';
 import { ROTTEN, ROT_FX } from '../rot.js';
 import { rotSprite } from './rot.js';
 import { drawPotions, drawPotionFx } from './potion.js';
-import { drawRoots } from './witchwood.js';
+import { drawRoots, drawAltar, undeadZoneSize } from './witchwood.js';
 import { barrierFront } from '../witchwood.js';
 
 // ---------- Render ----------
@@ -56,6 +56,7 @@ export function render(){
   if (__RELEASE__ >= 3) drawGlue();
   if (__RELEASE__ >= 4 && g.fires && g.fires.length) drawFires(g.fires, t);   // fire tiles (Release 4): one baked frame each, under the monsters
   if (__RELEASE__ >= 7 && g.roots && g.roots.length) drawRoots(ctx, g.roots, false);   // the Treant's mid-field roots (Release 7): one baked frame each, under the monsters
+  if (__RELEASE__ >= 7 && g.altar) drawAltar(ctx, g.altar);   // the Fallen Hexwitch's altar (Release 7): one baked frame, under the monsters
   for (const m of g.monsters) if (m.type === 'doctor' && !m.dead && m.p > 0) drawHealZone(m, t);
   for (const m of g.monsters) if (m.type === 'bulwark' && !m.dead && m.p > 0) drawBulwarkZone(m, t);
   if (__RELEASE__ >= 5) for (const m of g.monsters) if (m.type === 'rotdoctor' && !m.dead && m.p > 0) drawRotZone(m, t);
@@ -341,6 +342,7 @@ export function drawHexZones(t){
   for (const z of G.hexZones || []){
     const a = Math.min(1, z.t / 1.5), pulse = 0.5 + 0.5 * Math.sin(t * 3);
     let x, y, w, h;
+    if (__RELEASE__ >= 7 && z.shape === 'box5'){ [w, h] = undeadZoneSize(); drawUndeadZoneFx(ctx, LANE(z.lane) - w / 2, FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - h / 2, w, h, t, a, K); continue; }   // the Fallen Hexwitch's 5x5 (Release 7): one baked sprite
     if (z.shape === 'col'){ x = LANE(z.lane) - CS * 0.49; y = FIELD_TOP; w = CS * 0.98; h = FIELD_BOT - FIELD_TOP; }
     else if (z.shape === 'row'){ x = GX; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 0.5; w = CS * COLS; h = CS; }
     else { x = LANE(z.lane) - CS * 1.5 * 0.98; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 1.5; w = CS * 3 * 0.98; h = CS * 3; }

@@ -42,4 +42,12 @@ export default __RELEASE__ >= 7 ? [
   // N3-13 placeholder: the Treant in form 2 (34 health, roots every 5 s, 3-4 at a time), one normal chest (Task 10 writes the real level)
   Gd({ level:13, name:'Treant Returns', pattern:1, total:20, interval:3.1, spMul:0.95, spawnGap:1, spawnBurst:0.12, boss:'treant', bossForm:2, bossChest:'normal', gourds:ALL3,
     pool:[['woodGhoul', 10], ['broomImp', 5], ['owlBat', 4]], quests:[['noTools'], ['wallMin', 45]] }),
+  // N3-14 and N3-15 placeholders (plain nights, Task 10 replaces them), so N3-16 exists for the Fallen Hexwitch (Task 9)
+  Gd({ level:14, name:'Dead Wood 14', pattern:2, total:20, interval:3.2, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL3,
+    pool:[['woodGhoul', 10], ['broomImp', 5], ['owlBat', 4]], quests:[['noTools'], ['wallMin', 55]] }),
+  Gd({ level:15, name:'Dead Wood 15', pattern:3, total:20, interval:3.2, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL3,
+    pool:[['woodGhoul', 10], ['broomImp', 5], ['owlBat', 4]], quests:[['noTools'], ['wallMin', 55]] }),
+  // N3-16 placeholder: the Fallen Hexwitch, one normal chest (Task 10 writes the real level)
+  Gd({ level:16, name:'The Fallen Hexwitch', pattern:0, total:22, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.12, boss:'fallenhexwitch', bossChest:'normal', gourds:ALL3,
+    pool:[['woodGhoul', 10], ['broomImp', 5], ['owlBat', 4]], quests:[['noTools'], ['wallMin', 45]] }),
 ] : [];

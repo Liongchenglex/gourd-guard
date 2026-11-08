@@ -6,10 +6,11 @@
 import { K } from './canvas.js';
 import { E, S, pal } from './paint.js';
 import { TOAD_FPS, TOAD_MOUTH, TOAD_N, WITCHWOOD, toadLash } from './chars/witchwood.js';
-import { FENCE_Y, LANE } from '../state.js';
-import { BARRIER_N, barrierSprite } from './fx.js';
+import { CS, FENCE_Y, LANE } from '../state.js';
+import { ALTAR_STATES, BARRIER_N, altarSprite, barrierSprite, prebakeUndeadZone } from './fx.js';
 import { drawChar } from './anim.js';
-import { ROOT_RISE, rootGround, rootScale } from '../witchwood.js';
+import { ROOT_RISE, altarY, rootGround, rootScale } from '../witchwood.js';
+import { TYPES } from '../../data/monsters.js';
 
 const TW = 8, TH = 32, TIPW = 14, TIPH = 12;   // the tongue strip and its tip, world units
 const cache = new Map();
@@ -57,4 +58,17 @@ export function drawRoots(g, roots, fence){
     drawChar(g, r, 'root', null, r.t < ROOT_RISE ? ['rise', Math.min(7, Math.floor(r.t / ROOT_RISE * 8))] : ['idle', Math.floor((r.t - ROOT_RISE) * 7) % 8]);
     g.restore();
   }
+}
+
+/** The Fallen Hexwitch's undead zone is 5 lanes by 5 tiles (render/draw.js drawHexZones). */
+export const undeadZoneSize = () => [CS * 5 * 0.98, CS * 5];
+/** Her night's field props, baked at the canvas scale when it starts (game.js): the altar's crack states and her 5x5 zone. */
+export function prebakeFallenHex(){ for (let i = 0; i < ALTAR_STATES; i++) altarSprite(K, i); const [w, h] = undeadZoneSize(); prebakeUndeadZone(w, h, K); }
+/** The altar (G.altar): its crack state by health left, rising out of the ground over its first 0.4 s. One drawImage. */
+export function drawAltar(g, a){
+  const f = a.hp / TYPES.fallenhexwitch.altarHp, st = f > 2 / 3 ? 0 : f > 1 / 3 ? 1 : 2, sp = altarSprite(K, st);
+  const rise = Math.min(1, a.t / 0.4), x = LANE(a.lane), y = altarY(a) + 22, s = 1.05;
+  g.save(); g.globalAlpha *= rise;
+  g.drawImage(sp.c, x - sp.ox * s, y - sp.oy * s * rise, sp.w * s, sp.h * s * rise);
+  g.restore();
 }

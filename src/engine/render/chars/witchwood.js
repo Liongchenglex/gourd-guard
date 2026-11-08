@@ -21,6 +21,7 @@
 
 import { E, PL, RR, S, SM, SO, ell, mix, pal, rgba, rng } from '../paint.js';
 import { TAU } from '../../util.js';
+import { FALLENHEX } from './fallenhex.js';
 
 const ease = t => t * t * (3 - 2 * t);
 const clamp01 = x => Math.max(0, Math.min(1, x));
@@ -866,4 +867,5 @@ export const WITCHWOOD = {
   // the origin. Rise 8 frames at 12 fps and sink 8 at 13 (engine/witchwood.js ROOT_RISE / ROOT_SINK; the archive's sink had 6). Scale .75 (the archive's .55 read too small on the field).
   root: { draw:root, scale:.75, dy:-37.5, box:{ x:-40, y:-62, w:80, h:132 }, still:{ idle:0 },
     clips:{ rise:clipOf(8, 12, 'rise', true), idle:clipOf(8, 7, 'idle'), sink:clipOf(8, 13, 'sink', true) } },
+  ...FALLENHEX,   // the Fallen Hexwitch, N3-16's boss (fallenhex.js)
 };

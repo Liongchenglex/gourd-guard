@@ -19,7 +19,7 @@ import { dropJukebox, jukeboxPoints } from './spawner.js';
 import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
 import { reaperFalls, cometBreaks, fpAfterHit, fpReaperHit } from './hollow.js';
-import { witchwoodFalls } from './witchwood.js';
+import { witchwoodFalls, fhGate, fhAfterHit } from './witchwood.js';
 import { inWartSquare, isProtected } from './gourd.js';
 import { ROTTEN, ROT_FX, hitRule } from './rot.js';
 
@@ -100,10 +100,12 @@ export function damage(m, amt, color, small, big){
     return;
   }
   if (__RELEASE__ >= 3 && m.kind === 'hollowking' && !m.hkClone){ amt = hkGate(m, amt); if (amt <= 0) return; }   // immune while his form stands
+  if (__RELEASE__ >= 7 && m.kind === 'fallenhexwitch'){ amt = fhGate(m, amt); if (amt <= 0) return; }   // the Fallen Hexwitch: immune while her altar stands, never past her next mark (engine/witchwood.js)
   m.hp -= amt; m.flash = 0.1;
   addFloat(fmt(amt), m.x + rnd(-8, 8), mY(m) - m.r * mS(m) - 14, color || '#fff', small ? 16 : big ? 30 : 23, big ? 1 : 0.8);   // big: a Wartling hit (Release 7)
   if (m.hp <= 0.001) kill(m);
   else if (__RELEASE__ >= 3 && m.kind === 'hollowking') hkAfterHit(m);
+  else if (__RELEASE__ >= 7 && m.kind === 'fallenhexwitch') fhAfterHit(m);   // a mark reached: her altar rises on this hit
   else if (__RELEASE__ >= 5 && m.kind === 'fallenpoltergeist') fpAfterHit(m);   // a reaper mark crossed: its phase starts on this hit (engine/hollow.js)
 }
 

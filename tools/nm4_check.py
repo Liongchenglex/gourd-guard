@@ -457,11 +457,11 @@ def check_lancer(browser, url):
     ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[4].hp") == 1, 'a fence at 1/20 takes nothing (the lancer is still gone)')
     ok(page.evaluate("() => window.__L2.dead") and page.evaluate("() => window.__gg.walls[5].hp") == 1, f'a fence at 6/20 loses 5 (not 10): left {page.evaluate("() => window.__gg.walls[5].hp")}')
     # five hits kill it, and a kill pays
-    spawn_at(page, 'lancer', 2, 0.2); page.evaluate("() => { window.__L = window.__last; window.__c0 = window.__gg.G.coins; }")
+    spawn_at(page, 'lancer', 2, 0.2); page.evaluate("() => { window.__L = window.__last; window.__k0 = window.__gg.G.kills; }")
     for i in range(4): page.evaluate("() => window.__gg.damage(window.__L, 1)")
     ok(not page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__L.hp") == 1, 'four hits leave it on 1')
     page.evaluate("() => window.__gg.damage(window.__L, 1)")
-    ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.G.coins") > page.evaluate("() => window.__c0"), 'the fifth hit kills it and pays')
+    ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.G.kills") == page.evaluate("() => window.__k0") + 1, 'the fifth hit kills it and counts a kill (the reward roll may pay coins, a weapon or a pumpkin)')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
@@ -489,6 +489,29 @@ def check_lancer_edges(browser, url):
     ok(not page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__L.eating") and page.evaluate("() => window.__gg.walls[4].hp") == 0, 'a broken fence: it walks through (not removed, no damage)')
     page.evaluate(STEP, [20, 0.1])
     ok(page.evaluate("() => window.__gg.G.over"), 'and the night is lost as usual once it is through')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_lancer_ride(browser, url):
+    """It rides through slower monsters in its lane, and a repaired fence is struck at once instead of leaving it stuck on the chew path."""
+    if not R8: return
+    page, errors = net_night(browser, url); hold(page)
+    page.evaluate("() => { const w = window.__gg.walls[1]; w.max = 20; w.hp = 20; }")
+    spawn_at(page, 'ghoul', 1, 0.5, sp=0.005); page.evaluate("() => { window.__W = window.__last; }")
+    spawn_at(page, 'lancer', 1, 0.1); page.evaluate("() => { window.__L = window.__last; }")
+    page.evaluate(STEP, [60, 0.1])
+    ok(page.evaluate("() => window.__L.p") > page.evaluate("() => window.__W.p"), 'a slow ghoul ahead does not stop the Lancer (it passes it)')
+    page.evaluate(STEP, [30, 0.1])
+    ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[1].hp") == 10, 'and it reaches the fence at charge speed and strikes')
+    # a fence broken, the Lancer at it, the fence repaired
+    page.evaluate("() => { window.__gg.walls[3].max = 20; window.__gg.walls[3].hp = 0; }")
+    spawn_at(page, 'lancer', 3, 0.95); page.evaluate("() => { window.__L = window.__last; }")
+    page.evaluate(STEP, [10, 0.1])
+    ok(page.evaluate("() => window.__L.eating") and not page.evaluate("() => window.__L.dead"), 'it waits at the broken fence')
+    page.evaluate("() => { window.__gg.walls[3].hp = 20; window.__gg.G.over = false; }")
+    page.evaluate(STEP, [2, 0.1])
+    ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[3].hp") == 10, f'the fence repaired, it strikes at once ({page.evaluate("() => window.__gg.walls[3].hp")}/20) and is not stuck')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
@@ -588,7 +611,7 @@ def check_marshal_budget(browser, url):
 
 
 CHECKS = {'check_r8_absent': check_r8_absent, 'check_n4_track': check_n4_track, 'check_n4_weather': check_n4_weather, 'check_n4_book': check_n4_book,
-          'check_net_rules': check_net_rules, 'check_net_cap': check_net_cap, 'check_net_free_neighbour': check_net_free_neighbour, 'check_net_hint_wind': check_net_hint_wind, 'check_net_continue': check_net_continue, 'check_net_budget': check_net_budget, 'check_lobber': check_lobber, 'check_lobber_continue': check_lobber_continue, 'check_lancer': check_lancer, 'check_lancer_edges': check_lancer_edges, 'check_marshal': check_marshal, 'check_marshal_continue': check_marshal_continue, 'check_marshal_budget': check_marshal_budget}
+          'check_net_rules': check_net_rules, 'check_net_cap': check_net_cap, 'check_net_free_neighbour': check_net_free_neighbour, 'check_net_hint_wind': check_net_hint_wind, 'check_net_continue': check_net_continue, 'check_net_budget': check_net_budget, 'check_lobber': check_lobber, 'check_lobber_continue': check_lobber_continue, 'check_lancer': check_lancer, 'check_lancer_edges': check_lancer_edges, 'check_lancer_ride': check_lancer_ride, 'check_marshal': check_marshal, 'check_marshal_continue': check_marshal_continue, 'check_marshal_budget': check_marshal_budget}
 
 
 def main():

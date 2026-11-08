@@ -9,7 +9,8 @@
 //  - The Storm Lancer (`lancer`): charges at `charge` times its walk from the moment it spawns (keepSpeed, read where monsters.js reads `sp`, so Ice slow
 //    and freeze still scale from the boosted speed). Reaching the fence it takes `fenceHit` of the fence's full health, never the last 1 (the Hayrick's
 //    fork rule; a fence at 1 or less takes nothing) and is gone with no kill reward (lancerHit). A broken fence: it walks through like any monster.
-//    Castle walls never stop a monster, and it passes them. Gatehouses (Task 6) do not stop a walker either: keep it that way when they land.
+//    It never queues: it rides through the monsters ahead in its lane (monsters.js aheadLimit), while others still queue behind it. A Lancer that is at a
+//    fence which was down and is back up strikes at once (monsters.js, the eating branch). Castle walls never stop a monster, and it passes them. Gatehouses (Task 6) do not stop a walker either: keep it that way when they land.
 //  - The Storm Marshal (`marshal`): a clock of `rallyEvery` s; at zero he raises his sword for `rallyLast` s. At the start of the rally every monster in
 //    his square (his lane and one either side, 1.5 tiles up and down) that was never rallied gets `rallyHp` times its health, current and max, once ever
 //    (`m.rallied`); while the sword is up (and he is walking) monsters in the square move `rallySp` times faster (keepSpeed). Bosses, mini bosses (also
@@ -43,10 +44,19 @@ const inSquare = (q, o) => Math.abs(o.lane - q.lane) <= 1 && Math.abs(mY(o) - mY
 /** The factor on a walking monster's speed (monsters.js, after Ice): a Lancer's charge, and a rally from any Marshal whose sword is up. */
 export function keepSpeed(m){
   let f = m.type === 'lancer' ? TYPES.lancer.charge : 1;
-  if (m.p > -0.05 && rallyable(m)) for (const q of G.monsters){
+  if (anyRally() && m.p > -0.05 && rallyable(m)) for (const q of G.monsters){
     if (q.type === 'marshal' && q.rallying && !q.dead && !q.eating && q.frozenT <= 0 && inSquare(q, m)){ f *= TYPES.marshal.rallySp; break; }
   }
   return f;
+}
+let rallyG = null, rallyT = -1, rallyAny = false;
+/** Is any Marshal's sword up? Looked at once per frame (G.t), so the per-monster scan is skipped on every night without one. */
+function anyRally(){
+  if (rallyG !== G || rallyT !== G.t){
+    rallyG = G; rallyT = G.t; rallyAny = false;
+    for (let i = 0; i < G.monsters.length; i++){ const q = G.monsters[i]; if (q.type === 'marshal' && q.rallying && !q.dead){ rallyAny = true; break; } }
+  }
+  return rallyAny;
 }
 
 /** A Lancer that has reached the fence (monsters.js): true when it struck and is gone. A fallen fence: false, and it walks through like any monster. */

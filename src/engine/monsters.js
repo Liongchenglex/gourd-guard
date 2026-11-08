@@ -138,6 +138,7 @@ function standsStill(o){
 }
 export function aheadLimit(m){
   let limit = 1;
+  if (__RELEASE__ >= 8 && m.type === 'lancer') return limit;   // a Storm Lancer rides through the monsters ahead of it (engine/keep.js)
   if (__RELEASE__ >= 5 && m.dashing) return limit;   // a comet streaking down its lane never stops for anyone (engine/hollow.js)
   const myLanes = lanesOf(m);
   for (const o of G.monsters){
@@ -229,6 +230,7 @@ export function updateMonster(m, dt){
   if (m.type === 'jukebox') return;   // it only plays: never walks, never chews
   if (m.eating){
     if (__RELEASE__ >= 4 && m.type === 'crow' && m.frozenT <= 0 && (m.peekT = (m.peekT || 0) - dt) <= 0){ m.peekT = 0.25; if (crowStrike(m)) return; }   // a crow pecking the fence looks over the patch 4 times a second and flies in once a pumpkin it may take is there (engine/nightmare.js)
+    if (__RELEASE__ >= 8 && m.type === 'lancer' && walls[m.lane].hp > 0 && lancerHit(m)) return;   // its fence was down and has been repaired: the charge lands now, not a chew of 0 (engine/keep.js)
     m.shield = false;   // a shield knight lowers its shield to chew
     m.reflecting = false;   // a mirror sprite drops its mirror to chew
     const mul = (m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1) * (__RELEASE__ >= 7 && m.drank && m.drank.speed ? POTION_SPEED : 1);   // a speed potion: it chews (and walks through a gap) faster (Release 7, engine/potion.js)

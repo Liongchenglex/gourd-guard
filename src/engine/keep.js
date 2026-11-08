@@ -230,7 +230,7 @@ export function restoreSiege(m, s){
 /** combat.js hitMonsterNow: a pumpkin's direct hit on a tower with archers up takes one off instead of hurting it. True when it did. */
 export function knockArcher(m){
   if (!isSiege(m) || !(m.archers > 0)) return false;
-  m.archers--; m.flash = 0.1; m.anim = { clip:'knock', t:0, dur:KNOCK_DUR };
+  m.archers--; m.flash = 0.1; if (!m.archers) m.volleying = false; m.anim = { clip:'knock', t:0, dur:KNOCK_DUR };
   addFloat(m.archers ? 'Archer down!' : 'Both archers down!', m.x, mY(m) - m.r * mS(m) - 22, '#ffe8b0', 17, 0.9);
   const y = mY(m) - 70; for (let i = 0; i < 8; i++){ chunk(m.x + (m.archers ? 10 : -10), y, i % 2 ? '#8a5f38' : '#d8d0c0', 200); }
   ring(m.x, mY(m) - 60, 34, 'rgba(255,230,170,.85)'); SFX.bossSfx('siegetower', 'knock');
@@ -258,7 +258,7 @@ export function updateSiege(m, dt){
     if (m.volleyT <= VOLLEY_LEAD && !m.volleying && walls[m.lane] && walls[m.lane].hp > 0){ m.volleying = true; m.anim = { clip:'volley', t:0, dur:VOLLEY_DUR }; }
     if (m.volleyT <= 0){
       if (walls[m.lane] && walls[m.lane].hp > 0){
-        for (let i = 0; i < m.archers; i++) G.arrows.push({ lane:m.lane, p:m.p + 0.03 + i * 0.02, sp:0.4, dmg:T.volleyDmg, dead:false });
+        for (let i = 0; i < m.archers; i++) G.arrows.push({ lane:m.lane, p:m.p + 0.03 + i * 0.02, sp:T.arrowSp, dmg:T.volleyDmg, dead:false });
         SFX.monsterAct('archer', 'shoot'); m.volleyT = T.volleyEvery; m.volleying = false;
       } else m.volleyT = 0;
     }

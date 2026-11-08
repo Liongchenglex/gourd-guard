@@ -1073,6 +1073,7 @@ def check_siege(browser, url):
     ok(page.evaluate("() => window.__gg.G.arrows.filter(a => !a.dead).length") == 0, 'no volley in the first 5.9 s')
     page.evaluate(STEP, [3, 0.1])
     ar = page.evaluate("() => window.__gg.G.arrows.filter(a => !a.dead).map(a => [a.lane === window.__b.lane, a.dmg])")
+    ok(page.evaluate("() => window.__gg.G.arrows.every(a => a.sp === 0.4 && a.vis === undefined)"), "the arrows are the Skeleton Archer's (speed 0.4, no vis)")
     ok(ar == [[True, 3], [True, 3]], f'at 6 s one arrow per archer goes down its lane for 3 {ar}')
     page.evaluate(STEP, [27, 0.1])
     own = "() => { const g = window.__gg, id = window.__b.id; let n = 0; g.grid.forEach(r => r.forEach(c => { if (c && c.net && c.netBy === id) n++; })); return n + (g.G.netsFlying || []).filter(f => f.by === id).length; }"
@@ -1092,6 +1093,8 @@ def check_siege(browser, url):
         if (i === 40) G.monsters.filter(m => m.fromSiege && m.type === 'marshal').forEach(m => { m.dead = true; }); }
       return [seen.lancer > 0, seen.marshal >= 1, maxAlive, reMarshal]; }""")
     ok(res[0] and res[1] and res[2] <= 1, f'it releases both kinds and never has two Marshals of its own alive {res}')
+    ok(res[3], f'after its released Marshal dies, a later ramp releases a Marshal again {res}')
+    ok(page.evaluate("() => window.__gg.TYPES.siegetower.arrowSp") == 0.4, "its arrows fly at the Skeleton Archer's speed")
     # never past hold
     page.evaluate(SIEGE_UP, [1]); page.evaluate(PARK)
     w0 = page.evaluate("() => window.__gg.walls[window.__b.lane].hp")

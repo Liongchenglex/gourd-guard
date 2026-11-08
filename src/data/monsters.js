@@ -162,7 +162,7 @@ export const TYPES = {
   // `archers` Skeleton Archers; a pumpkin's hit knocks one off and costs it no health until both are gone. Every `volleyEvery` s each archer left looses an arrow down its
   // lane (`volleyDmg` wall damage); every `netEvery` s it lobs a net (thrown by it, cleared when it falls); every `rampEvery` s the ramp drops and a Storm Lancer or
   // a Storm Marshal (never a second Marshal of its own) walks out just ahead of it. form2 (N4-13): more health. No boss items or costume (noItems).
-  ...(__RELEASE__ >= 8 ? { siegetower: { boss:true, hp:24, r:34, sp:0.012, coins:40, eat:0, pts:300, drop:6, hold:0.35, archers:2, volleyEvery:6, volleyDmg:3, netEvery:9, rampEvery:12, noItems:true, form2:{ hp:34 } } } : {}),
+  ...(__RELEASE__ >= 8 ? { siegetower: { boss:true, hp:24, r:34, sp:0.012, coins:40, eat:0, pts:300, drop:6, hold:0.35, archers:2, volleyEvery:6, volleyDmg:3, arrowSp:0.4, netEvery:9, rampEvery:12, noItems:true, form2:{ hp:34 } } } : {}),
 };
 
 /** Release 8's castle pieces (spec Part 3; engine/keep.js): health as a multiple of the level's castle wall health, and the clocks. */

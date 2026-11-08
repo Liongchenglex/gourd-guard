@@ -1032,10 +1032,146 @@ def check_castle_pieces_budget(browser, url):
     page.close()
 
 
+# ---------- Task 8: the Siege Tower ----------
+SIEGE_UP = """([form]) => { const g = window.__gg, G = g.G; G.monsters.length = 0; G.arrows.length = 0; G.netsFlying = []; g.grid.forEach(r => r.forEach((c, i, a) => { if (c) c.net = null; }));
+  G.def.boss = 'siegetower'; G.def.bossForm = form; G.def.bossChest = 'normal'; G.bossSpawned = true; G.bossDead = false;
+  const b = g.spawnMonster('boss'); b.sp = 0; b.p = 0.2; window.__b = b; return [b.kind, b.hp, b.maxHp, b.archers, b.hold, b.form, b.id != null]; }"""
+HITB = """([t]) => { const g = window.__gg, b = window.__b; const pr = { type:t, vis:t, lv:1, size:1, lane:b.lane, x:b.x, y:0, hit:new Set(), grp:{ spawned:true, small:false, kills:0 }, guar:false, trail:[] };
+  g.hitMonster(pr, b); return [b.archers, b.hp, b.dead]; }"""
+PARK = "() => { const b = window.__b; b.volleyT = b.netT = b.rampT = 999; }"
+
+
+def check_siege(browser, url):
+    if not R8:
+        page, errors = open_page(browser, url)
+        ok(page.evaluate("() => !window.__gg.TYPES.siegetower && !window.__gg.BOSS_NAMES.siegetower"), 'no Siege Tower below Release 8')
+        page.close(); return
+    page, errors = piece_night(browser, url)
+    d = page.evaluate("() => { const T = window.__gg.TYPES.siegetower; return T ? [T.boss, T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.hold, T.archers, T.volleyEvery, T.volleyDmg, T.netEvery, T.rampEvery, T.noItems, T.form2.hp] : null; }")
+    ok(d == [True, 24, 34, 0.012, 40, 0, 300, 6, 0.35, 2, 6, 3, 9, 12, True, 34], f'Siege Tower data {d}')
+    ok(page.evaluate("() => window.__gg.BOSS_NAMES.siegetower") == 'The Siege Tower', 'its name on screen is "The Siege Tower"')
+    intro = page.evaluate("() => window.__gg.BOSS_INTRO.siegetower || null")
+    ok(bool(intro) and 'archer' in intro['1'].lower() and '2' in intro, f'it has boss intro texts for both forms {intro and list(intro)}')
+    b = page.evaluate(SIEGE_UP, [1])
+    ok(b == ['siegetower', 24, 24, 2, 0.35, 1, True], f'it arrives with 24 health, two archers, holding at 0.35 {b}')
+    page.evaluate(PARK)
+    # plain damage that is not a pumpkin's hit does not knock an archer off, and does not hurt it either
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 5, '#fff'); }")
+    ok(page.evaluate("() => [window.__b.archers, window.__b.hp]") == [2, 24], 'splash, burns and tools do nothing while archers stand (only a pumpkin hit knocks one off)')
+    h1 = page.evaluate(HITB, [0]); h2 = page.evaluate(HITB, [0]); h3 = page.evaluate(HITB, [0])
+    ok(h1 == [1, 24, False] and h2 == [0, 24, False], f'two pumpkin hits knock the archers off with no health lost {h1} {h2}')
+    ok(h3[0] == 0 and h3[1] < 24, f'the third hurts it {h3}')
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 1, '#fff'); }")
+    ok(page.evaluate("() => window.__b.hp") < h3[1], 'and with the archers gone any damage hurts it')
+    # immune to freeze and knockback
+    page.evaluate(SIEGE_UP, [1]); page.evaluate(PARK); page.evaluate(HITB, [2])
+    ok(page.evaluate("() => [window.__b.frozenT, window.__b.kb]") == [0, 0], 'an Ice hit does not freeze it and nothing knocks it back')
+    # the clocks: volley at 6 s, net at 9 s, ramp at 12 s
+    page.evaluate(SIEGE_UP, [1])
+    page.evaluate("() => { for (let c = 0; c < 6; c++) window.__put(2, c, 0); }")   # a net needs a pumpkin to land on
+    page.evaluate(STEP, [59, 0.1])
+    ok(page.evaluate("() => window.__gg.G.arrows.filter(a => !a.dead).length") == 0, 'no volley in the first 5.9 s')
+    page.evaluate(STEP, [3, 0.1])
+    ar = page.evaluate("() => window.__gg.G.arrows.filter(a => !a.dead).map(a => [a.lane === window.__b.lane, a.dmg])")
+    ok(ar == [[True, 3], [True, 3]], f'at 6 s one arrow per archer goes down its lane for 3 {ar}')
+    page.evaluate(STEP, [27, 0.1])
+    own = "() => { const g = window.__gg, id = window.__b.id; let n = 0; g.grid.forEach(r => r.forEach(c => { if (c && c.net && c.netBy === id) n++; })); return n + (g.G.netsFlying || []).filter(f => f.by === id).length; }"
+    ok(page.evaluate(own) == 0, 'no net before 9 s')
+    page.evaluate(STEP, [3, 0.1])
+    ok(page.evaluate(own) == 1, 'at 9 s it lobs a net onto the patch (thrown by it)')
+    ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.fromSiege).length") == 0, 'no ramp before 12 s')
+    page.evaluate(STEP, [30, 0.1])
+    r = page.evaluate("() => window.__gg.G.monsters.filter(m => m.fromSiege).map(m => [m.type, m.minion, m.lane === window.__b.lane, m.p])")
+    ok(len(r) == 1 and r[0][0] in ('lancer', 'marshal') and r[0][1] and r[0][2] and 0.24 <= r[0][3] < 0.3, f'at 12 s the ramp releases a Lancer or a Marshal, an extra, just ahead of it {r}')
+    # the Marshal rule: never two of its own, and both kinds come
+    res = page.evaluate("""() => { const g = window.__gg, G = g.G, b = window.__b; b.volleyT = b.netT = 999; const seen = { lancer:0, marshal:0 }; let maxAlive = 0, reMarshal = false;
+      G.monsters.filter(m => m.fromSiege).forEach(m => { m.dead = true; });
+      for (let i = 0; i < 80; i++){ b.rampT = 0; g.update(0.05);
+        for (const m of G.monsters) if (m.fromSiege && !m.seen){ m.seen = true; seen[m.type]++; if (m.type === 'lancer') m.dead = true; else if (seen.marshal > 1) reMarshal = true; }
+        const alive = G.monsters.filter(m => m.fromSiege && m.type === 'marshal' && !m.dead).length; maxAlive = Math.max(maxAlive, alive);
+        if (i === 40) G.monsters.filter(m => m.fromSiege && m.type === 'marshal').forEach(m => { m.dead = true; }); }
+      return [seen.lancer > 0, seen.marshal >= 1, maxAlive, reMarshal]; }""")
+    ok(res[0] and res[1] and res[2] <= 1, f'it releases both kinds and never has two Marshals of its own alive {res}')
+    # never past hold
+    page.evaluate(SIEGE_UP, [1]); page.evaluate(PARK)
+    w0 = page.evaluate("() => window.__gg.walls[window.__b.lane].hp")
+    page.evaluate("() => { window.__b.sp = 0.5; window.__b.p = 0.3; }"); page.evaluate(STEP, [300, 0.1])
+    pp = page.evaluate("() => [window.__b.p, window.__b.eating, window.__gg.walls[window.__b.lane].hp]")
+    ok(abs(pp[0] - 0.35) < 1e-6 and not pp[1] and pp[2] == w0, f'it rolls to 0.35 and stops there, never at the wall {pp}')
+    # death: its own nets go, others stay, one normal chest
+    page.evaluate(SIEGE_UP, [1]); page.evaluate(PARK)
+    page.evaluate("""() => { const g = window.__gg, G = g.G, b = window.__b; b.archers = 0;
+      window.__put(0, 0, 0, 'net').netBy = b.id; window.__put(0, 1, 0, 'net').netBy = 987654; window.__put(0, 2, 0, 'net').netBy = null; window.__put(1, 0, 0, 'net').netBy = b.id;
+      G.netsFlying = [{ x:100, y:100, kind:'net', by:b.id, r:2, c:0, t:0.5 }, { x:100, y:100, kind:'net', by:987654, r:2, c:1, t:0.5 }]; }""")
+    c0 = page.evaluate("() => window.__gg.save.chests.length")
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 99999, '#fff'); }"); time.sleep(0.2)
+    nets = page.evaluate("() => { const g = window.__gg; return [g.grid[0][0].net, g.grid[0][1].net, g.grid[0][2].net, g.grid[1][0].net, g.G.netsFlying.map(f => f.by)]; }")
+    ok(nets == [None, 'net', 'net', None, [987654]], f'on death its own nets are cleared (patch and in flight), other nets stay {nets}')
+    ch = page.evaluate("() => window.__gg.save.chests.slice(%d).map(c => c.kind)" % c0)
+    ok(ch == ['normal'] and page.evaluate("() => window.__gg.G.bossDead"), f'it gives one normal chest {ch}')
+    ok(page.evaluate("() => window.__gg.G.vfx.some(v => v.kind === 'clip' && v.key === 'siegetower' && v.clip === 'break')"), 'and it collapses (the break clip plays)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_siege_form2(browser, url):
+    """N4-13 (bossForm 2): 34 health; one normal chest."""
+    if not R8: return
+    page, errors = piece_night(browser, url)
+    b = page.evaluate(SIEGE_UP, [2])
+    ok(b[:3] == ['siegetower', 34, 34] and b[5] == 2 and b[3] == 2, f'in form 2 it arrives with 34 health and two archers {b}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_siege_continue(browser, url):
+    """A continued night brings it back with its health, the archers still on it and its three clocks where they were."""
+    if not R8: return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; window.__L0 = [L.boss, L.bossForm, L.bossChest]; L.boss = 'siegetower'; L.bossForm = 1; L.bossChest = 'normal'; }")
+    nm4_start(page, 1); time.sleep(0.4); hold(page)
+    page.evaluate("() => { const G = window.__gg.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.idle = -1e9; G.hint = null; }")
+    page.evaluate("() => { const g = window.__gg, G = g.G; G.bossSpawned = true; const b = g.spawnMonster('boss'); b.sp = 0; b.p = 0.2; window.__b = b; }")
+    page.evaluate("() => { const b = window.__b; b.volleyT = 5; b.netT = 6; b.rampT = 7; }")
+    page.evaluate(HITB, [0])   # one archer knocked off
+    page.evaluate(STEP, [10, 0.1])
+    before = page.evaluate("() => { const b = window.__b; return [b.archers, b.hp, +b.volleyT.toFixed(3), +b.netT.toFixed(3), +b.rampT.toFixed(3)]; }")
+    ok(before[0] == 1 and before[1] == 24, f'(it lost one archer, no health {before})')
+    page.evaluate("() => { const g = window.__gg; g.setState('play'); const c = g.continueState(); g.continueNight(c); g.setState('pause'); }")
+    page.evaluate(STEP, [5, 0.02])
+    after = page.evaluate("() => { const b = window.__gg.G.monsters.find(m => m.type === 'boss' && !m.dead); return b ? [b.archers, b.hp, +b.volleyT.toFixed(3), +b.netT.toFixed(3), +b.rampT.toFixed(3), b.kind, b.seenHp === b.hp] : null; }")
+    page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; [L.boss, L.bossForm, L.bossChest] = window.__L0; }")
+    ok(after is not None and after[:5] == before and after[5] == 'siegetower', f'it comes back with its archers left, its health and its clocks as they were {before} -> {after}')
+    ok(after is not None and after[6], 'its restored health plays no hit clip')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_siege_baked(browser, url):
+    """Its frames (three archer looks) are baked when the night starts, capped like the other bosses' (under 10 MB at bake scale 2.5)."""
+    if not R8: return
+    page, errors = open_page(browser, url)
+    C = page.evaluate("""() => { const C = window.__gg.CHARS.siegetower; if (!C) return null; const n = v => Object.keys(C.clipsFor(v)).sort();
+      return [n('a2'), n('a1'), n('a0'), C.vkeyOf({ kind:'siegetower', archers:1 }), C.vkeyOf({ kind:'siegetower', archers:0 }), C.vkeyOf({ kind:'siegetower', archers:2 })]; }""")
+    ok(C is not None and C[0] == ['break', 'hit', 'raise', 'ramp', 'volley', 'walk'] and C[1] == ['break', 'hit', 'knock', 'raise', 'ramp', 'volley', 'walk'] and C[2] == ['break', 'hit', 'knock', 'raise', 'ramp', 'walk'], f'each look bakes only the clips it can show {C and C[:3]}')
+    ok(C is not None and C[3:] == ['a1', 'a0', 'a2'], f'the look follows the archers left {C and C[3:]}')
+    page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; window.__L0 = [L.boss, L.bossForm, L.bossChest]; L.boss = 'siegetower'; L.bossForm = 1; L.bossChest = 'normal'; }")
+    page.evaluate("() => window.__gg.setBakeScale(2.5)")
+    t0 = time.time(); nm4_start(page, 1); dt = time.time() - t0
+    page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; [L.boss, L.bossForm, L.bossChest] = window.__L0; }")
+    ok(all(page.evaluate(f"() => window.__gg.isBaked('siegetower|{v}')") for v in ('a2', 'a1', 'a0')), 'starting the night bakes all three looks')
+    mb = page.evaluate("() => window.__gg.atlasBytes('siegetower') / 1e6")
+    ok(mb < 10, f"the Siege Tower's frames take {mb:.1f} MB at bake scale 2.5 (limit 10)")
+    ok(dt < 3, f'the night opens in {dt:.1f} s')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 CHECKS = {'check_r8_absent': check_r8_absent, 'check_n4_track': check_n4_track, 'check_n4_weather': check_n4_weather, 'check_n4_book': check_n4_book,
           'check_net_rules': check_net_rules, 'check_net_cap': check_net_cap, 'check_net_free_neighbour': check_net_free_neighbour, 'check_net_hint_wind': check_net_hint_wind, 'check_net_continue': check_net_continue, 'check_net_budget': check_net_budget, 'check_lobber': check_lobber, 'check_lobber_continue': check_lobber_continue, 'check_lancer': check_lancer, 'check_lancer_edges': check_lancer_edges, 'check_lancer_ride': check_lancer_ride, 'check_marshal': check_marshal, 'check_marshal_continue': check_marshal_continue, 'check_marshal_budget': check_marshal_budget,
           'check_glutton': check_glutton, 'check_bride': check_bride, 'check_glutton_bride': check_glutton_bride, 'check_shield_all_sources': check_shield_all_sources, 'check_shield_continue': check_shield_continue, 'check_veil_budget': check_veil_budget,
-          'check_gatehouse': check_gatehouse, 'check_archer_tower': check_archer_tower, 'check_castle_pieces_continue': check_castle_pieces_continue, 'check_castle_pieces_budget': check_castle_pieces_budget}
+          'check_gatehouse': check_gatehouse, 'check_archer_tower': check_archer_tower, 'check_castle_pieces_continue': check_castle_pieces_continue, 'check_castle_pieces_budget': check_castle_pieces_budget,
+          'check_siege': check_siege, 'check_siege_form2': check_siege_form2, 'check_siege_continue': check_siege_continue, 'check_siege_baked': check_siege_baked}
 
 
 def main():

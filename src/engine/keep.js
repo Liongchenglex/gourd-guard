@@ -24,6 +24,17 @@
 //    whose lane is within `veilReach` of hers (`o.veilBy = bride.id`, `bride.veil = o`): never herself, never another Bride (two could shield each other
 //    for ever), never one already veiled, the jukebox or the sack; a boss may be veiled. One veil at a time: it stays until the veiled monster or
 //    she is gone, wherever it walks. When the veiled one is gone her clock restarts at `veilAgain`; when she dies every `veilBy` pointing at her clears.
+//  - The Siege Tower (`boss` kind `siegetower`, the N4-4 and N4-13 mini boss): rolls very slowly down one lane and holds at `hold` (monsters.js stops it
+//    exactly there; a boss never chews, freezes or is knocked back). It carries `archers` Skeleton Archers. ARCHERS FIRST (our call: a pumpkin's direct hit
+//    only): combat.js hitMonsterNow asks knockArcher(m) before dealing damage, and a pumpkin hit while `m.archers > 0` takes one archer off (the `knock` clip)
+//    and costs it no health; splash, chain lightning, burn ticks, tools, rot and every other damage source are refused while archers stand
+//    (archersGuard, in damage() right after the shield door), so nothing but a pumpkin's own hit gets past them. Three clocks (`volleyT`, `netT`, `rampT`,
+//    running once it is on the field, p > 0.05): every `volleyEvery` s one arrow per archer left goes down its lane (G.arrows, `volleyDmg` wall damage;
+//    held while its fence is down, as the Skeleton Archer's); every `netEvery` s it throws a net (`throwNet(…, 'net', m.id)`; a fizzle when the patch is
+//    full); every `rampEvery` s the ramp drops and a Storm Lancer or a Storm Marshal (50/50; a Marshal only if none of its own lives) walks out of it at
+//    p + 0.04 as a minion (so an extra, not part of the night). A Lancer charges at once as it always does. On death the tower breaks and its own nets, on the
+//    patch and in flight, are cleared (siegeFalls); other nets stay. A continued night keeps its archers, health and clocks (siegeSnapshot / restoreSiege, through
+//    game.js continueState → spawner.js); the Marshal tracking restarts (ordinary monsters come back fresh).
 //  - The shield door: combat.js damage() asks shieldedNow(m) before anything else, so every damage source (pumpkin hits, burn ticks, glue, Black
 //    splash, Deep Blue lightning, mines, fireworks, the bomb) is refused alike, with the Hollow King's "No damage" float and dull clink (shieldPuff).
 //    A Corn Husker's husk-strip (a hit that strips instead of hurting) asks the door too. Ice, knockback and glue's slow still work: only damage is refused.
@@ -40,7 +51,7 @@ import { TYPES, PIECES } from '../data/monsters.js';
 import { SFX } from './audio.js';
 import { addFloat, ring, spark, chunk, castleY } from './combat.js';
 import { mS, mY, spawnMonster } from './monsters.js';
-import { throwNet, redNetsOf } from './nets.js';
+import { throwNet, redNetsOf, clearNets } from './nets.js';
 import { CS, COLS, G, FENCE_Y, ROWS, grid, walls, LANE } from './state.js';
 import { rnd } from './util.js';
 import { damageWall } from './walls.js';
@@ -53,6 +64,7 @@ const LOB_LEAD = LOB_DUR * 0.5;   // the net leaves the cup at half the clip (re
 export function initKeepMonster(m){
   if (m.type === 'lobbercart'){ const T = TYPES.lobbercart; m.lobT = rnd(T.lobEvery[0], T.lobEvery[1]); m.lobbing = false; m.parked = false; }
   if (m.type === 'marshal'){ m.rallyT = TYPES.marshal.rallyEvery; m.rallying = false; m.rallyLeft = 0; }
+  if (m.type === 'boss' && m.kind === 'siegetower') initSiege(m);
   if (G.shieldCarry) adopt(m);   // a continued night: the first of a carried owner's type takes its red nets, the first Bride its veil
   if (m.type === 'glutton'){ const T = TYPES.glutton; m.netT = T.netEvery; for (let i = ownNets(m); i < T.netsAtSpawn; i++) throwNet(m.x, mY(m), 'red', m.id); }
   if (m.type === 'bride'){ m.veilT = m.veilT || 0; m.veil = m.veil || null; }
@@ -197,6 +209,77 @@ export function pieceFalls(w){
   const a = spawnMonster('archer', w.lane, true, w.p);
   a.shootT = Math.max(0.5, w.t);   // the tower's own reload carries on; stunT stays 0
   a.fromTower = true;
+}
+
+// ---------- the Siege Tower (mini boss) ----------
+const VOLLEY_DUR = 8 / 12, VOLLEY_LEAD = VOLLEY_DUR * 0.45, RAMP_DUR = 10 / 10, RAMP_LEAD = 0.6, RAISE_DUR = 6 / 8, KNOCK_DUR = 6 / 12, HIT_DUR = 4 / 14;
+export const isSiege = m => m.type === 'boss' && m.kind === 'siegetower';
+
+/** A freshly spawned Siege Tower: both archers up, every clock full (a continued night restores them after this, restoreSiege). */
+export function initSiege(m){
+  const T = TYPES.siegetower;
+  m.archers = T.archers; m.volleyT = T.volleyEvery; m.netT = T.netEvery; m.rampT = T.rampEvery; m.volleying = false; m.ramping = false; m.raiseT = 0; m.seenHp = m.hp; m.marshals = [];
+}
+/** What a continued night keeps of it: the archers left and the time on each clock. */
+export const siegeSnapshot = m => isSiege(m) ? { archers:m.archers, volleyT:m.volleyT, netT:m.netT, rampT:m.rampT } : null;
+export function restoreSiege(m, s){
+  if (!s || !isSiege(m)) return;
+  m.archers = Math.max(0, Math.min(TYPES.siegetower.archers, s.archers | 0)); m.volleyT = s.volleyT; m.netT = s.netT; m.rampT = s.rampT; m.seenHp = m.hp;   // seenHp: its restored health is no hit
+}
+
+/** combat.js hitMonsterNow: a pumpkin's direct hit on a tower with archers up takes one off instead of hurting it. True when it did. */
+export function knockArcher(m){
+  if (!isSiege(m) || !(m.archers > 0)) return false;
+  m.archers--; m.flash = 0.1; m.anim = { clip:'knock', t:0, dur:KNOCK_DUR };
+  addFloat(m.archers ? 'Archer down!' : 'Both archers down!', m.x, mY(m) - m.r * mS(m) - 22, '#ffe8b0', 17, 0.9);
+  const y = mY(m) - 70; for (let i = 0; i < 8; i++){ chunk(m.x + (m.archers ? 10 : -10), y, i % 2 ? '#8a5f38' : '#d8d0c0', 200); }
+  ring(m.x, mY(m) - 60, 34, 'rgba(255,230,170,.85)'); SFX.bossSfx('siegetower', 'knock');
+  return true;
+}
+/** damage() (combat.js), after the shield door: any damage that is not a pumpkin's direct hit is refused while archers stand. True when refused. */
+export function archersGuard(m){
+  if (!isSiege(m) || !(m.archers > 0)) return false;
+  m.flash = 0.06;
+  if (G.t - (m.immuneT == null ? -9 : m.immuneT) >= 0.35){ m.immuneT = G.t; addFloat('Archers first', m.x, mY(m) - m.r * mS(m) - 24, '#c8c2b8', 15, 0.7); SFX.extra('blocked'); }
+  return true;
+}
+
+/** One frame of the Siege Tower (monsters.js, the walking branch). Its clocks run once it is on the field (p > 0.05). */
+export function updateSiege(m, dt){
+  const T = TYPES.siegetower;
+  m.x = m.tx + Math.sin(m.ph * 0.9) * 1.5;
+  if (m.hp < m.seenHp && !m.anim) m.anim = { clip:'hit', t:0, dur:HIT_DUR };
+  m.seenHp = m.hp;
+  if (m.raiseT > 0 && (m.raiseT -= dt) <= 0) m.anim = { clip:'raise', t:0, dur:RAISE_DUR };   // the ramp has dropped and the walker is out: it swings back up
+  if (m.p <= 0.05) return;
+  // the volley: one arrow per archer left, down the tower's lane (held while its fence is down, as the Skeleton Archer's)
+  if (m.archers > 0){
+    m.volleyT -= dt;
+    if (m.volleyT <= VOLLEY_LEAD && !m.volleying && walls[m.lane] && walls[m.lane].hp > 0){ m.volleying = true; m.anim = { clip:'volley', t:0, dur:VOLLEY_DUR }; }
+    if (m.volleyT <= 0){
+      if (walls[m.lane] && walls[m.lane].hp > 0){
+        for (let i = 0; i < m.archers; i++) G.arrows.push({ lane:m.lane, p:m.p + 0.03 + i * 0.02, sp:0.4, dmg:T.volleyDmg, dead:false });
+        SFX.monsterAct('archer', 'shoot'); m.volleyT = T.volleyEvery; m.volleying = false;
+      } else m.volleyT = 0;
+    }
+  } else m.volleyT = T.volleyEvery;
+  if ((m.netT -= dt) <= 0){ m.netT = T.netEvery; throwNet(m.x, mY(m) - 40, 'net', m.id); SFX.bossSfx('siegetower', 'net'); }
+  if (m.rampT <= RAMP_LEAD && !m.ramping){ m.ramping = true; m.anim = { clip:'ramp', t:0, dur:RAMP_DUR }; SFX.bossSfx('siegetower', 'ramp'); }
+  if ((m.rampT -= dt) <= 0){
+    m.rampT = T.rampEvery; m.ramping = false;
+    const live = (m.marshals || []).filter(o => !o.dead && G.monsters.includes(o)); m.marshals = live;
+    const kind = live.length || Math.random() < 0.5 ? 'lancer' : 'marshal';
+    const o = spawnMonster(kind, m.lane, true, Math.min(0.97, m.p + 0.04)); o.fromSiege = true; if (kind === 'marshal') m.marshals.push(o);
+    ring(m.x, mY(m) + 4, 44, 'rgba(255,170,90,.8)'); for (let i = 0; i < 6; i++) spark(m.x, mY(m) + 18, '#d8c8b0', 90);
+    m.raiseT = RAMP_DUR - RAMP_LEAD;   // the ramp has been down for RAMP_LEAD s of its clip
+  }
+}
+/** kill() (combat.js): the tower is down, so the nets it threw (on the patch and in flight) are gone. */
+export function siegeFalls(m){
+  if (!isSiege(m)) return;
+  const n = clearNets(cell => cell.netBy === m.id);
+  if (G.netsFlying) G.netsFlying = G.netsFlying.filter(f => f.by !== m.id);
+  if (n) addFloat('Nets fall away!', m.x, mY(m) - m.r - 60, '#e8d8b0', 17, 1.3);
 }
 
 // ---------- the Blood Glutton, the Bat Bride and the shield door ----------

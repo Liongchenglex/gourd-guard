@@ -20,7 +20,7 @@ import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
 import { reaperFalls, cometBreaks, fpAfterHit, fpReaperHit } from './hollow.js';
 import { witchwoodFalls } from './witchwood.js';
-import { shieldedNow, shieldPuff, keepFalls, pieceFalls } from './keep.js';
+import { shieldedNow, shieldPuff, keepFalls, pieceFalls, knockArcher, archersGuard, siegeFalls } from './keep.js';
 import { inWartSquare, isProtected } from './gourd.js';
 import { ROTTEN, ROT_FX, hitRule } from './rot.js';
 
@@ -71,6 +71,7 @@ export function launchGroup(ref){
 export function damage(m, amt, color, small, big){
   if (m.dead) return;
   if (__RELEASE__ >= 8 && shieldedNow(m)){ shieldPuff(m); return; }   // the one shield door (engine/keep.js): red nets, a Bride's veil, the Fallen Count's clamp; every damage source comes through here
+  if (__RELEASE__ >= 8 && archersGuard(m)) return;   // a Siege Tower with archers up: only a pumpkin's own hit gets past them, and that knocks one off instead (knockArcher, hitMonsterNow)
   if (m.type === 'jukebox' && m.lastHit === -1){ m.flash = 0.1; addFloat('Pumpkins only', m.x, mY(m) - m.r - 14, '#ffd35a', 15, 0.7); return; }   // tools never hurt the jukebox (owner)
   if (__RELEASE__ >= 5 && m.rotOnly && !rotDmg){ blockedPuff(m); return; }   // only rot can hurt it (Release 5): every other damage (splash, lightning, burn, mines, tools) is refused
   if (m.shield){   // shield knight marching: the hit bounces off
@@ -202,6 +203,7 @@ export function kill(m){
   if (__RELEASE__ >= 4 && m.type === 'rooster') lightFire(m.lane, m.p);   // a Cinder Rooster leaves a fire tile where it falls, whatever killed it
   if (__RELEASE__ >= 5 && m.type === 'reaper') reaperFalls(m);   // a crow bursts out where the Reaper fell (engine/hollow.js)
   if (__RELEASE__ >= 7) witchwoodFalls(m);   // the Flask Bearer's potion, the Cauldron Toad's burst (engine/witchwood.js)
+  if (__RELEASE__ >= 8) siegeFalls(m);   // the Siege Tower's own nets go with it (engine/keep.js)
   if (__RELEASE__ >= 8) keepFalls(m);   // a Glutton's red nets turn ordinary, a Bride's veil comes off (engine/keep.js)
   if (__RELEASE__ >= 4 && m.type === 'casketjack') dropCoffin(m);   // Casket Jack falls into a field coffin with one last mummy in it (engine/nightmare.js)
   if (hitBy){ const b = hitBy.grp; if (b){ b.kills++; if (b.kills > G.q.best) G.q.best = b.kills; } if (hitBy.type === BROWN && hitBy.size === 2) G.q.brown++; }   // quests: kills in one launch, big Brown kills
@@ -213,6 +215,7 @@ export function kill(m){
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
   ring(m.x, y, m.r * s * 2.2, 'rgba(255,220,150,.8)');
   if (__RELEASE__ >= 7 && G.vfx && (m.type === 'flaskbearer' || m.type === 'toad')) G.vfx.push({ kind:'clip', key:m.type, clip:'die', x:m.x, y, s, t:0, dur:m.type === 'toad' ? 0.6 : 0.55 });   // the bottles shatter and it topples / the toad swells and bursts (render/chars/witchwood.js)
+  else if (__RELEASE__ >= 8 && G.vfx && m.kind === 'siegetower') G.vfx.push({ kind:'clip', key:'siegetower', clip:'break', n:10, m:{ type:'boss', kind:'siegetower', archers:m.archers || 0 }, x:m.x, y, s, t:0, dur:1 });   // it creaks and comes apart into a heap of timber (render/chars/keep.js)
   else if (__RELEASE__ >= 4 && G.vfx && m.type === 'graveriser') G.vfx.push({ kind:'clip', key:'graveriser', clip:'die', x:m.x, y, s, t:0, dur:0.7 });   // it sinks back into the earth, its hat left on the hole (render/chars/graveriser.js)
   else if (G.vfx) G.vfx.push({ kind:'pop', m:{ type:m.type, kind:m.kind, look:m.look, ph:m.ph, eating:m.eating, hop:m.hop, tint:m.tint, age:5, rise:0, flash:0, slowT:0, frozenT:0, r:m.r }, x:m.x, y, s, t:0, dur:0.35 });   // the last frame squashes and fades (baked characters only)
   if (reward === 'boss' || reward === 'coins' || reward === 'gold'){
@@ -299,7 +302,8 @@ function hitMonsterNow(pr, m){
   }
   m.lastHit = pr.type; m.lastHitLv = pr.lv; m.lastHitAlt = pr.vis === PAINT && pr.type !== PAINT ? PAINT : -1;
   const hitPower = pumpkinPower(pr) * (__RELEASE__ >= 7 && pr.wart ? WART_DMG : 1);   // launched from a Wartling Gourd's square (Release 7): its hit damage doubles; damage() still applies every immunity
-  if (__RELEASE__ >= 4 && HUSK_STRIP[m.type] && !(__RELEASE__ >= 8 && shieldedNow(m))) stripHusk(m);   // a Corn Husker's first hit only takes the husk off (Release 4); a shielded one keeps it: damage() refuses the hit (Release 8)
+  if (__RELEASE__ >= 8 && !shieldedNow(m) && knockArcher(m)) { /* an archer takes the hit: no health lost (engine/keep.js) */ }
+  else if (__RELEASE__ >= 4 && HUSK_STRIP[m.type] && !(__RELEASE__ >= 8 && shieldedNow(m))) stripHusk(m);   // a Corn Husker's first hit only takes the husk off (Release 4); a shielded one keeps it: damage() refuses the hit (Release 8)
   else damage(m, hitPower, __RELEASE__ >= 7 && pr.wart ? '#d9b8ff' : PTYPES[pr.type].spark, false, __RELEASE__ >= 7 && pr.wart);
   if (pr.type === 5 && pr.grp && !pr.grp.spawned){   // Purple: every launched bunch spawns one pumpkin on its first hit
     pr.grp.spawned = true; purpleSpawn(m, y, i);

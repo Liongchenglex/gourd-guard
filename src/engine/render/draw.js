@@ -634,7 +634,7 @@ function drawVfx(){
     else if (__RELEASE__ >= 4 && (v.kind === 'firehiss' || v.kind === 'fireflare' || v.kind === 'firewave')) drawFireFx(v);   // Ice puts a fire out / a pumpkin burns up in one / the Fallen Gravekeeper's smash   // Ice puts a fire out / a pumpkin burns up in one
     else if (v.kind === 'clip'){
       ctx.save(); ctx.translate(v.x, v.y); ctx.scale(v.s, v.s);
-      drawChar(ctx, {}, v.key, null, [v.clip, Math.floor(p * 7.999)]); ctx.restore();
+      drawChar(ctx, v.m || {}, v.key, null, [v.clip, v.n ? Math.min(v.n - 1, Math.floor(p * v.n)) : Math.floor(p * 7.999)]); ctx.restore();   // v.n / v.m: a clip of more than 8 frames, and the monster whose look it keeps (the Siege Tower's break, Release 8)
     }
   }
 }

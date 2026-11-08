@@ -458,6 +458,13 @@ export const SFX = {
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:reaperend' : ''): S('reverse', 0.45, { rate: 0.9 }) || noise(0.2, 0.15, 900, 0.7); S('glassping', 0.3, { rate: 0.8, delay: 0.05 }); break;
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:hit' : ''): S('ghost', 0.55, { rate: 0.8 }) || tone(260, 0.2, 'triangle', 0.07, 180); S('slime', 0.25, { delay: 0.03 }); break;
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:die' : ''): S('scream', 0.6, { rate: 0.75 }) || tone(600, 1.4, 'sine', 0.1, 120); S('ghostdie', 0.6, { rate: 0.8, delay: 0.4 }); S('hiss', 0.4, { delay: 0.6 }); break;
+      // The Siege Tower (Release 8): timber creaks and groans, a hit thuds on wood, an archer clatters off, the ramp crashes down, the sling throws a net, and it comes apart
+      case (__RELEASE__ >= 8 ? 'siegetower:arrive' : ''): S('creak', 0.65, { rate: 0.7 }) || tone(90, 0.5, 'triangle', 0.07, 70); S('roar', 0.35, { rate: 0.6, delay: 0.25 }); S('wood', 0.4, { delay: 0.5 }); break;
+      case (__RELEASE__ >= 8 ? 'siegetower:knock' : ''): S('wood', 0.5, { rate: 1.1 }) || noise(0.08, 0.2, 900, 1); S('metallight', 0.3, { delay: 0.12 }); S('bone', 0.3, { delay: 0.2 }); break;
+      case (__RELEASE__ >= 8 ? 'siegetower:net' : ''): S('creak', 0.4, { rate: 0.9 }) || tone(140, 0.2, 'triangle', 0.06, 90); S('whoosh', 0.45, { rate: 0.8, delay: 0.3 }) || noise(0.25, 0.18, 900, 1.2, 0.3, 2200); break;
+      case (__RELEASE__ >= 8 ? 'siegetower:ramp' : ''): S('creak', 0.5, { rate: 0.75 }) || tone(100, 0.4, 'triangle', 0.06, 70); S('woodbreak', 0.4, { rate: 1.1, delay: 0.45 }) || noise(0.2, 0.3, 300, 0.8, 0.45); break;
+      case (__RELEASE__ >= 8 ? 'siegetower:hit' : ''): S('wood', 0.5, { rate: 0.8 }) || tone(120, 0.12, 'square', 0.06, 70); S('creak', 0.2, { delay: 0.04, rate: 0.8 }); break;
+      case (__RELEASE__ >= 8 ? 'siegetower:die' : ''): S('woodbreak', 0.8, { rate: 0.85 }) || noise(0.5, 0.3, 300, 0.8); S('stonebreak', 0.5, { delay: 0.3 }); S('roar', 0.5, { rate: 0.6, delay: 0.2 }); break;
       case 'hollowking:immune': S('clank', 0.5, { rate: 0.8 }) || tone(300, 0.08, 'square', 0.05); break;
       case 'hollowking:tell': S('darkcast', 0.8, { rate: 0.7 }); S('witchlong', 0.45, { rate: 0.6 }); tone(55, 0.9, 'sawtooth', 0.05, 110); break;
       case 'hollowking:wipe': S('stonecrash', 0.9, { rate: 0.8 }) || noise(0.4, 0.3, 300, 0.7); S('roar', 0.5, { rate: 0.6 }); break;

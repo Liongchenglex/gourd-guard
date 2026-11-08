@@ -67,7 +67,7 @@ export function makePreview(n){
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def.pattern, def.graves);
   if (def.gravesLayout) applyGravesLayout(def.gravesLayout);
-  if (__RELEASE__ >= 4 && def.gourd) placeGourdsAtStart(offeredGourds(def));   // the preview stands the gourds the night starts with (the picker preselects every one it offers) where it starts them
+  if (__RELEASE__ >= 4 && def.gourd) placeGourdsAtStart(defaultGourds(def));   // the preview stands the gourds the night starts with (the ones the picker preselects) where it starts them
   initWalls();
   resolveMatches();
   setGest(null);
@@ -83,7 +83,7 @@ export function beginNight(n){
   const fireSource = __RELEASE__ >= 4 && (hasFire(def) || def.boss === 'strawlord' || def.boss2 === 'strawlord' || def.boss === 'fallengravekeeper' || def.pool.some(([k]) => k === 'rooster'));   // fire tiles, or something that lights them (the rooster's death, the Strawlord)
   if ((def.pool.some(([k]) => iceKind(k)) || fireSource) && !must.some(m => m.t === 2))   // Ice is locked in wherever Ice-only monsters or fire can be
     must.push({ t:2, why: __RELEASE__ >= 4 && (fireSource || def.pool.some(([k]) => iceKind(k) && k !== 'firemummy')) ? 'Only Ice puts out fire and kills burning monsters' : 'Flaming mummies only die to Ice' });
-  if (av.length > 5 || (__RELEASE__ >= 4 && def.gourd)) openLoadout(av, (lo, gk) => startGame('story', n, lo, gk), must, __RELEASE__ >= 4 && def.gourd ? offeredGourds(def) : null);   // a gourd night always opens the picker, so its Gourds section is seen (Release 4); the picked kinds come back in slot order (Release 5)
+  if (av.length > 5 || (__RELEASE__ >= 4 && def.gourd)) openLoadout(av, (lo, gk) => startGame('story', n, lo, gk), must, __RELEASE__ >= 4 && def.gourd ? offeredGourds(def) : null, __RELEASE__ >= 4 && def.gourd ? defaultGourds(def) : null);   // a gourd night always opens the picker, so its Gourds section is seen (Release 4); the picked kinds come back in slot order (Release 5)
   else startGame('story', n, av);
 }
 
@@ -106,11 +106,22 @@ export function bakeKeys(def){
 
 /** The gourds a night offers in the picker, in slot order (Release 5, spec Part 6): none unless the level has `gourd:true`; there, its
  *  `gourds` field, or the Grave Gourd alone (Release 4's nights). A kind not unlocked yet (save.gourds) is not offered; the Grave counts as
- *  unlocked on any gourd night (those nights open only after N1-4, its unlock), so Release 4 plays as before. */
+ *  unlocked on any gourd night (those nights open only after N1-4, its unlock), so Release 4 plays as before. Release 7 offers more kinds
+ *  than slots (N3-5 on: all three), and the player picks two of them (defaultGourds says which start picked); below Release 7 the offer
+ *  never outgrows the slots. */
 export function offeredGourds(def){
   if (!(__RELEASE__ >= 4) || !def || !def.gourd) return [];
   const list = (__RELEASE__ >= 5 && def.gourds) || ['grave'];
-  return list.filter(k => GOURDS[k] && (k === 'grave' || (save.gourds && save.gourds[k]))).slice(0, GOURD_SLOTS);
+  const have = list.filter(k => GOURDS[k] && (k === 'grave' || (save.gourds && save.gourds[k])));
+  return __RELEASE__ >= 7 ? have : have.slice(0, GOURD_SLOTS);
+}
+/** The gourds a night starts with picked, in slot order (Release 7, spec Part 5): the first GOURD_SLOTS of its offer, in unlock order. On a
+ *  gourd's tutorial night (`coach` names an offered gourd) whose tutorial has not played, that gourd takes the last slot instead, so the
+ *  coach can run (Release 7's Wartling on N3-5; N2-5 offers only two, so nothing changes there). */
+export function defaultGourds(def){
+  const offer = offeredGourds(def), pick = offer.slice(0, GOURD_SLOTS);
+  if (__RELEASE__ >= 7 && def && def.coach === 'wartling' && !save.seenWartlingCoach && offer.includes('wartling') && !pick.includes('wartling')) pick[pick.length - 1] = 'wartling';
+  return pick;
 }
 
 /** The gourds a night starts with (Release 4; a list since Release 5): none unless the level has `gourd:true`; there, the picked kinds in slot
@@ -119,7 +130,7 @@ export function offeredGourds(def){
  *  kind are folded into one unless ALLOW_SAME_GOURD (data/gourds.js, false for now: owner) allows it. */
 function nightGourds(def, gourds){
   if (!def || !def.gourd) return [];
-  const list = gourds == null ? offeredGourds(def) : typeof gourds === 'string' ? [gourds] : gourds;
+  const list = gourds == null ? defaultGourds(def) : typeof gourds === 'string' ? [gourds] : gourds;
   const known = list.filter(k => GOURDS[k]);
   return (ALLOW_SAME_GOURD ? known : [...new Set(known)]).slice(0, GOURD_SLOTS);
 }

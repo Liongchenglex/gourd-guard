@@ -64,9 +64,10 @@
  * @property {boolean} [gourd]         the Grave Gourd stands on the patch this night (Release 4; src/engine/gourd.js): it starts in cell (2, 3), and one
  *   slot of every sprout tick fills the empty cells of its 3×3
  * @property {string} [coach]        a tutorial script the coach plays the first time this level is played (Release 4: 'gourd' on N1-5, src/engine/coach.js;
- *   Release 5: 'protector' on N2-5)
- * @property {string[]} [gourds]     the gourds a `gourd:true` night offers in the picker, in slot order (Release 5; `GOURD_SLOTS` at most; each only once
- *   unlocked in save.gourds; the Grave Gourd counts as unlocked on any gourd night). Without it the night offers the Grave Gourd alone
+ *   Release 5: 'protector' on N2-5; Release 7: 'wartling' on N3-5)
+ * @property {string[]} [gourds]     the gourds a `gourd:true` night offers in the picker, in slot order (Release 5; `GOURD_SLOTS` at most below Release 7;
+ *   Release 7 may offer more, and the player picks two; each only once unlocked in save.gourds; the Grave Gourd counts as unlocked on any gourd
+ *   night). Without it the night offers the Grave Gourd alone
  * @property {string[]} [unlockGourds]  gourd keys (save.gourds) unlocked by winning this level (Release 4: N1-4 unlocks 'grave')
  * @property {Array<{at:number, n:number}>} [fireMarks]  fire marks on the spawn bar (Release 4): when `at` × `total` monsters have spawned, `n` random
  *   field tiles catch fire and a burst of FRENZY_BURST monsters arrives that does not count toward `total`; the bar counts arrivals, as with jukebox marks

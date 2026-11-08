@@ -39,6 +39,11 @@ export const FIRE_TRICKLE_EVERY = 6, FIRE_TRICKLE_MAX = 4;
 // this much as it is launched, never above full (our number, a first guess).
 export const PROTECT_HEAL = 1;
 
+// The Wartling Gourd (Release 7, Nightmare Witchwood; spec Part 5): a pumpkin launched from its 3×3 hits for WART_DMG × its damage (owner:
+// double; its on-hit powers as usual). Broken in the top row of the patch, each fence above its 3×3 mends by WART_HEAL × its full health,
+// never above full (owner: half). Plain numbers, so a lower build that never reads them carries nothing named.
+export const WART_DMG = 2, WART_HEAL = 0.5;
+
 // Rotten pumpkins (Release 5; spec Part 2): a rotten pumpkin heals what it hits by ROT_HEAL (owner: half a hit point, never above full health)
 // and hurts by ROT_DMG only a monster that only rot can hurt (`rotOnly`: a Plague Doctor 2's square, the Lamplighter's rot mood, the Fallen
 // Poltergeist's reaper phase). Per pumpkin, flat: no level or bunch-size multiplier (ROT_DMG is our number, a first guess).

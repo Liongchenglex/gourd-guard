@@ -9,13 +9,18 @@
 // - The Protector Gourd ('protector', Release 5): pumpkins in its 3×3 (its own cell included) are protected (isProtected): no rot, no monster
 //   can destroy them; a pumpkin launched from there carries `ward` (combat.js). Breaking it turns the rotten pumpkins in its 3×3 into Rainbows.
 //   It does not sprout; when due it comes back on a random empty cell at the start of the next sprout tick (gourdsBack).
-// Every caller gates on `__RELEASE__ >= 4` (the Protector's branches on `>= 5`), so lower builds drop this module. Art: render/gourd.js.
+// - The Wartling Gourd ('wartling', Release 7): a pumpkin launched from its 3×3 (inWartSquare) carries `wart` and hits for WART_DMG × its
+//   damage (combat.js). Broken in the top row of the patch it mends each fence above its 3×3 by WART_HEAL × full (onWartlingBreak); broken
+//   anywhere else it does nothing extra. It comes back as the Protector does (gourdsBack).
+// Every caller gates on `__RELEASE__ >= 4` (the Protector's branches on `>= 5`, the Wartling's on `>= 7`), so lower builds drop this module.
+// Art: render/gourd.js.
 
 import { SFX } from './audio.js';
 import { applyMove, emptyCells, inside, newCell, planMove, randSprout, resolveMatches, revertMove } from './board.js';
-import { chunk, ring, spark } from './combat.js';
+import { addFloat, chunk, ring, spark } from './combat.js';
 import { bustGrave } from './game.js';
-import { COLS, CS, G, GY, LANE, ROWS, graves, grid } from './state.js';
+import { COLS, CS, FENCE_Y, G, GY, LANE, ROWS, graves, grid, walls } from './state.js';
+import { WART_HEAL } from '../data/rules.js';
 import { RAINBOW } from '../data/pumpkins.js';
 import { isRotten } from './rot.js';
 
@@ -69,6 +74,16 @@ export function isProtected(r, c){
   if (!(__RELEASE__ >= 5)) return false;
   for (let a = Math.max(0, r - 1); a <= Math.min(ROWS - 1, r + 1); a++) for (let b = Math.max(0, c - 1); b <= Math.min(COLS - 1, c + 1); b++){
     const cell = grid[a][b]; if (cell && cell.gourd === 'protector') return true;
+  }
+  return false;
+}
+
+/** Release 7: (r, c) is inside the 3×3 (its centre included) of a Wartling Gourd standing on the patch: a pumpkin launched from there hits
+ *  for double (combat.js). No allocation. */
+export function inWartSquare(r, c){
+  if (!(__RELEASE__ >= 7)) return false;
+  for (let a = Math.max(0, r - 1); a <= Math.min(ROWS - 1, r + 1); a++) for (let b = Math.max(0, c - 1); b <= Math.min(COLS - 1, c + 1); b++){
+    const cell = grid[a][b]; if (cell && cell.gourd === 'wartling') return true;
   }
   return false;
 }
@@ -131,9 +146,21 @@ export function onProtectorBreak(pos){
   }
 }
 
+/** Release 7: the Wartling Gourd has just broken at pos. In the top row of the patch (right under the fence) each fence above its 3×3 (its
+ *  column and the one each side that exists) mends by WART_HEAL of its full health, never above full; in any other row nothing happens. */
+export function onWartlingBreak(pos){
+  if (pos.r !== 0) return;
+  for (let c = Math.max(0, pos.c - 1); c <= Math.min(COLS - 1, pos.c + 1); c++){
+    const w = walls[c]; if (!w || w.hp >= w.max) continue;
+    const add = Math.min(w.max - w.hp, w.max * WART_HEAL); w.hp += add;
+    addFloat(`Wall +${Math.round(add * 10) / 10}`, LANE(c), FENCE_Y - 40, '#d9b8ff', 18, 1);
+    for (let k = 0; k < 6; k++) spark(LANE(c), FENCE_Y - 10, '#c9a6ff', 120);
+  }
+}
+
 /** Destroyed by the player's hold (board.js smash routes here), by kind. The Grave: every grave in its 3×3 is cleared (free, through
- *  bustGrave), pumpkins in the square are untouched. The Protector (Release 5): onProtectorBreak. Either way it is due back on the next
- *  sprout tick. */
+ *  bustGrave), pumpkins in the square are untouched. The Protector (Release 5): onProtectorBreak. The Wartling (Release 7):
+ *  onWartlingBreak. Either way it is due back on the next sprout tick. */
 export function destroyGourd(cell){
   if (!cell || !cell.gourd) return false;   // only ever a gourd itself (a null ref would match an empty cell)
   let pos = null;
@@ -146,13 +173,15 @@ export function destroyGourd(cell){
   ring(x, y, CS * 1.4, fx.ring);
   if (kind === 'grave') for (const [a, b] of squareAround(pos.r, pos.c)) if (graves[a][b]) bustGrave(a, b, true);
   if (__RELEASE__ >= 5 && kind === 'protector') onProtectorBreak(pos);
+  if (__RELEASE__ >= 7 && kind === 'wartling') onWartlingBreak(pos);
   SFX.smash(); G.shake = Math.max(G.shake || 0, 0.35);
   resolveMatches();
   return true;
 }
 
-/** Each kind's break and comeback colours (the Protector's only in a Release 5 build). */
+/** Each kind's break and comeback colours (the Protector's only in a Release 5 build, the Wartling's in a Release 7 one). */
 const gourdFx = kind => __RELEASE__ >= 5 && kind === 'protector' ? { shell:'#e4d9bd', dark:'#5c8c48', ring:'rgba(244,238,214,.9)', spark:'#f4eedc' }
+  : __RELEASE__ >= 7 && kind === 'wartling' ? { shell:'#8a5cc6', dark:'#4a2c74', ring:'rgba(214,186,255,.9)', spark:'#d9b8ff' }
   : { shell:'#e3a43c', dark:'#8a5a1e', ring:'rgba(255,214,140,.9)', spark:'#ffd98a' };
 /** Put a due gourd (by id) back on a random empty cell. True when it came back. */
 function bringBack(id){

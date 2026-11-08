@@ -7,9 +7,12 @@
 // The Protector Gourd (Release 5, spec Part 6): the Swan from the same archive (cream with green stripes, a long neck arcing into a little
 // head; owner 2026-11-05), with the archive's halo behind it as its ward, baked once and blitted with a pulsing alpha; its 3×3 glow is in
 // its own colour with shield corners, so the two squares read apart.
-// Only called from code gated on `__RELEASE__ >= 4`; every Protector branch is gated on `>= 5`, so lower builds carry none of its art.
+// The Wartling Gourd (Release 7, spec Part 5): the archive's Wartling (violet #8a5cc6, a round pear gourd covered in little bumps, faint
+// ribs and a curly stem), with the toy face; its 3×3 glow is violet with a wart at each corner.
+// Only called from code gated on `__RELEASE__ >= 4`; every Protector branch is gated on `>= 5` and every Wartling branch on `>= 7`, so lower
+// builds carry none of their art.
 
-import { E, S, SM, SO, mix, pal, rgba } from './paint.js';
+import { E, S, SM, SO, mix, pal, rgba, rng } from './paint.js';
 import { K } from './canvas.js';
 import { COLS, CS, GX, GY, LANE, ROWS, grid } from '../state.js';
 
@@ -73,7 +76,36 @@ function paintWard(g){
   g.fillStyle = gr; g.beginPath(); g.arc(0, cy, rr, 0, Math.PI * 2); g.fill();
 }
 
-const glowCol = kind => mix(__RELEASE__ >= 5 && kind === 'protector' ? protHue() : GOURD_HUE, '#fff6d0', .35);   // the archive's glowOf
+// The Wartling Gourd (Release 7): the archive's drawGourd for its SHAPES entry `wartling`, ported as is. Its data lives inside a function.
+const wartShape = () => ({ hue:'#8a5cc6', body:() => SM(P([[0,.86],[.5,.76],[.7,.4],[.66,0],[.46,-.4],[.24,-.64],[0,-.7],[-.24,-.64],[-.46,-.4],[-.66,0],[-.7,.4],[-.5,.76]])),
+  b:{ x:0, y:.12, r:.8 }, hl:[-.34, -.22], top:[0, -.68], face:{ x:0, y:.22, s:.94 }, warts:16 });
+/** The Wartling at the origin: shadow, body, its faint ribs, the warts, a curly stem and the face. */
+function paintWartling(g){
+  const sh = wartShape(), c = pal(sh.hue), STEM = pal('#6e4c2a'), LEAF = pal('#4c7a34'), body = sh.body(), b = { x:sh.b.x * R, y:sh.b.y * R, r:sh.b.r * R };
+  S.shadow(g, 0, R * .86, R * .86, R * .2);
+  S.part(g, body, c, b, { mat:'pumpkin', hx:sh.hl[0] * R, hy:sh.hl[1] * R });
+  g.save(); body(g); g.clip();   // the ribs
+  g.strokeStyle = rgba(c.deep, .35); g.lineWidth = R * .045;
+  for (const x of [-.55, -.25, .25, .55]){ g.beginPath(); g.moveTo(x * R * .8, -R * .6); g.quadraticCurveTo(x * R * 1.25, R * .4, x * R * .8, R * .84); g.stroke(); }
+  g.restore();
+  const Rr = rng(17); let n = 0;   // the warts, the archive's seed: none over the face
+  for (let i = 0; i < 60 && n < sh.warts; i++){
+    const a = Rr() * Math.PI * 2, d = Math.sqrt(Rr()) * .62, x = Math.cos(a) * d * R, y = (sh.b.y + Math.sin(a) * d * 1.05) * R, r = R * (.05 + Rr() * .05);
+    if (Math.hypot(x, y - R * .22) < R * .38) continue;
+    n++; S.part(g, E(x, y, r, r * .9), { ...c, base:mix(c.base, c.light, .25) }, { x:x - r * .3, y:y - r * .3, r }, { flat:true, lw:1 });
+  }
+  g.save(); g.translate(sh.top[0] * R, sh.top[1] * R);   // the curly stem, straight up (the archive's stem() at -90°)
+  S.part(g, SM([[-R * .07, R * .06], [-R * .09, -R * .12], [-R * .02, -R * .26], [R * .1, -R * .3], [R * .12, -R * .2], [R * .06, -R * .12], [R * .07, R * .06]], .8), STEM, { x:0, y:-R * .12, r:R * .2 }, { flat:true, mat:'wood' });
+  S.stroke(g, SO([[R * .1, -R * .26], [R * .26, -R * .34], [R * .32, -R * .2], [R * .22, -R * .14], [R * .2, -R * .22]]), LEAF, 1.4, .85);
+  g.restore();
+  const f = sh.face, s = R / 40 * f.s, x = f.x * R, ey = f.y * R - R * .1 * f.s, ex = R * .3 * f.s, iris = mix(c.dark, '#7a5a2a', .5);   // the archive's face()
+  S.eye(g, x - ex, ey, 9 * s, 9.5 * s, { lx:.2, iris }); S.eye(g, x + ex, ey, 9 * s, 9.5 * s, { lx:.2, iris });
+  S.blush(g, x, ey + 10 * s, s);
+  S.stroke(g, g2 => { g2.beginPath(); g2.moveTo(x - R * .16 * f.s, ey + R * .32 * f.s); g2.quadraticCurveTo(x, ey + R * .45 * f.s, x + R * .16 * f.s, ey + R * .32 * f.s); }, c, 2.4 * s);
+}
+
+const hueOf = kind => __RELEASE__ >= 5 && kind === 'protector' ? protHue() : __RELEASE__ >= 7 && kind === 'wartling' ? wartShape().hue : GOURD_HUE;
+const glowCol = kind => mix(hueOf(kind), '#fff6d0', .35);   // the archive's glowOf
 const kOf = () => Math.min(2.5, Math.max(0.5, K || 1));
 const bodies = {}, glows = {};
 let ward = null;
@@ -81,7 +113,7 @@ function bodySprite(kind = 'grave'){
   const k = kOf(), have = bodies[kind]; if (have && have.k === k) return have;
   const c = document.createElement('canvas'); c.width = Math.ceil(BOX.w * k); c.height = Math.ceil(BOX.h * k);
   const g = c.getContext('2d'); g.scale(k, k); g.translate(BOX.ox, BOX.oy);
-  if (__RELEASE__ >= 5 && kind === 'protector') paintProtector(g); else paintGourd(g);
+  if (__RELEASE__ >= 5 && kind === 'protector') paintProtector(g); else if (__RELEASE__ >= 7 && kind === 'wartling') paintWartling(g); else paintGourd(g);
   return (bodies[kind] = { c, k });
 }
 function wardSprite(){
@@ -102,11 +134,15 @@ function glowSprite(kind = 'grave'){
     g.lineWidth = 4; g.strokeStyle = rgba(col, .95); const L = CS * .42, m = 4;
     for (const [x, y, dx, dy] of [[m, m, 1, 1], [S3 - m, m, -1, 1], [m, S3 - m, 1, -1], [S3 - m, S3 - m, -1, -1]]){ g.beginPath(); g.moveTo(x, y + dy * L); g.lineTo(x, y); g.lineTo(x + dx * L, y); g.stroke(); }
   }
+  if (__RELEASE__ >= 7 && kind === 'wartling'){   // a little wart at each corner and mid-edge
+    g.fillStyle = rgba(col, .95);
+    for (const [x, y, r] of [[9, 9, 5], [S3 - 9, 9, 5], [9, S3 - 9, 5], [S3 - 9, S3 - 9, 5], [S3 / 2, 4, 3.5], [S3 / 2, S3 - 4, 3.5], [4, S3 / 2, 3.5], [S3 - 4, S3 / 2, 3.5]]){ g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+  }
   g.restore();
   return (glows[kind] = { c, k });
 }
 /** Bake them now (night start), not on first sight. */
-export function prebakeGourd(){ bodySprite(); glowSprite(); if (__RELEASE__ >= 5){ bodySprite('protector'); glowSprite('protector'); wardSprite(); } }
+export function prebakeGourd(){ bodySprite(); glowSprite(); if (__RELEASE__ >= 5){ bodySprite('protector'); glowSprite('protector'); wardSprite(); } if (__RELEASE__ >= 7){ bodySprite('wartling'); glowSprite('wartling'); } }
 
 /** A gourd in its cell: (x, y) is the cell centre with the slide offsets already in; s the pop/grow scale; ph its own idle phase. The
  *  Protector's ward is blitted behind it with a pulsing alpha. */
@@ -128,7 +164,7 @@ export function drawGourdGlow(ctx, t){
     const x0 = LANE(c0) - CS * 1.5 + cell.ox, y0 = GY + (r0 - 1) * CS + cell.oy;
     const ax = Math.max(x0, GX), ay = Math.max(y0, GY), bx = Math.min(x0 + CS * 3, GX + COLS * CS), by = Math.min(y0 + CS * 3, GY + ROWS * CS);
     if (bx <= ax || by <= ay) continue;
-    ctx.globalAlpha = (0.55 + 0.35 * Math.sin(t * 2 + (kind === 'grave' ? 0 : 1.6))) * Math.min(1, cell.grow * 1.5);
+    ctx.globalAlpha = (0.55 + 0.35 * Math.sin(t * 2 + (kind === 'grave' ? 0 : kind === 'protector' ? 1.6 : 0.8))) * Math.min(1, cell.grow * 1.5);
     ctx.drawImage(sp.c, (ax - x0) * k, (ay - y0) * k, (bx - ax) * k, (by - ay) * k, ax, ay, bx - ax, by - ay);
   }
   ctx.globalAlpha = 1;

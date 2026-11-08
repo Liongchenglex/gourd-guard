@@ -9,7 +9,7 @@ import { TILE_P, mS, mY, spMulNow, spawnMonster, inHexZone, stripHusk } from './
 import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS, walls, FENCE_Y } from './state.js';
 import { TAU, clamp, fmt, rnd } from './util.js';
 import { lvOf, save, persist } from '../save.js';
-import { KILL_REWARD, PROTECT_HEAL, ROT_DMG, ROT_HEAL } from '../data/rules.js';
+import { KILL_REWARD, PROTECT_HEAL, ROT_DMG, ROT_HEAL, WART_DMG } from '../data/rules.js';
 import { SACK, BOSS_SEED, ENDLESS_BOSS_SEED, CHEST_KILL_CHANCE } from '../data/economy.js';
 import { addChest, addSeeds, grant, toolSet } from './loot.js';
 import { GEAR } from '../data/shop.js';
@@ -20,7 +20,7 @@ import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
 import { reaperFalls, cometBreaks, fpAfterHit, fpReaperHit } from './hollow.js';
 import { witchwoodFalls } from './witchwood.js';
-import { isProtected } from './gourd.js';
+import { inWartSquare, isProtected } from './gourd.js';
 import { ROTTEN, ROT_FX, hitRule } from './rot.js';
 
 /** Release 5: a pumpkin launched from (r, c) inside a Protector Gourd's 3×3 mends its column's fence by PROTECT_HEAL (never above full) and
@@ -48,13 +48,14 @@ export function launchGroup(ref){
   for (const { r, c, cell } of cells){
     const x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;
     const ward = __RELEASE__ >= 5 && wardLaunch(r, c);   // from a Protector Gourd's square (Release 5)
-    G.projs.push({ x, y, vy:-900, type:inh != null ? inh : type, vis:cell.c, lv, guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}) });
+    const wart = __RELEASE__ >= 7 && inWartSquare(r, c);   // from a Wartling Gourd's square (Release 7): double damage
+    G.projs.push({ x, y, vy:-900, type:inh != null ? inh : type, vis:cell.c, lv, guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}), ...(wart ? { wart:true } : {}) });
     grid[r][c] = null;
   }
   for (const { r, c, cell } of pulled){
     const own = cell.c === RAINBOW ? type : cell.c, x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;   // a pulled rainbow flies as Paint
-    const ward = __RELEASE__ >= 5 && wardLaunch(r, c);
-    G.projs.push({ x, y, vy:-900, type:own, vis:cell.c, lv:lvOf(own), guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}) });
+    const ward = __RELEASE__ >= 5 && wardLaunch(r, c), wart = __RELEASE__ >= 7 && inWartSquare(r, c);
+    G.projs.push({ x, y, vy:-900, type:own, vis:cell.c, lv:lvOf(own), guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}), ...(wart ? { wart:true } : {}) });
     grid[r][c] = null;
   }
   if (pulled.length) cells.push(...pulled);
@@ -66,7 +67,7 @@ export function launchGroup(ref){
   resolveMatches();
 }
 
-export function damage(m, amt, color, small){
+export function damage(m, amt, color, small, big){
   if (m.dead) return;
   if (m.type === 'jukebox' && m.lastHit === -1){ m.flash = 0.1; addFloat('Pumpkins only', m.x, mY(m) - m.r - 14, '#ffd35a', 15, 0.7); return; }   // tools never hurt the jukebox (owner)
   if (__RELEASE__ >= 5 && m.rotOnly && !rotDmg){ blockedPuff(m); return; }   // only rot can hurt it (Release 5): every other damage (splash, lightning, burn, mines, tools) is refused
@@ -100,7 +101,7 @@ export function damage(m, amt, color, small){
   }
   if (__RELEASE__ >= 3 && m.kind === 'hollowking' && !m.hkClone){ amt = hkGate(m, amt); if (amt <= 0) return; }   // immune while his form stands
   m.hp -= amt; m.flash = 0.1;
-  addFloat(fmt(amt), m.x + rnd(-8, 8), mY(m) - m.r * mS(m) - 14, color || '#fff', small ? 16 : 23, 0.8);
+  addFloat(fmt(amt), m.x + rnd(-8, 8), mY(m) - m.r * mS(m) - 14, color || '#fff', small ? 16 : big ? 30 : 23, big ? 1 : 0.8);   // big: a Wartling hit (Release 7)
   if (m.hp <= 0.001) kill(m);
   else if (__RELEASE__ >= 3 && m.kind === 'hollowking') hkAfterHit(m);
   else if (__RELEASE__ >= 5 && m.kind === 'fallenpoltergeist') fpAfterHit(m);   // a reaper mark crossed: its phase starts on this hit (engine/hollow.js)
@@ -294,9 +295,9 @@ function hitMonsterNow(pr, m){
     return;
   }
   m.lastHit = pr.type; m.lastHitLv = pr.lv; m.lastHitAlt = pr.vis === PAINT && pr.type !== PAINT ? PAINT : -1;
-  const hitPower = pumpkinPower(pr);
+  const hitPower = pumpkinPower(pr) * (__RELEASE__ >= 7 && pr.wart ? WART_DMG : 1);   // launched from a Wartling Gourd's square (Release 7): its hit damage doubles; damage() still applies every immunity
   if (__RELEASE__ >= 4 && HUSK_STRIP[m.type]) stripHusk(m);   // a Corn Husker's first hit only takes the husk off (Release 4)
-  else damage(m, hitPower, PTYPES[pr.type].spark);
+  else damage(m, hitPower, __RELEASE__ >= 7 && pr.wart ? '#d9b8ff' : PTYPES[pr.type].spark, false, __RELEASE__ >= 7 && pr.wart);
   if (pr.type === 5 && pr.grp && !pr.grp.spawned){   // Purple: every launched bunch spawns one pumpkin on its first hit
     pr.grp.spawned = true; purpleSpawn(m, y, i);
   }

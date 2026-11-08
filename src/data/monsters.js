@@ -222,6 +222,7 @@ export const GOURD_INTRO = __RELEASE__ >= 4 ? 'The Grave Gourd stands on your pa
 // Release 5 (the hollow nightmare): the poison fog and rotten pumpkin cards, on the first level with `poison` (N2-1).
 export const POISON_INTRO = __RELEASE__ >= 5 ? 'Poison fog rolls over your patch. Green arrows warn you first, then the fog lies over one or two whole rows or columns for a few seconds. Every pumpkin under it turns rotten, and so does any pumpkin slid or sprouted into it while it lasts. Gourds never rot.' : '';
 export const ROT_INTRO = __RELEASE__ >= 5 ? 'A rotten pumpkin bunches with other rotten ones and flies like any pumpkin, but it heals the monster it hits instead of hurting it. Some foes are hurt only by rot: every monster in a Plague Doctor 2\'s square, and the Lamplighter when its lantern burns green. Aim your rot, or crush it by holding it.' : '';
+export const WARTLING_INTRO = __RELEASE__ >= 7 ? 'The Wartling Gourd joins your patch: pick two of your three gourds. A pumpkin flicked from the 3×3 around it does double damage. Slide it to the top row and press and hold it to break it: each fence above it mends by half.' : '';   // Release 7, its first night (N3-5)
 export const PROTECTOR_INTRO = __RELEASE__ >= 5 ? 'The Protector Gourd joins your patch: pick it beside the Grave Gourd. Pumpkins in the 3×3 around it never rot, and no monster can destroy them. A pumpkin flicked from its square always knocks back and mends its fence. Press and hold it to break it: every rotten pumpkin around it turns Rainbow.' : '';
 
 export const MINTRO = {

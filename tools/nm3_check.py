@@ -925,6 +925,11 @@ def check_triptych(browser, url):
     ok(r[1] == [], f'barrier down: a pumpkin beside it passes {r}')
     page.evaluate(FULL); r = page.evaluate(TSHOOT, [0, 0])
     ok(r[1] == [] and mon(page, i, "m.hp") == 2, f'barrier down: a pumpkin in its lane hits it {r} (hp {mon(page, i, "m.hp")})')
+    # a rotten pumpkin is never reflected: it meets the barrier as it would the Mirror Sprite's mirror (rot first) and feeds the sprite
+    page.evaluate(CLEAR)
+    i = page.evaluate(TRIP, [3, 0.3]); page.evaluate("(i) => { window.__ms[i].hp = 2; }", i)
+    page.evaluate(FULL); r = page.evaluate(TSHOOT, [page.evaluate("() => window.__gg.ROTTEN"), 4])
+    ok(r[0] and r[1] == [] and 2 < mon(page, i, "m.hp") <= 3, f'a rotten pumpkin in lane 4 is not reflected; it feeds the sprite {r} (hp 2 -> {mon(page, i, "m.hp")})')
     # down while it chews
     page.evaluate(CLEAR)
     i = page.evaluate(TRIP, [3, 0.3])
@@ -964,7 +969,24 @@ def check_triptych_budget(browser, url):
     page.close()
 
 
-CHECKS.update({'check_triptych': check_triptych, 'check_triptych_budget': check_triptych_budget})
+def check_triptych_prebaked(browser, url):
+    """The barrier's 12 frames (2 and 3 lanes, 6 sheen frames each) are baked when a night with a Triptych in its pool starts, before any
+    barrier goes up; a night without one bakes none."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    nm3_start(page, 1); time.sleep(0.3)
+    ok(page.evaluate("() => window.__gg.barrierBaked()") == 0, f'a night without a Triptych bakes no barrier ({page.evaluate("() => window.__gg.barrierBaked()")})')
+    page.evaluate("() => { window.__gg.NIGHTMARE_LEVELS[2][0].pool.push(['triptych', 3]); }")
+    ok(page.evaluate("() => window.__gg.levelFor(1201).pool.some(([k]) => k === 'triptych')"), 'N3-1 now has a Triptych in its pool (test set-up)')
+    nm3_start(page, 1)
+    n = page.evaluate("() => [window.__gg.barrierBaked(), window.__gg.G.monsters.some(m => m.type === 'triptych' && m.reflecting)]")
+    ok(n == [12, False], f'starting it bakes all 12 barrier frames before any barrier is up {n}')
+    page.evaluate("() => { const p = window.__gg.NIGHTMARE_LEVELS[2][0].pool; p.splice(p.findIndex(([k]) => k === 'triptych'), 1); }")
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_triptych': check_triptych, 'check_triptych_budget': check_triptych_budget, 'check_triptych_prebaked': check_triptych_prebaked})
 
 
 def main():

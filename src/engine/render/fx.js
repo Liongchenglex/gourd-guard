@@ -230,6 +230,8 @@ export function barrierSprite(k, lanes, i){
   k = bakeK(k); const pad = 20, w = lanes * CS + 24, h = BARRIER_H + pad + 12;
   return bake(`barrier:${k}:${lanes}:${i}`, w, h, w / 2, pad + BARRIER_H, k, g => barrier(g, lanes, CS, BARRIER_H, -1.2 + 2.4 * i / BARRIER_N));
 }
+/** Test hook: how many barrier frames are baked. */
+export const barrierBaked = () => [...propCache.keys()].filter(k => k.startsWith('barrier:')).length;
 /** Blit the barrier with its base line's middle at (x, y), scaled by s, at alpha a; the sheen sweeps across with the clock t. */
 export function drawBarrierFx(g, x, y, lanes, t, k, s, a){
   const sp = barrierSprite(k, lanes, Math.floor(t * 5) % BARRIER_N);

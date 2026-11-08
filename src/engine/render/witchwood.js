@@ -7,6 +7,7 @@ import { K } from './canvas.js';
 import { E, S, pal } from './paint.js';
 import { TOAD_FPS, TOAD_MOUTH, TOAD_N, WITCHWOOD, toadLash } from './chars/witchwood.js';
 import { FENCE_Y } from '../state.js';
+import { BARRIER_N, barrierSprite } from './fx.js';
 
 const TW = 8, TH = 32, TIPW = 14, TIPH = 12;   // the tongue strip and its tip, world units
 const cache = new Map();
@@ -38,3 +39,7 @@ export function drawTongue(g, m, s, y){
   g.drawImage(strip, -w / 2, y0, w, len);
   g.drawImage(tip, -TIPW * C.scale * .75, y0 + len - TIPH * C.scale * .6, TIPW * C.scale * 1.5, TIPH * C.scale * 1.2);
 }
+
+/** The Triptych Sprite's barrier: every sheen frame for 2 lanes (the field's edge) and 3, baked at the canvas scale when a night that can
+ *  spawn one starts (game.js), so no barrier is painted mid-night. */
+export function prebakeBarrier(){ for (const n of [2, 3]) for (let i = 0; i < BARRIER_N; i++) barrierSprite(K, n, i); }

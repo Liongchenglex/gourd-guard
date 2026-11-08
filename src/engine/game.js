@@ -30,6 +30,7 @@ import { openLoadout, setState, showResult } from '../ui/screens.js';
 import { SPROUT_EVERY, FIREWORK_TARGETS, FIREWORK_DAMAGE, EMERGENCY_N, POTION_SPEED } from '../data/rules.js';
 import { updatePotions, potionSnapshot, restorePotions } from './potion.js';
 import { prebakePotions } from './render/potion.js';
+import { prebakeBarrier } from './render/witchwood.js';
 import { startCoach, coachHolds, coachUpdate } from './coach.js';
 import { lightFire, lightRandomFires, fireAhead, burnPumpkin, updateFires } from './fire.js';
 import { updateCrowDives } from './nightmare.js';
@@ -160,6 +161,7 @@ export function startGame(mode, n, loadout, gourds){
   if (def && def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def && def.puddles) placePuddles(def.puddles);
   if (__RELEASE__ >= 4 && def){ startFires(def); if (def.nightmare) prebakeFire(); }   // after the castles, so random fires skip them; the flame strip is baked now, not on first sight
   if (__RELEASE__ >= 5 && def && def.poison) prebakePoison();   // the fog and its warning strips, baked now
+  if (__RELEASE__ >= 7 && def && bakeKeys(def).some(k => k.split('|')[0] === 'triptych')) prebakeBarrier();   // the Triptych's barrier frames (Release 7, ~4-6 MB), only on a night that can spawn one
   if (__RELEASE__ >= 7 && def && def.nightmare) prebakePotions();   // the three bottles, their icons and the drink puffs (Release 7), baked now
   if (__RELEASE__ >= 5 && def && def.nightmare) prebakeRot();   // the rotten pumpkin (Release 5), baked now, not on first sight
   if (G.world !== bgWorld) buildBg(G.world);
@@ -430,7 +432,11 @@ export function update(dt){
           if (pr.type !== 4 || pr.dead){ pr.dead = true; break; }   // Grey pierces, unless the hit used it up (a blocked hit, Release 5)
         }
       }
-      if (tb && !pr.dead){ pr.hit.add(tb); reflectPumpkin(pr, tb, pr.lane); pr.dead = true; }   // reflected back down its own lane; every pumpkin stops there, Grey too
+      if (tb && !pr.dead){
+        if (__RELEASE__ >= 5 && pr.type === ROTTEN) hitMonster(pr, tb);   // rot is never reflected: it meets the sprite as it would the Mirror Sprite's mirror (combat.js rotHitNow)
+        else { pr.hit.add(tb); reflectPumpkin(pr, tb, pr.lane); }   // reflected back down its own lane
+        pr.dead = true;   // every pumpkin stops at the barrier, Grey too
+      }
     }
     if (!pr.dead && pr.y < FIELD_TOP - 14){
       pr.dead = true;

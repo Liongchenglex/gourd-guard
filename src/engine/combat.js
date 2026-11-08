@@ -277,7 +277,7 @@ function hitMonsterNow(pr, m){
   if (wc && G.vfx && G.vfx.filter(v => v.kind === 'costumeHit').length < 5) { G.vfx.push({ kind:'costumeHit', key:wc, x:m.x, y:y - m.r * .3, t:0, dur:0.75 }); SFX.costumeHit(wc); }
   for (let k = 0; k < 10; k++) chunk(pr.x, pr.y, pr.vis === RAINBOW ? '#f0a020' : PTYPES[pr.vis].base, 200);
   let kb = !(__MAGNET__ && pr.type === MAGNET) && (pr.guar || (pr.type === PINK ? Math.random() < KB_PINK[i] : pr.type === BROWN ? Math.random() < BROWN_KB[i] : (pr.type <= 1 || pr.type >= 4) && Math.random() < KB_CHANCE[i]));
-  if (__RELEASE__ >= 5 && pr.ward && !pr.wardHit){ pr.wardHit = true; kb = true; }   // launched from a Protector Gourd's square: its first monster hit always knocks back (bosses and noKnockback stay immune in knockback)
+  if (__RELEASE__ >= 5 && pr.ward && !pr.wardHit){ pr.wardHit = true; kb = !(__MAGNET__ && pr.type === MAGNET); }   // ... except a Magnet: never knockback (Release 6)   // launched from a Protector Gourd's square: its first monster hit always knocks back (bosses and noKnockback stay immune in knockback)
   if (pr.type === 2){
     G.q.chill++;
     if (m.type !== 'boss' && Math.random() < FREEZE_P[i]){ m.frozenT = Math.max(m.frozenT, SLOW_T[i]); addFloat('Frozen!', m.x, y - m.r - 34, '#bfefff', 18, 0.9); SFX.freeze(); }

@@ -4,7 +4,7 @@
 // pulled off it (owner: "I want it to rescue walls"). Standalone: this reads nothing from Releases 2-5, so the Magnet can ship ahead of them.
 
 import { MAG_N, MAG_ROWS, MAG_SLIDE } from '../data/pumpkins.js';
-import { G, LANE, FIELD_TOP, FIELD_BOT } from './state.js';
+import { G, LANE, FIELD_TOP, FIELD_BOT, walls } from './state.js';
 import { TILE_P, mY } from './monsters.js';
 import { SFX } from './audio.js';
 
@@ -17,9 +17,12 @@ export function magnetPullable(m){
 
 /** Pull for a Magnet hit of level lv on `anchor`; returns how many monsters were pulled. */
 export function magnetPull(anchor, lv){
-  const i = Math.max(0, Math.min(4, lv - 1)), tp = TILE_P(), row = Math.floor(anchor.p / tp), last = row + MAG_ROWS[i] - 1;
+  if (anchor.p > 1 || (anchor.p >= 1 && walls[anchor.lane] && walls[anchor.lane].hp <= 0)) return 0;   // walking through a fallen wall: never drag others into the gap (final review: that lost the night)
+  const i = Math.max(0, Math.min(4, lv - 1)), tp = TILE_P(), maxRow = Math.max(0, Math.ceil(1 / tp) - 1);
+  const rowOf = p => Math.min(maxRow, Math.max(0, Math.floor(p / tp)));   // capped like glue's: on a field a whole number of tiles tall, the fence is still the bottom row
+  const row = rowOf(anchor.p), last = row + MAG_ROWS[i] - 1;
   const h = FIELD_BOT - FIELD_TOP, ax = LANE(anchor.lane);
-  const near = G.monsters.filter(o => o !== anchor && magnetPullable(o) && Math.floor(o.p / tp) >= row && Math.floor(o.p / tp) <= last)
+  const near = G.monsters.filter(o => o !== anchor && magnetPullable(o) && rowOf(o.p) >= row && rowOf(o.p) <= last)
     .map(o => ({ o, d:Math.hypot(LANE(o.lane) - ax, (o.p - anchor.p) * h) })).sort((a, b) => a.d - b.d).slice(0, MAG_N[i]);
   for (const { o } of near){
     const x0 = o.x, y0 = mY(o);

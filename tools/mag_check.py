@@ -85,8 +85,8 @@ HELP = """window.__mg = { tp:window.__gg.TILE_P(),
   on(a){ return window.__gg.G.monsters.filter(o => o !== a && !o.dead && o.lane === a.lane && Math.abs(o.p - a.p) < 0.01).length; } };"""
 
 
-def mag_page(browser, url):
-    page, errors = open_page(browser, url)
+def mag_page(browser, url, h=844):
+    page, errors = open_page(browser, url, h)
     page.evaluate("() => { window.__gg.save.magnetOwned = true; window.__gg.save.seenHelp = true; }")
     page.evaluate("() => window.__gg.startGame('story', 2, [0, 1, 2, window.__gg.MAGNET])"); time.sleep(0.4)
     page.evaluate(SETUP); page.evaluate("() => { " + HELP + " }")
@@ -243,6 +243,46 @@ def check_art(browser, url):
 
 
 CHECKS.update({'check_art': check_art})
+
+
+# ---------- Final review fixes ----------
+def check_breach(browser, url):
+    """Review: a hit on a monster walking through a fallen wall must not drag others into the gap (that lost the night)."""
+    if not MAG: return
+    page, errors = mag_page(browser, url)
+    r = page.evaluate("""() => { const g = window.__gg, h = window.__mg; g.walls[3].hp = 0;
+      const a = h.ghoul(3, 1.02, 999); a.eating = true; a.breach = 0.2;
+      const c = h.ghoul(5, 1); c.eating = true; const n = h.ghoul(1, 1 - 0.4 * h.tp);
+      h.hit(3, a);
+      return new Promise(res => setTimeout(() => res([c.lane, n.lane, g.G.monsters.filter(o => o !== a && !o.dead && o.lane === 3).length]), 300)); }""")
+    ok(r == [5, 1, 0], f'a Magnet hit on a monster in a fallen-wall gap pulls nobody into it {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_row_cap(browser, url):
+    """Review: on a field exactly 7 tiles tall (a 390 x 824 screen), monsters at the fence fell into a phantom eighth row."""
+    if not MAG: return
+    page, errors = mag_page(browser, url, 824)
+    r = page.evaluate("""() => { const g = window.__gg, h = window.__mg, a = h.ghoul(2, 1 - 0.4 * h.tp); const c = h.ghoul(5, 1); c.eating = true;
+      h.hit(1, a); return new Promise(res => setTimeout(() => res([1 / h.tp, c.lane, c.eating]), 600)); }""")
+    ok(abs(r[0] - 7) < 1e-9 and r[1:] == [2, False], f'a level-1 hit in the bottom row rescues a wall-chewer on any screen {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_ward_no_kb(browser, url):
+    """Review: a Magnet launched from a Protector Gourd's square (Release 5) must not knock back either."""
+    if MODE != 'on': return
+    page, errors = mag_page(browser, url)
+    r = page.evaluate("""() => { const g = window.__gg, h = window.__mg, a = h.ghoul(3, h.row(3), 999), M = g.MAGNET;
+      g.hitMonster({ type:M, vis:M, lv:3, size:1, lane:3, x:a.x, y:0, hit:new Set(), grp:null, guar:false, trail:[], ward:true }, a); return a.kb; }""")
+    ok(r == 0, f'no knockback from a Protector-square Magnet ({r})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_breach': check_breach, 'check_row_cap': check_row_cap, 'check_ward_no_kb': check_ward_no_kb})
 
 
 def main():

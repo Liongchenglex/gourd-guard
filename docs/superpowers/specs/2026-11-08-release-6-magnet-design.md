@@ -40,7 +40,7 @@ The owner may ship Release 6 **before** Releases 4 and 5. Builds today include e
 
 **Rescuing walls (owner, 2026-11-08).** A monster chewing a wall (`m.eating`) or a scarecrow (`m.chewing`) can be pulled: it stops chewing and slides up to the anchor's tile, then walks on from there. A monster that has already walked through a fallen wall (off the field) is not pulled. A pulled monster that lands where a standing castle wall holds that lane at that height behaves as any monster reaching that castle wall does.
 
-**Never pulled:** bosses (including mini bosses and the Hollow King's forms), the Loot Sack, the jukebox, a diver hidden underwater, a mummy lying down waiting to rise, a monster that is not walking a lane on the field (for example a Release 4 Crow in the patch), and anything already dead. Everything else can be pulled, including Bulwark Knights and Shell Turtles.
+**Never pulled:** bosses (including mini bosses and the Hollow King's forms), the Loot Sack, the jukebox, a Puddle Diver at any time (owner, 2026-11-08, after the final review), a mummy lying down waiting to rise, a monster that is not walking a lane on the field (for example a Release 4 Crow in the patch), and anything already dead. Everything else can be pulled, including Bulwark Knights and Shell Turtles.
 
 **Getting it.** In the pumpkin shop, bought for **50 seeds** once **5-20** is beaten, then usable in every level (like Paint). Upgrades: **3,000 coins, 5,000 coins, 10,000 coins, 50 seeds** (same as Beige).
 

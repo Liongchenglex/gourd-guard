@@ -285,6 +285,20 @@ def check_ward_no_kb(browser, url):
 CHECKS.update({'check_breach': check_breach, 'check_row_cap': check_row_cap, 'check_ward_no_kb': check_ward_no_kb})
 
 
+def check_no_divers(browser, url):
+    """Owner, 2026-11-08: Puddle Divers are never pulled, even surfaced (a pulled one kept diving on dry ground)."""
+    if not MAG: return
+    page, errors = mag_page(browser, url)
+    r = page.evaluate("""() => { const g = window.__gg, h = window.__mg, p = h.row(3), a = h.ghoul(3, p); const d = h.ghoul(2, p, 50, 'diver'); d.hidden = false;
+      const pred = g.magnetPullable(d); h.hit(5, a); return new Promise(res => setTimeout(() => res([pred, d.lane]), 500)); }""")
+    ok(r == [False, 2], f'a surfaced Puddle Diver is never pulled {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_no_divers': check_no_divers})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

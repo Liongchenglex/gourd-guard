@@ -8,9 +8,9 @@ import { G, LANE, FIELD_TOP, FIELD_BOT, walls } from './state.js';
 import { TILE_P, mY } from './monsters.js';
 import { SFX } from './audio.js';
 
-const NEVER = new Set(['boss', 'sack', 'jukebox']);   // bosses (mini bosses and forms are bosses too), the Loot Sack, the Frenzy jukebox
+const NEVER = new Set(['boss', 'sack', 'jukebox', 'diver']);   // bosses (mini bosses and forms are bosses too), the Loot Sack, the Frenzy jukebox, and Puddle Divers (owner, 2026-11-08: one pulled out of its puddle kept diving on dry ground)
 
-/** Can a Magnet hit move this monster? Never a boss, the Loot Sack or the jukebox, a hidden diver, a mummy lying down, or one off the field. */
+/** Can a Magnet hit move this monster? Never a boss, the Loot Sack, the jukebox or a Puddle Diver, anything hidden, a mummy lying down, or one off the field. */
 export function magnetPullable(m){
   return !m.dead && !NEVER.has(m.type) && !m.hidden && !(m.rise > 0) && m.p >= 0 && m.p <= 1;
 }

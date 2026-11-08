@@ -3,6 +3,7 @@ import { PTYPES } from '../../data/pumpkins.js';
 import { mS, mY } from '../monsters.js';
 import { K, ctx } from './canvas.js';
 import { pipSprite, veilSprite, VEIL_R } from './fx.js';
+import { veiledNow } from '../keep.js';
 import { drawPotionIcons } from './potion.js';
 import { drawTongue } from './witchwood.js';
 import { POTION_BULKY_SCALE } from '../../data/rules.js';
@@ -32,7 +33,7 @@ export function drawMonster(m, t){
     const tint = m.flash > 0 ? ['#ffffff', 0.85] : blue ? ['#7fd0ff', 0.5] : m.tint && !hasCostume(key, vkeyOf(m, key)) ? [m.tint, 0.45] : null;
     drawChar(cx, m, key, tint);
     if (__RELEASE__ >= 7 && m.tongue && m.eating && m.frozenT <= 0 && !m.demo) drawTongue(cx, m, s, y);   // the Cauldron Toad's tongue down the lane to its fence (render/witchwood.js)
-    if (__RELEASE__ >= 8 && m.veilBy != null){ const v = veilSprite(K), f = m.r / VEIL_R; cx.drawImage(v.c, -v.ox * f, -v.oy * f, v.w * f, v.h * f); }   // a Bat Bride's veil (Release 8): one baked sprite
+    if (__RELEASE__ >= 8 && m.veilBy != null && veiledNow(m)){ const v = veilSprite(K), f = m.r / VEIL_R; cx.drawImage(v.c, -v.ox * f, -v.oy * f, v.w * f, v.h * f); }   // a Bat Bride's veil (Release 8): one baked sprite
   } else {
   cx.fillStyle = 'rgba(0,0,0,.35)';
   if (m.type === 'bat') ell(cx, 0, m.r + 18, m.r * 0.6, 4);

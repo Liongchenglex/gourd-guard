@@ -634,6 +634,9 @@ def check_glutton(browser, url):
     spawn_at(page, 'glutton', 3, 0.4, sp=0); page.evaluate("() => { window.__U = window.__last; }")
     fl = page.evaluate("() => window.__gg.G.netsFlying.map(f => [f.kind, f.by === window.__U.id])")
     ok(fl == [['red', True], ['red', True]], f'at spawn it throws two red nets of its own {fl}')
+    page.evaluate(STEP, [2, 0.1])      # 0.2 s: both nets still in the air
+    page.evaluate("() => window.__gg.damage(window.__U, 3)")
+    ok(page.evaluate("() => window.__gg.G.netsFlying.length") == 2 and page.evaluate("() => window.__U.hp") == 8, 'a hit 0.2 s after it spawns does no damage: its nets in flight already shield it (controller ruling)')
     page.evaluate(STEP, [10, 0.1])
     ok(page.evaluate("() => window.__gg.redNetsOf(window.__U)") == 2, 'both land: two red nets of its own on the patch')
     page.evaluate("() => window.__gg.damage(window.__U, 3)")
@@ -663,7 +666,8 @@ def check_glutton(browser, url):
     # dying with nets in flight: they land as ordinary nets
     page.evaluate(NQ); page.evaluate(FILL)
     spawn_at(page, 'glutton', 3, 0.4, sp=0); page.evaluate("() => { window.__U = window.__last; window.__gg.damage(window.__U, 99); }")
-    ok(page.evaluate("() => window.__U.dead"), 'with its nets still in flight it can be killed')
+    ok(not page.evaluate("() => window.__U.dead"), 'with its nets still in flight it cannot be killed')
+    page.evaluate("() => { window.__U.dead = true; window.__gg.keepFalls(window.__U); }")   # forced: as a later boss's own death may
     page.evaluate(STEP, [10, 0.1])
     cells = page.evaluate("() => window.__gg.netSnapshot().cells.map(c => [c[2], c[3]])")
     ok(cells == [['net', None], ['net', None]], f'its red nets land as ordinary nets with no thrower {cells}')
@@ -705,6 +709,12 @@ def check_bride(browser, url):
     ok(page.evaluate("() => window.__B.veilBy === window.__R.id") and not page.evaluate("() => window.__C.veilBy"), 'after 3 s she veils the next in reach')
     page.evaluate("() => window.__gg.damage(window.__B, 1)")
     ok(page.evaluate("() => window.__B.hp") == 2, 'and it takes no damage')
+    # her veil holds only while she is on the field: gone without a kill (removed), the veil is not drawn, does not shield and is cleared
+    page.evaluate("() => { const G = window.__gg.G; G.monsters.splice(G.monsters.indexOf(window.__R), 1); }")
+    r = page.evaluate("() => [window.__gg.veiledNow(window.__B), window.__gg.shieldedNow(window.__B), window.__B.veilBy == null]")
+    ok(r == [False, False, True], f'a Bride gone from the field: no veil drawn, no shield, veilBy cleared {r}')
+    page.evaluate("() => window.__gg.damage(window.__B, 1)")
+    ok(page.evaluate("() => window.__B.hp") == 1, 'and it takes damage again')
     # another Bride is never veiled (two Brides could shield each other for ever)
     page.evaluate(NQ); page.evaluate(FILL)
     spawn_at(page, 'bride', 3, 0.4, sp=0); page.evaluate("() => { window.__R = window.__last; }")
@@ -847,6 +857,10 @@ def check_veil_budget(browser, url):
     lit = page.evaluate(count)
     ok(0.9 <= lit[0] - base[0] <= 1.05, f'the veil costs one drawImage a frame ({base[0]:.1f} -> {lit[0]:.1f})')
     ok(lit[1] <= base[1] + 0.1 and lit[2] <= base[2] + 0.1 and lit[3] <= base[3] + 0.1, 'and no fill, stroke or gradient')
+    page.evaluate("() => { window.__A.veilBy = 987654; }"); time.sleep(0.3)   # a veilBy whose Bride is gone (no monster has that id): the veil must not be drawn
+    gone = page.evaluate(count)
+    ok(abs(gone[0] - base[0]) <= 0.1, f'with its Bride gone the veil is no longer drawn ({lit[0]:.1f} -> {gone[0]:.1f}, base {base[0]:.1f})')
+    ok(page.evaluate("() => window.__A.veilBy == null"), 'and its veilBy is cleared')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 

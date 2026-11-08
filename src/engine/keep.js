@@ -18,7 +18,7 @@
 //    monsters fresh, so a returning Marshal starts a new clock and nothing is carried over (`rallied` lives on the monster that came back).
 //  - The Blood Glutton (`glutton`): at spawn it throws `netsAtSpawn` red nets (`throwNet(…, 'red', m.id)`); a clock of `netEvery` s runs all the time
 //    (glutTick, not while frozen) and at each zero it throws one more if it has fewer than `netMax` of its own on the patch or in flight. While any of
-//    its red nets lies on the patch it is shielded (shieldedNow). When it dies (keepFalls) its red nets on the patch and in flight become ordinary
+//    its red nets lies on the patch or is still in flight it is shielded (shieldedNow), so from the moment it spawns. When it dies (keepFalls) its red nets on the patch and in flight become ordinary
 //    nets with no thrower, so they no longer shield anything.
 //  - The Bat Bride (`bride`): while she has no veil a clock of `veilAgain` s (0 at spawn) runs down; at zero she veils the nearest living other monster
 //    whose lane is within `veilReach` of hers (`o.veilBy = bride.id`, `bride.veil = o`): never herself, never another Bride (two could shield each other
@@ -27,7 +27,7 @@
 //  - The shield door: combat.js damage() asks shieldedNow(m) before anything else, so every damage source (pumpkin hits, burn ticks, glue, Black
 //    splash, Deep Blue lightning, mines, fireworks, the bomb) is refused alike, with the Hollow King's "No damage" float and dull clink (shieldPuff).
 //    A Corn Husker's husk-strip (a hit that strips instead of hurting) asks the door too. Ice, knockback and glue's slow still work: only damage is refused.
-//    shieldedNow = red nets of its own on the patch, or a veil from a living Bride, or the Fallen Count's clamp (countClamped, Task 9).
+//    shieldedNow = red nets of its own on the patch or in flight, or a veil from a living Bride (veiledNow, also what the renderer draws by), or the Fallen Count's clamp (countClamped, Task 9).
 //  - A continued night (game.js continueState / continueNight) respawns ordinary monsters fresh, with new ids. shieldSnapshot keeps, in field order,
 //    the type of every living monster that owns red nets and the type each living Bride's veil is on; restoreShields (after restoreNets) re-tags each
 //    owner's red nets with a placeholder id (-1, -2, …: no monster has one) and orphan red nets (no living owner at the loss) become ordinary. As
@@ -147,16 +147,18 @@ export function updateKeepMonster(m, dt){
 /** The Fallen Count's clamp (Task 9): a hit may not carry him past his next mark while shielded. Not built yet. */
 export const countClamped = m => false;
 
-/** The living Bride whose veil is on m, or null. */
+/** The living Bride (on the field, not dead) whose veil is on m, or null. A `veilBy` whose Bride is gone, however she went, is cleared here. */
 function brideOf(m){
   if (m.veilBy == null) return null;
-  for (const o of G.monsters) if (o.id === m.veilBy) return o.dead || o.type !== 'bride' ? null : o;
-  return null;
+  for (const o of G.monsters) if (o.id === m.veilBy && !o.dead && o.type === 'bride') return o;
+  m.veilBy = null; return null;
 }
+/** Does a Bride's veil hold on m right now? The shield door and the renderer (render/monsters.js) both ask this, so the veil is drawn exactly when it shields. */
+export const veiledNow = m => brideOf(m) != null;
 
-/** Is m shielded from every damage right now? Red nets of its own on the patch, a veil from a living Bride, or the Fallen Count's clamp. */
+/** Is m shielded from every damage right now? Red nets of its own on the patch or still in flight, a veil from a living Bride, or the Fallen Count's clamp. */
 export function shieldedNow(m){
-  return (m.id != null && redNetsOf(m) > 0) || brideOf(m) != null || countClamped(m);
+  return (m.id != null && ownNets(m) > 0) || brideOf(m) != null || countClamped(m);
 }
 
 /** A refused hit: a quick flash, and at most every 0.35 s the "No damage" float and the dull clink (the Hollow King's pattern). */
@@ -198,7 +200,7 @@ export function keepTick(m, dt){
 }
 
 /** May a Bride veil o at all? */
-const veilable = (b, o) => o !== b && !o.dead && o.type !== 'bride' && o.type !== 'jukebox' && o.type !== 'sack' && o.veilBy == null && o.rise <= 0 && !o.hidden;
+const veilable = (b, o) => o !== b && !o.dead && o.type !== 'bride' && o.type !== 'jukebox' && o.type !== 'sack' && brideOf(o) == null && o.rise <= 0 && !o.hidden;
 /** The nearest veilable monster within the Bride's reach, or null. */
 function veilTarget(b){
   const reach = TYPES.bride.veilReach, by = mY(b);

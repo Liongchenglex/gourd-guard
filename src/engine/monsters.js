@@ -3,6 +3,7 @@ import { SACK } from '../data/economy.js';
 import { resolveMatches } from './board.js';
 import { TYPES, MODS, VARIANTS, BURNS_TO, ICE_ONLY, BURNING_FROM, HUSK_STRIP } from '../data/monsters.js';
 import { BURN_EVERY, RAINBOW, GLUE_SLOW } from '../data/pumpkins.js';
+import { POTION_SPEED } from '../data/rules.js';
 import { glueStep } from './glue.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
 import { updateHollowMonster, reapLanes, initHollowMonster, initLamplighter, updateLamplighter, initFallenPolt, updateFallenPolt } from './hollow.js';
@@ -223,7 +224,7 @@ export function updateMonster(m, dt){
     if (__RELEASE__ >= 4 && m.type === 'crow' && m.frozenT <= 0 && (m.peekT = (m.peekT || 0) - dt) <= 0){ m.peekT = 0.25; if (crowStrike(m)) return; }   // a crow pecking the fence looks over the patch 4 times a second and flies in once a pumpkin it may take is there (engine/nightmare.js)
     m.shield = false;   // a shield knight lowers its shield to chew
     m.reflecting = false;   // a mirror sprite drops its mirror to chew
-    const mul = m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1;
+    const mul = (m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1) * (__RELEASE__ >= 7 && m.drank && m.drank.speed ? POTION_SPEED : 1);   // a speed potion: it chews (and walks through a gap) faster (Release 7, engine/potion.js)
     if (walls[m.lane].hp <= 0){   // the wall is down: it walks through the gap; the night is lost when it is in
       m.breach = (m.breach || 0) + dt * mul;
       m.p = Math.min(1.05, 1 + m.breach * 0.04); SFX.alarm();
@@ -411,6 +412,7 @@ export function updateMonster(m, dt){
     }
   }
   if (__RELEASE__ >= 4 && m.rush > 0) sp *= TYPES.rooster.rushMul;
+  if (__RELEASE__ >= 7 && m.drank && m.drank.speed) sp *= POTION_SPEED;   // a speed potion (Release 7, engine/potion.js)
   let np = Math.min(m.p + sp * dt, aheadLimit(m));
   if (m.chewing && !m.chewing.dead) np = Math.min(np, m.chewing.p);   // held at a scarecrow
   if (np > m.p) m.p = np;

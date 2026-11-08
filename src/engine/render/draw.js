@@ -26,6 +26,7 @@ import { drawPin, drawFlyingFork } from './pin.js';
 import { drawGourdCell, drawGourdGlow } from './gourd.js';
 import { ROTTEN, ROT_FX } from '../rot.js';
 import { rotSprite } from './rot.js';
+import { drawPotions, drawPotionFx } from './potion.js';
 
 // ---------- Render ----------
 
@@ -79,6 +80,7 @@ export function render(){
   if (fogCols.length) drawFogCols(t, fogCols, g.fogClear > 0);
   if (bands.length || fogCols.length) drawBossBarsOverFog(g);   // owner: the boss's health bar must show through the mist
   if (fogOn) for (const m of ms) if (m.type === 'sack' || m.type === 'jukebox') drawMonster(m, t);
+  if (__RELEASE__ >= 7 && g.potions && g.potions.length) drawPotions(g.potions, t);   // potions (Release 7): one baked bottle each, above the fog and the monsters so every one is always seen
   if (g.gustDir) drawWindArrows(t);
   drawMines(t);
   drawDrops(t);
@@ -591,6 +593,7 @@ function drawVfx(){
     else if (v.kind === 'blast') drawBlast(ctx, v);
     else if (v.kind === 'hexbolt') drawHexBolt(ctx, v);
     else if (v.kind === 'sigil') drawSigil(ctx, v);
+    else if (__RELEASE__ >= 7 && v.kind === 'potiondrink') drawPotionFx(v);   // a monster drinks a potion (Release 7)
     else if (__RELEASE__ >= 4 && (v.kind === 'firehiss' || v.kind === 'fireflare' || v.kind === 'firewave')) drawFireFx(v);   // Ice puts a fire out / a pumpkin burns up in one / the Fallen Gravekeeper's smash   // Ice puts a fire out / a pumpkin burns up in one
     else if (v.kind === 'clip'){
       ctx.save(); ctx.translate(v.x, v.y); ctx.scale(v.s, v.s);

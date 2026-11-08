@@ -47,3 +47,9 @@ export const ROT_DMG = 1.5, ROT_HEAL = 0.5;
 // Poison fog on the patch (Release 5; spec Part 3): green arrows warn POISON_WARN s before it settles on 1-2 whole rows or columns, where it
 // lies for the level's `poison.dur` s (POISON_DUR when a caller gives none, our number) and rots everything under it.
 export const POISON_WARN = 1.5, POISON_DUR = 3;
+
+// Potions on the field (Release 7, Nightmare Witchwood; spec Part 2; src/engine/potion.js). A monster that walks onto a potion's tile drinks
+// it if it may: bulky doubles its health and full health, speed makes it walk and chew POTION_SPEED times as fast (our number), colour hexes
+// it as a witch does: a Chameleon with chance POTION_COLOUR_CHAMELEON, else a Reverse Chameleon (owner: 10% / 90%). A bulky drinker is drawn
+// POTION_BULKY_SCALE times as big (our call). A level's `potions.cap` defaults to POTION_CAP (our number).
+export const POTION_SPEED = 1.5, POTION_COLOUR_CHAMELEON = 0.1, POTION_BULKY_SCALE = 1.15, POTION_CAP = 6;

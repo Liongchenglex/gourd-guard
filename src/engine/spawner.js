@@ -4,6 +4,7 @@ import * as E from '../data/endless.js';
 import { PTYPES } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { spawnMonster, spawnSack, spawnJukebox } from './monsters.js';
+import { carryDrank } from './potion.js';
 import { buildBg } from './render/sprites.js';
 import { G, COLS } from './state.js';
 import { rnd, shuffle } from './util.js';
@@ -39,6 +40,7 @@ function spawnOne(d){
   const pool = d.caps ? d.pool.filter(([t]) => (counts[t] || 0) < (d.caps[t] == null ? Infinity : d.caps[t])) : d.pool;   // per-type caps (owner: "only 2 haulers")
   const t = G.spawned >= 1 && G.introQueue.length ? G.introQueue.shift() : pickFrom(pool.length ? pool : d.pool);
   counts[t] = (counts[t] || 0) + 1; const m = spawnMonster(t);
+  if (__RELEASE__ >= 7 && G.drankCarry && G.drankCarry.length) carryDrank(m);   // a continued night: a drinker comes back with its potions (engine/potion.js)
   if (midJukebox() || (__RELEASE__ >= 4 && G.burstMinion)){ m.minion = true; return; }   // 6-19: the halfway Frenzy's monsters are extra; the bar waits at the mark. Release 4: so is a fire mark's horde
   G.spawned++;
 }

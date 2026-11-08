@@ -688,6 +688,160 @@ export function triptych(g, P0 = {}){
   g.restore(); g.restore();
 }
 
+// ---------- The Treant (the N3-4 and N3-13 mini boss) and its roots ----------
+// Ported from the archive (docs/archive/nightmare-monsters/minibosses-patch-wood/patch_wood.js, owner-approved): a huge gnarled hollow tree in
+// Witchwood colours (violet-brown bark, an angry carved face with glowing violet eyes and maw, root feet, branch arms with twig claws, a sparse
+// crown of autumn leaves, hanging moss and a hex charm). Clips: idle (registered as walk: it creaks and sways, leaves fall), summon (both arms
+// raised, then slammed into the ground, which cracks with violet light), hit. The summoned root: a thorny bark root bursting out of a cracked
+// mound with a violet vein; rise (once), idle (it writhes), sink (once). Glows are fine here: every frame is baked (render/anim.js).
+let TRPALS = null;
+/** The Treant's palette (lazy, as P() above). */
+function TRP(){
+  return TRPALS || (TRPALS = { BARK:pal('#5c3b3c'), BARKD:pal('#3e2429'), BARKL:pal('#7e5852'), MOSSH:pal('#8e9c74'), HOLLOW:'#12060e',
+    LEAFC:['#c9581f', '#a8281f', '#d68a1c', '#8a3a2a'], GLOWV:'#c87aff', GLOWC:'#f4e0ff', CHARM:pal('#e2d8c4'), TWINE:pal('#6a4a2a'),
+    THORN:pal('#d8c8a8'), SOIL:pal('#5a3a26'), SOILD:pal('#3a2418') });
+}
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+function crSample(pts, n){ const out = [], m = pts.length; for (let i = 0; i < m - 1; i++){ const p0 = pts[Math.max(i - 1, 0)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(i + 2, m - 1)]; for (let k = 0; k < n; k++){ const t = k / n, t2 = t * t, t3 = t2 * t; out.push([.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3), .5 * (2 * p1[1] + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)]); } } out.push(pts[m - 1]); return out; }
+/** A tapered ribbon along a spline (same helper as the Kraken's arms): { path, left, right, centre, w }. */
+function ribbon(pts, wf, n = 6){ const c = crSample(pts, n), L = [], R = [], W = []; for (let i = 0; i < c.length; i++){ const a = c[Math.max(i - 1, 0)], b = c[Math.min(i + 1, c.length - 1)]; let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l; const w = wf(i / (c.length - 1)); W.push(w); L.push([c[i][0] - dy * w, c[i][1] + dx * w]); R.push([c[i][0] + dy * w, c[i][1] - dx * w]); }
+  const poly = [...L, ...R.slice().reverse()].map(p => [p[0], p[1]]); poly[0][2] = 1; poly[poly.length - 1][2] = 1; return { path:SM(poly, .5), left:L, right:R, centre:c, w:W }; }
+function spine(x, y, a0, segL, curls){ const pts = [[x, y]]; let a = a0; for (const c of curls){ a += c; x += Math.cos(a) * segL; y += Math.sin(a) * segL; pts.push([x, y]); } return pts; }
+function bboxOf(pts, pad){ let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const p of pts){ x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); } return { x:(x0 + x1) / 2, y:(y0 + y1) / 2, r:Math.max(x1 - x0, y1 - y0) / 2 + pad }; }
+function leaf(g, x, y, r, a, ci){ const { BARK, BARKD, BARKL, MOSSH, HOLLOW, LEAFC, GLOWV, GLOWC, CHARM, TWINE, THORN, SOIL, SOILD } = TRP();  const c = pal(LEAFC[ci % 4]); g.save(); g.translate(x, y); g.rotate(a); S.part(g, SM([[-r, 0], [-r * .3, -r * .55], [r * .2, -r * .4, 1], [r * .55, -r * .7], [r, 0, 1], [r * .55, r * .5], [-r * .3, r * .5]], .7), c, { x:0, y:0, r }, { flat:true, lw:.9 }); S.ln(g, [[-r * .9, 0], [r * .8, 0]], c, .7, .6); g.restore(); }
+function moss(g, x, y, len, sw, seed){ const { BARK, BARKD, BARKL, MOSSH, HOLLOW, LEAFC, GLOWV, GLOWC, CHARM, TWINE, THORN, SOIL, SOILD } = TRP();  const R = rng(seed); S.part(g, E(x, y + 1, 6, 3), MOSSH, { x, y, r:6 }, { flat:true, mat:'moss', lw:.8 });
+  for (let i = 0; i < 5; i++){ const dx = (i - 2) * 2.4 + (R() - .5) * 2, L = len * (.5 + R() * .6), pts = [[x + dx, y], [x + dx + sw * .3 + (R() - .5) * 3, y + L * .5], [x + dx + sw, y + L]];
+    g.save(); g.globalAlpha *= .85; S.stroke(g, SO(pts), { deep:MOSSH.dark }, 2.4, .9); S.stroke(g, SO(pts), { deep:MOSSH.light }, 1.1, .9); g.restore(); S.dot(g, E(x + dx + sw, y + L + 1, 1.3, 2), MOSSH.light, .8); } }
+/** A hex charm hanging from (x, y): a twig triangle bound with twine around a glowing rune, and a bone bead. */
+function hexCharm(g, x, y, swing, glow){ const { BARK, BARKD, BARKL, MOSSH, HOLLOW, LEAFC, GLOWV, GLOWC, CHARM, TWINE, THORN, SOIL, SOILD } = TRP();
+  const cx = x + swing * 4, cy = y + 16; S.ln(g, [[x, y], [cx, cy - 8]], TWINE, 1.2, .9);
+  g.save(); g.translate(cx, cy); g.rotate(swing * .2);
+  g.save(); g.shadowColor = GLOWV; g.shadowBlur = 6 + glow * 6; S.dot(g, E(0, 0, 3.5, 3.5), GLOWV, .7 + glow * .3); g.restore(); S.dot(g, E(0, 0, 1.5, 1.5), GLOWC);
+  for (const [a, b] of [[[-8, 6], [8, 6]], [[8, 6], [0, -8]], [[0, -8], [-8, 6]]]) S.tube(g, SO([a, b]), BARKL, 2.4);
+  for (const [px, py] of [[-8, 6], [8, 6], [0, -8]]) S.dot(g, E(px, py, 1.8, 1.8), TWINE.base);
+  S.part(g, E(0, 12, 3, 3.5), CHARM, { x:0, y:12, r:3 }, { flat:true, mat:'bone', lw:.8 }); S.ln(g, [[0, 6], [0, 9]], TWINE, .9, .9);
+  g.restore();
+}
+/** A branch arm from the shoulder through the elbow to a gnarled hand with four twig claws. */
+function branchArm(g, sx, sy, ex, ey, hx, hy, side, spread, seed){ const { BARK, BARKD, BARKL, MOSSH, HOLLOW, LEAFC, GLOWV, GLOWC, CHARM, TWINE, THORN, SOIL, SOILD } = TRP();
+  const rb = ribbon([[sx, sy], [ex, ey], [hx, hy]], u => 11 * (1 - u * .45), 6);
+  S.part(g, rb.path, BARK, bboxOf(rb.centre, 10), { mat:'wood', flat:true });
+  S.crease(g, SO([[sx + (ex - sx) * .3, sy + (ey - sy) * .3 - 3], [ex, ey - 2]]), BARK, 1.6, .45);
+  S.part(g, E(ex, ey, 5, 4), BARKD, { x:ex, y:ey, r:5 }, { flat:true, mat:'wood', lw:1 });   // knot at the elbow
+  const a = Math.atan2(hy - ey, hx - ex);
+  // twig spur off the forearm
+  const mx = (ex + hx) / 2, my = (ey + hy) / 2; S.tube(g, SO([[mx, my], [mx + side * 8, my - 10], [mx + side * 10, my - 18]]), BARK, 3);
+  for (let i = 0; i < 4; i++){ const fa = a + (i - 1.5) * (.32 + spread * .2), L = 18 + (i % 2) * 4;
+    const p1 = [hx + Math.cos(fa) * L * .5, hy + Math.sin(fa) * L * .5], p2 = [hx + Math.cos(fa + side * .3) * L, hy + Math.sin(fa + side * .3) * L];
+    S.tube(g, SO([[hx, hy], p1, p2]), BARK, 4.4); S.claw(g, p2[0], p2[1], fa + side * .3, 5, '#e8d8c0'); }
+  S.part(g, E(hx, hy, 9, 8), BARK, { x:hx, y:hy, r:9 }, { flat:true, mat:'wood' });
+}
+export function treant(g, P = {}){ const { BARK, BARKD, BARKL, MOSSH, HOLLOW, LEAFC, GLOWV, GLOWC, CHARM, TWINE, THORN, SOIL, SOILD } = TRP();
+  const idle = P.idle, sm = P.summon, hit = P.hit ?? 0;
+  const ph = idle ?? sm ?? 0, sw = idle != null ? Math.sin(idle * TAU) : 0, hitK = hit ? Math.sin(hit * Math.PI) : 0;
+  // summon: raise (0..0.4), slam (0.4..0.52), hold in the ground (0.52..0.82), lift a little (0.82..1)
+  let up = 0, down = 0, roar = 0;
+  if (sm != null){ up = sm < .4 ? ease(sm / .4) : sm < .52 ? 1 - ease((sm - .4) / .12) : 0; down = sm < .4 ? 0 : sm < .52 ? ease((sm - .4) / .12) : sm < .82 ? 1 : 1 - ease((sm - .82) / .18) * .7; roar = clamp(sm < .4 ? sm / .4 : sm < .82 ? 1 : (1 - sm) / .18); }
+  const squash = down * (sm != null && sm < .6 ? Math.sin(seg(sm, .4, .6) * Math.PI) : 0);
+  S.shadow(g, 0, 52, 72, 10);
+  g.save(); g.translate(0, 50); g.rotate(sw * .022 - hitK * .05); g.scale(1 + squash * .04, 1 - squash * .05 - hitK * .02); g.translate(hitK * 4, -50);
+  // root feet splaying out over the ground
+  for (const [x1, x2, x3, w0] of [[-26, -52, -78, 12], [-12, -26, -40, 10], [14, 30, 48, 10], [28, 56, 80, 12], [0, 6, 4, 8]]){
+    const rb = ribbon([[x1 * .7, 24], [x2, 40], [x3, 49]], u => w0 * (1 - u * .8), 5); S.part(g, rb.path, BARKD, bboxOf(rb.centre, 8), { mat:'wood', flat:true });
+    S.ln(g, [[x2 - 4, 39], [x2 + 4, 42]], BARKD, 1, .4); }
+  // crown behind: three gnarled upper limbs with sparse autumn leaf clumps and moss
+  const cs = sw * 3;
+  for (const [pts, w0] of [[[[-14, -70], [-30, -104], [-56, -124], [-70, -140]], 9], [[[12, -72], [30, -108], [58, -126], [72, -134]], 9], [[[0, -78], [-4, -116], [8, -148]], 8]]){
+    const q = pts.map(([x, y], i) => [x + cs * i * .6, y]); const rb = ribbon(q, u => w0 * (1 - u * .75), 6); S.part(g, rb.path, BARK, bboxOf(rb.centre, 8), { mat:'wood', flat:true }); }
+  for (const [x, y, n, sd] of [[-62, -132, 7, 1], [64, -128, 7, 2], [6, -146, 6, 3], [-34, -112, 5, 4], [36, -114, 5, 5]]){ const R = rng(sd * 13);
+    for (let i = 0; i < n; i++) leaf(g, x + cs * 2 + (R() - .5) * 26, y + (R() - .5) * 16, 5 + R() * 2.5, R() * TAU, i + sd); }
+  // the trunk
+  const trunk = SM([[-38, 40], [-44, 16], [-36, -14], [-32, -46], [-24, -72], [-10, -86], [8, -86], [24, -74], [32, -46], [36, -14], [44, 16], [38, 40], [0, 44]], .85);
+  S.part(g, trunk, BARK, { x:0, y:-20, r:60 }, { mat:'wood', flat:true }); S.dot(g, E(-20, -58, 6, 2.4, -.7), '#ffffff', .22);
+  // bark ridges
+  for (const [pts, a] of [[[[-30, 30], [-34, 0], [-28, -30], [-22, -60]], .5], [[[28, 30], [32, 0], [26, -34], [18, -66]], .5], [[[-18, 38], [-20, 20]], .4], [[[16, 38], [20, 22]], .4], [[[-6, -60], [-2, -80]], .35]]) S.crease(g, SO(pts), BARK, 3, a + .25);
+  S.part(g, E(-24, 22, 6, 5), BARKD, { x:-24, y:22, r:6 }, { flat:true, mat:'wood', lw:1 }); S.dot(g, E(-24, 22, 2.4, 2), HOLLOW, .9);
+  // the angry carved face: heavy brow, glowing hollow eyes, knot nose, jagged glowing maw
+  const fy = -32, glow = .6 + Math.sin(ph * TAU * 2) * .1 + roar * .3 + hitK * .4;
+  for (const d of [-1, 1]){ const sock = SM([[d * 6, fy - 2], [d * 12, fy - 6, 1], [d * 24, fy - 2], [d * 22, fy + 6], [d * 12, fy + 8], [d * 6, fy + 4]], .7);
+    S.dot(g, sock, HOLLOW); g.save(); sock(g); g.clip(); const gr = g.createRadialGradient(d * 15, fy + 2, 0, d * 15, fy + 2, 12); gr.addColorStop(0, rgba(GLOWV, .9 * glow)); gr.addColorStop(1, rgba(GLOWV, 0)); g.fillStyle = gr; g.fillRect(d * 15 - 14, fy - 12, 28, 26); g.restore();
+    S.stroke(g, sock, BARKD, 1.6, .9);
+    S.glow(g, d * 15, fy + 2, 3.2 + roar * .8, hitK > .3 ? GLOWC : GLOWV); }
+  // brow: two bark ridges in a deep V
+  for (const d of [-1, 1]) S.part(g, SM([[d * 2, fy - 4], [d * 14, fy - 14 - roar * 2], [d * 30, fy - 12], [d * 28, fy - 7], [d * 14, fy - 7], [d * 4, fy + 1]], .7), BARKL, { x:d * 15, y:fy - 9, r:15 }, { flat:true, mat:'wood' });
+  S.part(g, SM([[-4, fy + 4], [4, fy + 4], [6, fy + 16], [0, fy + 19], [-6, fy + 16]], .8), BARKL, { x:0, y:fy + 12, r:8 }, { flat:true, mat:'wood' });
+  const mo = 4 + roar * 12 + hitK * 4, my = fy + 26;
+  const maw = SM([[-22, my], [-12, my - 4], [0, my - 2], [12, my - 4], [22, my], [16, my + 8 + mo * .6], [0, my + 10 + mo], [-16, my + 8 + mo * .6]], .8);
+  S.dot(g, maw, HOLLOW); g.save(); maw(g); g.clip(); const mg = g.createRadialGradient(0, my + 6 + mo * .6, 0, 0, my + 6 + mo * .6, 20); mg.addColorStop(0, rgba(GLOWV, .85 * glow)); mg.addColorStop(.6, rgba('#6a2aa0', .4 * glow)); mg.addColorStop(1, rgba('#6a2aa0', 0)); g.fillStyle = mg; g.fillRect(-26, my - 8, 52, 40);
+  for (let i = -3; i <= 3; i++){ const x = i * 6; S.part(g, PL([[x - 3, my - 4], [x + 3, my - 4], [x + (i % 2) * 1, my + 4 + (i % 2 ? 1 : 3)]]), BARKL, { x, y:my, r:4 }, { flat:true, lw:.8 }); }
+  for (let i = -2; i <= 2; i++){ const x = i * 7 + 2, yb = my + 10 + mo - Math.abs(i) * 2; S.part(g, PL([[x - 3, yb + 2], [x + 3, yb + 2], [x, yb - 5]]), BARKL, { x, y:yb, r:4 }, { flat:true, lw:.8 }); }
+  g.restore(); S.stroke(g, maw, BARKD, 1.8, .9);
+  // moss draped over the shoulders, a hex charm and a bone charm hanging from the trunk
+  moss(g, -28, -62, 30, sw * 2, 3); moss(g, 26, -66, 24, sw * 2, 4);
+  // arms
+  for (const s of [-1, 1]){ const drift = idle != null ? Math.sin(idle * TAU + (s < 0 ? 0 : 1.6)) * 3 : 0, rec = hitK * 6;
+    const restE = [s * 66, -36 + drift], restH = [s * 78, 6 + drift], upE = [s * 60, -88], upH = [s * 52, -126], dnE = [s * 66, -10], dnH = [s * 68, 44];
+    const E1 = [lerp(lerp(restE[0], upE[0], up), dnE[0], down), lerp(lerp(restE[1], upE[1], up), dnE[1], down) - rec], H1 = [lerp(lerp(restH[0], upH[0], up), dnH[0], down), lerp(lerp(restH[1], upH[1], up), dnH[1], down) - rec];
+    branchArm(g, s * 28, -54, E1[0], E1[1], H1[0], H1[1], s, up + down * .5, 50 + s);
+    moss(g, (E1[0] * 2 + H1[0]) / 3, (E1[1] * 2 + H1[1]) / 3 + 4, 24 - up * 8, sw * 2 + s * 2, 7 + s);
+    if (s < 0) hexCharm(g, (E1[0] + H1[0]) / 2 + 6, (E1[1] + H1[1]) / 2 + 2, sw - up, roar); }
+  // slam: the hands punch into the ground, which cracks with violet light and throws up clods
+  if (sm != null && down > 0){ const k = seg(sm, .48, 1), R = rng(12);
+    for (const s of [-1, 1]){ const x = s * 68;
+      g.save(); g.shadowColor = GLOWV; g.shadowBlur = 8; g.strokeStyle = rgba(GLOWV, .9 * (1 - k * .6)); g.lineWidth = 2;
+      for (let i = 0; i < 4; i++){ const a = Math.PI * (.05 + i * .3) * (s < 0 ? -1 : 1) + (s < 0 ? Math.PI : 0), L = 10 + k * 18; g.beginPath(); g.moveTo(x, 48); g.lineTo(x + Math.cos(a) * L * .5, 48 + Math.sin(a) * 2); g.lineTo(x + Math.cos(a) * L, 49 + Math.sin(a) * 3); g.stroke(); } g.restore();
+      S.part(g, SM([[x - 16, 50], [x - 10, 42], [x, 40], [x + 10, 42], [x + 16, 50]], .8), SOIL, { x, y:46, r:14 }, { flat:true, mat:'stone' });
+      if (k > 0 && k < 1){ g.save(); g.globalAlpha *= 1 - k; for (let i = 0; i < 6; i++){ const a = -Math.PI * (.15 + R() * .7), d = k * (16 + R() * 18), cx = x + Math.cos(a) * d, cy = 42 + Math.sin(a) * d + k * k * 16; S.part(g, E(cx, cy, 2.6, 2), SOIL, { x:cx, y:cy, r:3 }, { flat:true, lw:.8 }); } g.restore(); } } }
+  g.restore();
+  // falling leaves (idle) or leaves shaken loose (hit, summon)
+  const R = rng(31), nL = hit ? 7 : sm != null ? 5 : 4;
+  for (let i = 0; i < nL; i++){ const x0 = (R() - .5) * 140, y0 = -130 + R() * 30, sp = R(), off = R();
+    let k, burst = true; if (hit) k = hit * (.4 + sp * .4); else if (sm != null) k = seg(sm, .4, 1) * (.6 + sp * .3); else if (idle != null){ k = (idle + off) % 1; burst = false; } else continue;
+    const x = x0 + Math.sin(k * TAU + i) * 10, y = y0 + k * 150; g.save(); g.globalAlpha *= Math.min(1, (1 - k) * 4) * (burst ? (k > 0 ? 1 : 0) : 1); leaf(g, x, y, 4.2, k * 6 + i, i); g.restore(); }
+  // hit: bark chips flying
+  if (hitK){ const R2 = rng(44); g.save(); g.globalAlpha *= 1 - hit * .6; for (let i = 0; i < 8; i++){ const a = -Math.PI * (.1 + R2() * .8), d = 20 + hit * 34 * (.6 + R2()), x = Math.cos(a) * d, y = -30 + Math.sin(a) * d; S.part(g, PL([[x - 3, y - 2], [x + 3, y - 1], [x + 1, y + 3]]), BARKL, { x, y, r:3 }, { flat:true, lw:.8 }); } g.restore(); }
+}
+
+// ---------- the summoned root ----------
+/** A thorny root bursting out of the ground: P.rise 0..1 (once), P.idle 0..1 (writhe), P.sink 0..1 (once). */
+export function root(g, P = {}){ const { BARK, BARKD, BARKL, MOSSH, HOLLOW, LEAFC, GLOWV, GLOWC, CHARM, TWINE, THORN, SOIL, SOILD } = TRP();
+  const ri = P.rise, id = P.idle, sk = P.sink;
+  let L = 1, wr = 0, burst = 0, mound = 1;
+  if (ri != null){ L = ri < .75 ? ease(ri / .75) * 1.08 : lerp(1.08, 1, ease((ri - .75) / .25)); burst = ri; mound = .4 + ease(Math.min(1, ri * 2.5)) * .6; }
+  if (id != null) wr = id;
+  if (sk != null){ L = 1 - ease(sk) ; mound = 1 - seg(sk, .7, 1) * .5; wr = sk * .3; }
+  S.shadow(g, 0, 52, 30, 6);
+  // the hole: dark earth with violet cracks
+  S.dot(g, E(0, 48, 22 * mound, 6 * mound), '#1a0c08');
+  g.save(); g.shadowColor = GLOWV; g.shadowBlur = 6; g.strokeStyle = rgba(GLOWV, .75 * mound); g.lineWidth = 1.6;
+  for (const [a, l] of [[.15, 30], [2.9, 28], [3.4, 22], [-.25, 24]]){ g.beginPath(); g.moveTo(Math.cos(a) * 16, 49 + Math.sin(a) * 3); g.lineTo(Math.cos(a) * l * .7, 50 + Math.sin(a) * 4); g.lineTo(Math.cos(a) * l, 49 + Math.sin(a) * 6); g.stroke(); } g.restore();
+  if (L > .02){
+    const ph = wr * TAU, segs = 7, len = 15.5 * L;
+    const curls = [0, .1 + Math.sin(ph) * .1, .12 + Math.sin(ph + .9) * .14, -.18 + Math.sin(ph + 1.8) * .16, -.2 + Math.sin(ph + 2.7) * .16, .35 + Math.sin(ph + 3.4) * .18, .85 + Math.sin(ph + 4.1) * .2].map(c => c * (.6 + L * .4));
+    const pts = spine(-2, 50, -Math.PI / 2 + Math.sin(ph) * .06, len, curls.slice(0, segs));
+    const rb = ribbon(pts, u => 13 * Math.pow(1 - u, .7) + 1.4, 6), c = rb.centre, N = c.length, b = bboxOf(c, 13);
+    // side rootlet
+    if (L > .5){ const i = Math.floor(N * .45); const [x, y] = c[i]; S.tube(g, SO([[x, y], [x + 12, y - 4 + Math.sin(ph) * 2], [x + 20, y - 12 + Math.sin(ph + 1) * 3]]), BARKD, 4); S.claw(g, x + 20, y - 12 + Math.sin(ph + 1) * 3, -1.2, 5, THORN.base); }
+    S.part(g, rb.path, BARKD, b, { mat:'wood', flat:true });
+    // lit ridge and a violet vein along the root
+    g.save(); g.strokeStyle = 'rgba(255,230,240,.25)'; g.lineWidth = 2; g.lineCap = 'round'; g.beginPath(); for (let i = 1; i < N - 3; i++){ const p = [c[i][0] + (rb.right[i][0] - c[i][0]) * .5, c[i][1] + (rb.right[i][1] - c[i][1]) * .5]; i > 1 ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); } g.stroke(); g.restore();
+    g.save(); g.shadowColor = GLOWV; g.shadowBlur = 6; g.strokeStyle = rgba(GLOWV, .75); g.lineWidth = 1.4; g.beginPath(); for (let i = 2; i < N - 4; i++){ const k = .25 * Math.sin(i * 1.3), p = [c[i][0] + (rb.left[i][0] - c[i][0]) * k, c[i][1] + (rb.left[i][1] - c[i][1]) * k]; i > 2 ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); } g.stroke(); g.restore();
+    // bark rings and thorns on both edges
+    for (let i = 3; i < N - 2; i += 4) S.ln(g, [rb.left[i], [(rb.left[i][0] + rb.right[i][0]) / 2, (rb.left[i][1] + rb.right[i][1]) / 2 + 2], rb.right[i]], BARKD, 1.2, .5);
+    for (let i = 2; i < N - 2; i += 3) for (const [side, sgn] of [[rb.left, 1], [rb.right, -1]]){ if ((i + (sgn > 0 ? 0 : 1)) % 2) continue; const p = side[i], q = c[i], dx = p[0] - q[0], dy = p[1] - q[1], l = Math.hypot(dx, dy) || 1, a = Math.atan2(dy, dx) - .5 * sgn, tl = 4 + rb.w[i] * .35;
+      S.part(g, PL([[p[0] - dy / l * 2.4, p[1] + dx / l * 2.4], [p[0] + dy / l * 2.4, p[1] - dx / l * 2.4], [p[0] + Math.cos(a) * tl, p[1] + Math.sin(a) * tl]]), THORN, { x:p[0], y:p[1], r:tl }, { flat:true, lw:.8 }); }
+    // a few autumn leaves clinging on
+    if (L > .6){ leaf(g, c[Math.floor(N * .3)][0] - 8, c[Math.floor(N * .3)][1], 4, -.6 + Math.sin(ph) * .2, 1); leaf(g, c[Math.floor(N * .62)][0] + 7, c[Math.floor(N * .62)][1] - 2, 3.6, 2.4 + Math.sin(ph + 1) * .2, 2); }
+  }
+  // front lip of the mound over the root base
+  S.part(g, SM([[-24 * mound, 50], [-18 * mound, 43], [-8, 44], [0, 46], [8, 44], [18 * mound, 43], [24 * mound, 50], [0, 54]], .8), SOIL, { x:0, y:48, r:20 }, { flat:true, mat:'stone' });
+  for (const [x, y] of [[-14, 46], [12, 47], [2, 50]]) S.part(g, E(x * mound, y, 3, 2.2), SOILD, { x, y, r:3 }, { flat:true, noEdge:true });
+  // rise: clods burst up; sink: clods tumble back in
+  const R = rng(66), k = ri != null ? seg(ri, 0, .6) : sk != null ? seg(sk, .2, .9) : 0;
+  if (k > 0 && k < 1){ g.save(); g.globalAlpha *= 1 - k * k; for (let i = 0; i < 9; i++){ const a = -Math.PI * (.1 + R() * .8), d = (ri != null ? k : 1 - k) * (18 + R() * 22), x = Math.cos(a) * d * 1.2, y = 44 + Math.sin(a) * d + (ri != null ? k * k * 26 : 0); S.part(g, E(x, y, 3, 2.3, a), i % 3 ? SOIL : SOILD, { x, y, r:3 }, { flat:true, lw:.8 }); } g.restore(); }
+}
+
 // ---------- registry ----------
 // The Ash Crone and the Blood Coven Witch (r 22): the game witch's scale .62 and dy -10 (feet at 21); the crone's box is taller for the skull
 // staff's smoke and wider for the staff. Their hex clip is 6 frames at 12 fps (0.5 s: engine/witchwood.js plays it for 0.5 s as they cast).
@@ -704,4 +858,12 @@ export const WITCHWOOD = {
   // clip (10 frames at 12 fps, engine/witchwood.js SUMMON_DUR) as it goes up; the box is wide for the open doors and the wings.
   triptych: { draw:triptych, scale:.7, dy:-10, box:{ x:-62, y:-72, w:124, h:128 }, clips:{ walk:clipOf(8, 12, 'walk'), chew:clipOf(4, 8, 'chew'), reflect:clipOf(6, 10, 'reflect'), summon:clipOf(10, 12, 'summon', true) }, still:{ reflect:.3 },
     frame(m, clips){ if (m.reflecting && !(m.eating && m.frozenT <= 0) && !(m.anim && m.anim.clip === 'summon')){ const cl = clips.reflect; return ['reflect', Math.floor(m.ph * cl.fps) % cl.n]; } return null; } },
+  // The Treant (r 34): the archive's box at its sibling the Strawlord's scale .56 and dy -8, capped at bake scale 2 like it (23 frames, about 5.6 MB).
+  // Its idle is its walk (it never walks: the registry's convention for a boss's idle); summon is 10 frames at 10 fps (engine/witchwood.js plays it 1 s).
+  treant: { draw:treant, scale:.56, dy:-8, box:{ x:-104, y:-156, w:208, h:232 }, maxK:2, still:{ idle:0 },
+    clips:{ walk:clipOf(8, 5, 'idle'), summon:clipOf(10, 10, 'summon', true), hit:{ n:5, fps:14, once:true, pose:t => ({ idle:0, hit:t }) } } },
+  // The summoned root: not a monster, a field object (render/witchwood.js drawRoots blits one frame per root). dy puts its ground line (y 50) at
+  // the origin. Rise 8 frames at 12 fps and sink 8 at 13 (engine/witchwood.js ROOT_RISE / ROOT_SINK; the archive's sink had 6). Scale .75 (the archive's .55 read too small on the field).
+  root: { draw:root, scale:.75, dy:-37.5, box:{ x:-40, y:-62, w:80, h:132 }, still:{ idle:0 },
+    clips:{ rise:clipOf(8, 12, 'rise', true), idle:clipOf(8, 7, 'idle'), sink:clipOf(8, 13, 'sink', true) } },
 };

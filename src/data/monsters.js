@@ -150,7 +150,12 @@ export const TYPES = {
     covenwitch: { hp:3, sp:0.04, r:22, coins:9, eat:0.5, pts:28, drop:2, brewEvery:7, brewN:[1, 2] },
     // The Triptych Sprite: the Mirror Sprite's cycle (barrier up `reflect` s, down `open` s, down while it chews) with a barrier `lanes` lanes either side of
     // its own: a pumpkin meeting it in any of them flies back down that lane into its fence for the pumpkin's power (combat.js reflectPumpkin, game.js).
-    triptych: { hp:3, sp:0.04, r:26, coins:10, eat:0.5, pts:32, drop:2, reflect:2, open:2.5, lanes:1 } } : {}),
+    triptych: { hp:3, sp:0.04, r:26, coins:10, eat:0.5, pts:32, drop:2, reflect:2, open:2.5, lanes:1 },
+    // The Treant (N3-4, N3-13), a mini boss (engine/witchwood.js updateTreant): holds at `hold` like the Lamplighter and never moves from there. Every
+    // `rootEvery` s it summons rootN[0]..rootN[1] roots in other lanes: a mid-field root blocks its lane until `rootHp` pumpkins hit it; a fence root
+    // squeezes its fence at `rootSqueeze` a second until destroyed the same way or it sinks after `rootLast` s. form2 (N3-13): more health, more
+    // roots more often. No boss items or costume (noItems).
+    treant: { boss:true, hp:24, r:34, sp:0.03, coins:40, eat:0, pts:300, drop:6, hold:0.12, rootEvery:7, rootN:[2, 3], rootHp:3, rootSqueeze:0.5, rootLast:8, noItems:true, form2:{ hp:34, rootEvery:5, rootN:[3, 4] } } } : {}),
 };
 
 /** Modifiers (docs/WORLDS.md §6): data-only stat tweaks any monster can carry. */
@@ -188,16 +193,18 @@ export const ICE_ONLY = new Set(['firemummy', ...(__RELEASE__ >= 4 ? ['hayrickBu
 /** The Corn Husker's first hit strips its husk (no damage): husker -> huskerBare, huskerBurning -> huskerCharred. Any pumpkin strips it. */
 export const HUSK_STRIP = __RELEASE__ >= 4 ? { husker:'huskerBare', huskerBurning:'huskerCharred' } : {};
 /** Looks a type is always seen in during a night, baked with it so the first hit never hitches. */
-export const ALSO_BAKE = __RELEASE__ >= 4 ? { husker:['huskerBare'], huskerBurning:['huskerCharred'], strawlord:['crow'], casketjack:['coffin', 'mummy'], fallengravekeeper:['rooster', 'casketjack', 'coffin', 'mummy', 'graveriser', 'crow'], ...(__RELEASE__ >= 5 ? { reaper:['crow'], fogwalker2:['brute'], comet:['wisp', 'imp'] } : {}) } : {};   // a boss's minions too (the Strawlord's crows)
+export const ALSO_BAKE = __RELEASE__ >= 4 ? { husker:['huskerBare'], huskerBurning:['huskerCharred'], strawlord:['crow'], casketjack:['coffin', 'mummy'], fallengravekeeper:['rooster', 'casketjack', 'coffin', 'mummy', 'graveriser', 'crow'], ...(__RELEASE__ >= 5 ? { reaper:['crow'], fogwalker2:['brute'], comet:['wisp', 'imp'] } : {}), ...(__RELEASE__ >= 7 ? { treant:['root'] } : {}) } : {};   // a boss's minions too (the Strawlord's crows)
 /** burning type -> the ordinary type it ignites */
 export const BURNING_FROM = Object.fromEntries(Object.entries(BURNS_TO).map(([a, b]) => [b, a]));
 
-export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch', ...(__RELEASE__ >= 3 ? { hollowking:'The Hollow King' } : {}), ...(__RELEASE__ >= 4 ? { strawlord:'The Strawlord', fallengravekeeper:'The Fallen Gravekeeper' } : {}), ...(__RELEASE__ >= 5 ? { lamplighter:'The Lamplighter', fallenpoltergeist:'The Fallen Poltergeist' } : {}) };
+export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch', ...(__RELEASE__ >= 3 ? { hollowking:'The Hollow King' } : {}), ...(__RELEASE__ >= 4 ? { strawlord:'The Strawlord', fallengravekeeper:'The Fallen Gravekeeper' } : {}), ...(__RELEASE__ >= 5 ? { lamplighter:'The Lamplighter', fallenpoltergeist:'The Fallen Poltergeist' } : {}), ...(__RELEASE__ >= 7 ? { treant:'The Treant' } : {}) };
 export const BOSS_NAME = BOSS_NAMES.gravekeeper;   // legacy alias used by endless mode
 
 export const MNAME = { sack:'Loot Sack', jukebox:'Jukebox', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss', ...(__RELEASE__ >= 4 ? { rooster:'Cinder Rooster', hayrick:'Hayrick', hayrickBurning:'Burning Hayrick', husker:'Corn Husker', huskerBare:'Bare Cob', huskerBurning:'Burning Husker', huskerCharred:'Charred Cob', crow:'Crow', graveriser:'Grave Riser', casketjack:'Casket Jack', coffin:'Fallen Casket' } : {}), ...(__RELEASE__ >= 5 ? { rotdoctor:'Plague Doctor 2', reaper:'Reaper', fogwalker2:'Fogwalker 2', comet:'Wisp Rider 2', minipolt:'Poltergeist 2' } : {}), ...(__RELEASE__ >= 7 ? { flaskbearer:'Flask Bearer', toad:'Cauldron Toad', ashcrone:'Ash Crone', covenwitch:'Blood Coven Witch', triptych:'Triptych Sprite' } : {}) };
 
 export const BOSS_INTRO = {
+  ...(__RELEASE__ >= 7 ? { treant: { 1:'A great hollow tree at the back of the field. It never moves, but every few seconds it summons roots in other lanes. A root on the field stops every pumpkin flicked up its lane until three have hit it; a root at your fence squeezes it until three hits break it or it sinks. Monsters keep coming until it falls.',
+    2:'Its roots come faster now, three or four at a time. Break the ones in your way, and the ones squeezing your fences. Monsters keep coming until it falls.' } } : {}),
   ...(__RELEASE__ >= 5 ? { lamplighter: { 1:'A hooded figure with a ghost lantern, drifting at the back of the field. It switches moods: while its lantern burns amber only normal pumpkins hurt it, while it burns sickly green only rotten ones do. It drifts between lanes and calls poison fog onto your patch. Monsters keep coming until it falls.',
     2:'Its lantern switches colour faster now: amber, only normal pumpkins hurt it; green, only rotten ones. It still calls poison fog onto your patch. Monsters keep coming until it falls.' },
     fallenpoltergeist: { 1:'The Poltergeist, rotted through. It vanishes from lane to lane, swaps your pumpkins and lays black fog where only rotten pumpkins hurt. Twice it shuffles your whole patch, and twice it turns reaper: then only rotten pumpkins hurt it, three of them. Rotten pumpkins heal it otherwise. Pumpkins in a Protector square stay put. Monsters keep coming until it falls.' } } : {}),

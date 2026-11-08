@@ -989,6 +989,231 @@ def check_triptych_prebaked(browser, url):
 CHECKS.update({'check_triptych': check_triptych, 'check_triptych_budget': check_triptych_budget, 'check_triptych_prebaked': check_triptych_prebaked})
 
 
+# ---------- Task 8: the Treant (mini boss, N3-4 and N3-13) ----------
+R7_NAMES += ['rootSqueeze']   # its data keys
+TBOSS = "window.__gg.G.monsters.find(m => m.type === 'boss' && !m.dead)"
+# A game-time log of the Treant from now: each summon [t, n roots it raised] (window.__ts), its highest p (window.__tmaxP); sampled every 10 ms.
+TLOG = """() => { const G = window.__gg.G, b = window.__b, t0 = G.t; window.__ts = []; window.__tmaxP = 0; let n = G.roots.length; clearInterval(window.__ti);
+  window.__ti = setInterval(() => { const g = window.__gg, B = window.__b; window.__tmaxP = Math.max(window.__tmaxP, B.p); g.G.spawnTimer = 999;
+    if (g.G.roots.length > n) window.__ts.push([g.G.t - t0, g.G.roots.length - n]); n = g.G.roots.length; }, 10); }"""
+ROOTS = "() => window.__gg.G.roots.map(r => [r.lane, Math.round(r.p * 1000) / 1000, r.hp, !!r.atFence, Math.round(r.t * 100) / 100])"
+
+
+def treant_up(page, k):
+    """Start Nightmare 3-k, bring its boss in now, stop ordinary spawns and sprouts and clear the field so only the boss acts, put it just
+    short of hold, clear the roots and start TLOG. Returns [kind, hp, maxHp, hold, form, rootT at spawn, lane] or None."""
+    nm3_start(page, k)
+    page.evaluate("() => { const G = window.__gg.G; G.sproutT = -999; G.spawned = Math.ceil(G.def.total * 0.4); G.spawnTimer = 0; }")
+    time.sleep(0.3)
+    b = page.evaluate(f"""() => {{ const g = window.__gg, G = g.G, b = {TBOSS}; if (!b) return null;
+      G.spawnTimer = 999; G.monsters.splice(0, G.monsters.length, b); const t0 = b.rootT; b.p = b.hold - 0.01; window.__b = b; G.roots.length = 0;
+      if (G.potions) G.potions.length = 0; G.potionT = 1e9;
+      return [b.kind, b.hp, b.maxHp, b.hold, b.form, t0, b.lane]; }}""")
+    if b: page.evaluate(TLOG)
+    return b
+
+
+def check_treant(browser, url):
+    if not R7: return
+    page, errors = open_page(browser, url)
+    d = page.evaluate("""() => { const T = window.__gg.TYPES.treant; return T ? [T.boss, T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.hold, T.rootEvery, T.rootN, T.rootHp,
+      T.rootSqueeze, T.rootLast, T.noItems, T.form2.hp, T.form2.rootEvery, T.form2.rootN] : null; }""")
+    ok(d == [True, 24, 34, 0.03, 40, 0, 300, 6, 0.12, 7, [2, 3], 3, 0.5, 8, True, 34, 5, [3, 4]], f'Treant data {d}')
+    ok(page.evaluate("() => window.__gg.BOSS_NAMES.treant") == 'The Treant', 'its name on screen is "The Treant"')
+    intro = page.evaluate("() => window.__gg.BOSS_INTRO.treant || null")
+    ok(bool(intro) and 'root' in intro['1'].lower() and '2' in intro, f'it has boss intro texts for both forms {intro and list(intro)}')
+    L = page.evaluate("() => [3, 12].map(i => { const d = window.__gg.NIGHTMARE_LEVELS[2][i]; return d && [d.level, d.boss, d.bossForm, d.bossChest, d.unlockGourds || null]; })")
+    ok(L[0] == [4, 'treant', 1, 'normal', ['wartling']], f'N3-4: the Treant, a normal chest, unlocks the Wartling {L[0]}')
+    ok(L[1] is not None and L[1][:4] == [13, 'treant', 2, 'normal'], f'N3-13: the Treant in form 2, a normal chest {L[1]}')
+    b = treant_up(page, 4)
+    ok(b is not None and b[0] == 'treant' and b[1] == b[2] == 24 and b[4] == 1 and b[5] == 7, f'on N3-4 it arrives with 24 health, its root clock at 7 s {b}')
+    if b is None:
+        page.close(); return
+    lane = b[6]
+    ok(page.evaluate("() => window.__gg.canDrink(window.__b, 'speed')") is False, 'it never drinks a potion')
+    # the first summon at 7 s: 2-3 roots in other lanes, its summon clip
+    ok(gwait(page, "() => window.__ts.length >= 1", 9) is not None, 'it summons roots')
+    ts, rs = page.evaluate("() => window.__ts"), page.evaluate(ROOTS)
+    lo, hi = page.evaluate("() => window.__gg.FIRE_P_RANGE")
+    ok(6.6 < ts[0][0] < 7.4 and 2 <= ts[0][1] <= 3, f'at about 7 s it raises 2-3 roots {ts}')
+    ok(len({r[0] for r in rs}) == len(rs) and all(r[0] != lane for r in rs), f'each in its own lane, never the Treant\'s (lane {lane}) {rs}')
+    ok(all(r[2] == 3 for r in rs) and all((r[3] and r[1] > 1) or (not r[3] and lo <= r[1] <= hi) for r in rs), f'3 hits each; mid-field ones in FIRE_P_RANGE, fence ones at the fence {rs}')
+    ok(mon_b(page, "m.anim && m.anim.clip") == 'summon', 'it plays its summon clip')
+    # many summons: 2 or 3 each, both kinds seen, never its own lane
+    counts, kinds, own = set(), set(), False
+    for _ in range(16):
+        page.evaluate("() => { window.__gg.G.roots.length = 0; window.__b.rootT = 0.02; }")
+        gwait(page, "() => window.__gg.G.roots.length >= 1", 2)
+        rs = page.evaluate(ROOTS)
+        counts.add(len(rs)); kinds |= {r[3] for r in rs}; own = own or any(r[0] == lane for r in rs)
+    ok(counts == {2, 3}, f'each summon is 2 or 3 roots, both seen {sorted(counts)}')
+    ok(kinds == {True, False}, f'mid-field and fence roots both seen {kinds}')
+    ok(not own, 'never in its own lane')
+    page.evaluate("() => { window.__gg.G.roots.length = 0; window.__b.rootT = 1e9; }")
+    # a mid-field root blocks its lane: a ghoul behind it is never reached; three pumpkins destroy it; the fourth reaches the ghoul
+    L2 = (lane + 2) % 7
+    page.evaluate("(l) => window.__gg.raiseRoot(l, false, 0.5)", L2)
+    j = page.evaluate(GHOUL, [L2, 0.3, 3, 0])
+    page.evaluate(FULL)
+    for n in (2, 1):
+        r = page.evaluate(TSHOOT, [0, L2])
+        rs = page.evaluate(ROOTS)
+        ok(r[0] and len(rs) == 1 and rs[0][2] == n and mon(page, j, "m.hp") == 3, f'a pumpkin up lane {L2} hits the root and stops: root {n} left, ghoul behind untouched {rs} (ghoul {mon(page, j, "m.hp")})')
+    page.evaluate(TSHOOT, [0, L2])
+    ok(page.evaluate(ROOTS) == [], f'the third pumpkin destroys it {page.evaluate(ROOTS)}')
+    page.evaluate(TSHOOT, [0, L2])
+    ok(mon(page, j, "m.hp") == 2, f'the lane is open again: the next pumpkin reaches the ghoul ({mon(page, j, "m.hp")})')
+    # a monster in front of the root (nearer the fence) is met first
+    page.evaluate("(l) => window.__gg.raiseRoot(l, false, 0.4)", L2)
+    j2 = page.evaluate(GHOUL, [L2, 0.7, 3, 0])
+    page.evaluate(TSHOOT, [0, L2])
+    ok(mon(page, j2, "m.hp") == 2 and page.evaluate(ROOTS)[0][2] == 3, f'a ghoul in front of the root takes the hit, the root none {page.evaluate(ROOTS)}')
+    ok(page.evaluate(f"(l) => window.__gg.G.monsters.filter(m => m.lane === l).length", L2) >= 1, '(set-up: ghouls in the lane)')
+    page.evaluate(f"() => {{ const G = window.__gg.G, b = window.__b; G.monsters.splice(0, G.monsters.length, b); G.roots.length = 0; window.__ms = []; }}")
+    # a pumpkin in another lane flies past a root
+    page.evaluate("(l) => window.__gg.raiseRoot(l, false, 0.5)", L2)
+    L3 = (L2 + 1) % 7 if (L2 + 1) % 7 != lane else (L2 + 2) % 7
+    j = page.evaluate(GHOUL, [L3, 0.3, 3, 0])
+    page.evaluate(TSHOOT, [0, L3])
+    ok(mon(page, j, "m.hp") == 2 and page.evaluate(ROOTS)[0][2] == 3, f'a pumpkin in lane {L3} passes the root in lane {L2}')
+    page.evaluate(f"() => {{ const G = window.__gg.G, b = window.__b; G.monsters.splice(0, G.monsters.length, b); G.roots.length = 0; window.__ms = []; }}")
+    # a fence root squeezes its fence: about 4 off in 8 s, then it sinks; a pumpkin hits it there too
+    page.evaluate(FULL)
+    page.evaluate("(l) => window.__gg.raiseRoot(l, true)", L2)
+    w0 = page.evaluate("(l) => window.__gg.walls[l].hp", L2)
+    tg = gwait(page, "() => window.__gg.G.roots.length === 0", 10)
+    w1 = page.evaluate("(l) => window.__gg.walls[l].hp", L2)
+    ok(tg is not None and 7.6 < tg < 8.4, f'the fence root sinks after 8 s ({tg})')
+    ok(3.6 < w0 - w1 < 4.4, f'it squeezed about 4 off its fence ({w0} -> {w1})')
+    ok(page.evaluate("(l) => window.__gg.walls.every((w, k) => k === l || w.hp === w.max)", L2), 'no other fence is hurt')
+    page.evaluate(FULL); page.evaluate("(l) => window.__gg.raiseRoot(l, true)", L2)
+    j = page.evaluate(GHOUL, [L2, 0.6, 3, 0])
+    page.evaluate(TSHOOT, [0, L2])
+    ok(page.evaluate(ROOTS)[0][2] == 2 and mon(page, j, "m.hp") == 3, f'a pumpkin up a fence root\'s lane hits the root first {page.evaluate(ROOTS)}')
+    page.evaluate(TSHOOT, [0, L2]); page.evaluate(TSHOOT, [0, L2])
+    w2 = page.evaluate("(l) => window.__gg.walls[l].hp", L2); gsleep(page, 1)
+    ok(page.evaluate(ROOTS) == [] and page.evaluate("(l) => window.__gg.walls[l].hp", L2) == w2, 'three destroy it, and the squeezing stops')
+    page.evaluate(f"() => {{ const G = window.__gg.G, b = window.__b; G.monsters.splice(0, G.monsters.length, b); G.roots.length = 0; window.__ms = []; }}")
+    # immune to knockback and freeze; held at the back all along
+    hits = """(m) => { const g = window.__gg, out = { kb:0, frozen:0, slowed:0 };
+      for (let i = 0; i < 20; i++){ const pr = { x:m.x, y:g.fieldY(1), vy:-900, type:2, vis:2, lv:5, guar:true, lane:m.lane, hitWalls:new Set(), grp:{ spawned:false, small:false, kills:0 }, size:1, rot:0, spin:9, hit:new Set(), trail:[], r:16, dead:false };
+        g.hitMonster(pr, m); if (m.kb > 0) out.kb++; if (m.frozenT > 0) out.frozen++; if (m.slowT > 0) out.slowed++; }
+      return out; }"""
+    r = page.evaluate(f"() => {{ const b = window.__b; const h = b.hp; b.hp = 5000; const o = ({hits})(b); b.hp = h; return [o, b.kb || 0, b.frozenT || 0]; }}")
+    ok(r[0]['kb'] == 0 and r[0]['frozen'] == 0 and r[1] == 0 and r[2] == 0, f'20 Ice hits with knockback guaranteed: no knockback, no freeze {r}')
+    mp, hold = page.evaluate("() => [window.__tmaxP, window.__b.hold]")
+    ok(mp <= hold + 1e-9 and hold == 0.12, f'it never walks past hold (max p {mp:.4f}, hold {hold})')
+    # killing it: one normal chest, no boss item; its roots sink with it
+    page.evaluate("(l) => { window.__gg.raiseRoot(l, false, 0.5); window.__gg.raiseRoot(l, true); }", L2)
+    c0 = page.evaluate("() => window.__gg.save.chests.length")
+    page.evaluate("() => { clearInterval(window.__ti); const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 99999, '#fff'); }")
+    time.sleep(0.3)
+    ch = page.evaluate("() => window.__gg.save.chests.slice(%d)" % c0)
+    ok(len(ch) == 1 and ch[0]['kind'] == 'normal' and not ch[0].get('boss'), f'killing it adds exactly one normal chest and no boss item {ch}')
+    ok(page.evaluate("() => window.__gg.G.bossDead") and page.evaluate(ROOTS) == [], 'the boss is down and its roots sink with it')
+    # winning N3-4 unlocks the Wartling
+    page.evaluate("() => { window.__gg.save.gourds.wartling = false; }")
+    nm3_start(page, 4); page.evaluate("() => window.__gg.endGame(true)"); time.sleep(1.8)
+    ok(page.evaluate("() => window.__gg.save.gourds.wartling") is True, 'winning N3-4 sets save.gourds.wartling')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def mon_b(page, js):
+    return page.evaluate(f"() => {{ const m = window.__b; return ({js}); }}")
+
+
+def check_treant_form2(browser, url):
+    """N3-13 (bossForm 2): 34 health, roots every 5 s, 3-4 at a time; one normal chest."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    b = treant_up(page, 13)
+    ok(b is not None and b[0] == 'treant' and b[1] == b[2] == 34 and b[4] == 2 and b[5] == 5, f'on N3-13 it arrives in form 2 with 34 health, its root clock at 5 s {b}')
+    if b is None:
+        page.close(); return
+    ok(gwait(page, "() => window.__ts.length >= 2", 12) is not None, 'it summons twice')
+    ts = page.evaluate("() => window.__ts")
+    ok(4.6 < ts[0][0] < 5.4 and 9.6 < ts[1][0] < 10.4, f'form 2 summons every 5 s {ts}')
+    counts = set()
+    for _ in range(14):
+        page.evaluate("() => { window.__gg.G.roots.length = 0; window.__b.rootT = 0.02; }")
+        gwait(page, "() => window.__gg.G.roots.length >= 1", 2)
+        counts.add(len(page.evaluate(ROOTS)))
+    ok(counts == {3, 4}, f'form 2 raises 3 or 4 roots, both seen {sorted(counts)}')
+    c0 = page.evaluate("() => window.__gg.save.chests.length")
+    page.evaluate("() => { clearInterval(window.__ti); const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 99999, '#fff'); }"); time.sleep(0.3)
+    ch = page.evaluate("() => window.__gg.save.chests.slice(%d).map(c => c.kind)" % c0)
+    ok(ch == ['normal'], f'N3-13 also gives one normal chest {ch}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_treant_continue(browser, url):
+    """A continued night keeps the roots standing (lane, place, hits left, age) and brings the Treant back with its health and its root clock."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    b = treant_up(page, 4)
+    if b is None:
+        ok(False, 'the Treant arrived'); page.close(); return
+    lane = b[6]; l1, l2 = (lane + 1) % 7, (lane + 3) % 7
+    page.evaluate("([a, c]) => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 5, '#fff'); b.rootT = 3.25; g.raiseRoot(a, false, 0.5); g.raiseRoot(c, true); g.G.roots[0].hp = 2; }", [l1, l2])
+    gsleep(page, 1.5)
+    before = page.evaluate(f"""() => {{ clearInterval(window.__ti); const g = window.__gg, b = window.__b, s = [b.hp, +b.rootT.toFixed(3)], r = ({ROOTS})();
+      const c = g.continueState(); g.continueNight(c); return [s, r, ({ROOTS})()]; }}""")
+    ok(before[1] == before[2] and len(before[1]) == 2, f'the roots stand where they stood, with their hits left and their age {before[1]} -> {before[2]}')
+    time.sleep(0.6)
+    after = page.evaluate(f"() => {{ const b = {TBOSS}; return b ? [b.hp, +b.rootT.toFixed(3), b.kind, b.p <= 0.05] : null; }}")
+    ok(after is not None and after[:2] == before[0] and after[2] == 'treant' and after[3],
+       f'the Treant comes back with its 19 health and its root clock as it was (it waits while it walks in) {before[0]} -> {after}')
+    ok(before[0][0] == 19, f'(it was hurt to 19 {before[0]})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_treant_baked(browser, url):
+    """Its frames (idle as walk, summon, hit) and the root's (rise, idle, sink) are baked when a Treant night starts, under 10 MB at bake scale 2.5;
+    a night without it bakes no root. Each root on the field costs one drawImage a frame and no painting."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    C = page.evaluate("() => { const C = window.__gg.CHARS; return C.treant && C.root ? [Object.keys(C.treant.clips).sort(), Object.keys(C.root.clips).sort()] : null; }")
+    ok(C == [['hit', 'summon', 'walk'], ['idle', 'rise', 'sink']], f'the Treant bakes walk (its idle), summon and hit; the root rise, idle and sink {C}')
+    page.evaluate("() => window.__gg.setBakeScale(2.5)")
+    nm3_start(page, 1)
+    ok(not page.evaluate("() => window.__gg.isBaked('root')"), 'a night without the Treant bakes no root')
+    t0 = time.time(); nm3_start(page, 4); dt = time.time() - t0
+    ok(page.evaluate("() => window.__gg.isBaked('treant') && window.__gg.isBaked('root')"), 'starting N3-4 bakes the Treant and its root')
+    mb = page.evaluate("() => window.__gg.atlasBytes('treant') / 1e6")
+    rb = page.evaluate("() => window.__gg.atlasBytes('root') / 1e6")
+    ok(mb < 10, f"the Treant's frames take {mb:.1f} MB at bake scale 2.5 (limit 10)")
+    ok(rb < 5, f"the root's frames take {rb:.1f} MB at bake scale 2.5 (limit 5)")
+    ok(dt < 3, f'the night opens in {dt:.1f} s')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+    # the draw budget: six roots add about one drawImage each and no fill, stroke or gradient
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script("""(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+      for (const k of ['drawImage', 'fill', 'stroke', 'fillRect', 'createRadialGradient', 'createLinearGradient']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; } })();""")
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    nm3_start(page, 4); time.sleep(3.2)
+    page.evaluate(PQ); page.evaluate("() => { window.__gg.G.roots.length = 0; }")
+    count = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 30) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 30, (c.fill || 0) / 30, (c.stroke || 0) / 30, ((c.createRadialGradient || 0) + (c.createLinearGradient || 0)) / 30]); } }; requestAnimationFrame(tick); })"
+    time.sleep(0.5); base = page.evaluate(count)
+    page.evaluate("() => { const g = window.__gg; for (const l of [0, 2, 4]) g.raiseRoot(l, false, 0.5); for (const l of [1, 3, 5]) g.raiseRoot(l, true); }")
+    time.sleep(1.2); lit = page.evaluate(count)
+    ok(5.5 <= lit[0] - base[0] <= 6.5, f'six roots add one drawImage each a frame ({base[0]:.1f} -> {lit[0]:.1f})')
+    ok(lit[1] <= base[1] + 0.1 and lit[2] <= base[2] + 0.1 and lit[3] <= base[3] + 0.1, f'and no fill, stroke or gradient (fill {base[1]:.1f} -> {lit[1]:.1f}, stroke {base[2]:.1f} -> {lit[2]:.1f}, gradients {base[3]:.1f} -> {lit[3]:.1f})')
+    os.makedirs(SHOTS, exist_ok=True)
+    page.evaluate("() => { const g = window.__gg, b = g.spawnMonster('boss', 6); b.p = b.hold; b.rootT = 1e9; }"); time.sleep(0.8)   # the Treant itself, for the owner's shot
+    page.screenshot(path=os.path.join(SHOTS, 'treant-field.png'))
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_treant': check_treant, 'check_treant_form2': check_treant_form2, 'check_treant_continue': check_treant_continue, 'check_treant_baked': check_treant_baked})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

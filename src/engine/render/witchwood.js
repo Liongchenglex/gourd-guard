@@ -1,4 +1,4 @@
-// Nightmare Witchwood's field effects (Release 7): the Cauldron Toad's long tongue. Its body and the tongue's root in its mouth are baked
+// Nightmare Witchwood's field effects (Release 7): the Cauldron Toad's long tongue and the Treant's roots. Its body and the tongue's root in its mouth are baked
 // character frames (render/chars/witchwood.js); the tongue that reaches down the lane to the fence is two baked sprites, a strip stretched to
 // the current reach and a sticky tip, so it always lands on the fence whatever the screen height (perf rule: no painting per frame, two
 // drawImage calls a lashing toad). Only called from code gated on `__RELEASE__ >= 7`, so lower builds drop it.
@@ -6,8 +6,10 @@
 import { K } from './canvas.js';
 import { E, S, pal } from './paint.js';
 import { TOAD_FPS, TOAD_MOUTH, TOAD_N, WITCHWOOD, toadLash } from './chars/witchwood.js';
-import { FENCE_Y } from '../state.js';
+import { FENCE_Y, LANE } from '../state.js';
 import { BARRIER_N, barrierSprite } from './fx.js';
+import { drawChar } from './anim.js';
+import { ROOT_RISE, rootGround, rootScale } from '../witchwood.js';
 
 const TW = 8, TH = 32, TIPW = 14, TIPH = 12;   // the tongue strip and its tip, world units
 const cache = new Map();
@@ -43,3 +45,16 @@ export function drawTongue(g, m, s, y){
 /** The Triptych Sprite's barrier: every sheen frame for 2 lanes (the field's edge) and 3, baked at the canvas scale when a night that can
  *  spawn one starts (game.js), so no barrier is painted mid-night. */
 export function prebakeBarrier(){ for (const n of [2, 3]) for (let i = 0; i < BARRIER_N; i++) barrierSprite(K, n, i); }
+
+/** The Treant's roots (G.roots): one baked frame each (the 'root' atlas, prebaked on a Treant night through ALSO_BAKE): its rise clip over its
+ *  first ROOT_RISE s, then its writhing idle. `fence` picks the fence roots (drawn over the fence, which they grip) or the mid-field ones
+ *  (drawn under the monsters). One drawImage a root. */
+export function drawRoots(g, roots, fence){
+  for (let i = 0; i < roots.length; i++){
+    const r = roots[i]; if (!!r.atFence !== fence) continue;
+    const s = rootScale(r);
+    g.save(); g.translate(LANE(r.lane), rootGround(r)); g.scale(s, s);
+    drawChar(g, r, 'root', null, r.t < ROOT_RISE ? ['rise', Math.min(7, Math.floor(r.t / ROOT_RISE * 8))] : ['idle', Math.floor((r.t - ROOT_RISE) * 7) % 8]);
+    g.restore();
+  }
+}

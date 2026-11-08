@@ -27,6 +27,7 @@ import { drawGourdCell, drawGourdGlow } from './gourd.js';
 import { ROTTEN, ROT_FX } from '../rot.js';
 import { rotSprite } from './rot.js';
 import { drawPotions, drawPotionFx } from './potion.js';
+import { drawRoots } from './witchwood.js';
 import { barrierFront } from '../witchwood.js';
 
 // ---------- Render ----------
@@ -54,6 +55,7 @@ export function render(){
   drawPuddles(t);
   if (__RELEASE__ >= 3) drawGlue();
   if (__RELEASE__ >= 4 && g.fires && g.fires.length) drawFires(g.fires, t);   // fire tiles (Release 4): one baked frame each, under the monsters
+  if (__RELEASE__ >= 7 && g.roots && g.roots.length) drawRoots(ctx, g.roots, false);   // the Treant's mid-field roots (Release 7): one baked frame each, under the monsters
   for (const m of g.monsters) if (m.type === 'doctor' && !m.dead && m.p > 0) drawHealZone(m, t);
   for (const m of g.monsters) if (m.type === 'bulwark' && !m.dead && m.p > 0) drawBulwarkZone(m, t);
   if (__RELEASE__ >= 5) for (const m of g.monsters) if (m.type === 'rotdoctor' && !m.dead && m.p > 0) drawRotZone(m, t);
@@ -87,6 +89,7 @@ export function render(){
   drawMines(t);
   drawDrops(t);
   drawWalls(t);
+  if (__RELEASE__ >= 7 && g.roots && g.roots.length) drawRoots(ctx, g.roots, true);   // its fence roots, gripping the fence
   if (__RELEASE__ >= 4) drawGourdGlow(ctx, t);   // each gourd's 3×3, one baked tile per gourd under the graves and pumpkins
   drawGraves();
   if (G.aim === 'buster') drawAimGraves(t);

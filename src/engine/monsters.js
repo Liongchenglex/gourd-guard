@@ -7,7 +7,7 @@ import { POTION_SPEED } from '../data/rules.js';
 import { glueStep } from './glue.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
 import { updateHollowMonster, reapLanes, initHollowMonster, initLamplighter, updateLamplighter, initFallenPolt, updateFallenPolt } from './hollow.js';
-import { initWitchwoodMonster, updateWitchwoodMonster, toadStop, tongueFree } from './witchwood.js';
+import { initWitchwoodMonster, updateWitchwoodMonster, toadStop, tongueFree, initTreant, updateTreant } from './witchwood.js';
 import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike, initFallenGK, updateFallenGK } from './nightmare.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
@@ -122,6 +122,7 @@ export function spawnMonster(key, lane, minion, p, formArg){
   if (__RELEASE__ >= 4 && type === 'boss' && kind === 'fallengravekeeper') initFallenGK(m);
   if (__RELEASE__ >= 5 && type === 'boss' && kind === 'lamplighter') initLamplighter(m);   // the Nightmare Foggy Hollow mini boss (engine/hollow.js)
   if (__RELEASE__ >= 5 && type === 'boss' && kind === 'fallenpoltergeist') initFallenPolt(m);   // the hollow nightmare's boss, N2-16 (engine/hollow.js)
+  if (__RELEASE__ >= 7 && type === 'boss' && kind === 'treant') initTreant(m);   // the Nightmare Witchwood mini boss (engine/witchwood.js)
   G.monsters.push(m);
   return m;
 }
@@ -366,6 +367,7 @@ export function updateMonster(m, dt){
         if (__RELEASE__ >= 3 && m.kind === 'hollowking'){ updateHollowKing(m, dt); if (m.p >= m.hold) sp = 0; break; }
         if (__RELEASE__ >= 4 && m.kind === 'strawlord'){ updateStrawlord(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // stops exactly at hold, never past it
         if (__RELEASE__ >= 5 && m.kind === 'lamplighter'){ updateLamplighter(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the Lamplighter's moods (engine/hollow.js); stops exactly at hold
+        if (__RELEASE__ >= 7 && m.kind === 'treant'){ updateTreant(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // its roots (engine/witchwood.js); stops exactly at hold and never moves on
         if (__RELEASE__ >= 5 && m.kind === 'fallenpoltergeist'){ updateFallenPolt(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // N2-16's boss (engine/hollow.js); stops exactly at hold
         if (__RELEASE__ >= 4 && m.kind === 'fallengravekeeper'){ updateFallenGK(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the nightmare patch's boss (engine/nightmare.js)
         if (m.kind === 'poltergeist'){ updatePoltergeist(m, dt); if (m.p >= m.hold) sp = 0; break; }

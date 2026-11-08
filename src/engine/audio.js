@@ -448,6 +448,13 @@ export const SFX = {
       case (__RELEASE__ >= 5 ? 'lamplighter:fog' : ''): S('hiss', 0.45, { rate: 0.8 }) || noise(0.5, 0.15, 900, 0.8); S('wind', 0.35, { delay: 0.1 }); break;
       case (__RELEASE__ >= 5 ? 'lamplighter:hit' : ''): S('ghost', 0.45, { rate: 0.9 }) || cloth(); S('metallight', 0.25, { delay: 0.03 }); break;
       case (__RELEASE__ >= 5 ? 'lamplighter:die' : ''): S('ghostdie', 0.7, { rate: 0.8 }) || noise(0.5, 0.2, 1200, 0.8); S('glass', 0.5, { delay: 0.15 }); S('torch', 0.4, { rate: 0.7, delay: 0.3 }); break;
+      // The Treant (Release 7): creaking wood and a deep roar; the summon slams the ground; roots creak when hit and snap when they break
+      case (__RELEASE__ >= 7 ? 'treant:arrive' : ''): S('creak', 0.7, { rate: 0.7 }) || noise(0.4, 0.2, 400, 1); S('roarbig', 0.5, { rate: 0.75, delay: 0.3 }); break;
+      case (__RELEASE__ >= 7 ? 'treant:summon' : ''): S('roar', 0.55, { rate: 0.7 }) || groan(90, 0.06, 0.3); S('dig', 0.6, { delay: 0.4 }) || noise(0.3, 0.3, 200, 0.8, 0.4, 90); S('stonebreak', 0.35, { rate: 0.8, delay: 0.45 }); break;
+      case (__RELEASE__ >= 7 ? 'treant:hit' : ''): S('wood', 0.5, { rate: 0.8 }) || noise(0.08, 0.2, 700, 1.2); S('creak', 0.25, { rate: 1.1, delay: 0.03 }); break;
+      case (__RELEASE__ >= 7 ? 'treant:root' : ''): S('wood', 0.4, { rate: 1.1 }) || noise(0.06, 0.15, 900, 1.4); break;
+      case (__RELEASE__ >= 7 ? 'treant:rootbreak' : ''): S('woodbreak', 0.5, { rate: 1.15 }) || noise(0.25, 0.25, 500, 0.9); break;
+      case (__RELEASE__ >= 7 ? 'treant:die' : ''): S('woodbreak', 0.8, { rate: 0.7 }) || noise(0.6, 0.3, 300, 0.7); S('roarbig', 0.6, { rate: 0.7, delay: 0.1 }); S('creak', 0.5, { rate: 0.6, delay: 0.4 }); break;
       // The Fallen Poltergeist (Release 5): the Poltergeist's voice, lower and wetter; black fog hisses, the reaper's scythe whooshes in
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:arrive' : ''): S('teleport', 0.6, { rate: 0.75 }) || tone(300, 0.6, 'sine', 0.09, 700); S('ghost', 0.6, { rate: 0.7, delay: 0.3 }); S('darkcast', 0.45, { rate: 0.7, delay: 0.55 }); break;
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:vanish' : ''): S('teleport', 0.55, { rate: 0.85 }) || woosh(false, 0.16); S('hiss', 0.3, { rate: 0.7, delay: 0.05 }); break;

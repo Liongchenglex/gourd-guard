@@ -20,14 +20,27 @@
 //    sprite (where a pumpkin would hit it). game.js asks triptychAhead for every pumpkin in flight: a pumpkin that reaches a raised barrier in
 //    its lane is reflected back down that lane (combat.js reflectPumpkin) and stops there, unless a monster standing in front of the barrier in
 //    that lane is met first (things are met in the order they stand).
+//  - The Treant (`boss` kind `treant`, the N3-4 and N3-13 mini boss) holds at the back like the Lamplighter (monsters.js stops it exactly at hold)
+//    and never moves from there. Every `rootEvery` s (its clock runs once it is on the field, p > 0.05) it plays its summon clip and raises
+//    rootN[0]..rootN[1] roots in as many other lanes (never its own). G.roots holds them: { lane, p, hp, t, atFence }. A lane holds at most one
+//    root of each kind; each pick is 50/50 between the kinds the lane can still take (a fence root only over a standing fence; our calls).
+//      * a mid-field root stands on a tile row whose centre lies in FIRE_P_RANGE and blocks its lane: game.js asks rootAhead for every pumpkin
+//        in flight, so the first pumpkin up that lane that reaches it hits it and stops (Grey too), unless a monster stands in front of it.
+//        `rootHp` hits destroy it (one a pumpkin, whatever its power; rot splats on it as on stone). It never sinks by itself.
+//      * a fence root stands at the fence (ROOT_FENCE_P, in front of the chewers) and squeezes it at `rootSqueeze` a second until it is
+//        destroyed the same way or sinks after `rootLast` s.
+//    When the Treant falls every root sinks. A continued night keeps the roots (rootSnapshot / restoreRoots, game.js) and the Treant's clock
+//    (treantSnapshot / restoreTreant, beside the Lamplighter's bossSnapshot in game.js and spawner.js).
 
 import { TYPES } from '../data/monsters.js';
 import { SFX } from './audio.js';
-import { addFloat, spark } from './combat.js';
+import { addFloat, chunk, spark } from './combat.js';
 import { TILE_P, mS, mY } from './monsters.js';
 import { POTION_FX, POTION_KINDS, placePotion, potionAt } from './potion.js';
-import { COLS, G, walls } from './state.js';
+import { COLS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, LANE, walls } from './state.js';
 import { shuffle } from './util.js';
+import { damageWall } from './walls.js';
+import { FIRE_P_RANGE } from '../data/rules.js';
 
 // ---------- shared ----------
 /** Field tile rows (as engine/potion.js): whole tiles between the top of the field and the fence. */
@@ -161,9 +174,102 @@ export function tongueFree(m){
   return true;
 }
 
+// ---------- the Treant (mini boss, N3-4 and N3-13; spec Part 4) ----------
+export const ROOT_FENCE_P = 1.02;   // where a fence root stands: just in front of the chewers at the fence (p 1), so it is met first
+export const ROOT_RISE = 8 / 12, ROOT_SINK = 8 / 13;   // its rise and sink clips (render/chars/witchwood.js: 8 frames at 12 and 13 fps)
+const ROOT_R = 16;   // a pumpkin meets a root this far below the root's centre (as a monster's radius × 0.8)
+const isTreant = m => m.type === 'boss' && m.kind === 'treant';
+const tv = (m, k) => { const T = TYPES.treant; return m.form === 2 && T.form2[k] != null ? T.form2[k] : T[k]; };
+/** A root's centre on screen (game pixels): a fence root's p is past 1, so it sits between the field's bottom and the fence. */
+export const rootY = r => FIELD_TOP + r.p * (FIELD_BOT - FIELD_TOP);
+const rootSparks = (r, n) => { const x = LANE(r.lane), y = rootY(r); for (let i = 0; i < n; i++) spark(x, y, i % 3 ? '#5c3b3c' : '#c87aff', 140); };
+
+/** Set up a freshly spawned Treant: its root clock full (a continued night restores it after this, restoreTreant). */
+export function initTreant(m){ m.rootT = tv(m, 'rootEvery'); m.seenHp = m.hp; }
+/** What a continued night keeps of it: the time left on its root clock. */
+export const treantSnapshot = m => isTreant(m) ? { rootT:m.rootT } : null;
+export function restoreTreant(m, s){
+  if (!s || !isTreant(m) || s.rootT == null) return;
+  m.rootT = s.rootT; m.seenHp = m.hp;   // seenHp: its restored health is no hit
+}
+/** One frame of the Treant: it creaks in place, recoils when hit and summons roots on its clock. */
+export function updateTreant(m, dt){
+  m.x = m.tx + Math.sin(m.ph * 0.9) * 1.5;
+  if (m.hp < m.seenHp && !m.anim) m.anim = { clip:'hit', t:0, dur:5 / 14 };
+  m.seenHp = m.hp;
+  if (m.p <= 0.05) return;
+  if ((m.rootT -= dt) <= 0){ m.rootT += tv(m, 'rootEvery'); summonRoots(m); }
+}
+function summonRoots(m){
+  const [a, b] = tv(m, 'rootN'), n = a + Math.floor(Math.random() * (b - a + 1));
+  const kindsFor = l => { const has = k => G.roots.some(r => r.lane === l && !!r.atFence === k); return [...(has(false) ? [] : [false]), ...(has(true) || !(walls[l] && walls[l].hp > 0) ? [] : [true])]; };
+  const lanes = shuffle([...Array(COLS).keys()].filter(l => l !== m.lane && kindsFor(l).length)).slice(0, n);
+  for (const l of lanes){ const ks = kindsFor(l); raiseRoot(l, ks[Math.floor(Math.random() * ks.length)]); }
+  m.anim = { clip:'summon', t:0, dur:1 };   // 10 frames at 10 fps
+  const y = mY(m);
+  for (let i = 0; i < 14; i++) spark(m.x + (i % 2 ? -36 : 36), y + 16, i % 3 ? '#c87aff' : '#5a3a26', 150);   // its hands slam the ground
+  if (lanes.length) addFloat('Roots!', m.x, y - m.r - 40, '#d8b8ff', 17, 1.1);
+  SFX.bossSfx('treant', 'summon');
+}
+/** Raise a root in `lane`: at the fence (atFence) or mid-field at p (a random tile row centre in FIRE_P_RANGE when left out). A root of the
+ *  same kind already in that lane is replaced. Pumpkins already past it in that lane fly on (fire.js's rule for a fire lit behind one). */
+export function raiseRoot(lane, atFence, p){
+  if (!G.roots) G.roots = [];
+  const T = TYPES.treant, fence = !!atFence;
+  if (!fence && p == null){
+    const tp = TILE_P(), rs = [...Array(rows()).keys()].map(r => (r + 0.5) * tp).filter(c => c >= FIRE_P_RANGE[0] && c <= FIRE_P_RANGE[1]);
+    p = rs.length ? rs[Math.floor(Math.random() * rs.length)] : 0.5;
+  }
+  const i = G.roots.findIndex(r => r.lane === lane && !!r.atFence === fence);
+  if (i >= 0) G.roots.splice(i, 1);
+  const r = { lane, p:fence ? ROOT_FENCE_P : p, hp:T.rootHp, t:0, atFence:fence };
+  G.roots.push(r);
+  for (const pr of G.projs || []) if (pr.lane === lane && !pr.dead && pr.y < rootY(r)) (pr.passed || (pr.passed = new Set())).add(r);
+  rootSparks(r, 10);
+  return r;
+}
+/** The root pumpkin pr (flying up its lane) has reached this frame, or null: the nearest the fence of those in its lane. No allocation. */
+export function rootAhead(pr){
+  let best = null;
+  for (const r of G.roots) if (r.lane === pr.lane && !(pr.passed && pr.passed.has(r)) && pr.y <= rootY(r) + pr.r + ROOT_R && (!best || r.p > best.p)) best = r;
+  return best;
+}
+/** A pumpkin meets a root: one hit off it (a rotten one splats there and does nothing, as on a castle wall); the pumpkin stops either way. */
+export function hitRoot(pr, r, rotten){
+  pr.dead = true; pr.hit.add(r);
+  if (rotten){ rootSparks(r, 6); return; }
+  r.hp -= 1; rootSparks(r, 8);
+  if (r.hp <= 0){ sinkRoot(r); SFX.bossSfx('treant', 'rootbreak'); }
+  else SFX.bossSfx('treant', 'root');
+}
+/** A root goes: off the field, its sink clip played where it stood. */
+function sinkRoot(r){
+  const i = G.roots.indexOf(r); if (i < 0) return;
+  G.roots.splice(i, 1);
+  if (G.vfx) G.vfx.push({ kind:'clip', key:'root', clip:'sink', x:LANE(r.lane), y:rootGround(r), s:rootScale(r), t:0, dur:ROOT_SINK });
+}
+/** Where a root's ground line is drawn and how big (render/witchwood.js drawRoots): a fence root rises from the fence's foot. */
+export const rootGround = r => r.atFence ? FENCE_Y + 6 : rootY(r) + 14;
+export const rootScale = r => r.atFence ? 1.05 : 0.85 + 0.2 * Math.min(1, Math.max(0, r.p));
+/** Per frame: each root's age; a fence root squeezes its fence and sinks after rootLast. */
+export function updateRoots(dt){
+  const T = TYPES.treant;
+  for (let i = G.roots.length - 1; i >= 0; i--){
+    const r = G.roots[i];
+    r.t += dt;
+    if (!r.atFence) continue;
+    if (walls[r.lane] && walls[r.lane].hp > 0){ damageWall(r.lane, T.rootSqueeze * dt); if (Math.random() < dt * 3) chunk(LANE(r.lane) + (Math.random() - 0.5) * 20, FENCE_Y - 16, '#8a6440', 80); }
+    if (r.t >= T.rootLast) sinkRoot(r);
+  }
+}
+/** What a continued night keeps of the roots: every one as it stands. */
+export const rootSnapshot = () => (G.roots || []).map(r => ({ lane:r.lane, p:r.p, hp:r.hp, t:r.t, atFence:!!r.atFence }));
+export function restoreRoots(list){ G.roots = (list || []).map(r => ({ lane:r.lane, p:r.p, hp:r.hp, t:r.t, atFence:!!r.atFence })); }
+
 // ---------- deaths ----------
-/** kill() (combat.js), once a Release 7 monster is truly dead: the Flask Bearer's potion, the toad's burst. */
+/** kill() (combat.js), once a Release 7 monster is truly dead: the Flask Bearer's potion, the toad's burst, the Treant's roots sinking. */
 export function witchwoodFalls(m){
+  if (isTreant(m)){ for (const r of (G.roots || []).slice()) sinkRoot(r); return; }
   if (m.type === 'flaskbearer'){
     dropPotionsNear(m.lane, m.p, [POTION_KINDS[Math.floor(Math.random() * POTION_KINDS.length)]]);
     return;

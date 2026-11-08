@@ -1,7 +1,7 @@
 import { SFX, ensureAudio, sfxReady, sample } from './engine/audio.js';
 import './style.css';
 import { bestLitGroup, bestMove, collectDrop, emptyCells, groupCells, resolveMatches, slideOne, randSprout, newCell, smash, planMove } from './engine/board.js';
-import { launchGroup, damage, hitMonster, damageCastle, castleY } from './engine/combat.js';
+import { launchGroup, damage, hitMonster, damageCastle, castleY, kill } from './engine/combat.js';
 import { beginNight, demoUpdate, makeDemo, startGame, update, repairWall, placeMine, endGame, useRepair, continueState, continueNight } from './engine/game.js';
 import { attachInput } from './engine/input.js';
 import { spawnMonster, lanesOf, TILE_P, burnMonster, applyBulwarks } from './engine/monsters.js';
@@ -95,5 +95,5 @@ if (new URLSearchParams(location.search).has('test')){
     ...(__RELEASE__ >= 4 ? { lightFire, lightRandomFires, fireAt, putOut, fireMarkPoints, fieldY, updateHud, TYPES, burnMonster, newCell, prebake, GOURD, isGourd, newGourd, gourdPos, destroyGourd, gourdFill, placeGourdAtStart, spawnSprouts, boardScore, paintPull, update, coachHolds, fireFirst, bestGourdMove, levelFor, questsFor, QUEST_TYPES, ICE_ONLY } : {}),   // fire tiles, the Grave Gourd (Release 4)
     ...(__RELEASE__ >= 5 ? { gourdsOn, gourdKind, isProtected, placeGourdsAtStart, gourdSnapshot, restoreGourd, GOURDS, setAllowSameGourd, inGraveSquare, gourdIcon, ROTTEN, isRotten, rotCell, hitRule, rotSnapshot, rotSprite, rotIcon, poisonNow, fogged, MNAME, MINTRO, useLantern, BOSS_INTRO, fpSwap, fpShuffle, FALLEN, BESTIARY, VARIANTS } : {}),
     ...(__RELEASE__ >= 7 ? { WORLDS, POTION_KINDS, potionAt, placePotion, placeRandomPotions, canDrink, drink, updatePotions, potionEveryNow, potionSnapshot, restorePotions, dropBrewMark, potionSprite, potionIcon, FIRE_P_RANGE, applyBulwarks, inWartSquare } : {}),
-    ...(__RELEASE__ >= 8 ? { ctx, drawWeather, weatherState, weatherReset, weatherForce, weatherBaked, netCount, canNet, pickNetCell, throwNet, isNetted, clearNets, redNetsOf, updateNets, netSnapshot, restoreNets, smash, planMove, gust, setState, shieldedNow, veiledNow, keepFalls, useFirework, dropBomb, damageCastle, castleY, newCastle, PIECES, pieceBakeStats, prebakeCastlePieces, resetPieces } : {}) };   // Release 8
+    ...(__RELEASE__ >= 8 ? { ctx, drawWeather, weatherState, weatherReset, weatherForce, weatherBaked, netCount, canNet, pickNetCell, throwNet, isNetted, clearNets, redNetsOf, updateNets, netSnapshot, restoreNets, smash, planMove, gust, setState, shieldedNow, veiledNow, keepFalls, useFirework, dropBomb, damageCastle, castleY, newCastle, PIECES, pieceBakeStats, prebakeCastlePieces, resetPieces, kill } : {}) };   // Release 8
 }

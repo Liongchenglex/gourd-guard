@@ -290,12 +290,13 @@ export function siegeFalls(m){
 //    nowhere to land they fizzle). While any lies on the patch or is in flight the shield door holds him (countClamped). A hit never carries him past the next
 //    mark: countGate (damage(), combat.js) caps it there, and the hit that reaches it throws the nets at once (fcCross), so the next hit is refused. `fcDone`
 //    is the marks passed; lazily on his first frame (or first hit) it is the marks strictly above his health, so a fresh Count throws his start nets then.
-//    A continued night carries `fcDone` (countSnapshot), so passed marks never replay; his red nets come back as his through the shield carry.
+//    A continued night carries `fcDone` and his clocks (countSnapshot), so passed marks never replay; his red nets come back as his through the shield carry,
+//    and his raise clock is 0 (castles are reset with the level, so he raises his pieces again on arrival).
 //  - Blood trance (`tranceT`): he stands still in `m.healing` (the story Count's flag: damage() counts the hits, render picks the clip) and every
 //    `tranceTick` s heals `tranceHeal` per netted pumpkin on the patch (either kind), up to his full health. `tranceHits` hits break it and stun him `tranceStun` s.
 //    A hit the shield door refuses does not count (the door's rule). While he is stunned or in a trance his other clocks stand still.
 //  - Blood spear (`spearT`): flies down his lane (G.fcSpears, SPEAR_FLY s) and his fence loses `spearHit` of its full health, never its last 1.
-//  - Lightning (`boltT`): a random patch column is warned `boltWarn` s (G.fcBolt), then every pumpkin in it goes except netted ones and gourds; matches re-resolve.
+//  - Lightning (`boltT`): a random patch column is warned `boltWarn` s (G.fcBolt), then every pumpkin in it goes except netted ones, gourds and gliding sprouts; matches re-resolve.
 //  - Summons (`summonT`): one Storm Lancer in his lane (it charges at once) and one Bat Bride a lane beside, both just ahead of him, as extras (minions).
 //  - Castle pieces (`raiseT`, 0 at the start, so he raises them as he arrives): one Archer Tower and one Gatehouse (newCastle, the level's castle wall health
 //    or the story Count's `wallHp`), each only if none of his stands, in a lane that is not his and holds no other castle, at 0.45-0.7 of the field (the story
@@ -308,11 +309,12 @@ export function initFallenCount(m){
   const T = TYPES.fallencount;
   m.fcDone = null; m.tranceT = T.tranceEvery; m.spearT = T.spearEvery; m.boltT = T.boltEvery; m.summonT = T.summonEvery; m.raiseT = 0; m.healTickT = 0;
 }
-/** What a continued night keeps of him: the marks passed and every clock. */
+/** What a continued night keeps of him: the marks passed and every clock (the raise clock is restored as 0: his pieces went with the level's castles). */
 export const countSnapshot = m => isCount(m) ? { fcDone:fcMarks(m), tranceT:m.tranceT, spearT:m.spearT, boltT:m.boltT, summonT:m.summonT, raiseT:m.raiseT } : null;
 export function restoreCount(m, s){
   if (!s || !isCount(m) || s.fcDone == null) return;
-  m.fcDone = s.fcDone; m.tranceT = s.tranceT; m.spearT = s.spearT; m.boltT = s.boltT; m.summonT = s.summonT; m.raiseT = s.raiseT;
+  m.fcDone = s.fcDone; m.tranceT = s.tranceT; m.spearT = s.spearT; m.boltT = s.boltT; m.summonT = s.summonT;
+  m.raiseT = 0;   // castles come back with the level, so his pieces are gone: he raises them again on arrival
 }
 
 function fcMarks(m){
@@ -420,11 +422,11 @@ function countFx(m, dt){
     b.warn = 0; b.strike = BOLT_FLASH; boltColumn(b.c);
   } else if ((b.strike -= dt) <= 0) G.fcBolt = null;
 }
-/** The bolt lands on column c: every pumpkin in it goes but netted ones (either kind) and gourds; the board re-resolves its bunches. */
+/** The bolt lands on column c: every pumpkin in it goes but netted ones (either kind), gourds and sprouts still gliding in; the board re-resolves its bunches. */
 function boltColumn(c){
   const x = LANE(c);
   for (let r = 0; r < ROWS; r++){
-    const cell = grid[r][c]; if (!cell || cell.gourd || cell.net) continue;
+    const cell = grid[r][c]; if (!cell || cell.fly || cell.gourd || cell.net) continue;   // a sprout still gliding in is skipped, as the Hollow King's wipeColumn
     grid[r][c] = null;
     const y = GY + r * CS + CS / 2;
     for (let i = 0; i < 8; i++) chunk(x, y, '#f0a020', 200);

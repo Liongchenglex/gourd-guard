@@ -533,7 +533,8 @@ export function veilSprite(k){ k = bakeK(k); return bake(`veil:${k}`, 124, 112, 
 
 
 // ---------- the Fallen Count (Release 8): the lightning column warning, the bolt, the blood spear; each baked once, one drawImage a frame ----------
-// Baked in fixed drawing units and stretched onto the patch at draw time (render/draw.js drawCountFx), so a resize never rebakes them.
+// Baked in fixed drawing units and stretched onto the patch at draw time (render/draw.js drawCountBolt / drawCountSpears), so a change of tile size
+// needs no new art; like every prop here they are keyed by the bake scale K, so a resize that changes K bakes them once more.
 export const FC_COL = { w:100, h:500 }, FC_BOLT = { w:160, h:620 }, FC_SPEAR = { w:28, h:110 };
 /** A patch column under a lightning warning: a pale storm-blue wash with crimson-lit edges and chevrons pointing down. */
 export function countWarnSprite(k){ k = bakeK(k); return bake(`fcwarn:${k}`, FC_COL.w, FC_COL.h, 0, 0, k, g => {

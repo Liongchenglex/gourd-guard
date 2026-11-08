@@ -1278,13 +1278,27 @@ def check_fallen_count(browser, url):
     ok(page.evaluate("() => window.__b.healing") is False, 'no trance before 18 s')
     page.evaluate(STEP, [6, 0.1])
     ok(page.evaluate("() => [window.__b.healing, window.__b.healHits]") == [True, 3], 'at 18 s he falls into a blood trance that 3 hits break')
-    # death: one normal chest
+    # death: one normal chest; his pieces crumble (no archer from his tower), his nets (patch and flight), bolt and spears go, and the night can end
     fc_up(page)
+    page.evaluate("() => { window.__b.raiseT = 0.01; }"); page.evaluate(STEP, [1, 0.05])
+    page.evaluate("""() => { const g = window.__gg, G = g.G, b = window.__b; b.fcDone = 4;
+      g.grid[0][0].net = 'red'; g.grid[0][0].netBy = b.id; g.grid[2][2].net = 'red'; g.grid[2][2].netBy = b.id; g.grid[4][4].net = 'net'; g.grid[4][4].netBy = null;
+      G.netsFlying = [{ x:100, y:100, kind:'red', by:b.id, r:1, c:1, t:0.5 }, { x:100, y:100, kind:'net', by:987654, r:1, c:3, t:0.5 }];
+      G.fcBolt = { c:3, warn:1, strike:0 }; G.fcSpears = [{ lane:b.lane, p0:b.p, t:0 }]; G.crumbles = G.crumbles || []; window.__cr0 = G.crumbles.length; }""")
+    ok(page.evaluate("() => window.__gg.G.castles.filter(w => !w.dead && w.by === window.__b.id).length") == 2, '(his Tower and Gatehouse stand)')
     c0 = page.evaluate("() => window.__gg.save.chests.length")
-    page.evaluate("() => { window.__b.fcDone = 4; }")
-    page.evaluate(FC_DMG, [99999]); time.sleep(0.2)
+    page.evaluate("() => { const b = window.__b; b.hp = 0; window.__gg.kill(b); }"); time.sleep(0.2)   # killed outright: his own nets would refuse any hit (the door), but countFalls must still clear them
     ch = page.evaluate("() => window.__gg.save.chests.slice(%d).map(c => c.kind)" % c0)
     ok(ch == ['normal'] and page.evaluate("() => window.__gg.G.bossDead"), f'he gives one normal chest {ch}')
+    dd = page.evaluate("""() => { const g = window.__gg, G = g.G, id = window.__b.id;
+      return [G.castles.filter(w => w.by === id && !w.dead).length, G.crumbles.slice(window.__cr0).map(c => c.kind).sort(), G.monsters.filter(m => m.type === 'archer' && !m.dead).length,
+        [g.grid[0][0].net, g.grid[2][2].net, g.grid[4][4].net], G.netsFlying.map(f => f.by), G.fcBolt, G.fcSpears.length]; }""")
+    ok(dd[0] == 0 and dd[1] == ['gate', 'tower'] and dd[2] == 0, f'his Gatehouse and Tower crumble, and no archer climbs out of the rubble {dd[:3]}')
+    ok(dd[3] == [None, None, 'net'] and dd[4] == [987654], f'his red nets on the patch and in flight are gone, other nets stay {dd[3:5]}')
+    ok(dd[5] is None and dd[6] == 0, f'his lightning and his spears are cleared {dd[5:]}')
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = G.def.total; G.monsters.forEach(m => { m.dead = true; }); G.fireBurst = 0; }")
+    page.evaluate(STEP, [40, 0.1])
+    ok(page.evaluate("() => window.__gg.G.over") is True and page.evaluate("() => window.__gg.G.monsters.filter(m => !m.dead && m.type !== 'sack').length") == 0, 'with the stragglers gone the night is won (no Gatehouse of his keeps it open)')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
@@ -1366,12 +1380,12 @@ def check_fc_bolt(browser, url):
     page, errors = fc_night(browser, url)
     fc_up(page)
     page.evaluate("""() => { const g = window.__gg, b = window.__b; g.grid[0][4].net = 'net'; g.grid[2][4].net = 'red'; g.grid[2][4].netBy = b.id;
-      g.grid[4][4] = Object.assign(g.newCell(0), { gourd:'grave' }); window.__keep = [g.grid[0][4], g.grid[2][4], g.grid[4][4]]; b.boltT = 0.01; }""")
+      g.grid[4][4] = Object.assign(g.newCell(0), { gourd:'grave' }); g.grid[3][4].fly = 5; window.__keep = [g.grid[0][4], g.grid[2][4], g.grid[4][4], g.grid[3][4]]; b.boltT = 0.01; }""")
     page.evaluate(STEP, [1, 0.02])
     page.evaluate("() => { window.__gg.G.fcBolt.c = 4; }")
     page.evaluate(STEP, [80, 0.02])
     r = page.evaluate("() => { const g = window.__gg; return g.grid.map((row, i) => row[4] === null ? null : window.__keep.indexOf(row[4])); }")
-    ok(r == [0, None, 1, None, 2], f'netted pumpkins (both kinds) and the gourd survive the bolt, the rest go {r}')
+    ok(r == [0, None, 1, 3, 2], f'netted pumpkins (both kinds), the gourd and a sprout still gliding in survive the bolt, the rest go {r}')
     ok(page.evaluate("() => window.__gg.G.fcBolt") is None or page.evaluate("() => window.__gg.G.fcBolt.warn") <= 0, 'the warning is over')
     # matches re-resolve: three in a row across the cleared column are no longer a bunch once the middle goes
     fc_up(page)
@@ -1408,15 +1422,18 @@ def check_fallen_count_continue(browser, url):
     page.evaluate("() => { const g = window.__gg, G = g.G; G.bossSpawned = true; const b = g.spawnMonster('boss'); b.sp = 0; b.p = 0.2; window.__b = b; }")
     page.evaluate(FC_PARK); page.evaluate(STEP, [1, 0.02]); page.evaluate(FC_CLEAR)
     page.evaluate("() => { window.__b.hp = 38; }"); page.evaluate(FC_DMG, [10])   # stops at 36: the 75% mark, three more nets
-    page.evaluate("() => { const b = window.__b; b.spearT = 5; b.boltT = 6; b.summonT = 7; b.raiseT = 8; b.tranceT = 9; }")
+    page.evaluate("() => { const b = window.__b; b.spearT = 5; b.boltT = 6; b.summonT = 7; b.raiseT = 0.01; b.tranceT = 9; }")
     page.evaluate(STEP, [15, 0.1])
     before = page.evaluate("() => { const b = window.__b; return [b.hp, b.fcDone, +b.spearT.toFixed(3), +b.boltT.toFixed(3), +b.summonT.toFixed(3), +b.raiseT.toFixed(3), +b.tranceT.toFixed(3)]; }")
+    ok(page.evaluate("() => window.__gg.G.castles.filter(w => !w.dead && w.by === window.__b.id).length") == 2, '(his Tower and Gatehouse stand before the loss)')
     ok(before[:2] == [36, 2] and page.evaluate("() => window.__gg.redNetsOf(window.__b)") == 3, f'(at the 75% mark, his three nets down {before})')
     page.evaluate("() => { const g = window.__gg; g.setState('play'); const c = g.continueState(); g.continueNight(c); g.setState('pause'); }")
     page.evaluate(STEP, [5, 0.02])
-    after = page.evaluate("() => { const b = window.__gg.G.monsters.find(m => m.type === 'boss' && !m.dead); window.__b = b; return b ? [b.hp, b.fcDone, +b.spearT.toFixed(3), +b.boltT.toFixed(3), +b.summonT.toFixed(3), +b.raiseT.toFixed(3), +b.tranceT.toFixed(3), b.kind] : null; }")
+    page.evaluate("() => { const G = window.__gg.G; window.__pcs = G.castles.filter(w => !w.dead && w.kind !== 'wall').length; }")
+    after = page.evaluate("() => { const b = window.__gg.G.monsters.find(m => m.type === 'boss' && !m.dead); window.__b = b; return b ? [b.hp, b.fcDone, +b.spearT.toFixed(3), +b.boltT.toFixed(3), +b.summonT.toFixed(3), b.raiseT, +b.tranceT.toFixed(3), b.kind] : null; }")
     page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; [L.boss, L.bossForm, L.bossChest] = window.__L0; }")
-    ok(after is not None and after[:7] == before and after[7] == 'fallencount', f'he comes back with his health, marks passed and clocks as they were {before} -> {after}')
+    ok(after is not None and after[:5] == before[:5] and after[6] == before[6] and after[7] == 'fallencount', f'he comes back with his health, marks passed and clocks as they were {before} -> {after}')
+    ok(after is not None and after[5] == 0 and page.evaluate("() => window.__pcs") == 0, f'his pieces went with the castles reset, and his raise clock comes back at 0 ({after and after[5]})')
     ok(page.evaluate(FC_OWN) == 3, f'his three red nets are his again, none replayed ({page.evaluate(FC_OWN)})')
     ok(page.evaluate(FC_DMG, [5])[0] == 36, 'and they still shield him')
     ok(not errors, f'no page errors {errors[:2]}')

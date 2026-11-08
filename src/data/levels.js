@@ -25,6 +25,7 @@
  * @property {{every:number, count:[number, number], kinds?:('bulky'|'speed'|'colour')[], cap?:number}} [potions]  potions on the field (Release 7, src/engine/potion.js):
  *   every `every` s, `count` [min, max] potions land on random free field tiles (the fire band, spread across lanes), of `kinds` (all three
  *   when left out), never more than `cap` (6 when left out) on the field
+ * @property {number[]} [brewMarks]  brew marks on the spawn bar (Release 7): fractions of `total`; at each, a swoop of crows and the potion clock cut by a quarter; the bar counts arrivals
  * @property {Array<[number, number]>} [gravesLayout]  explicit grave cells [row, col] on the 5×7 patch (overrides `graves`)
  * @property {number[]} [laneWeights]   relative spawn weight per lane (7 numbers); lanes at 0 never spawn
  * @property {number[]} [fogRows]       fogged field rows (tile rows, 0 = top); combined with `fog` bands
@@ -86,6 +87,6 @@ export function expandLevel(def, n){
     fogRows:def.fogRows || [], fogCols:def.fogCols || [], caps:def.caps || null, spawnGap:def.spawnGap == null ? null : def.spawnGap, spawnBurst:def.spawnBurst == null ? null : def.spawnBurst, bossGap:def.bossGap || null, bossHpMul:def.bossHpMul || null, unlockCopy:def.unlockCopy || null, castlesLayout:def.castlesLayout || null, shore:def.shore || 0, hexAll:def.hexAll || null, quests:def.quests || null, name:def.name || null, introPumpkins:def.introPumpkins || [], puddlesLayout:def.puddlesLayout || null, shoreFrac:def.shoreFrac || 0, boss2:def.boss2 || null, frenzy:!!def.frenzy, frenzyAfterBoss:!!def.frenzyAfterBoss, frenzyAt:def.frenzyAt || 0, frenzyHp:def.frenzyHp || 0, extraChestP:def.extraChestP || 0, bossChests:def.bossChests || 1, worldNo:def.world, levelNo:def.level,
     ...(__RELEASE__ >= 4 ? { fireStart:def.fireStart || 0, fireLayout:def.fireLayout || null, fireMarks:def.fireMarks || null, bossChest:def.bossChest || null, gourd:!!def.gourd, unlockGourds:def.unlockGourds || [], coach:def.coach || null } : {}),
     ...(__RELEASE__ >= 5 ? { poison:def.poison || null, gourds:def.gourds || null } : {}),
-    ...(__RELEASE__ >= 7 ? { potions:def.potions || null } : {}),
+    ...(__RELEASE__ >= 7 ? { potions:def.potions || null, brewMarks:def.brewMarks || null } : {}),
     nightmare:!!def.nightmare, label:def.nightmare ? `N${def.world}-${def.level}` : `${def.world}-${def.level}` };
 }

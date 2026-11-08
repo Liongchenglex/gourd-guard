@@ -4,7 +4,7 @@ import * as E from '../data/endless.js';
 import { PTYPES } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { spawnMonster, spawnSack, spawnJukebox } from './monsters.js';
-import { carryDrank } from './potion.js';
+import { carryDrank, dropBrewMark } from './potion.js';
 import { buildBg } from './render/sprites.js';
 import { G, COLS } from './state.js';
 import { rnd, shuffle } from './util.js';
@@ -69,6 +69,10 @@ export function storySpawn(dt){
   if (__RELEASE__ >= 4 && d.fireMarks && !(G.fireBurst > 0)){   // fire marks (Release 4): each fires once the bar (arrivals) reaches it
     const i = G.fmNext || 0;
     if (i < d.fireMarks.length && G.spawned >= Math.floor(d.total * d.fireMarks[i].at)) dropFireMark(d.fireMarks[i]);
+  }
+  if (__RELEASE__ >= 7 && d.brewMarks){   // brew marks (Release 7): each fires once the bar (arrivals) reaches it
+    const i = G.bmNext || 0;
+    if (i < d.brewMarks.length && G.spawned >= Math.floor(d.total * d.brewMarks[i])) dropBrewMark();
   }
   if (d.boss2 && !G.bossSpawned && (G.spawned >= Math.floor(d.total * 0.4) || (G.bossHp && G.bossHp.length))){   // two bosses at once (World 6)
     G.bossSpawned = true;

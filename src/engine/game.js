@@ -137,7 +137,7 @@ export function startGame(mode, n, loadout, gourds){
     t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], glue:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
     loot:{ chests:0, seeds:0 }, chestDropped:false, continued:false, sackT:0, jukebox:null, jukeboxDone:false, jbNext:0,
-    ...(__RELEASE__ >= 7 ? { potions:[], potionT:def && def.potions ? def.potions.every : 0, drankCarry:null } : {}),   // potions on the field (engine/potion.js): the potions standing, the clock to the next ones, a continued night's drinkers still to come back
+    ...(__RELEASE__ >= 7 ? { potions:[], bmNext:0, bmT:-99, potionT:def && def.potions ? def.potions.every : 0, drankCarry:null } : {}),   // potions on the field (engine/potion.js): the potions standing, the clock to the next ones, a continued night's drinkers still to come back
     ...(__RELEASE__ >= 5 ? { poison:{ t:def && def.poison ? def.poison.every : 0, warn:null, on:null } } : {}),   // poison fog (engine/poison.js): the clock to the next fog, the warning and the fog lying now
     ...(__RELEASE__ >= 4 ? { fires:[], fmNext:0, fmT:-99, fireBurst:0, fireBurstT:0, fireTrickleT:null, burstMinion:false, gourdDue:false, gourdDueOf:{}, gourdKinds:nightGourds(def, gourds), crowDives:[] } : {}),   // fire tiles and fire marks (src/engine/fire.js); the night's gourds (slot order) and which are due back: gourdDue the Grave Gourd's flag, gourdDueOf the other kinds' (src/engine/gourd.js)
   });

@@ -452,6 +452,66 @@ def check_toad_burst_full(browser, url):
 
 CHECKS.update({'check_flaskbearer': check_flaskbearer, 'check_toad_tongue': check_toad_tongue, 'check_toad_burst': check_toad_burst, 'check_toad_burst_full': check_toad_burst_full})
 
+
+# ---------- Task 3: brew marks ----------
+BM = """() => { const g = window.__gg, G = g.G, d = G.def; d.total = 12; G.total = 12; d.brewMarks = [0.33, 0.66]; d.potions = { every:8, count:[1, 1] }; G.bmNext = 0; G.bmT = -99; G.spawned = 0; G.spawnTimer = 999; g.updateHud(true); }"""
+BM_STATE = "() => { const G = window.__gg.G; return [G.bmNext, window.__gg.potionEveryNow(), G.monsters.filter(m => m.type === 'crow' && m.minion && !m.dead).length, document.querySelector('#banner').classList.contains('show') && document.querySelector('#bnBig').textContent]; }"
+
+
+def check_brew_marks(browser, url):
+    if not R7: return
+    page, errors = potion_page(browser, url)
+    page.evaluate(BM); time.sleep(0.2)
+    m = page.evaluate("() => [...document.querySelectorAll('.bmMark')].map(e => [Math.round(parseFloat(e.style.left)), e.classList.contains('live'), e.classList.contains('done')])")
+    ok(m == [[33, False, False], [66, False, False]], f'two brew marks on the spawn bar at 33% and 66% {m}')
+    page.evaluate("() => { window.__gg.G.spawned = 2; }"); gsleep(page, 0.3)
+    r = page.evaluate(BM_STATE)
+    ok(r[0] == 0 and r[1] == 8 and r[2] == 0 and r[3] != 'The brew boils!', f'before the first mark: nothing happens {r}')
+    page.evaluate("() => { window.__gg.G.spawned = 3; }"); gsleep(page, 0.3)
+    r = page.evaluate(BM_STATE)
+    ok(r[0] == 1 and r[3] == 'The brew boils!', f'at the first mark: bmNext 1 and the banner "The brew boils!" {r}')
+    ok(page.evaluate("() => document.querySelector('#bnSub').textContent") == 'Crows swoop in and the potions come faster.', 'with its line')
+    ok(4 <= r[2] <= 6, f'4 to 6 crows come down ({r[2]})')
+    ok(r[1] == 6, f'potionEveryNow() = 0.75 x every ({r[1]})')
+    ok(page.evaluate("() => window.__gg.G.spawned") == 3, 'the crows are minions: G.spawned unchanged')
+    ok(page.evaluate("() => document.querySelector('.bmMark.live') !== null"), 'the mark pulses (live) when it fires')
+    gsleep(page, 1.8); gsleep(page, 0.1)
+    m = page.evaluate("() => [...document.querySelectorAll('.bmMark')].map(e => [e.classList.contains('live'), e.classList.contains('done')])")
+    ok(m == [[False, True], [False, False]], f'the first mark shows ticked once passed {m}')
+    page.evaluate("() => { window.__gg.G.spawned = 7; }"); gsleep(page, 0.3)
+    r = page.evaluate(BM_STATE)
+    ok(r[0] == 2 and abs(r[1] - 8 * 0.5625) < 1e-9, f'at the second mark: bmNext 2 and potionEveryNow() = 0.5625 x every ({r})')
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = 12; G.monsters.forEach(m => m.dead = true); }"); gsleep(page, 0.3)
+    ok(page.evaluate("() => window.__gg.G.bmNext") == 2, 'never more than the level has')
+    prog = page.evaluate("() => parseFloat(document.querySelector('#prog').style.width)")
+    ok(prog > 99, f'the bar counts arrivals on a brew-mark night ({prog}%)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_brew_continue(browser, url):
+    if not R7: return
+    page, errors = potion_page(browser, url)
+    page.evaluate(BM)
+    page.evaluate("() => { window.__gg.G.spawned = 3; }"); gsleep(page, 0.3)
+    ok(page.evaluate("() => window.__gg.G.bmNext") == 1, 'the first mark has passed')
+    page.evaluate("() => { const g = window.__gg, c = g.continueState(); window.__c = c; g.continueNight(c); }"); time.sleep(0.3)
+    page.evaluate("() => { const G = window.__gg.G; G.def.total = 12; G.total = 12; G.def.brewMarks = [0.33, 0.66]; G.def.potions = { every:8, count:[1, 1] }; G.spawnTimer = 999; G.monsters.length = 0; G.spawned = 4; }")   # the real N3-1 has no marks: give it these and put the bar just past the first
+    r = page.evaluate("() => [window.__gg.G.bmNext, window.__gg.potionEveryNow()]")
+    ok(r[0] == 1 and r[1] == 6, f'a continued night keeps the marks passed (bmNext {r[0]}, every {r[1]})')
+    page.evaluate("() => { window.__gg.G.spawned = 4; }"); gsleep(page, 0.4)
+    r = page.evaluate(BM_STATE)
+    ok(r[0] == 1 and r[2] == 0 and r[3] != 'The brew boils!', f'a passed mark does not fire again {r}')
+    m = page.evaluate("() => [...document.querySelectorAll('.bmMark')].map(e => e.classList.contains('done'))")
+    ok(m == [True, False], f'and shows ticked {m}')
+    page.evaluate("() => { window.__gg.G.spawned = 7; }"); gsleep(page, 0.3)
+    ok(page.evaluate("() => window.__gg.G.bmNext") == 2, 'the next mark still fires')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_brew_marks': check_brew_marks, 'check_brew_continue': check_brew_continue})
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

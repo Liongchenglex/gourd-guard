@@ -52,4 +52,7 @@ export const POISON_WARN = 1.5, POISON_DUR = 3;
 // it if it may: bulky doubles its health and full health, speed makes it walk and chew POTION_SPEED times as fast (our number), colour hexes
 // it as a witch does: a Chameleon with chance POTION_COLOUR_CHAMELEON, else a Reverse Chameleon (owner: 10% / 90%). A bulky drinker is drawn
 // POTION_BULKY_SCALE times as big (our call). A level's `potions.cap` defaults to POTION_CAP (our number).
+// Brew marks (Release 7; spec Part 2, built like Release 4's fire marks): at each mark a swoop of BREW_CROWS [min, max] crows (minions) comes down
+// random lanes and the level's potion clock is cut to BREW_CUT of itself per mark passed (our numbers).
+export const BREW_CROWS = [4, 6], BREW_CUT = 0.75;
 export const POTION_SPEED = 1.5, POTION_COLOUR_CHAMELEON = 0.1, POTION_BULKY_SCALE = 1.15, POTION_CAP = 6;

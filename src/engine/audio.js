@@ -314,6 +314,9 @@ export const SFX = {
       case 'chameleon': case 'rchameleon': S('chameleon', 0.45) || (tone(1500, 0.05, 'sine', 0.05, 2200), tone(1500, 0.05, 'sine', 0.04, 2200, 0.07)); break;
       case 'mirror': S('glassping', 0.5) || tone(3000, 0.08, 'sine', 0.05, 2400); break;
       case 'witch': S('witch', 0.5) || cackle(2, 640); break;
+      case (__RELEASE__ >= 7 ? 'ashcrone' : ''): S('witch', 0.45, { rate: 0.8 }) || cackle(2, 520); break;   // the Ash Crone: an older, lower cackle (Release 7)
+      case (__RELEASE__ >= 7 ? 'covenwitch' : ''): S('witch', 0.5, { rate: 1.05 }) || cackle(2, 680); break;   // the Blood Coven Witch (Release 7)
+      case (__RELEASE__ >= 7 ? 'triptych' : ''): S('glassping', 0.5, { rate: 0.85 }) || tone(2600, 0.08, 'sine', 0.05, 2000); break;   // the Triptych Sprite: a deeper glass ping (Release 7)
       default: S('thud', 0.4, { rate: 0.9 }) || thump(0.05, 180);
     }
   },
@@ -344,6 +347,9 @@ export const SFX = {
       case 'chameleon': case 'rchameleon': S('chameleon', 0.4, { rate: 1.3 }) || tone(1500, 0.04, 'sine', 0.05, 900); break;
       case 'mirror': S('glass', 0.6) || (noise(0.3, 0.25, 4000, 1, 0, 1500), [3000, 2500, 2000].forEach((f, i) => tone(f, 0.08, 'sine', 0.04, null, i * 0.05))); break;
       case 'witch': S('witchdie', 0.55) || (cackle(1, 700), noise(0.1, 0.16, 500, 1, 0.14)); break;
+      case (__RELEASE__ >= 7 ? 'ashcrone' : ''): S('witchdie', 0.55, { rate: 0.8 }) || (cackle(1, 560), noise(0.1, 0.16, 400, 1, 0.14)); S('cloth', 0.3, { delay: 0.15 }); break;   // her rags crumple into ash (Release 7)
+      case (__RELEASE__ >= 7 ? 'covenwitch' : ''): S('witchdie', 0.55, { rate: 1.05 }) || (cackle(1, 720), noise(0.1, 0.16, 500, 1, 0.14)); S('splash', 0.3, { delay: 0.12 }); break;   // and her cauldron spills (Release 7)
+      case (__RELEASE__ >= 7 ? 'triptych' : ''): S('glass', 0.7, { rate: 0.85 }) || (noise(0.35, 0.28, 3600, 1, 0, 1300), [2800, 2300, 1800].forEach((f, i) => tone(f, 0.08, 'sine', 0.04, null, i * 0.05))); break;   // her triptych shatters (Release 7)
       default: S('pop', 0.5, { rate: 0.7 }) || tone(330, 0.18, 'triangle', 0.1, 700);
     }
   },
@@ -372,6 +378,8 @@ export const SFX = {
       case (__RELEASE__ >= 8 ? 'gate:open' : ''): S('creak', 0.5, { rate: 0.75 }) || tone(110, 0.3, 'triangle', 0.06, 160); break;   // the portcullis rises (Release 8)
       case (__RELEASE__ >= 8 ? 'gate:shut' : ''): S('stone', 0.7, { rate: 0.8 }) || (noise(0.1, 0.25, 500, 1), tone(100, 0.12, 'square', 0.06, 70)); break;   // and drops
       case 'witch:hex': S('zap', 0.55, { rate: 0.9 }) || shimmer(); S('witch', 0.3, { delay: 0.12 }) || cackle(2, 620, 0.05, 0.04); break;
+      case (__RELEASE__ >= 7 ? 'ashcrone:zone' : ''): S('zap', 0.5, { rate: 0.7 }) || shimmer(); S('ghost', 0.3, { delay: 0.1 }); break;   // the Ash Crone raises an undead zone (Release 7)
+      case (__RELEASE__ >= 7 ? 'covenwitch:brew' : ''): S('bubbles', 0.5, { rate: 0.8 }) || noise(0.15, 0.2, 1200, 1, 0, 300); S('witch', 0.25, { delay: 0.12 }) || cackle(2, 660, 0.05, 0.04); break;   // the cauldron boils over (Release 7)
       case 'slime:split': S('slime', 0.5, { rate: 1.15 }) || (tone(500, 0.06, 'sine', 0.08, 800), tone(560, 0.06, 'sine', 0.08, 900, 0.09)); break;
       case (__RELEASE__ >= 4 ? 'husker:shed' : ''): S('cloth', 0.5, { rate: 1.4 }) || cloth(); S('whoosh', 0.3, { rate: 1.3, delay: 0.04 }) || noise(0.18, 0.16, 1500, 1, 0.04, 3000); break;   // the husk rips off and flies away (Release 4)
       case (__RELEASE__ >= 4 ? 'hayrick:toss' : ''): S('whoosh', 0.5, { rate: 0.85 }) || noise(0.25, 0.22, 900, 1.2, 0, 2400); S('metallight', 0.3, { delay: 0.35 }); break;   // the pitchfork flies, then bites into the pumpkin (Release 4)
@@ -448,6 +456,25 @@ export const SFX = {
       case (__RELEASE__ >= 5 ? 'lamplighter:fog' : ''): S('hiss', 0.45, { rate: 0.8 }) || noise(0.5, 0.15, 900, 0.8); S('wind', 0.35, { delay: 0.1 }); break;
       case (__RELEASE__ >= 5 ? 'lamplighter:hit' : ''): S('ghost', 0.45, { rate: 0.9 }) || cloth(); S('metallight', 0.25, { delay: 0.03 }); break;
       case (__RELEASE__ >= 5 ? 'lamplighter:die' : ''): S('ghostdie', 0.7, { rate: 0.8 }) || noise(0.5, 0.2, 1200, 0.8); S('glass', 0.5, { delay: 0.15 }); S('torch', 0.4, { rate: 0.7, delay: 0.3 }); break;
+      // The Treant (Release 7): creaking wood and a deep roar; the summon slams the ground; roots creak when hit and snap when they break
+      case (__RELEASE__ >= 7 ? 'treant:arrive' : ''): S('creak', 0.7, { rate: 0.7 }) || noise(0.4, 0.2, 400, 1); S('roarbig', 0.5, { rate: 0.75, delay: 0.3 }); break;
+      case (__RELEASE__ >= 7 ? 'treant:summon' : ''): S('roar', 0.55, { rate: 0.7 }) || groan(90, 0.06, 0.3); S('dig', 0.6, { delay: 0.4 }) || noise(0.3, 0.3, 200, 0.8, 0.4, 90); S('stonebreak', 0.35, { rate: 0.8, delay: 0.45 }); break;
+      case (__RELEASE__ >= 7 ? 'treant:hit' : ''): S('wood', 0.5, { rate: 0.8 }) || noise(0.08, 0.2, 700, 1.2); S('creak', 0.25, { rate: 1.1, delay: 0.03 }); break;
+      case (__RELEASE__ >= 7 ? 'treant:root' : ''): S('wood', 0.4, { rate: 1.1 }) || noise(0.06, 0.15, 900, 1.4); break;
+      case (__RELEASE__ >= 7 ? 'treant:rootbreak' : ''): S('woodbreak', 0.5, { rate: 1.15 }) || noise(0.25, 0.25, 500, 0.9); break;
+      case (__RELEASE__ >= 7 ? 'fallenhexwitch:arrive' : ''): S('witchlong', 0.7, { rate: 0.8 }) || cackle(5, 560, 0, 0.08); S('darkcast', 0.45, { rate: 0.75, delay: 0.3 }); break;   // the Fallen Hexwitch (Release 7): the Hexwitch's laugh, lower and hollow
+      case (__RELEASE__ >= 7 ? 'fallenhexwitch:zone' : ''): S('darkcast', 0.6, { rate: 0.8 }) || tone(50, 0.6, 'sine', 0.14, 40); S('ghost', 0.35, { rate: 0.8, delay: 0.1 }); S('witch', 0.3, { rate: 0.8, delay: 0.3 }) || cackle(2, 520, 0, 0.05); break;
+      case (__RELEASE__ >= 7 ? 'fallenhexwitch:potions' : ''): S('bubbles', 0.55, { rate: 0.7 }) || noise(0.15, 0.2, 1000, 1, 0, 300); S('glassping', 0.3, { rate: 0.8, delay: 0.15 }); break;
+      case (__RELEASE__ >= 7 ? 'fallenhexwitch:crows' : ''): [0, 0.08, 0.16].forEach(d => S('bat', 0.35, { delay: d, rate: 0.75 + d }) || noise(0.05, 0.1, 2500, 1.5, d)); break;
+      case (__RELEASE__ >= 7 ? 'fallenhexwitch:smash' : ''): S('woodbreak', 0.6, { rate: 0.8 }) || noise(0.4, 0.3, 300, 0.8); S('roarbig', 0.35, { rate: 1.2, delay: 0.05 }); break;
+      case (__RELEASE__ >= 7 ? 'fallenhexwitch:glide' : ''): S('whoosh', 0.45, { rate: 0.8 }) || noise(0.2, 0.1, 1200, 1, 0, 500); break;
+      case (__RELEASE__ >= 7 ? 'fallenhexwitch:altar' : ''): S('stonebreak', 0.6, { rate: 0.7 }) || noise(0.4, 0.3, 200, 0.8); S('darkcast', 0.55, { rate: 0.7, delay: 0.15 }) || tone(60, 0.6, 'sine', 0.12, 40); break;
+      case (__RELEASE__ >= 7 ? 'fallenhexwitch:altarhit' : ''): S('stonebreak', 0.35, { rate: 1.4 }) || noise(0.08, 0.2, 900, 1.2); break;
+      case (__RELEASE__ >= 7 ? 'fallenhexwitch:altarbreak' : ''): S('stonebreak', 0.8, { rate: 0.9 }) || noise(0.5, 0.3, 300, 0.7); S('glassping', 0.35, { rate: 0.6, delay: 0.1 }); break;
+      case (__RELEASE__ >= 7 ? 'fallenhexwitch:immune' : ''): S('clank', 0.45, { rate: 0.7 }) || tone(260, 0.08, 'square', 0.05); break;   // a dull clink, as the Hollow King's
+      case (__RELEASE__ >= 7 ? 'fallenhexwitch:hit' : ''): S('witch', 0.55, { rate: 0.8 }) || tone(700, 0.1, 'sawtooth', 0.05, 1000); break;
+      case (__RELEASE__ >= 7 ? 'fallenhexwitch:die' : ''): S('witchdie', 0.75, { rate: 0.8 }) || cackle(2, 560, 0, 0.07); S('boom', 0.5, { delay: 0.35 }) || noise(0.4, 0.3, 700, 0.8, 0.25, 200); S('stonebreak', 0.5, { delay: 0.6 }); break;
+      case (__RELEASE__ >= 7 ? 'treant:die' : ''): S('woodbreak', 0.8, { rate: 0.7 }) || noise(0.6, 0.3, 300, 0.7); S('roarbig', 0.6, { rate: 0.7, delay: 0.1 }); S('creak', 0.5, { rate: 0.6, delay: 0.4 }); break;
       // The Fallen Poltergeist (Release 5): the Poltergeist's voice, lower and wetter; black fog hisses, the reaper's scythe whooshes in
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:arrive' : ''): S('teleport', 0.6, { rate: 0.75 }) || tone(300, 0.6, 'sine', 0.09, 700); S('ghost', 0.6, { rate: 0.7, delay: 0.3 }); S('darkcast', 0.45, { rate: 0.7, delay: 0.55 }); break;
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:vanish' : ''): S('teleport', 0.55, { rate: 0.85 }) || woosh(false, 0.16); S('hiss', 0.3, { rate: 0.7, delay: 0.05 }); break;

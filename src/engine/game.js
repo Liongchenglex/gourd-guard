@@ -9,7 +9,8 @@ import { WORLDS, levelFor, prevLevelFor, progressNight, typesForNight, highestOp
 import { SFX, ensureAudio, musicStart, musicStop } from './audio.js';
 import { MUSIC } from '../data/music.js';
 import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, spawnPumpkin, landingCell, landingNear, flyInto, DIRV } from './board.js';
-import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle, pumpkinPower, pinkHeal } from './combat.js';
+import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle, pumpkinPower, pinkHeal, reflectPumpkin } from './combat.js';
+import { triptychAhead, rootAhead, hitRoot, updateRoots, rootSnapshot, restoreRoots, treantSnapshot, altarAhead, hitAltar, fallenHexSnapshot } from './witchwood.js';
 import { mS, mY, updateMonster, TILE_P, applyBulwarks, spawnSack } from './monsters.js';
 import { SACK, ENDLESS_AD_MIN_SECONDS } from '../data/economy.js';
 import { showInterstitial } from './ads.js';
@@ -36,6 +37,7 @@ import { shieldSnapshot, restoreShields, carryCheck, newCastle, updateCastlePiec
 import { prebakeNets } from './render/nets.js';
 import { prebakeCountFx } from './render/fx.js';
 import { K } from './render/canvas.js';
+import { prebakeBarrier, prebakeFallenHex } from './render/witchwood.js';
 import { startCoach, coachHolds, coachUpdate } from './coach.js';
 import { lightFire, lightRandomFires, fireAhead, burnPumpkin, updateFires } from './fire.js';
 import { updateCrowDives } from './nightmare.js';
@@ -156,7 +158,7 @@ export function startGame(mode, n, loadout, gourds){
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
     loot:{ chests:0, seeds:0 }, chestDropped:false, continued:false, sackT:0, jukebox:null, jukeboxDone:false, jbNext:0,
     ...(__RELEASE__ >= 8 ? { netsFlying:[], crumbles:[] } : {}),   // nets in flight (engine/nets.js)
-    ...(__RELEASE__ >= 7 ? { potions:[], bmNext:0, bmT:-99, potionT:def && def.potions ? def.potions.every : 0, drankCarry:null } : {}),   // potions on the field (engine/potion.js): the potions standing, the clock to the next ones, a continued night's drinkers still to come back
+    ...(__RELEASE__ >= 7 ? { potions:[], bmNext:0, bmT:-99, potionT:def && def.potions ? def.potions.every : 0, drankCarry:null, roots:[], altar:null } : {}),   // potions on the field (engine/potion.js): the potions standing, the clock to the next ones, a continued night's drinkers still to come back
     ...(__RELEASE__ >= 5 ? { poison:{ t:def && def.poison ? def.poison.every : 0, warn:null, on:null } } : {}),   // poison fog (engine/poison.js): the clock to the next fog, the warning and the fog lying now
     ...(__RELEASE__ >= 4 ? { fires:[], fmNext:0, fmT:-99, fireBurst:0, fireBurstT:0, fireTrickleT:null, burstMinion:false, gourdDue:false, gourdDueOf:{}, gourdKinds:nightGourds(def, gourds), crowDives:[] } : {}),   // fire tiles and fire marks (src/engine/fire.js); the night's gourds (slot order) and which are due back: gourdDue the Grave Gourd's flag, gourdDueOf the other kinds' (src/engine/gourd.js)
   });
@@ -167,6 +169,8 @@ export function startGame(mode, n, loadout, gourds){
   if (def && def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def && def.puddles) placePuddles(def.puddles);
   if (__RELEASE__ >= 4 && def){ startFires(def); if (def.nightmare) prebakeFire(); }   // after the castles, so random fires skip them; the flame strip is baked now, not on first sight
   if (__RELEASE__ >= 5 && def && def.poison) prebakePoison();   // the fog and its warning strips, baked now
+  if (__RELEASE__ >= 7 && def && bakeKeys(def).some(k => k.split('|')[0] === 'triptych')) prebakeBarrier();   // the Triptych's barrier frames (Release 7, ~4-6 MB), only on a night that can spawn one
+  if (__RELEASE__ >= 7 && def && (def.boss === 'fallenhexwitch' || def.boss2 === 'fallenhexwitch')) prebakeFallenHex();   // her altar's crack states and her 5x5 zone (Release 7), only on her night
   if (__RELEASE__ >= 7 && def && def.nightmare) prebakePotions();   // the three bottles, their icons and the drink puffs (Release 7), baked now
   if (__RELEASE__ >= 8 && def && def.nightmare) prebakeNets();   // the rope net, the crimson one and the net in flight, baked now
   if (__RELEASE__ >= 8 && def && def.boss === 'fallencount') prebakeCountFx(K);   // his lightning warning, bolt and blood spear, baked now (render/fx.js)
@@ -436,11 +440,24 @@ export function update(dt){
         const f = fireAhead(pr, targets);
         if (f){ burnPumpkin(pr, f); continue; }   // Ice puts it out; every pumpkin stops there, with no on-hit power
       }
+      const tb = __RELEASE__ >= 7 ? triptychAhead(pr) : null;   // a raised Triptych barrier it has reached in this lane (engine/witchwood.js)
+      const rt = __RELEASE__ >= 7 && g.roots && g.roots.length ? rootAhead(pr) : null;   // a Treant's root it has reached in this lane (engine/witchwood.js)
+      const al = __RELEASE__ >= 7 && g.altar ? altarAhead(pr) : null;   // the Fallen Hexwitch's altar, reached in this lane (engine/witchwood.js)
       for (const m of targets){
+        if (tb && (m === tb || m.p < tb.p)) break;   // the barrier stands in front of this one: what stands in front of the barrier is met first
+        if (rt && m.p < rt.p) break;   // so does a root
+        if (al && m.p < al.p) break;   // and the altar
         if (Math.abs(pr.y - mY(m)) < pr.r + m.r * mS(m) * 0.8 || pr.y < mY(m)){
           hitMonster(pr, m);
           if (pr.type !== 4 || pr.dead){ pr.dead = true; break; }   // Grey pierces, unless the hit used it up (a blocked hit, Release 5)
         }
+      }
+      if (al && !pr.dead && !(tb && tb.p > al.p) && !(rt && rt.p > al.p)) hitAltar(pr, al, __RELEASE__ >= 5 && pr.type === ROTTEN);   // every pumpkin stops at the altar, Grey too (a barrier or root in front of it is met first)
+      if (rt && !pr.dead && !(tb && tb.p > rt.p)) hitRoot(pr, rt, __RELEASE__ >= 5 && pr.type === ROTTEN);   // every pumpkin stops at a root, Grey too (a barrier in front of it is met first)
+      if (tb && !pr.dead){
+        if (__RELEASE__ >= 5 && pr.type === ROTTEN) hitMonster(pr, tb);   // rot is never reflected: it meets the sprite as it would the Mirror Sprite's mirror (combat.js rotHitNow)
+        else { pr.hit.add(tb); reflectPumpkin(pr, tb, pr.lane); }   // reflected back down its own lane
+        pr.dead = true;   // every pumpkin stops at the barrier, Grey too
       }
     }
     if (!pr.dead && pr.y < FIELD_TOP - 14){
@@ -457,6 +474,7 @@ export function update(dt){
   if (__RELEASE__ >= 4 && g.fires) updateFires(dt);
   if (__RELEASE__ >= 8) updateNets(dt);   // nets in flight land (engine/nets.js)
   if (__RELEASE__ >= 8 && G.shieldCarry) carryCheck();   // a continued night: red nets nobody came back for turn ordinary (engine/keep.js)
+  if (__RELEASE__ >= 7 && g.roots && g.roots.length) updateRoots(dt);   // the Treant's roots: their age, and the fence roots squeezing (engine/witchwood.js)
   if (__RELEASE__ >= 7 && g.potions) updatePotions(dt);   // potions on the field: the clock, and monsters drinking what they walk onto (engine/potion.js)
   if (__RELEASE__ >= 5) updatePoison(dt);   // poison fog: the warning, the fog, the rot under it (engine/poison.js)
   if (__RELEASE__ >= 4 && g.crowDives && g.crowDives.length) updateCrowDives(dt);   // crows diving into the patch (engine/nightmare.js)
@@ -584,9 +602,9 @@ export function continueState(){
     hk:__RELEASE__ >= 3 ? hkState() : null,   // the Hollow King's phase and his standing form (Release 3)
     jukebox:{ next:g.jbNext || 0, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null },   // next: drop points already used (one per jukebox dropped)   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
     ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0, bossPhase2:living.map(m => !!m.phase2), gourd:g.def.gourd ? gourdSnapshot() : null } : {}),
-    ...(__RELEASE__ >= 5 ? { bossMood:living.map(m => bossSnapshot(m) || (__RELEASE__ >= 8 ? siegeSnapshot(m) || countSnapshot(m) : null)), rot:rotSnapshot(), poison:poisonClock() } : {}),   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
-    ...(__RELEASE__ >= 7 ? { potions:potionSnapshot() } : {}),
-    ...(__RELEASE__ >= 8 ? { nets:netSnapshot(), shields:shieldSnapshot() } : {}) };   // the nets on the patch and in flight (Release 8)   // the potions on the field, their clock and what the drinkers on the field had drunk (Release 7)
+    ...(__RELEASE__ >= 5 ? { bossMood:living.map(m => bossSnapshot(m) || (__RELEASE__ >= 7 ? treantSnapshot(m) || fallenHexSnapshot(m) : null) || (__RELEASE__ >= 8 ? siegeSnapshot(m) || countSnapshot(m) : null)), rot:rotSnapshot(), poison:poisonClock() } : {}),   // a Treant's root clock, the Fallen Hexwitch's marks and standing altar too (Release 7)   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
+    ...(__RELEASE__ >= 7 ? { potions:potionSnapshot(), roots:rootSnapshot() } : {}),   // the Treant's roots as they stand; the potions on the field, their clock and what the drinkers on the field had drunk (Release 7)
+    ...(__RELEASE__ >= 8 ? { nets:netSnapshot(), shields:shieldSnapshot() } : {}) };   // the nets on the patch and in flight (Release 8)
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
 export function continueNight(c){
@@ -601,6 +619,7 @@ export function continueNight(c){
   if (__RELEASE__ >= 8 && c.nets) restoreNets(c.nets);   // the same nets, on the same pumpkins where they still stand (Release 8)
   if (__RELEASE__ >= 8 && c.nets) restoreShields(c.shields);   // red nets wait for their owner's type to come back, a Bride's veil for the next Bride (engine/keep.js)
   if (__RELEASE__ >= 7 && c.potions) restorePotions(c.potions);   // the same potions stand, the clock carries on, and the drinkers come back with what they drank (Release 7)
+  if (__RELEASE__ >= 7 && c.roots) restoreRoots(c.roots);   // the Treant's roots stand where they stood, with their hits left and their age (Release 7)
   if (__RELEASE__ >= 4 && c.bossSpawned && c.bossPhase2) G.bossPhase2 = c.bossPhase2.slice();   // spawner.js puts each returning boss back in its phase
   if (__RELEASE__ >= 5 && c.bossSpawned && c.bossMood) G.bossMood = c.bossMood.slice();   // and a Lamplighter in its mood, its clocks where they were, a Fallen Poltergeist with its marks spent and its reaper phase (Release 5)
   if (c.bossSpawned){ G.bossDead = c.bossDead; G.bossHp = c.bossHp.slice(); G.bossKinds = c.bossKinds ? c.bossKinds.slice() : null; if (c.bossDead) G.bossSpawned = true; }

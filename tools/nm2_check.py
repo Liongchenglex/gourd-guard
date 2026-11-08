@@ -10,6 +10,7 @@ import argparse, sys, time, os
 from playwright.sync_api import sync_playwright
 
 from w6_check import open_page, ok, FAILS, start, bundle_js, set_stars
+from nm3_check import check_r7_absent   # `--expect r6` adds it to CHECKS (see main)
 
 R5 = False   # set by --expect: the build holds Release 5 (playtest)
 MODE = 'on'
@@ -53,7 +54,7 @@ def check_n2_track(browser, url):
     ok(page.evaluate("() => window.__gg.isOpen(1102)") is False, 'N2-2 does not exist yet / stays shut')
     d = page.evaluate("() => { const d = window.__gg.levelFor(1101); return [d.label, d.nightmare, d.worldNo, d.levelNo, d.world, d.gourd]; }")
     ok(d == ['N2-1', True, 2, 1, 7, True], f'levelFor(1101): label N2-1, nightmare, story world 2, level 1, theme 7, gourd {d}')
-    ok(page.evaluate("() => window.__gg.NIGHTMARE_LEVELS.length") == 2, 'NIGHTMARE_LEVELS holds the patch and the hollow tables')
+    ok(page.evaluate("() => window.__gg.NIGHTMARE_LEVELS.length") >= 2, 'NIGHTMARE_LEVELS holds the patch and the hollow tables (and later the wood)')
     ok(page.evaluate("() => window.__gg.nmNight(2, 1)") == 1101, 'nmNight(2, 1) = 1101')
     nm2_start(page, 1)
     g = page.evaluate("() => { const G = window.__gg.G; return [G.def.label, G.world, G.n, window.__gg.state]; }")
@@ -1887,10 +1888,11 @@ CHECKS.update({'check_n2_levels': check_n2_levels, 'check_n2_intros': check_n2_i
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)
-    ap.add_argument('--expect', choices=['on', 'r4', 'r3', 'r2', 'off'], required=True)
+    ap.add_argument('--expect', choices=['on', 'r6', 'r4', 'r3', 'r2', 'off'], required=True)
     ap.add_argument('--only', default=None)
     a = ap.parse_args()
     global R5, MODE
+    if a.expect == 'r6': a.expect = 'on'; CHECKS['check_r7_absent'] = check_r7_absent   # a Release 6 build holds everything up to Release 6: these checks run as `on`, plus the Release 7 absence check
     MODE = a.expect; R5 = a.expect == 'on'
     with sync_playwright() as p:
         browser = p.chromium.launch(args=os.environ.get('GG_CHROME_ARGS', '').split())   # e.g. GG_CHROME_ARGS=--disable-gpu when the headless GPU process hangs (a sleeping Mac)

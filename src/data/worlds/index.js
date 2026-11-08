@@ -11,6 +11,7 @@ import world5 from './world5.js';
 import world6, { releaseOf as w6Release } from './world6.js';
 import nightmare1 from './nightmare1.js';
 import nightmare2 from './nightmare2.js';
+import nightmare3 from './nightmare3.js';
 
 // Background themes (index = LevelDef.theme). Drawn by buildBg() in src/engine/render/sprites.js.
 //   sky: [top, middle, horizon] gradient    ground: [field top, field bottom]    grass: tuft / reed colour
@@ -38,6 +39,10 @@ export const WORLDS = [
   // Foggy Hollow: Nightmare (Release 5): the nightmare book's sickly green moon and poison fog (scene 'fogN' in render/nightmare/scenes.js); palette = that THEMES row.
   ...(__RELEASE__ >= 5 ? [{ name:'Foggy Hollow: Nightmare', sky:['#020604','#0b1f12','#2f6a3a'], ground:['#16261a','#08110a'], grass:'#132418',
     moon:'#d8ffb0', halo:'#5aff7a', sil:['#0d2014','#040a06'], rim:'#9aff9a', soil:['#3e4a2c','#232c18','#10150a'], mist:'#5ac07a', custom:'nightmare', scene:'fogN', base:1 }] : []),
+  // Witchwood: Nightmare (Release 7): the nightmare book's drained, grey wood and the witch's burning window (scene 'woodN'); palette = that THEMES row.
+  // `base` is the story theme whose field texture it borrows (Witchwood is theme 4 in this list; the THEMES row's base:4 says the same).
+  ...(__RELEASE__ >= 7 ? [{ name:'Witchwood: Nightmare', sky:['#0c0c0e','#2a2a2e','#6a6a70'], ground:['#34343a','#141418'], grass:'#3a3a40',
+    moon:'#f0f0f0', halo:'#b8b8c0', sil:['#26262c','#0c0c10'], rim:'#e0e0e8', soil:['#5a5a60','#38383e','#1a1a1e'], mist:null, custom:'nightmare', scene:'woodN', base:4 }] : []),
 ];
 
 /** Display names for the six worlds (docs/WORLDS.md §3). Worlds without levels yet show as "coming soon". */
@@ -61,7 +66,7 @@ export const LEVELS = ALL_LEVELS.length;
  *  quests live in save.stars / save.quests under that number. NIGHTMARE_LEVELS[w - 1] is world w's nightmare table. */
 export const NM_BASE = 1000;
 export const NM_BOOK_LEVELS = 16;   // stamps on a nightmare book page; levels not built yet show as "Coming soon"
-export const NIGHTMARE_LEVELS = __RELEASE__ >= 5 ? [nightmare1, nightmare2] : __RELEASE__ >= 4 ? [nightmare1] : [];
+export const NIGHTMARE_LEVELS = __RELEASE__ >= 7 ? [nightmare1, nightmare2, nightmare3] : __RELEASE__ >= 5 ? [nightmare1, nightmare2] : __RELEASE__ >= 4 ? [nightmare1] : [];
 export const nmNight = (w, k) => NM_BASE + 100 * (w - 1) + k;
 export const isNightmare = n => n > NM_BASE;
 const nmWorld = n => Math.floor((n - NM_BASE - 1) / 100) + 1, nmLevel = n => (n - NM_BASE - 1) % 100 + 1;
@@ -105,11 +110,15 @@ export function typesForNight(n){
   return [...Array(NTYPES).keys()].filter(t => t < 1 || unlockNightOf(PTYPES[t].key) <= n || (BUY_PUMPKIN[PTYPES[t].key] && save[BUY_PUMPKIN[PTYPES[t].key].flag]));   // Paint: once bought, in every level (owner)   // only Green from the start; Yellow unlocks at 1-2 (owner)
 }
 
-/** What world w's nightmare track still needs, or '' (Release 5: the hollow needs the Grave Gourd, which N1-4 unlocks). */
+/** What world w's nightmare track still needs, or '' (Release 5: the hollow needs the Grave Gourd, which N1-4 unlocks; Release 7: the wood needs the Protector Gourd, N2-4). */
 export function nmGateText(w){
   if (__RELEASE__ >= 5 && w === 2){
     if (!save.stars[firstNightOf(2) + WORLD_LEVELS[1].length - 1]) return 'Beat 2-20';
     if (!save.stars[nmNight(1, 4)]) return 'Beat Nightmare 1-4';
+  }
+  if (__RELEASE__ >= 7 && w === 3){   // Release 7: the wood needs the Protector Gourd, which N2-4 unlocks
+    if (!save.stars[firstNightOf(3) + WORLD_LEVELS[2].length - 1]) return 'Beat 3-20';
+    if (!save.stars[nmNight(2, 4)]) return 'Beat Nightmare 2-4';
   }
   return '';
 }

@@ -17,7 +17,7 @@ The owner may ship Release 6 **before** Releases 4 and 5. Builds today include e
 - Magnet depends only on Release 1 content (worlds 1–5): its code reads no Release 2–5 module, constant or level field, and treats Release 2–5 things it must skip (the jukebox, mini bosses, Crows) by generic properties (`type`, a not-on-the-field flag) rather than by importing them. If its gate were changed to `>= 2`, it would work in a Release 2 build with no Beige.
 - Its type index is computed from what the build contains (Beige may or may not exist), the same way `BEIGE` / `RAINBOW` are today.
 - Its unlock is 5-20 (Release 1), not 6-16 or a nightmare level.
-- All Magnet code and data sit behind `__RELEASE__ >= 6` written inline, so a renumber is a search for `>= 6` in Magnet's code.
+- All Magnet code and data sit behind one build constant, `__MAGNET__` (true when the build's release is at least `MAGNET_AT` in `vite.config.js`, 6 today), so shipping it earlier is a one-number change (builder's call, 2026-11-08; replaces "`__RELEASE__ >= 6` written inline").
 
 ## Rules (owner)
 

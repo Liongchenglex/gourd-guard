@@ -771,6 +771,87 @@ CHECKS.update({'check_wart_damage': check_wart_damage, 'check_wart_break_heal': 
                'check_wart_coach': check_wart_coach, 'check_wart_unlock': check_wart_unlock, 'check_wart_art': check_wart_art})
 
 
+# ---------- Task 5: the Ash Crone and the Blood Coven Witch ----------
+CROWS = "() => window.__gg.G.monsters.filter(o => o.type === 'crow' && !o.dead).map(o => [o.lane, Math.round(o.p * 1000) / 1000, o.minion])"
+NO_CROWS = "() => { const M = window.__gg.G.monsters; for (let i = M.length - 1; i >= 0; i--) if (M[i].type === 'crow') M.splice(i, 1); }"
+
+
+def check_ashcrone(browser, url):
+    if not R7: return
+    page, errors = potion_page(browser, url)
+    t = page.evaluate("() => { const T = window.__gg.TYPES.ashcrone; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop, T.zoneEvery, T.zoneLast, T.crows]; }")
+    ok(t == [4, 0.035, 22, 9, 0.5, 30, 2, 10, 8, 4], f'ashcrone: hp 4, sp 0.035, r 22, coins 9, eat 0.5, pts 30, drop 2, zoneEvery 10, zoneLast 8, crows 4 {t}')
+    ok(page.evaluate("() => window.__gg.MNAME.ashcrone") == 'Ash Crone' and bool(page.evaluate("() => window.__gg.MINTRO.ashcrone")), 'her name is the Ash Crone, with an intro card')
+    # ringed by crows: left, right, ahead and behind (the Vampire's spots); none when she is a minion
+    c = sorted(page.evaluate("() => { const m = window.__gg.spawnMonster('ashcrone', 3, false, 0.3); m.sp = 0; return (" + CROWS + ")(); }"))   # read before a frame moves them (crows are fast)
+    ok(c == sorted([[2, 0.3, True], [4, 0.3, True], [3, 0.36, True], [3, 0.24, True]]), f'four crow minions at her left, right, ahead and behind {c}')
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; const m = window.__gg.spawnMonster('ashcrone', 3, true, 0.3); m.sp = 0; }")
+    ok(page.evaluate(CROWS) == [], 'spawned as a minion: no crows')
+    # an undead zone every 10 s, a box centred on a monster within 2 lanes of her, lasting 8 s
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; window.__ms = []; }")
+    i = page.evaluate(NEW, ['ashcrone', 3, 0.3]); page.evaluate(NO_CROWS)
+    page.evaluate("() => { window.__gg.G.hexZones.length = 0; }")
+    j = page.evaluate(GHOUL, [5, 0.5, 3, 0])
+    page.evaluate(GHOUL, [0, 0.6, 3, 0])   # 3 lanes away: never her centre
+    tz = gwait(page, "() => window.__gg.G.hexZones.length >= 1", 12)
+    z = page.evaluate("() => window.__gg.G.hexZones.map(z => [z.shape, z.lane, Math.round(z.p * 1000) / 1000, z.t])")
+    ok(tz is not None and abs(tz - 10) < 0.4, f'her first zone comes at 10 s ({tz})')
+    ok(len(z) == 1 and z[0][:3] == ['box', 5, 0.5] and abs(z[0][3] - 8) < 0.3, f'one box zone centred on the ghoul in lane 5 (2 lanes away), 8 s to run {z}')
+    ok(mon(page, i, "m.anim && m.anim.clip") == 'hex', 'she plays her hex clip as she casts')
+    # a ghoul killed inside it collapses and rises after 4 s
+    d = page.evaluate(KILL, j)
+    ok(d == [False, 0] and mon(page, j, "m.rise") > 3.5, f'the ghoul killed inside collapses to rise {d}')
+    tr = gwait(page, "() => window.__ms[1].rise <= 0", 6)
+    ok(tr is not None and abs(tr - 4) < 0.4 and mon(page, j, "[m.dead, m.hp > 0]") == [False, True], f'and rises again after 4 s ({tr})')
+    tg = gwait(page, "() => window.__gg.G.hexZones.length === 0 || window.__gg.G.hexZones[0].t > 7.5", 6)
+    ok(tg is not None, f'the zone runs out 8 s after it was cast ({tg})')
+    # nobody else within 2 lanes: no zone
+    page.evaluate("() => { const g = window.__gg, G = g.G; G.monsters.length = 0; G.hexZones.length = 0; window.__ms = []; }")
+    i = page.evaluate(NEW, ['ashcrone', 0, 0.3]); page.evaluate(NO_CROWS)
+    page.evaluate(GHOUL, [4, 0.5, 3, 0])
+    page.evaluate("(i) => { window.__ms[i].zoneT = 0.2; }", i); gsleep(page, 0.6)
+    ok(page.evaluate("() => window.__gg.G.hexZones.length") == 0, 'with no monster within 2 lanes she raises no zone')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_covenwitch(browser, url):
+    if not R7: return
+    page, errors = potion_page(browser, url)
+    t = page.evaluate("() => { const T = window.__gg.TYPES.covenwitch; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop, T.brewEvery, T.brewN]; }")
+    ok(t == [3, 0.04, 22, 9, 0.5, 28, 2, 7, [1, 2]], f'covenwitch: hp 3, sp 0.04, r 22, coins 9, eat 0.5, pts 28, drop 2, brewEvery 7, brewN [1, 2] {t}')
+    ok(page.evaluate("() => window.__gg.MNAME.covenwitch") == 'Blood Coven Witch' and bool(page.evaluate("() => window.__gg.MINTRO.covenwitch")), 'her name is the Blood Coven Witch, with an intro card')
+    i = page.evaluate(NEW, ['covenwitch', 0, 0.1])
+    page.evaluate(GHOUL, [3, 0.5, 3, 0]); page.evaluate(GHOUL, [5, 0.3, 3, 0]); page.evaluate(GHOUL, [6, 0.6, 3, 0])
+    ahead = {(3, tile_of(page, 0.5)[0] + 1), (5, tile_of(page, 0.3)[0] + 1), (6, tile_of(page, 0.6)[0] + 1)}
+    tb = gwait(page, "() => window.__gg.G.potions.length >= 1", 9)
+    ps = potions_rc(page)
+    ok(tb is not None and abs(tb - 7) < 0.4, f'her first brew at 7 s ({tb})')
+    ok(1 <= len(ps) <= 2 and all((l, r) in ahead for l, r, _ in ps) and all(k in ('bulky', 'speed', 'colour') for *_, k in ps), f'1-2 potions, each one tile ahead of a ghoul {ps} (ahead tiles {sorted(ahead)})')
+    ok(mon(page, i, "m.anim && m.anim.clip") == 'hex', 'she plays her hex clip as she brews')
+    # many brews: one or two potions each, never two on a tile, all kinds seen
+    counts, kinds = set(), set()
+    for _ in range(14):
+        page.evaluate("(i) => { window.__gg.G.potions.length = 0; window.__ms[i].brewT = 0.05; }", i)
+        gwait(page, "() => window.__gg.G.potions.length >= 1", 2)
+        ps = potions_rc(page)
+        counts.add(len(ps)); kinds |= {k for *_, k in ps}
+        ok(len({(l, r) for l, r, _ in ps}) == len(ps) and all((l, r) in ahead for l, r, _ in ps), f'(each just ahead of a ghoul, one a tile {ps})')
+    ok(counts == {1, 2}, f'each brew is 1 or 2 potions, both seen {sorted(counts)}')
+    ok(kinds == {'bulky', 'speed', 'colour'}, f'random kinds: all three seen {sorted(kinds)}')
+    # every tile ahead taken: she places nothing on top
+    page.evaluate("() => { window.__gg.G.potions.length = 0; }")
+    page.evaluate("(a) => { const g = window.__gg, tp = g.TILE_P(); for (const [l, r] of a) g.placePotion(l, (r + 0.5) * tp, 'bulky', true); }", sorted(ahead))
+    page.evaluate("(i) => { window.__ms[i].brewT = 0.05; }", i); gsleep(page, 0.5)
+    ps = potions_rc(page)
+    ok(len(ps) == 3 and all(k == 'bulky' for *_, k in ps), f'the tiles ahead taken: no new potion {ps}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_ashcrone': check_ashcrone, 'check_covenwitch': check_covenwitch})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

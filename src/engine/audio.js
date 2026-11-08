@@ -313,6 +313,8 @@ export const SFX = {
       case 'chameleon': case 'rchameleon': S('chameleon', 0.45) || (tone(1500, 0.05, 'sine', 0.05, 2200), tone(1500, 0.05, 'sine', 0.04, 2200, 0.07)); break;
       case 'mirror': S('glassping', 0.5) || tone(3000, 0.08, 'sine', 0.05, 2400); break;
       case 'witch': S('witch', 0.5) || cackle(2, 640); break;
+      case (__RELEASE__ >= 7 ? 'ashcrone' : ''): S('witch', 0.45, { rate: 0.8 }) || cackle(2, 520); break;   // the Ash Crone: an older, lower cackle (Release 7)
+      case (__RELEASE__ >= 7 ? 'covenwitch' : ''): S('witch', 0.5, { rate: 1.05 }) || cackle(2, 680); break;   // the Blood Coven Witch (Release 7)
       default: S('thud', 0.4, { rate: 0.9 }) || thump(0.05, 180);
     }
   },
@@ -343,6 +345,8 @@ export const SFX = {
       case 'chameleon': case 'rchameleon': S('chameleon', 0.4, { rate: 1.3 }) || tone(1500, 0.04, 'sine', 0.05, 900); break;
       case 'mirror': S('glass', 0.6) || (noise(0.3, 0.25, 4000, 1, 0, 1500), [3000, 2500, 2000].forEach((f, i) => tone(f, 0.08, 'sine', 0.04, null, i * 0.05))); break;
       case 'witch': S('witchdie', 0.55) || (cackle(1, 700), noise(0.1, 0.16, 500, 1, 0.14)); break;
+      case (__RELEASE__ >= 7 ? 'ashcrone' : ''): S('witchdie', 0.55, { rate: 0.8 }) || (cackle(1, 560), noise(0.1, 0.16, 400, 1, 0.14)); S('cloth', 0.3, { delay: 0.15 }); break;   // her rags crumple into ash (Release 7)
+      case (__RELEASE__ >= 7 ? 'covenwitch' : ''): S('witchdie', 0.55, { rate: 1.05 }) || (cackle(1, 720), noise(0.1, 0.16, 500, 1, 0.14)); S('splash', 0.3, { delay: 0.12 }); break;   // and her cauldron spills (Release 7)
       default: S('pop', 0.5, { rate: 0.7 }) || tone(330, 0.18, 'triangle', 0.1, 700);
     }
   },
@@ -364,6 +368,8 @@ export const SFX = {
       case 'mirror:up': S('glassping', 0.4, { rate: 1.2 }) || tone(2400, 0.12, 'sine', 0.04, 3600); break;
       case 'mirror:reflect': S('glassping', 0.5, { rate: 0.8 }) || (tone(3200, 0.12, 'sine', 0.06, 2000), noise(0.06, 0.1, 5000, 2)); S('metallight', 0.3); break;
       case 'witch:hex': S('zap', 0.55, { rate: 0.9 }) || shimmer(); S('witch', 0.3, { delay: 0.12 }) || cackle(2, 620, 0.05, 0.04); break;
+      case (__RELEASE__ >= 7 ? 'ashcrone:zone' : ''): S('zap', 0.5, { rate: 0.7 }) || shimmer(); S('ghost', 0.3, { delay: 0.1 }); break;   // the Ash Crone raises an undead zone (Release 7)
+      case (__RELEASE__ >= 7 ? 'covenwitch:brew' : ''): S('bubbles', 0.5, { rate: 0.8 }) || noise(0.15, 0.2, 1200, 1, 0, 300); S('witch', 0.25, { delay: 0.12 }) || cackle(2, 660, 0.05, 0.04); break;   // the cauldron boils over (Release 7)
       case 'slime:split': S('slime', 0.5, { rate: 1.15 }) || (tone(500, 0.06, 'sine', 0.08, 800), tone(560, 0.06, 'sine', 0.08, 900, 0.09)); break;
       case (__RELEASE__ >= 4 ? 'husker:shed' : ''): S('cloth', 0.5, { rate: 1.4 }) || cloth(); S('whoosh', 0.3, { rate: 1.3, delay: 0.04 }) || noise(0.18, 0.16, 1500, 1, 0.04, 3000); break;   // the husk rips off and flies away (Release 4)
       case (__RELEASE__ >= 4 ? 'hayrick:toss' : ''): S('whoosh', 0.5, { rate: 0.85 }) || noise(0.25, 0.22, 900, 1.2, 0, 2400); S('metallight', 0.3, { delay: 0.35 }); break;   // the pitchfork flies, then bites into the pumpkin (Release 4)

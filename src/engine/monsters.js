@@ -111,6 +111,10 @@ export function spawnMonster(key, lane, minion, p, formArg){
     const spots = [[lane - 1, 0], [lane + 1, 0], [lane, 0.06], [lane, -0.06]];
     for (const [l, dp] of spots.slice(0, T.bats)) spawnMonster('bat', Math.max(0, Math.min(COLS - 1, l)), true, Math.max(-0.02, m.p + dp));
   }
+  if (__RELEASE__ >= 7 && type === 'ashcrone' && !minion){   // ringed by crows as the Vampire is by its bats: left, right, ahead and behind (engine/witchwood.js)
+    const spots = [[lane - 1, 0], [lane + 1, 0], [lane, 0.06], [lane, -0.06]];
+    for (const [l, dp] of spots.slice(0, T.crows)) spawnMonster('crow', Math.max(0, Math.min(COLS - 1, l)), true, Math.max(-0.02, m.p + dp));
+  }
   if (__RELEASE__ >= 5) initHollowMonster(m);   // Fogwalker 2's Mossbacks, the comet's cruise, the Mini Poltergeist's timers (engine/hollow.js)
   if (__RELEASE__ >= 7) initWitchwoodMonster(m);   // Nightmare Witchwood's monsters (engine/witchwood.js)
   if (__RELEASE__ >= 3 && type === 'boss' && kind === 'hollowking') initHollowKing(m);

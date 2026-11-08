@@ -20,14 +20,19 @@ export const isNetted = cell => !!(cell && cell.net);
 // The Crookneck Gourd's square (Task 7, Release 8) is not built yet: nothing is "in a Crookneck square" until `inCrookSquare` lands.
 const inCrookSquare = (r, c) => false;
 
-const free = (r, c) => r >= 0 && r < ROWS && c >= 0 && c < COLS && !graves[r][c] && !(grid[r][c] && grid[r][c].net);   // on the patch, not a grave, not netted
+const free = (r, c, xr = -1, xc = -1) => r >= 0 && r < ROWS && c >= 0 && c < COLS && !graves[r][c] && !(grid[r][c] && grid[r][c].net) && !(r === xr && c === xc);   // on the patch, not a grave, not netted (nor the cell about to be netted)
+const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+const hasFree = (r, c, xr, xc) => DIRS.some(([dr, dc]) => free(r + dr, c + dc, xr, xc));
 
-/** May a net land on (r, c)? A pumpkin (not a gourd, not in flight, not already netted, not in a Crookneck square) that keeps at least one free
- *  orthogonal neighbour once netted, so nets can never lock the patch. */
+/** May a net land on (r, c)? A pumpkin (not a gourd, not in flight, not already netted, not in a Crookneck square) such that, once it is netted,
+ *  it AND every already-netted orthogonal neighbour of it still have at least one free orthogonal neighbour (on the patch, not a grave, not
+ *  netted). So no netted pumpkin can ever be left boxed in by nets, however they land in turn. */
 export function canNet(r, c){
   const cell = r >= 0 && r < ROWS && c >= 0 && c < COLS ? grid[r][c] : null;
   if (!cell || cell.gourd || cell.fly > 0 || cell.net || inCrookSquare(r, c)) return false;
-  return free(r - 1, c) || free(r + 1, c) || free(r, c - 1) || free(r, c + 1);
+  if (!hasFree(r, c, r, c)) return false;
+  for (const [dr, dc] of DIRS){ const n = r + dr, m = c + dc; if (n >= 0 && n < ROWS && m >= 0 && m < COLS && grid[n][m] && grid[n][m].net && !hasFree(n, m, r, c)) return false; }
+  return true;
 }
 
 /** A random cell a net may land on, or null. Cells another net in flight is already headed for are left alone. */
@@ -91,7 +96,7 @@ export function netSnapshot(){
   return { cells, flying:(G.netsFlying || []).map(f => [f.x, f.y, f.kind, f.by, f.r, f.c, f.t]) };
 }
 
-/** Put the saved nets back: on the same cell when it holds a pumpkin, else on the nearest netable pumpkin (the continued patch is fresh). */
+/** Put the saved nets back (Task 5 re-tags each red net's `netBy` to the restored monster, ids being new on a continued night): on the same cell when it holds a pumpkin, else on the nearest netable pumpkin (the continued patch is fresh). */
 export function restoreNets(s){
   if (!s) return;
   for (const [r0, c0, kind, by] of s.cells || []){

@@ -270,6 +270,13 @@ def check_net_free_neighbour(browser, url):
     # nothing netable: null
     page.evaluate(NQ)
     ok(page.evaluate("() => window.__gg.pickNetCell()") is None, 'an empty patch has no cell to pick')
+    # a pocket of two pumpkins that are each other's only free neighbour: once one is netted the other is never picked (the pair would be locked)
+    page.evaluate(NQ)
+    page.evaluate("() => { const g = window.__gg, p = window.__put; p(3, 3, 0); p(3, 4, 1); for (const [r, c] of [[2, 3], [4, 3], [3, 2], [2, 4], [4, 4], [3, 5]]) g.graves[r][c] = true; }")
+    ok(page.evaluate("() => window.__gg.canNet(3, 3) && window.__gg.canNet(3, 4)") is True, 'a pocket pair: either may be netted first')
+    page.evaluate("() => { window.__gg.grid[3][3].net = 'net'; }")
+    picks = page.evaluate("() => { const g = window.__gg, out = new Set(); for (let i = 0; i < 100; i++){ const s = g.pickNetCell(); out.add(s ? s.join(',') : 'none'); } return [...out]; }")
+    ok(page.evaluate("() => window.__gg.canNet(3, 4)") is False and picks == ['none'], f'after one of a pocket pair is netted the other is never picked {picks}')
     # a net landing re-checks: its cell lost its last free neighbour in flight
     page.evaluate("() => { const g = window.__gg, p = window.__put; p(3, 3, 0); p(3, 4, 1); g.graves[2][3] = g.graves[4][3] = g.graves[3][2] = true; window.__thr = g.throwNet(50, 50, 'net', 3); }")
     page.evaluate("() => { const g = window.__gg; g.G.netsFlying.forEach(f => { f.r = 3; f.c = 3; }); g.grid[3][4].net = 'net'; }")

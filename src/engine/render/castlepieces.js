@@ -243,18 +243,22 @@ function towerBody(g, P){
 // ---------- baked clips ----------
 const BOX = { gate:{ x:-68, y:-104, w:136, h:146 }, tower:{ x:-64, y:-178, w:128, h:220 } };
 const CLIPS = {
-  gate:  { closed:{ n:6, fps:6, pose:t => ({ sway:t }) }, open:{ n:12, fps:12, once:true, pose:t => ({ open:t, sway:t }) }, shut:{ n:9, fps:16, once:true, pose:t => ({ shut:t, sway:t }) }, opened:{ n:6, fps:6, pose:t => ({ opened:true, sway:t }) }, crumble:{ n:14, fps:12, once:true, pose:t => ({ crumble:t }) } },
+  gate:  { closed:{ n:6, fps:6, pose:t => ({ sway:t }) }, open:{ n:12, fps:12, once:true, pose:t => ({ open:t, sway:t }) }, shut:{ n:9, fps:16, once:true, pose:t => ({ shut:t, sway:t }) }, crumble:{ n:14, fps:12, once:true, pose:t => ({ crumble:t }) } },
   tower: { idle:{ n:4, fps:4, pose:t => ({ hold:t, n:1 }) }, shoot:{ n:6, fps:14, once:true, pose:t => ({ draw:t, n:1, flick:t }) }, crumble:{ n:16, fps:12, once:true, pose:t => ({ crumble:t, n:1 }) } },
 };
 const DRAW = { gate:gatehouse, tower:tower };
-const bk = k => Math.min(2.5, Math.max(0.5, k || 1));
-const cache = new Map();
+// Pieces are blitted at logical size, so a bake scale above 1 only adds memory (a DPR-2 phone would pay ~30 MB for 141 frames): capped at MAXK.
+const MAXK = 1;
+const bk = k => Math.min(MAXK, Math.max(0.5, k || 1));
+let cache = new Map(), curK = 0;
 
 /** Frames and speed of a clip (the renderer picks the frame from the clip's time). */
 export const pieceClip = (kind, clip) => CLIPS[kind][clip];
 /** One baked frame of a piece: kind 'gate' | 'tower', a clip, frame i, damage state 0..2 (whole, cracked, broken; the crumble ignores it). */
 export function pieceFrame(kind, clip, i, dmg, k){
-  k = bk(k); const cl = CLIPS[kind][clip], f = Math.max(0, Math.min(cl.n - 1, i)), d = clip === 'crumble' ? 0 : dmg;
+  k = bk(k);
+  if (k !== curK){ cache = new Map(); pixels = 0; curK = k; }   // a resize: the frames of the old scale are dropped, not kept
+  const cl = CLIPS[kind][clip], f = Math.max(0, Math.min(cl.n - 1, i)), d = clip === 'crumble' ? 0 : dmg;
   const key = `${kind}:${clip}:${f}:${d}:${k}`;
   let sp = cache.get(key); if (sp) return sp;
   const b = BOX[kind], c = document.createElement('canvas'); c.width = Math.ceil(b.w * k); c.height = Math.ceil(b.h * k);
@@ -270,4 +274,5 @@ export function prebakeCastlePieces(){
   for (const kind of ['gate', 'tower']) for (const clip of Object.keys(CLIPS[kind])) for (let d = 0; d < (clip === 'crumble' ? 1 : 3); d++) for (let i = 0; i < CLIPS[kind][clip].n; i++) pieceFrame(kind, clip, i, d, K);
 }
 /** Frames baked so far (lazy or not), their canvas count and pixel total: the check reads it to prove nothing bakes during play. */
-export const pieceBakeStats = () => ({ bakes, canvases:cache.size, pixels });
+export const pieceBakeStats = () => ({ bakes, canvases:cache.size, pixels, k:curK });
+export const resetPieces = () => { cache = new Map(); pixels = 0; curK = 0; };

@@ -978,6 +978,7 @@ def check_castle_pieces_continue(browser, url):
     page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; window.__L0 = [L.castlesLayout, L.castles, L.gatePool]; L.castles = { n:3, hp:12 }; L.castlesLayout = [[2, 0.5, 'gate'], [4, 0.5, 'tower'], [6, 0.4]]; L.gatePool = ['ghoul']; }")
     nm4_start(page, 1); time.sleep(0.4); hold(page)
     page.evaluate("() => { const G = window.__gg.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; }")
+    ok(page.evaluate("() => window.__gg.pieceBakeStats().canvases") == 141, 'a night whose layout holds a gate or tower bakes all 141 frames at night start')
     c = page.evaluate("() => window.__gg.G.castles.map(c => [c.lane, c.kind, c.hp, c.maxHp])")
     ok(c == [[2, 'gate', 30, 30], [4, 'tower', 18, 18], [6, 'wall', 12, 12]], f'castlesLayout kinds build the pieces {c}')
     page.evaluate(STEP, [30, 0.1])
@@ -1007,9 +1008,12 @@ def check_castle_pieces_budget(browser, url):
     page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
     nm4_start(page, 1); time.sleep(1.0)
     page.evaluate(NQ); page.evaluate("() => { window.__gg.G.castles.length = 0; window.__gg.G.def.gatePool = null; }")
+    # N4-1 has no piece in its layout, so nothing is baked yet: bake as a night with pieces does, and time it
+    ok(page.evaluate("() => window.__gg.pieceBakeStats().canvases") == 0, 'a night with no gate, tower or Fallen Count bakes no pieces')
+    ms = page.evaluate("() => { const g = window.__gg; g.resetPieces(); const t0 = performance.now(); g.prebakeCastlePieces(); return performance.now() - t0; }")
     st0 = page.evaluate("() => window.__gg.pieceBakeStats()")
-    print(f'       bake cost: {st0["canvases"]} canvases, {st0["pixels"]} px ({st0["pixels"] * 4 / 1048576:.1f} MB)')
-    ok(st0['canvases'] >= 150, f'every clip of both kinds at every damage state is baked at night start ({st0["canvases"]})')
+    print(f'       bake cost: {st0["canvases"]} canvases, {st0["pixels"]} px ({st0["pixels"] * 4 / 1048576:.1f} MB) at K {st0["k"]}, {ms:.0f} ms')
+    ok(st0['canvases'] == 141 and st0['k'] <= 1, f'every clip of both kinds at every damage state is baked, at a scale capped at 1 ({st0["canvases"]} canvases, K {st0["k"]})')
     count = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 30) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 30, (c.fill || 0) / 30, (c.stroke || 0) / 30, ((c.createRadialGradient || 0) + (c.createLinearGradient || 0)) / 30]); } }; requestAnimationFrame(tick); })"
     base = page.evaluate(count)
     page.evaluate("() => { const g = window.__gg; g.G.castles.push(g.newCastle(2, 0.5, 'gate', 12), g.newCastle(4, 0.5, 'tower', 12)); }")

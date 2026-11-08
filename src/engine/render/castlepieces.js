@@ -243,7 +243,7 @@ function towerBody(g, P){
 // ---------- baked clips ----------
 const BOX = { gate:{ x:-68, y:-104, w:136, h:146 }, tower:{ x:-64, y:-178, w:128, h:220 } };
 const CLIPS = {
-  gate:  { closed:{ n:6, fps:6, pose:t => ({ sway:t }) }, open:{ n:12, fps:12, once:true, pose:t => ({ open:t, sway:t }) }, shut:{ n:9, fps:16, once:true, pose:t => ({ shut:t, sway:t }) }, crumble:{ n:14, fps:12, once:true, pose:t => ({ crumble:t }) } },
+  gate:  { closed:{ n:6, fps:6, pose:t => ({ sway:t }) }, open:{ n:12, fps:12, once:true, pose:t => ({ open:t, sway:t }) }, shut:{ n:9, fps:16, once:true, pose:t => ({ shut:t, sway:t }) }, opened:{ n:6, fps:6, pose:t => ({ opened:true, sway:t }) }, crumble:{ n:14, fps:12, once:true, pose:t => ({ crumble:t }) } },
   tower: { idle:{ n:4, fps:4, pose:t => ({ hold:t, n:1 }) }, shoot:{ n:6, fps:14, once:true, pose:t => ({ draw:t, n:1, flick:t }) }, crumble:{ n:16, fps:12, once:true, pose:t => ({ crumble:t, n:1 }) } },
 };
 const DRAW = { gate:gatehouse, tower:tower };
@@ -260,11 +260,14 @@ export function pieceFrame(kind, clip, i, dmg, k){
   const b = BOX[kind], c = document.createElement('canvas'); c.width = Math.ceil(b.w * k); c.height = Math.ceil(b.h * k);
   const g = c.getContext('2d'); g.scale(k, k); g.translate(-b.x, -b.y);
   DRAW[kind](g, { ...cl.pose(cl.once ? f / (cl.n - 1) : f / cl.n), dmg:d });
+  bakes++; pixels += c.width * c.height;
   sp = { c, w:b.w, h:b.h, ox:-b.x, oy:-b.y }; cache.set(key, sp); return sp;
 }
-/** Bake the frames a night with these pieces shows (while it loads, not on first sight): every clip whole, the damage loops cracked and broken. */
-export function prebakeCastlePieces(layout){
-  const kinds = [...new Set(layout.map(e => e[2]).filter(kd => kd === 'gate' || kd === 'tower')) ], k = K;
-  for (const kind of kinds) for (const clip of Object.keys(CLIPS[kind])) for (let i = 0; i < CLIPS[kind][clip].n; i++) pieceFrame(kind, clip, i, 0, k);
-  for (const kind of kinds) for (const d of [1, 2]) for (const clip of kind === 'gate' ? ['closed'] : ['idle']) for (let i = 0; i < CLIPS[kind][clip].n; i++) pieceFrame(kind, clip, i, d, k);
+let bakes = 0, pixels = 0;
+/** Bake every frame of both pieces at every damage state (a Nightmare Crumbling Keep night: the Fallen Count raises both kinds mid-fight). Nothing is
+ *  baked in the frame loop afterwards (pieceFrame's lazy path stays only as a fallback, e.g. after a canvas resize). */
+export function prebakeCastlePieces(){
+  for (const kind of ['gate', 'tower']) for (const clip of Object.keys(CLIPS[kind])) for (let d = 0; d < (clip === 'crumble' ? 1 : 3); d++) for (let i = 0; i < CLIPS[kind][clip].n; i++) pieceFrame(kind, clip, i, d, K);
 }
+/** Frames baked so far (lazy or not), their canvas count and pixel total: the check reads it to prove nothing bakes during play. */
+export const pieceBakeStats = () => ({ bakes, canvases:cache.size, pixels });

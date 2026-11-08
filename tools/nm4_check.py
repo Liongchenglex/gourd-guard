@@ -913,6 +913,11 @@ def check_gatehouse(browser, url):
     spawn_at(page, 'ghoul', 3, 0.3, hp=10, sp=0)
     page.evaluate(PR, [0, 3]); fl = page.evaluate(FLY)
     ok(fl and page.evaluate("() => window.__w.hp") < 30 and page.evaluate("() => window.__last.hp") == 10, f'a Green stops at the gate and hurts it, the ghoul behind is untouched (gate {page.evaluate("() => window.__w.hp")}/30)')
+    # Grey passes a Gatehouse: it deals its power and continues to the monster behind
+    spawn_at(page, 'ghoul', 3, 0.3, hp=10, sp=0)
+    g0 = page.evaluate("() => window.__w.hp")
+    page.evaluate(PR, [4, 3]); page.evaluate(FLY)
+    ok(page.evaluate("() => window.__w.hp") < g0 and page.evaluate("() => window.__last.hp") < 10, 'a Grey damages the Gatehouse and continues to the monster behind it')
     # an empty pool summons nothing
     page.evaluate(STEP, [100, 0.1])
     ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.fromGate).length") == 0, 'a level with no gatePool summons nothing')
@@ -958,7 +963,7 @@ def check_archer_tower(browser, url):
     page.evaluate(STEP, [1, 0.1])
     ok(page.evaluate("() => window.__gg.G.castles.filter(c => c.kind === 'tower').length") == 0, 'the tower is gone')
     shot = page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 80; i++){ g.update(0.1); if (g.G.arrows.some(a => a.lane === 4)) return i * 0.1; } return -1; }")
-    ok(0 <= shot <= 5.0, f'the archer shoots within its reload ({shot:.1f} s), no daze')
+    ok(0 <= shot <= a[5] + 0.2, f'the archer shoots by its set reload ({shot:.1f} s, shootT {a[5]:.1f}), no daze')
     page.evaluate(STEP, [20, 0.1])
     ok(page.evaluate("() => { const m = window.__gg.G.monsters.find(m => m.type === 'archer'); return !!m && m.p === 0.5; }"), 'and it holds there like any archer')
     ok(not errors, f'no page errors {errors[:2]}')
@@ -1002,12 +1007,20 @@ def check_castle_pieces_budget(browser, url):
     page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
     nm4_start(page, 1); time.sleep(1.0)
     page.evaluate(NQ); page.evaluate("() => { window.__gg.G.castles.length = 0; window.__gg.G.def.gatePool = null; }")
-    time.sleep(0.5)
+    st0 = page.evaluate("() => window.__gg.pieceBakeStats()")
+    print(f'       bake cost: {st0["canvases"]} canvases, {st0["pixels"]} px ({st0["pixels"] * 4 / 1048576:.1f} MB)')
+    ok(st0['canvases'] >= 150, f'every clip of both kinds at every damage state is baked at night start ({st0["canvases"]})')
     count = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 30) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 30, (c.fill || 0) / 30, (c.stroke || 0) / 30, ((c.createRadialGradient || 0) + (c.createLinearGradient || 0)) / 30]); } }; requestAnimationFrame(tick); })"
     base = page.evaluate(count)
     page.evaluate("() => { const g = window.__gg; g.G.castles.push(g.newCastle(2, 0.5, 'gate', 12), g.newCastle(4, 0.5, 'tower', 12)); }")
-    time.sleep(1.2)   # the frames bake on first sight
     lit = page.evaluate(count)
+    # play every clip and damage state: a shot, a summon, hits, a fall
+    page.evaluate("() => { const g = window.__gg; g.G.def.gatePool = ['ghoul']; const [a, b] = g.G.castles; a.t = 1.2; b.t = 0.3; }")
+    page.evaluate("() => { const g = window.__gg; for (const c of g.G.castles.slice()) g.damageCastle(c, c.maxHp * 0.4); }"); time.sleep(0.8)
+    page.evaluate("() => { const g = window.__gg; for (const c of g.G.castles.slice()) g.damageCastle(c, c.maxHp * 0.3); }"); time.sleep(0.8)
+    page.evaluate("() => { const g = window.__gg; for (const c of g.G.castles.slice()) g.damageCastle(c, 1000); }"); time.sleep(1.8)
+    st1 = page.evaluate("() => window.__gg.pieceBakeStats()")
+    ok(st1['bakes'] == st0['bakes'], f'nothing bakes during play: shots, summons, damage states and falls ({st0["bakes"]} -> {st1["bakes"]})')
     ok(lit[0] - base[0] <= 2.1, f'a Gatehouse and a Tower add at most 2 drawImage calls a frame ({base[0]:.1f} -> {lit[0]:.1f})')
     ok(lit[2] <= base[2] + 0.1 and lit[3] <= base[3] + 0.1, f'and no stroke or gradient (stroke {base[2]:.1f} -> {lit[2]:.1f}, gradients {base[3]:.1f} -> {lit[3]:.1f})')
     ok(lit[1] - base[1] <= 4.1, f'the health bars are the only fills ({base[1]:.1f} -> {lit[1]:.1f})')

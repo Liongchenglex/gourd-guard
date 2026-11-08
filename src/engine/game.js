@@ -32,8 +32,10 @@ import { prebakePotions } from './render/potion.js';
 import { prebakeWeather } from './render/weather.js';
 import { prebakeCastlePieces } from './render/castlepieces.js';
 import { updateNets, netSnapshot, restoreNets } from './nets.js';
-import { shieldSnapshot, restoreShields, carryCheck, newCastle, updateCastlePieces, siegeSnapshot } from './keep.js';
+import { shieldSnapshot, restoreShields, carryCheck, newCastle, updateCastlePieces, siegeSnapshot, countSnapshot } from './keep.js';
 import { prebakeNets } from './render/nets.js';
+import { prebakeCountFx } from './render/fx.js';
+import { K } from './render/canvas.js';
 import { startCoach, coachHolds, coachUpdate } from './coach.js';
 import { lightFire, lightRandomFires, fireAhead, burnPumpkin, updateFires } from './fire.js';
 import { updateCrowDives } from './nightmare.js';
@@ -167,6 +169,7 @@ export function startGame(mode, n, loadout, gourds){
   if (__RELEASE__ >= 5 && def && def.poison) prebakePoison();   // the fog and its warning strips, baked now
   if (__RELEASE__ >= 7 && def && def.nightmare) prebakePotions();   // the three bottles, their icons and the drink puffs (Release 7), baked now
   if (__RELEASE__ >= 8 && def && def.nightmare) prebakeNets();   // the rope net, the crimson one and the net in flight, baked now
+  if (__RELEASE__ >= 8 && def && def.boss === 'fallencount') prebakeCountFx(K);   // his lightning warning, bolt and blood spear, baked now (render/fx.js)
   if (__RELEASE__ >= 8 && def && (def.boss === 'fallencount' || (def.castlesLayout || []).some(e => e[2] === 'gate' || e[2] === 'tower'))) prebakeCastlePieces();   // the Gatehouse's and the Archer Tower's frames, baked now (render/castlepieces.js)
   if (__RELEASE__ >= 8 && def) prebakeWeather();   // fresh weather timers every night; the Keep storm's rain and bolts baked now (Release 8, render/weather.js)
   if (__RELEASE__ >= 5 && def && def.nightmare) prebakeRot();   // the rotten pumpkin (Release 5), baked now, not on first sight
@@ -581,7 +584,7 @@ export function continueState(){
     hk:__RELEASE__ >= 3 ? hkState() : null,   // the Hollow King's phase and his standing form (Release 3)
     jukebox:{ next:g.jbNext || 0, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null },   // next: drop points already used (one per jukebox dropped)   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
     ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0, bossPhase2:living.map(m => !!m.phase2), gourd:g.def.gourd ? gourdSnapshot() : null } : {}),
-    ...(__RELEASE__ >= 5 ? { bossMood:living.map(m => bossSnapshot(m) || (__RELEASE__ >= 8 ? siegeSnapshot(m) : null)), rot:rotSnapshot(), poison:poisonClock() } : {}),   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
+    ...(__RELEASE__ >= 5 ? { bossMood:living.map(m => bossSnapshot(m) || (__RELEASE__ >= 8 ? siegeSnapshot(m) || countSnapshot(m) : null)), rot:rotSnapshot(), poison:poisonClock() } : {}),   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
     ...(__RELEASE__ >= 7 ? { potions:potionSnapshot() } : {}),
     ...(__RELEASE__ >= 8 ? { nets:netSnapshot(), shields:shieldSnapshot() } : {}) };   // the nets on the patch and in flight (Release 8)   // the potions on the field, their clock and what the drinkers on the field had drunk (Release 7)
 }

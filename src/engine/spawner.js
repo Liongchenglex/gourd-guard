@@ -14,7 +14,7 @@ import { musicStart } from './audio.js';
 import { coachHolds } from './coach.js';
 import { dropFireMark } from './fire.js';
 import { restoreBoss } from './hollow.js';
-import { restoreSiege } from './keep.js';
+import { restoreSiege, restoreCount } from './keep.js';
 
 export function pickFrom(pool){
   let tot = 0; for (const [, w] of pool) tot += w;
@@ -90,7 +90,7 @@ export function storySpawn(dt){
   } else if (d.boss && !G.bossSpawned && (G.spawned >= Math.floor(d.total * 0.4) || (G.bossHp && G.bossHp.length))){   // a continued night brings its hurt boss straight back
     const b = spawnMonster('boss'); G.bossSpawned = true;
     if (d.bossHpMul) for (const m of b.twin ? [b, b.twin] : [b]){ m.maxHp = Math.max(1, Math.round(m.maxHp * d.bossHpMul)); m.hp = m.maxHp; }   // per-level boss health (tuning, 2026-10-01)
-    if (G.bossHp && G.bossHp.length){ const bs = b.twin ? [b, b.twin] : [b]; bs.forEach((m, i) => { const hp = G.bossHp[Math.min(i, G.bossHp.length - 1)]; m.hp = Math.min(m.maxHp, hp); }); if (__RELEASE__ >= 4 && G.bossPhase2){ bs.forEach((m, i) => { if (G.bossPhase2[i]) m.phase2 = true; }); G.bossPhase2 = null; } if (__RELEASE__ >= 5 && G.bossMood){ bs.forEach((m, i) => { restoreBoss(m, G.bossMood[i]); if (__RELEASE__ >= 8) restoreSiege(m, G.bossMood[i]); }); G.bossMood = null; } G.bossHp = null; }   // a continued night: the boss keeps the health it had left (a Strawlord its phase, a Lamplighter its mood and clocks, a Fallen Poltergeist its marks and reaper phase)
+    if (G.bossHp && G.bossHp.length){ const bs = b.twin ? [b, b.twin] : [b]; bs.forEach((m, i) => { const hp = G.bossHp[Math.min(i, G.bossHp.length - 1)]; m.hp = Math.min(m.maxHp, hp); }); if (__RELEASE__ >= 4 && G.bossPhase2){ bs.forEach((m, i) => { if (G.bossPhase2[i]) m.phase2 = true; }); G.bossPhase2 = null; } if (__RELEASE__ >= 5 && G.bossMood){ bs.forEach((m, i) => { restoreBoss(m, G.bossMood[i]); if (__RELEASE__ >= 8){ restoreSiege(m, G.bossMood[i]); restoreCount(m, G.bossMood[i]); } }); G.bossMood = null; } G.bossHp = null; }   // a continued night: the boss keeps the health it had left (a Strawlord its phase, a Lamplighter its mood and clocks, a Fallen Poltergeist its marks and reaper phase)
     banner(BOSS_NAMES[d.boss] || 'Boss', (BOSS_INTRO[d.boss] || {})[d.bossForm] || 'Monsters keep coming until it falls.', 3); SFX.bossAlert(); setTimeout(() => SFX.bossSfx(d.boss, 'arrive'), 900); setTimeout(() => { if (G && !G.over && G.mode === 'story') musicStart('boss'); }, 1600);   // stakes rise: the boss track takes over (owner)
   }
 }

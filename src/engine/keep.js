@@ -51,8 +51,9 @@ import { TYPES, PIECES } from '../data/monsters.js';
 import { SFX } from './audio.js';
 import { addFloat, ring, spark, chunk, castleY } from './combat.js';
 import { mS, mY, spawnMonster } from './monsters.js';
-import { throwNet, redNetsOf, clearNets } from './nets.js';
-import { CS, COLS, G, FENCE_Y, ROWS, grid, walls, LANE } from './state.js';
+import { throwNet, redNetsOf, clearNets, netCount } from './nets.js';
+import { resolveMatches } from './board.js';
+import { CS, COLS, G, FENCE_Y, GY, ROWS, grid, walls, LANE } from './state.js';
 import { rnd } from './util.js';
 import { damageWall } from './walls.js';
 
@@ -65,6 +66,7 @@ export function initKeepMonster(m){
   if (m.type === 'lobbercart'){ const T = TYPES.lobbercart; m.lobT = rnd(T.lobEvery[0], T.lobEvery[1]); m.lobbing = false; m.parked = false; }
   if (m.type === 'marshal'){ m.rallyT = TYPES.marshal.rallyEvery; m.rallying = false; m.rallyLeft = 0; }
   if (m.type === 'boss' && m.kind === 'siegetower') initSiege(m);
+  if (isCount(m)) initFallenCount(m);
   if (G.shieldCarry) adopt(m);   // a continued night: the first of a carried owner's type takes its red nets, the first Bride its veil
   if (m.type === 'glutton'){ const T = TYPES.glutton; m.netT = T.netEvery; for (let i = ownNets(m); i < T.netsAtSpawn; i++) throwNet(m.x, mY(m), 'red', m.id); }
   if (m.type === 'bride'){ m.veilT = m.veilT || 0; m.veil = m.veil || null; }
@@ -181,10 +183,10 @@ export function updateCastlePieces(dt){
     if (G.over) continue;
     w.t -= dt;
     if (w.kind === 'gate'){
-      if (w.t <= GATE_OPEN && !w.opening && G.def && G.def.gatePool && G.def.gatePool.length){ w.opening = true; w.anim = { clip:'open', t:0, dur:GATE_OPEN }; SFX.monsterAct('gate', 'open'); }
+      const pool = w.pool || (G.def && G.def.gatePool);   // the Fallen Count's own Gatehouse carries his pool
+      if (w.t <= GATE_OPEN && !w.opening && pool && pool.length){ w.opening = true; w.anim = { clip:'open', t:0, dur:GATE_OPEN }; SFX.monsterAct('gate', 'open'); }
       if (w.t <= 0){
         w.t = PIECES.gateEvery; w.opening = false;
-        const pool = G.def && G.def.gatePool;
         if (pool && pool.length){
           const m = spawnMonster(pool[Math.floor(Math.random() * pool.length)], w.lane, true, Math.min(0.97, w.p + 0.03));
           m.fromGate = true; w.anim = { clip:'shut', t:0, dur:GATE_SHUT }; SFX.monsterAct('gate', 'shut');
@@ -282,10 +284,169 @@ export function siegeFalls(m){
   if (n) addFloat('Nets fall away!', m.x, mY(m) - m.r - 60, '#e8d8b0', 17, 1.3);
 }
 
+// ---------- the Fallen Count (N4-16's boss) ----------
+// Numbers in data/monsters.js (`fallencount`). He walks like the Vampire Count to `hold` (monsters.js stops him exactly there) and never changes lane.
+//  - Blood nets: at each `netAt` mark of his health (1 = the start) he throws `netN` red nets of his own (`throwNet(…, 'red', m.id)`; over the cap or with
+//    nowhere to land they fizzle). While any lies on the patch or is in flight the shield door holds him (countClamped). A hit never carries him past the next
+//    mark: countGate (damage(), combat.js) caps it there, and the hit that reaches it throws the nets at once (fcCross), so the next hit is refused. `fcDone`
+//    is the marks passed; lazily on his first frame (or first hit) it is the marks strictly above his health, so a fresh Count throws his start nets then.
+//    A continued night carries `fcDone` (countSnapshot), so passed marks never replay; his red nets come back as his through the shield carry.
+//  - Blood trance (`tranceT`): he stands still in `m.healing` (the story Count's flag: damage() counts the hits, render picks the clip) and every
+//    `tranceTick` s heals `tranceHeal` per netted pumpkin on the patch (either kind), up to his full health. `tranceHits` hits break it and stun him `tranceStun` s.
+//    A hit the shield door refuses does not count (the door's rule). While he is stunned or in a trance his other clocks stand still.
+//  - Blood spear (`spearT`): flies down his lane (G.fcSpears, SPEAR_FLY s) and his fence loses `spearHit` of its full health, never its last 1.
+//  - Lightning (`boltT`): a random patch column is warned `boltWarn` s (G.fcBolt), then every pumpkin in it goes except netted ones and gourds; matches re-resolve.
+//  - Summons (`summonT`): one Storm Lancer in his lane (it charges at once) and one Bat Bride a lane beside, both just ahead of him, as extras (minions).
+//  - Castle pieces (`raiseT`, 0 at the start, so he raises them as he arrives): one Archer Tower and one Gatehouse (newCastle, the level's castle wall health
+//    or the story Count's `wallHp`), each only if none of his stands, in a lane that is not his and holds no other castle, at 0.45-0.7 of the field (the story
+//    Count's walls). His Gatehouse sends out `gatePool` (w.pool). When he falls his pieces crumble, his nets and bolt go (countFalls).
+export const SPEAR_FLY = 0.45, BOLT_FLASH = 0.35; const WALL_DUR = 6 / 8, BATS_DUR = 6 / 9;
+export const isCount = m => m.type === 'boss' && m.kind === 'fallencount';
+
+/** A freshly spawned Fallen Count: every clock full but the raise, marks not yet known (a continued night restores them after this, restoreCount). */
+export function initFallenCount(m){
+  const T = TYPES.fallencount;
+  m.fcDone = null; m.tranceT = T.tranceEvery; m.spearT = T.spearEvery; m.boltT = T.boltEvery; m.summonT = T.summonEvery; m.raiseT = 0; m.healTickT = 0;
+}
+/** What a continued night keeps of him: the marks passed and every clock. */
+export const countSnapshot = m => isCount(m) ? { fcDone:fcMarks(m), tranceT:m.tranceT, spearT:m.spearT, boltT:m.boltT, summonT:m.summonT, raiseT:m.raiseT } : null;
+export function restoreCount(m, s){
+  if (!s || !isCount(m) || s.fcDone == null) return;
+  m.fcDone = s.fcDone; m.tranceT = s.tranceT; m.spearT = s.spearT; m.boltT = s.boltT; m.summonT = s.summonT; m.raiseT = s.raiseT;
+}
+
+function fcMarks(m){
+  if (m.fcDone == null) m.fcDone = TYPES.fallencount.netAt.filter(a => m.hp < m.maxHp * a - 1e-6).length;
+  return m.fcDone;
+}
+/** The health a hit may not take him below: the next mark, or 0 past the last. */
+const fcFloor = m => { const A = TYPES.fallencount.netAt, d = fcMarks(m); return d < A.length ? A[d] * m.maxHp : 0; };
+/** A mark reached: pass it and throw that mark's blood nets. */
+export function fcCross(m){
+  if (!isCount(m)) return;
+  const T = TYPES.fallencount;
+  while (fcMarks(m) < T.netAt.length && m.hp <= fcFloor(m) + 1e-6){
+    m.hp = Math.min(m.hp, fcFloor(m)); m.fcDone++;
+    for (let i = 0; i < T.netN; i++) throwNet(m.x, mY(m) - 40, 'red', m.id);
+    m.anim = { clip:'wall', t:0, dur:WALL_DUR };
+    addFloat('Blood nets!', m.x, mY(m) - m.r * mS(m) - 40, '#ff4a5a', 18, 1.1); ring(m.x, mY(m) - 30, 54, 'rgba(220,20,50,.85)');
+    SFX.bossSfx('fallencount', 'nets');
+  }
+}
+/** damage() (combat.js), after the shield door: the most of `amt` that leaves him at his next mark or above. */
+export function countGate(m, amt){
+  if (!isCount(m)) return amt;
+  fcCross(m);   // a mark already reached (a hit before his first frame): its nets go now
+  if (countClamped(m)){ shieldPuff(m); return 0; }
+  return Math.min(amt, Math.max(0, m.hp - fcFloor(m)));
+}
+
+/** One frame of the Fallen Count (monsters.js, the walking branch). True while he stands still (stunned or in a trance). */
+export function updateFallenCount(m, dt){
+  const T = TYPES.fallencount;
+  m.x = m.tx;
+  fcCross(m);   // his first frame: the start nets
+  countFx(m, dt);
+  if (m.stunT > 0){ m.stunT -= dt; return true; }
+  if (m.healing){
+    if ((m.healTickT -= dt) <= 0){
+      m.healTickT += T.tranceTick;
+      const h = Math.min(T.tranceHeal * netCount(), m.maxHp - m.hp);
+      if (h > 0){ m.hp += h; addFloat('+' + Math.round(h), m.x, mY(m) - m.r * mS(m) - 30, '#ff6a6a', 15, 0.8); }
+      SFX.bossSfx('fallencount', 'pulse');
+    }
+    return true;
+  }
+  if (m.p < 0.05) return false;
+  if ((m.spearT -= dt) <= 0){
+    m.spearT = T.spearEvery;
+    (G.fcSpears || (G.fcSpears = [])).push({ lane:m.lane, p0:m.p, t:0 });
+    m.anim = { clip:'bats', t:0, dur:BATS_DUR }; SFX.bossSfx('fallencount', 'spear');
+  }
+  if ((m.boltT -= dt) <= 0){
+    m.boltT = T.boltEvery;
+    if (!G.fcBolt){ G.fcBolt = { c:Math.floor(Math.random() * COLS), warn:T.boltWarn, strike:0 }; m.anim = { clip:'wall', t:0, dur:WALL_DUR }; SFX.bossSfx('fallencount', 'warn'); }
+  }
+  if ((m.summonT -= dt) <= 0){
+    m.summonT = T.summonEvery;
+    const p = Math.min(0.97, m.p + 0.04), side = m.lane === 0 ? 1 : m.lane === COLS - 1 ? -1 : Math.random() < 0.5 ? -1 : 1;
+    const a = spawnMonster('lancer', m.lane, true, p), b = spawnMonster('bride', m.lane + side, true, p); a.fromCount = b.fromCount = true;
+    ring(m.x, mY(m), 50, 'rgba(200,30,60,.8)'); for (let i = 0; i < 10; i++) spark(m.x, mY(m) - 10, i % 2 ? '#c8d4ff' : '#b8202e', 120);
+    m.anim = { clip:'bats', t:0, dur:BATS_DUR }; SFX.bossSfx('fallencount', 'summon');
+  }
+  if ((m.raiseT -= dt) <= 0){ m.raiseT = T.raiseEvery; raisePieces(m); }
+  if ((m.tranceT -= dt) <= 0){   // the blood trance: he stands and heals until the player lands the hits
+    m.tranceT = T.tranceEvery; m.healing = true; m.healHits = T.tranceHits; m.healTickT = T.tranceTick;
+    addFloat(`Blood trance: hit it ×${m.healHits}`, m.x, mY(m) - m.r * mS(m) - 34, '#ff6a6a', 18, 1.4); SFX.bossSfx('fallencount', 'trance');
+    return true;
+  }
+  return false;
+}
+
+/** Raise an Archer Tower and a Gatehouse of his, each only if none of his stands. */
+function raisePieces(m){
+  const hp = G.def && G.def.castles ? G.def.castles.hp : TYPES.vampirecount.wallHp;
+  let raised = false;
+  for (const kind of ['tower', 'gate']){
+    if (G.castles.some(w => !w.dead && w.by === m.id && w.kind === kind)) continue;
+    const used = new Set(G.castles.filter(w => !w.dead).map(w => w.lane)), free = [...Array(COLS).keys()].filter(l => l !== m.lane && !used.has(l));
+    if (!free.length) continue;
+    const w = newCastle(free[Math.floor(Math.random() * free.length)], rnd(0.45, 0.7), kind, hp); w.by = m.id;
+    if (kind === 'gate') w.pool = TYPES.fallencount.gatePool;
+    G.castles.push(w); raised = true;
+    ring(LANE(w.lane), castleY(w), 44, 'rgba(200,180,220,.9)'); for (let i = 0; i < 8; i++) chunk(LANE(w.lane), castleY(w) + 10, '#8a8d96', 140);
+  }
+  if (raised){ m.anim = { clip:'wall', t:0, dur:WALL_DUR }; addFloat('The keep rises', m.x, mY(m) - m.r * mS(m) - 30, '#d8cfe0', 16, 1); SFX.bossSfx('fallencount', 'raise'); }
+}
+
+/** His spears in flight and the lightning on the patch (one frame; run from his update, so they freeze with the night). */
+function countFx(m, dt){
+  const sp = G.fcSpears;
+  if (sp && sp.length){
+    for (const s of sp){
+      s.t += dt; if (s.t < SPEAR_FLY) continue;
+      s.done = true;
+      const w = walls[s.lane]; if (!w || w.hp <= 0) continue;
+      const amt = Math.min(w.max * TYPES.fallencount.spearHit, w.hp - 1);   // never the last 1; a fence at 1 or less takes nothing
+      if (amt > 0) damageWall(s.lane, amt);
+      for (let i = 0; i < 10; i++){ chunk(LANE(s.lane) + rnd(-12, 12), FENCE_Y - 14, '#8a6440', 200); spark(LANE(s.lane), FENCE_Y - 12, i % 2 ? '#ff3040' : '#ffd0d0', 130); }
+      G.shake = Math.max(G.shake || 0, 0.4);
+    }
+    G.fcSpears = sp.filter(s => !s.done);
+  }
+  const b = G.fcBolt; if (!b) return;
+  if (b.warn > 0){
+    if ((b.warn -= dt) > 0) return;
+    b.warn = 0; b.strike = BOLT_FLASH; boltColumn(b.c);
+  } else if ((b.strike -= dt) <= 0) G.fcBolt = null;
+}
+/** The bolt lands on column c: every pumpkin in it goes but netted ones (either kind) and gourds; the board re-resolves its bunches. */
+function boltColumn(c){
+  const x = LANE(c);
+  for (let r = 0; r < ROWS; r++){
+    const cell = grid[r][c]; if (!cell || cell.gourd || cell.net) continue;
+    grid[r][c] = null;
+    const y = GY + r * CS + CS / 2;
+    for (let i = 0; i < 8; i++) chunk(x, y, '#f0a020', 200);
+    spark(x, y, '#e8f0ff', 140);
+  }
+  resolveMatches();
+  G.shake = Math.max(G.shake || 0, 0.7); SFX.bossSfx('fallencount', 'bolt');
+}
+
+/** kill() (combat.js): the Count is down, so his red nets, his bolt and spears, and his castle pieces go with him (our call, as the Siege Tower's nets). */
+export function countFalls(m){
+  if (!isCount(m)) return;
+  clearNets(cell => cell.netBy === m.id);
+  if (G.netsFlying) G.netsFlying = G.netsFlying.filter(f => f.by !== m.id);
+  G.fcBolt = null; G.fcSpears = [];
+  for (const w of G.castles) if (!w.dead && w.by === m.id){ w.dead = true; if (G.crumbles) G.crumbles.push({ kind:w.kind, lane:w.lane, p:w.p, t:0 }); }
+}
+
 // ---------- the Blood Glutton, the Bat Bride and the shield door ----------
 
-/** The Fallen Count's clamp (Task 9): a hit may not carry him past his next mark while shielded. Not built yet. */
-export const countClamped = m => false;
+/** The Fallen Count's clamp: true while any red net of his own lies on the patch or is in flight (his blood nets; the hit that reached a mark stopped there). */
+export const countClamped = m => isCount(m) && ownNets(m) > 0;
 
 /** The living Bride (on the field, not dead) whose veil is on m, or null. A `veilBy` whose Bride is gone, however she went, is cleared here. */
 function brideOf(m){

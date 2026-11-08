@@ -1170,11 +1170,316 @@ def check_siege_baked(browser, url):
     page.close()
 
 
+# ---------- Task 9: the Fallen Count (N4-16) ----------
+FC_UP = """() => { const g = window.__gg, G = g.G; G.monsters.length = 0; G.arrows.length = 0; G.netsFlying = []; G.castles.length = 0; G.fcSpears = []; G.fcBolt = null;
+  g.grid.forEach(r => r.forEach(c => { if (c) { c.net = null; c.netBy = null; } })); for (let l = 0; l < 7; l++) { const w = g.walls[l]; w.max = 40; w.hp = 40; }
+  G.def.boss = 'fallencount'; G.def.bossForm = 1; G.def.bossChest = 'normal'; G.def.gatePool = null; G.bossSpawned = true; G.bossDead = false;
+  const b = g.spawnMonster('boss'); b.sp = 0; b.p = 0.2; window.__b = b; return [b.kind, b.hp, b.maxHp, b.hold, b.form, b.id != null]; }"""
+FC_PARK = "() => { const b = window.__b; b.tranceT = b.spearT = b.boltT = b.summonT = b.raiseT = 999; }"
+FC_CLEAR = "() => { const g = window.__gg, id = window.__b.id; g.clearNets(c => c.netBy === id); g.G.netsFlying = g.G.netsFlying.filter(f => f.by !== id); }"
+FC_OWN = "() => { const g = window.__gg, id = window.__b.id; let n = 0; g.grid.forEach(r => r.forEach(c => { if (c && c.net === 'red' && c.netBy === id) n++; })); return n + g.G.netsFlying.filter(f => f.kind === 'red' && f.by === id).length; }"
+FC_DMG = "([a]) => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, a, '#fff'); return [+b.hp.toFixed(3), b.dead]; }"
+
+
+def fc_night(browser, url):
+    """A quiet N4 night, paused, every fence at 40, the patch full: then the Count is spawned at p 0.2 (FC_UP) and his first frame throws his start nets."""
+    page, errors = piece_night(browser, url)
+    page.evaluate(FILL)
+    return page, errors
+
+
+def fc_up(page, park=True, clear=True):
+    page.evaluate(FILL)
+    b = page.evaluate(FC_UP)
+    if park: page.evaluate(FC_PARK)
+    page.evaluate(STEP, [1, 0.02])   # his first frame: the start nets
+    if clear: page.evaluate(FC_CLEAR)
+    return b
+
+
+def check_fallen_count(browser, url):
+    if not R8:
+        page, errors = open_page(browser, url)
+        ok(page.evaluate("() => !window.__gg.TYPES.fallencount && !window.__gg.BOSS_NAMES.fallencount"), 'no Fallen Count below Release 8')
+        page.close(); return
+    page, errors = fc_night(browser, url)
+    d = page.evaluate("() => { const T = window.__gg.TYPES.fallencount; return T ? [T.boss, T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.hold, T.netAt, T.netN, T.tranceEvery, T.tranceHeal, T.tranceTick, T.tranceHits, T.spearEvery, +T.spearHit.toFixed(6), T.boltEvery, T.boltWarn, T.summonEvery, T.raiseEvery, T.gatePool, T.noItems] : null; }")
+    ok(d == [True, 48, 34, 0.03, 50, 0, 400, 6, 0.3, [1, 0.75, 0.5, 0.25], 3, 18, 1, 2, 3, 10, round(1 / 3, 6), 12, 1.5, 14, 20, ['knight', 'bulwark', 'vampire'], True], f'Fallen Count data {d}')
+    ok(page.evaluate("() => window.__gg.BOSS_NAMES.fallencount") == 'The Fallen Count', 'his name on screen is "The Fallen Count"')
+    intro = page.evaluate("() => window.__gg.BOSS_INTRO.fallencount || null")
+    ok(bool(intro) and 'net' in intro['1'].lower() and 'lightning' in intro['1'].lower(), f'he has a boss intro text {intro}')
+    b = fc_up(page)
+    ok(b == ['fallencount', 48, 48, 0.3, 1, True], f'he arrives with 48 health, holding at 0.3 {b}')
+    # walks like the Vampire Count to 0.3, never to the wall, and never changes lane (no bat scatter), with every clock running
+    page.evaluate("() => { const b = window.__b; b.sp = 0.5; b.p = 0.25; window.__L = b.lane; window.__W = window.__gg.walls[b.lane].hp; }")
+    lanes = page.evaluate("""() => { const g = window.__gg, b = window.__b, seen = new Set(); b.spearT = 999; b.boltT = 2; b.summonT = 4; b.raiseT = 0; b.tranceT = 30;
+      for (let i = 0; i < 600; i++){ g.update(0.1); seen.add(b.lane); for (const o of g.G.monsters) if (o !== b) o.dead = true; if (b.dead || g.G.over) break; } return [...seen]; }""")
+    pp = page.evaluate("() => [window.__b.p, window.__b.eating, window.__b.lane === window.__L]")
+    ok(abs(pp[0] - 0.3) < 1e-6 and not pp[1], f'he walks to 0.3 and holds there, never chewing {pp}')
+    ok(lanes == [page.evaluate("() => window.__L")] and not page.evaluate("() => window.__gg.G.over"), f'in 60 s with every clock running he never leaves his lane {lanes}')
+    # immune to freeze and knockback
+    fc_up(page)
+    page.evaluate("() => { const g = window.__gg, b = window.__b; const pr = { type:2, vis:2, lv:1, size:1, lane:b.lane, x:b.x, y:0, hit:new Set(), grp:{ spawned:true, small:false, kills:0 }, guar:false, trail:[] }; g.hitMonster(pr, b); }")
+    ok(page.evaluate("() => [window.__b.frozenT, window.__b.kb]") == [0, 0], 'an Ice hit does not freeze him and nothing knocks him back')
+    # the spear: every 10 s his fence loses a third of its full health, never its last 1
+    fc_up(page)
+    page.evaluate("() => { window.__b.spearT = 10; }")
+    page.evaluate(STEP, [95, 0.1])
+    w = page.evaluate("() => window.__gg.walls[window.__b.lane].hp")
+    ok(w == 40, f'no spear before 10 s ({w})')
+    page.evaluate(STEP, [15, 0.1])
+    w = page.evaluate("() => window.__gg.walls[window.__b.lane].hp")
+    ok(abs(w - (40 - 40 / 3)) < 1e-6, f'at 10 s the blood spear takes a third of his fence ({w:.3f} of 40)')
+    page.evaluate("() => { window.__gg.walls[window.__b.lane].hp = 5; window.__b.spearT = 0.01; }"); page.evaluate(STEP, [15, 0.1])
+    ok(page.evaluate("() => window.__gg.walls[window.__b.lane].hp") == 1, 'a fence at 5 is left at 1, never broken')
+    page.evaluate("() => { window.__b.spearT = 0.01; }"); page.evaluate(STEP, [15, 0.1])
+    ok(page.evaluate("() => window.__gg.walls[window.__b.lane].hp") == 1, 'a fence at 1 takes nothing')
+    ok(page.evaluate("() => window.__gg.G.fcSpears.length") == 0, 'the spears in flight are gone once they land')
+    # the bolt: every 12 s a column flashes for 1.5 s, then its pumpkins go
+    fc_up(page)
+    page.evaluate("() => { window.__b.boltT = 12; }")
+    page.evaluate(STEP, [115, 0.1])
+    ok(page.evaluate("() => window.__gg.G.fcBolt") is None, 'no lightning warning before 12 s')
+    page.evaluate(STEP, [6, 0.1])
+    bw = page.evaluate("() => { const f = window.__gg.G.fcBolt; return f ? [f.c >= 0 && f.c < 7, +f.warn.toFixed(2)] : null; }")
+    ok(bw is not None and bw[0] and 1.3 <= bw[1] <= 1.5, f'at 12 s a column is warned for 1.5 s {bw}')
+    page.evaluate("() => { window.__gg.G.fcBolt.c = 2; }")
+    page.evaluate(STEP, [12, 0.1])
+    ok(page.evaluate("() => window.__gg.grid.every(r => r[2] != null)"), 'the column still stands during the warning')
+    page.evaluate(STEP, [5, 0.1])
+    col = page.evaluate("() => window.__gg.grid.map(r => [r[2] == null, r[1] != null, r[3] != null])")
+    ok(all(c[0] for c in col) and all(c[1] and c[2] for c in col), f'then the bolt clears that column, and only it {col}')
+    # the summons: every 14 s one Storm Lancer and one Bat Bride, extras
+    fc_up(page)
+    page.evaluate("() => { window.__b.summonT = 14; }")
+    page.evaluate(STEP, [135, 0.1])
+    ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.fromCount).length") == 0, 'no summons before 14 s')
+    page.evaluate(STEP, [6, 0.1])
+    s = page.evaluate("() => window.__gg.G.monsters.filter(m => m.fromCount).map(m => [m.type, m.minion]).sort()")
+    ok(s == [['bride', True], ['lancer', True]], f'at 14 s one Storm Lancer and one Bat Bride, both extras {s}')
+    # castle pieces: one Archer Tower and one Gatehouse, each rebuilt every 20 s only if none of his stands; his gate sends out his pool
+    fc_up(page)
+    page.evaluate("() => { window.__b.raiseT = 0.01; }"); page.evaluate(STEP, [1, 0.05])
+    pcs = page.evaluate("() => window.__gg.G.castles.filter(w => !w.dead).map(w => [w.kind, w.by === window.__b.id, w.lane !== window.__b.lane]).sort()")
+    ok(pcs == [['gate', True, True], ['tower', True, True]], f'he raises one Gatehouse and one Archer Tower, outside his lane {pcs}')
+    rt = page.evaluate("() => +window.__b.raiseT.toFixed(2)")
+    ok(19 <= rt <= 20, f'and his raise clock restarts at 20 s ({rt})')
+    page.evaluate("() => { window.__b.raiseT = 0.01; }"); page.evaluate(STEP, [1, 0.05])
+    ok(page.evaluate("() => window.__gg.G.castles.filter(w => !w.dead).length") == 2, 'with both standing, a raise adds nothing')
+    page.evaluate("() => { const g = window.__gg; g.damageCastle(g.G.castles.find(w => w.kind === 'gate' && !w.dead), 1000); window.__b.raiseT = 0.01; }"); page.evaluate(STEP, [1, 0.05])
+    k = page.evaluate("() => window.__gg.G.castles.filter(w => !w.dead).map(w => w.kind).sort()")
+    ok(k == ['gate', 'tower'], f'a broken Gatehouse is rebuilt, the Tower is not doubled {k}')
+    pool = page.evaluate("""() => { const g = window.__gg, G = g.G, seen = new Set(), gate = G.castles.find(w => w.kind === 'gate' && !w.dead); window.__b.raiseT = 999;
+      for (let i = 0; i < 40; i++){ gate.t = 0.01; g.update(0.05); for (const m of G.monsters) if (m.fromGate && !m.dead){ seen.add(m.type); m.dead = true; } } return [...seen].sort(); }""")
+    ok(len(pool) >= 2 and all(t in ('knight', 'bulwark', 'vampire') for t in pool), f'his Gatehouse sends out Shield Knights, Bulwark Knights and Vampires {pool}')
+    # the trance clock
+    fc_up(page)
+    page.evaluate("() => { window.__b.tranceT = 18; }"); page.evaluate(STEP, [175, 0.1])
+    ok(page.evaluate("() => window.__b.healing") is False, 'no trance before 18 s')
+    page.evaluate(STEP, [6, 0.1])
+    ok(page.evaluate("() => [window.__b.healing, window.__b.healHits]") == [True, 3], 'at 18 s he falls into a blood trance that 3 hits break')
+    # death: one normal chest
+    fc_up(page)
+    c0 = page.evaluate("() => window.__gg.save.chests.length")
+    page.evaluate("() => { window.__b.fcDone = 4; }")
+    page.evaluate(FC_DMG, [99999]); time.sleep(0.2)
+    ch = page.evaluate("() => window.__gg.save.chests.slice(%d).map(c => c.kind)" % c0)
+    ok(ch == ['normal'] and page.evaluate("() => window.__gg.G.bossDead"), f'he gives one normal chest {ch}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fc_nets(browser, url):
+    """Blood nets: three red nets of his at the start and at 75%, 50% and 25%; no damage while any stands; a hit stops at the next mark."""
+    if not R8: return
+    page, errors = fc_night(browser, url)
+    page.evaluate(FC_UP); page.evaluate(FC_PARK)
+    page.evaluate(STEP, [1, 0.02])
+    ok(page.evaluate(FC_OWN) == 3, f'his first frame throws three red nets of his own ({page.evaluate(FC_OWN)})')
+    page.evaluate(STEP, [12, 0.1])
+    ok(page.evaluate("() => window.__gg.redNetsOf(window.__b)") == 3, 'all three land on the patch')
+    ok(page.evaluate(FC_DMG, [5]) == [48, False] and page.evaluate(NODMG), 'while they stand he takes no damage ("No damage")')
+    ok(page.evaluate("() => window.__gg.shieldedNow(window.__b)") is True, 'the shield door holds him')
+    page.evaluate("() => { let one = false; window.__gg.clearNets(c => c.netBy === window.__b.id && !one && (one = true)); }")
+    ok(page.evaluate(FC_DMG, [5]) == [48, False], 'two left: still no damage')
+    page.evaluate(FC_CLEAR)
+    page.evaluate("() => { window.__b.hp = 48 * 0.8; }")
+    ok(page.evaluate(FC_DMG, [20]) == [36, False], f'a 20 hit at 80% stops at the 75% mark')
+    ok(page.evaluate(FC_OWN) == 3, f'and he throws three more ({page.evaluate(FC_OWN)})')
+    ok(page.evaluate(FC_DMG, [5]) == [36, False], 'shielded again at once (nets in flight count)')
+    page.evaluate(FC_CLEAR)
+    ok(page.evaluate(FC_DMG, [5]) == [31, False], 'with those gone he takes damage')
+    ok(page.evaluate(FC_DMG, [100]) == [24, False] and page.evaluate(FC_OWN) == 3, 'a huge hit stops at 50% and raises three more')
+    page.evaluate(FC_CLEAR)
+    ok(page.evaluate(FC_DMG, [100]) == [12, False] and page.evaluate(FC_OWN) == 3, 'and at 25%')
+    page.evaluate(FC_CLEAR)
+    ok(page.evaluate(FC_DMG, [100])[1] is True, 'past the last mark a hit can kill him')
+    # a full patch: the nets fizzle, and damage goes on to the next mark (never a lock)
+    fc_up(page)
+    page.evaluate("() => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); }")
+    page.evaluate("() => { window.__b.hp = 40; }")
+    ok(page.evaluate(FC_DMG, [10]) == [36, False] and page.evaluate(FC_OWN) == 0, 'with nowhere to land, his nets fizzle at the mark')
+    ok(page.evaluate(FC_DMG, [5]) == [31, False], 'and the next hit goes on')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fc_trance(browser, url):
+    """The blood trance heals tranceHeal per netted pumpkin (either kind) every 2 s; 3 hits break it and stun him 2 s."""
+    if not R8: return
+    page, errors = fc_night(browser, url)
+    fc_up(page)
+    page.evaluate("() => { const g = window.__gg; [[0, 0], [0, 4], [2, 2], [4, 6]].forEach(([r, c]) => { g.grid[r][c].net = 'net'; }); window.__b.hp = 20; window.__b.fcDone = 4; window.__b.tranceT = 0.01; }")
+    page.evaluate(STEP, [1, 0.02])
+    ok(page.evaluate("() => window.__b.healing") is True, 'he is in his trance')
+    page.evaluate(STEP, [95, 0.02])   # 1.9 s
+    ok(page.evaluate("() => window.__b.hp") == 20, 'no heal before 2 s')
+    page.evaluate(STEP, [10, 0.02])   # 2.1 s
+    ok(page.evaluate("() => window.__b.hp") == 24, f'with 4 nets on the patch he heals 4 at 2 s ({page.evaluate("() => window.__b.hp")})')
+    page.evaluate("() => { window.__gg.grid[1][1].net = 'net'; }")
+    page.evaluate(STEP, [100, 0.02])   # 4.1 s
+    ok(page.evaluate("() => window.__b.hp") == 29, f'with 5, 5 at the next tick ({page.evaluate("() => window.__b.hp")})')
+    ok(page.evaluate("() => window.__b.p") == 0.2, 'he stands still in the trance')
+    page.evaluate(FC_DMG, [1]); page.evaluate(FC_DMG, [1])
+    ok(page.evaluate("() => [window.__b.healing, window.__b.healHits]") == [True, 1], 'two hits: one more to go')
+    page.evaluate(FC_DMG, [1])
+    st = page.evaluate("() => [window.__b.healing, +window.__b.stunT.toFixed(2), window.__b.hp]")
+    ok(st == [False, 2, 26], f'the third hit breaks it and stuns him 2 s {st}')
+    page.evaluate("() => { window.__b.spearT = 0.5; }")
+    w0 = page.evaluate("() => window.__gg.walls[window.__b.lane].hp")
+    page.evaluate(STEP, [95, 0.02])   # 1.9 s
+    ok(page.evaluate("() => window.__gg.walls[window.__b.lane].hp") == w0 and page.evaluate("() => window.__b.stunT") > 0, 'stunned, his clocks stand still (no spear)')
+    page.evaluate(STEP, [60, 0.02])
+    ok(page.evaluate("() => window.__b.stunT") <= 0, 'the stun wears off after 2 s')
+    # max health caps the heal
+    fc_up(page)
+    page.evaluate("() => { const g = window.__gg; for (let c = 0; c < 7; c++) g.grid[0][c].net = 'net'; window.__b.hp = 46; window.__b.fcDone = 4; window.__b.tranceT = 0.01; }")
+    page.evaluate(STEP, [110, 0.02])
+    ok(page.evaluate("() => window.__b.hp") == 48, 'the heal stops at his full health')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fc_bolt(browser, url):
+    """The bolt removes every pumpkin in its column except netted ones (either kind) and gourds; matches re-resolve."""
+    if not R8: return
+    page, errors = fc_night(browser, url)
+    fc_up(page)
+    page.evaluate("""() => { const g = window.__gg, b = window.__b; g.grid[0][4].net = 'net'; g.grid[2][4].net = 'red'; g.grid[2][4].netBy = b.id;
+      g.grid[4][4] = Object.assign(g.newCell(0), { gourd:'grave' }); window.__keep = [g.grid[0][4], g.grid[2][4], g.grid[4][4]]; b.boltT = 0.01; }""")
+    page.evaluate(STEP, [1, 0.02])
+    page.evaluate("() => { window.__gg.G.fcBolt.c = 4; }")
+    page.evaluate(STEP, [80, 0.02])
+    r = page.evaluate("() => { const g = window.__gg; return g.grid.map((row, i) => row[4] === null ? null : window.__keep.indexOf(row[4])); }")
+    ok(r == [0, None, 1, None, 2], f'netted pumpkins (both kinds) and the gourd survive the bolt, the rest go {r}')
+    ok(page.evaluate("() => window.__gg.G.fcBolt") is None or page.evaluate("() => window.__gg.G.fcBolt.warn") <= 0, 'the warning is over')
+    # matches re-resolve: three in a row across the cleared column are no longer a bunch once the middle goes
+    fc_up(page)
+    page.evaluate("""() => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); const p = window.__put; p(4, 2, 0); p(4, 3, 0); p(4, 4, 0); g.resolveMatches(); window.__lit0 = g.grid[4][2].lit; window.__b.boltT = 0.01; }""")
+    page.evaluate(STEP, [1, 0.02]); page.evaluate("() => { window.__gg.G.fcBolt.c = 3; }"); page.evaluate(STEP, [80, 0.02])
+    lit = page.evaluate("() => [window.__lit0, window.__gg.grid[4][3] === null, window.__gg.grid[4][2].lit]")
+    ok(lit == [True, True, False], f'a bunch broken by the bolt goes dark {lit}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fc_veiled(browser, url):
+    """A Bat Bride's veil on him blocks all damage until she dies."""
+    if not R8: return
+    page, errors = fc_night(browser, url)
+    fc_up(page)
+    page.evaluate("() => { const g = window.__gg, b = window.__b; const r = g.spawnMonster('bride', Math.max(0, b.lane - 1), true, b.p + 0.02); r.sp = 0; r.veilT = 0; window.__R = r; }")
+    page.evaluate(STEP, [2, 0.05])
+    ok(page.evaluate("() => window.__b.veilBy === window.__R.id && window.__gg.veiledNow(window.__b)"), 'the Bride veils him')
+    ok(page.evaluate(FC_DMG, [5]) == [48, False], 'veiled, he takes no damage')
+    page.evaluate("() => { const g = window.__gg, r = window.__R; r.lastHit = 0; g.damage(r, 999, '#fff'); }")
+    ok(page.evaluate(FC_DMG, [5]) == [43, False], 'with the Bride dead he takes damage again')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fallen_count_continue(browser, url):
+    """A continued night brings him back with his health, the marks already passed (no replayed nets), his own red nets and his clocks."""
+    if not R8: return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; window.__L0 = [L.boss, L.bossForm, L.bossChest]; L.boss = 'fallencount'; L.bossForm = 1; L.bossChest = 'normal'; }")
+    nm4_start(page, 1); time.sleep(0.4); hold(page)
+    page.evaluate("() => { const G = window.__gg.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.idle = -1e9; G.hint = null; }")
+    page.evaluate("() => { const g = window.__gg, G = g.G; G.bossSpawned = true; const b = g.spawnMonster('boss'); b.sp = 0; b.p = 0.2; window.__b = b; }")
+    page.evaluate(FC_PARK); page.evaluate(STEP, [1, 0.02]); page.evaluate(FC_CLEAR)
+    page.evaluate("() => { window.__b.hp = 38; }"); page.evaluate(FC_DMG, [10])   # stops at 36: the 75% mark, three more nets
+    page.evaluate("() => { const b = window.__b; b.spearT = 5; b.boltT = 6; b.summonT = 7; b.raiseT = 8; b.tranceT = 9; }")
+    page.evaluate(STEP, [15, 0.1])
+    before = page.evaluate("() => { const b = window.__b; return [b.hp, b.fcDone, +b.spearT.toFixed(3), +b.boltT.toFixed(3), +b.summonT.toFixed(3), +b.raiseT.toFixed(3), +b.tranceT.toFixed(3)]; }")
+    ok(before[:2] == [36, 2] and page.evaluate("() => window.__gg.redNetsOf(window.__b)") == 3, f'(at the 75% mark, his three nets down {before})')
+    page.evaluate("() => { const g = window.__gg; g.setState('play'); const c = g.continueState(); g.continueNight(c); g.setState('pause'); }")
+    page.evaluate(STEP, [5, 0.02])
+    after = page.evaluate("() => { const b = window.__gg.G.monsters.find(m => m.type === 'boss' && !m.dead); window.__b = b; return b ? [b.hp, b.fcDone, +b.spearT.toFixed(3), +b.boltT.toFixed(3), +b.summonT.toFixed(3), +b.raiseT.toFixed(3), +b.tranceT.toFixed(3), b.kind] : null; }")
+    page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; [L.boss, L.bossForm, L.bossChest] = window.__L0; }")
+    ok(after is not None and after[:7] == before and after[7] == 'fallencount', f'he comes back with his health, marks passed and clocks as they were {before} -> {after}')
+    ok(page.evaluate(FC_OWN) == 3, f'his three red nets are his again, none replayed ({page.evaluate(FC_OWN)})')
+    ok(page.evaluate(FC_DMG, [5])[0] == 36, 'and they still shield him')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fallen_count_baked(browser, url):
+    """His frames (fallen look only, own key) and his minions are baked when the night starts; under 12 MB at bake scale 2.5."""
+    if not R8: return
+    page, errors = open_page(browser, url)
+    C = page.evaluate("() => { const C = window.__gg.CHARS.fallencount; return C ? [Object.keys(C.clips).sort(), !!C.variants, C.maxK] : null; }")
+    ok(C is not None and C[0] == ['bats', 'stun', 'trance', 'walk', 'wall'] and not C[1] and C[2], f'the Fallen Count bakes walk, trance, stun, wall and bats, one look, maxK capped {C}')
+    ok(page.evaluate("() => window.__gg.CHARS.vampirecount.box.w") == 280, "the story Count's box is unchanged")
+    page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; window.__L0 = [L.boss, L.bossForm, L.bossChest]; L.boss = 'fallencount'; L.bossForm = 1; L.bossChest = 'normal'; }")
+    page.evaluate("() => window.__gg.setBakeScale(2.5)")
+    t0 = time.time(); nm4_start(page, 1); dt = time.time() - t0
+    page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; [L.boss, L.bossForm, L.bossChest] = window.__L0; }")
+    ok(page.evaluate("() => window.__gg.isBaked('fallencount')"), 'starting his night bakes the Fallen Count')
+    ok(all(page.evaluate(f"() => window.__gg.isBaked('{k}')") for k in ('lancer', 'bride', 'knight', 'bulwark', 'vampire', 'archer')), 'and the monsters he brings')
+    mb = page.evaluate("() => window.__gg.atlasBytes('fallencount') / 1e6")
+    ok(mb < 12, f"his frames take {mb:.1f} MB at bake scale 2.5 (limit 12)")
+    ok(dt < 3, f'the night opens in {dt:.1f} s')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CC_INIT = """(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+  for (const k of ['drawImage', 'fill', 'stroke', 'createRadialGradient', 'createLinearGradient']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; }
+  const d = Object.getOwnPropertyDescriptor(P, 'shadowBlur'); Object.defineProperty(P, 'shadowBlur', { get(){ return d.get.call(this); }, set(v){ if (window.__ccOn && v && this.canvas && this.canvas.id === 'cv') window.__cc.shadowBlur = (window.__cc.shadowBlur || 0) + 1; d.set.call(this, v); } }); })();"""
+CC10 = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 10) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 10, (c.stroke || 0) / 10, ((c.createRadialGradient || 0) + (c.createLinearGradient || 0)) / 10, c.shadowBlur || 0]); } }; requestAnimationFrame(tick); })"
+
+
+def check_fc_budget(browser, url):
+    """The lightning warning, the bolt and the blood spear are baked sprites: a few drawImage calls a frame, no stroke, gradient or shadowBlur."""
+    if not R8: return
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script(CC_INIT)
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    nm4_start(page, 1); time.sleep(0.6); hold(page)
+    page.evaluate(NQ); page.evaluate(FILL)
+    fc_up(page)
+    page.evaluate("() => { window.__gg.G.floats.length = 0; window.__gg.G.parts.length = 0; }")
+    time.sleep(0.3); base = page.evaluate(CC10)
+    page.evaluate("() => { window.__b.boltT = 0.01; }"); page.evaluate(STEP, [1, 0.02]); page.evaluate("() => { window.__gg.G.floats.length = 0; }")
+    warn = page.evaluate(CC10)
+    page.evaluate("() => { window.__gg.G.fcBolt.warn = 0.01; }"); page.evaluate(STEP, [1, 0.02]); page.evaluate("() => { const G = window.__gg.G; G.floats.length = 0; G.parts.length = 0; }")
+    strike = page.evaluate(CC10) if page.evaluate("() => !!window.__gg.G.fcBolt && window.__gg.G.fcBolt.strike > 0") else None
+    page.evaluate("() => { window.__gg.G.fcBolt = null; window.__b.spearT = 0.01; }"); page.evaluate(STEP, [2, 0.02])
+    spear = page.evaluate(CC10) if page.evaluate("() => window.__gg.G.fcSpears.length > 0") else None
+    for name, c in (('lightning warning', warn), ('bolt', strike), ('blood spear', spear)):
+        ok(c is not None and c[0] - base[0] <= 3 and c[1] <= base[1] + 0.1 and c[2] <= base[2] + 0.1 and c[3] == 0, f'the {name} is baked: [drawImage, stroke, gradients, shadowBlur] {base} -> {c}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 CHECKS = {'check_r8_absent': check_r8_absent, 'check_n4_track': check_n4_track, 'check_n4_weather': check_n4_weather, 'check_n4_book': check_n4_book,
           'check_net_rules': check_net_rules, 'check_net_cap': check_net_cap, 'check_net_free_neighbour': check_net_free_neighbour, 'check_net_hint_wind': check_net_hint_wind, 'check_net_continue': check_net_continue, 'check_net_budget': check_net_budget, 'check_lobber': check_lobber, 'check_lobber_continue': check_lobber_continue, 'check_lancer': check_lancer, 'check_lancer_edges': check_lancer_edges, 'check_lancer_ride': check_lancer_ride, 'check_marshal': check_marshal, 'check_marshal_continue': check_marshal_continue, 'check_marshal_budget': check_marshal_budget,
           'check_glutton': check_glutton, 'check_bride': check_bride, 'check_glutton_bride': check_glutton_bride, 'check_shield_all_sources': check_shield_all_sources, 'check_shield_continue': check_shield_continue, 'check_veil_budget': check_veil_budget,
           'check_gatehouse': check_gatehouse, 'check_archer_tower': check_archer_tower, 'check_castle_pieces_continue': check_castle_pieces_continue, 'check_castle_pieces_budget': check_castle_pieces_budget,
-          'check_siege': check_siege, 'check_siege_form2': check_siege_form2, 'check_siege_continue': check_siege_continue, 'check_siege_baked': check_siege_baked}
+          'check_siege': check_siege, 'check_siege_form2': check_siege_form2, 'check_siege_continue': check_siege_continue, 'check_siege_baked': check_siege_baked,
+          'check_fallen_count': check_fallen_count, 'check_fc_nets': check_fc_nets, 'check_fc_trance': check_fc_trance, 'check_fc_bolt': check_fc_bolt, 'check_fc_veiled': check_fc_veiled, 'check_fallen_count_continue': check_fallen_count_continue, 'check_fallen_count_baked': check_fallen_count_baked, 'check_fc_budget': check_fc_budget}
 
 
 def main():

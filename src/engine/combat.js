@@ -20,7 +20,7 @@ import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
 import { reaperFalls, cometBreaks, fpAfterHit, fpReaperHit } from './hollow.js';
 import { witchwoodFalls } from './witchwood.js';
-import { shieldedNow, shieldPuff, keepFalls, pieceFalls, knockArcher, archersGuard, siegeFalls } from './keep.js';
+import { shieldedNow, shieldPuff, keepFalls, pieceFalls, knockArcher, archersGuard, siegeFalls, countGate, fcCross, countFalls } from './keep.js';
 import { inWartSquare, isProtected } from './gourd.js';
 import { ROTTEN, ROT_FX, hitRule } from './rot.js';
 
@@ -92,8 +92,9 @@ export function damage(m, amt, color, small, big){
   m.calmT = 0;   // vampires and the Count stop regenerating for a while after any hit
   if (m.healing){   // Vampire Count trance: count the hit
     m.healHits--;
-    if (m.healHits <= 0){ m.healing = false; m.stunT = TYPES.vampirecount.stun; addFloat('Trance broken!', m.x, mY(m) - m.r - 34, '#ffd35a', 20, 1.2); ring(m.x, mY(m), 60, 'rgba(255,211,90,.9)'); SFX.bossSfx('vampirecount', 'break'); }
-    else { addFloat(`×${m.healHits} more`, m.x, mY(m) - m.r - 34, '#ff6a6a', 16, 0.8); SFX.bossSfx('vampirecount', 'tick'); }
+    const fc = __RELEASE__ >= 8 && m.kind === 'fallencount';   // the Fallen Count's blood trance works the same, with his own stun (engine/keep.js)
+    if (m.healHits <= 0){ m.healing = false; m.stunT = fc ? TYPES.fallencount.tranceStun : TYPES.vampirecount.stun; addFloat('Trance broken!', m.x, mY(m) - m.r - 34, '#ffd35a', 20, 1.2); ring(m.x, mY(m), 60, 'rgba(255,211,90,.9)'); SFX.bossSfx(fc ? 'fallencount' : 'vampirecount', 'break'); }
+    else { addFloat(`×${m.healHits} more`, m.x, mY(m) - m.r - 34, '#ff6a6a', 16, 0.8); SFX.bossSfx(fc ? 'fallencount' : 'vampirecount', 'tick'); }
   }
   if (m.carrier){   // wisp rider: the first hit breaks the carrier instead of hurting the rider
     if (__RELEASE__ >= 5 && m.type === 'comet'){ cometBreaks(m); return; }   // Wisp Rider 2: a plain Wisp and a walking Imp (engine/hollow.js)
@@ -103,10 +104,12 @@ export function damage(m, amt, color, small, big){
     return;
   }
   if (__RELEASE__ >= 3 && m.kind === 'hollowking' && !m.hkClone){ amt = hkGate(m, amt); if (amt <= 0) return; }   // immune while his form stands
+  if (__RELEASE__ >= 8 && m.kind === 'fallencount'){ amt = countGate(m, amt); if (amt <= 0) return; }   // a hit stops at his next blood-net mark (engine/keep.js)
   m.hp -= amt; m.flash = 0.1;
   addFloat(fmt(amt), m.x + rnd(-8, 8), mY(m) - m.r * mS(m) - 14, color || '#fff', small ? 16 : big ? 30 : 23, big ? 1 : 0.8);   // big: a Wartling hit (Release 7)
   if (m.hp <= 0.001) kill(m);
   else if (__RELEASE__ >= 3 && m.kind === 'hollowking') hkAfterHit(m);
+  else if (__RELEASE__ >= 8 && m.kind === 'fallencount') fcCross(m);   // a blood-net mark reached: three red nets at once, so the next hit is refused (engine/keep.js)
   else if (__RELEASE__ >= 5 && m.kind === 'fallenpoltergeist') fpAfterHit(m);   // a reaper mark crossed: its phase starts on this hit (engine/hollow.js)
 }
 
@@ -203,6 +206,7 @@ export function kill(m){
   if (__RELEASE__ >= 4 && m.type === 'rooster') lightFire(m.lane, m.p);   // a Cinder Rooster leaves a fire tile where it falls, whatever killed it
   if (__RELEASE__ >= 5 && m.type === 'reaper') reaperFalls(m);   // a crow bursts out where the Reaper fell (engine/hollow.js)
   if (__RELEASE__ >= 7) witchwoodFalls(m);   // the Flask Bearer's potion, the Cauldron Toad's burst (engine/witchwood.js)
+  if (__RELEASE__ >= 8) countFalls(m);   // the Fallen Count's nets, bolt, spears and castle pieces go with him (engine/keep.js)
   if (__RELEASE__ >= 8) siegeFalls(m);   // the Siege Tower's own nets go with it (engine/keep.js)
   if (__RELEASE__ >= 8) keepFalls(m);   // a Glutton's red nets turn ordinary, a Bride's veil comes off (engine/keep.js)
   if (__RELEASE__ >= 4 && m.type === 'casketjack') dropCoffin(m);   // Casket Jack falls into a field coffin with one last mummy in it (engine/nightmare.js)

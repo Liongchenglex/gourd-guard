@@ -15,6 +15,7 @@
 import { E, PL, RR, S, SM, SO, ell, pal, rgba, rng } from '../paint.js';
 import { TAU } from '../../util.js';
 import { archer, knight } from './w4.js';
+import { FALLENCOUNT } from './fallencount.js';
 
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 const ease = t => t * t * (3 - 2 * t);
@@ -827,6 +828,7 @@ const ST_CLIPS = { walk:{ n:6, fps:5, pose:t => ({ roll:t }) }, volley:{ n:8, fp
   break:{ n:10, fps:10, once:true, pose:t => ({ brk:t }) } };
 const pick = (o, ...k) => Object.fromEntries(k.map(n => [n, o[n]]));
 export const KEEP = {
+  ...FALLENCOUNT,   // the Fallen Count, N4-16's boss (fallencount.js)
   // The Siege Tower: r 34 boss footprint at the archive's scale .46 and box (the knight walks down the lowered ramp). Three archer looks, each baked with only
   // the clips it can show (an archer is knocked off INTO the look it ends in; a0 never volleys), at a bake scale capped at 1.2: 136 frames of about 97 x 160
   // px, 8-9 MB at the worst bake scale (check_siege_baked < 10 MB). `walk` must exist (a missing clip falls back to it).

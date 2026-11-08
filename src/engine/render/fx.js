@@ -531,3 +531,38 @@ export function veilSprite(k){ k = bakeK(k); return bake(`veil:${k}`, 124, 112, 
   g.fillStyle = '#e0203a'; g.beginPath(); g.ellipse(0, -70, 4, 4, 0, 0, TAU); g.fill(); g.fillStyle = 'rgba(255,230,235,.9)'; g.beginPath(); g.ellipse(-1.2, -71.4, 1.2, 1.2, 0, 0, TAU); g.fill();   // the Bride's blood-red gem pinning it
 }); }
 
+
+// ---------- the Fallen Count (Release 8): the lightning column warning, the bolt, the blood spear; each baked once, one drawImage a frame ----------
+// Baked in fixed drawing units and stretched onto the patch at draw time (render/draw.js drawCountFx), so a resize never rebakes them.
+export const FC_COL = { w:100, h:500 }, FC_BOLT = { w:160, h:620 }, FC_SPEAR = { w:28, h:110 };
+/** A patch column under a lightning warning: a pale storm-blue wash with crimson-lit edges and chevrons pointing down. */
+export function countWarnSprite(k){ k = bakeK(k); return bake(`fcwarn:${k}`, FC_COL.w, FC_COL.h, 0, 0, k, g => {
+  const { w, h } = FC_COL;
+  let gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, 'rgba(200,212,255,.55)'); gr.addColorStop(.18, 'rgba(160,180,255,.22)'); gr.addColorStop(.82, 'rgba(160,180,255,.22)'); gr.addColorStop(1, 'rgba(200,212,255,.55)');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(255,60,80,.85)'; g.lineWidth = 3; g.setLineDash([14, 10]); g.strokeRect(2, 2, w - 4, h - 4); g.setLineDash([]);
+  g.strokeStyle = 'rgba(240,246,255,.75)'; g.lineWidth = 5; g.lineCap = 'round'; g.lineJoin = 'round';
+  for (let y = 40; y < h - 20; y += 90){ g.beginPath(); g.moveTo(w * .3, y); g.lineTo(w * .5, y + 22); g.lineTo(w * .7, y); g.stroke(); }
+}); }
+/** The bolt itself: a forked white-blue stroke with a wide glow, top to bottom of the column. */
+export function countBoltSprite(k){ k = bakeK(k); return bake(`fcbolt:${k}`, FC_BOLT.w, FC_BOLT.h, 0, 0, k, g => {
+  const { w, h } = FC_BOLT, R = rng(77), pts = [[w / 2, 0]];
+  for (let i = 1; i < 12; i++) pts.push([w / 2 + (R() - .5) * w * .5, h * i / 12]);
+  pts.push([w / 2, h]);
+  const path = () => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
+    for (const k0 of [3, 7]){ const p = pts[k0], d = k0 === 3 ? -1 : 1; g.moveTo(p[0], p[1]); g.lineTo(p[0] + d * w * .22, p[1] + h * .05); g.lineTo(p[0] + d * w * .34, p[1] + h * .12); } };
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  g.save(); g.shadowColor = '#9fc0ff'; g.shadowBlur = 24; path(); g.strokeStyle = 'rgba(159,192,255,.6)'; g.lineWidth = 18; g.stroke(); g.restore();
+  path(); g.strokeStyle = 'rgba(200,220,255,.9)'; g.lineWidth = 8; g.stroke();
+  path(); g.strokeStyle = '#f6f9ff'; g.lineWidth = 3; g.stroke();
+}); }
+/** The blood spear in flight, point down: an iron shaft and a long glowing blade of blood. */
+export function countSpearSprite(k){ k = bakeK(k); return bake(`fcspear:${k}`, FC_SPEAR.w, FC_SPEAR.h, FC_SPEAR.w / 2, 0, k, g => {
+  S.tube(g, SO([[0, 4], [0, 62]]), pal('#1c1f2a'), 3.8);
+  for (let i = 0; i < 3; i++) S.ln(g, [[-2.6, 56 + i * 3], [2.6, 56 + i * 3]], pal('#b4101f'), 1.4, .9);
+  const blade = SM([[-4.2, 64, 1], [-5.6, 74], [-3.2, 88], [0, 106, 1], [3.2, 88], [5.6, 74], [4.2, 64, 1]], .7);
+  g.save(); g.shadowColor = '#ff2030'; g.shadowBlur = 10; S.dot(g, blade, '#ff2a3a', .5); g.restore();
+  S.part(g, blade, pal('#c8101e'), { x:0, y:80, r:14 }, { hx:-2.4, hy:72, lw:1 });
+  S.ln(g, [[0, 66], [0, 100]], { deep:'#ffb0b0' }, .9, .55);
+}); }
+export function prebakeCountFx(k){ countWarnSprite(k); countBoltSprite(k); countSpearSprite(k); }

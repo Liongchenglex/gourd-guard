@@ -12,7 +12,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite } from './tools.js';
-import { castleSprite, coinSprite, discSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
+import { castleSprite, coinSprite, discSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -25,7 +25,7 @@ import { drawPoison } from './poison.js';
 import { drawPin, drawFlyingFork } from './pin.js';
 import { drawNetOver, drawNetFlight } from './nets.js';
 import { pieceFrame, pieceClip } from './castlepieces.js';
-import { CRUMBLE_DUR, CRUMBLE_LINGER } from '../keep.js';
+import { CRUMBLE_DUR, CRUMBLE_LINGER, SPEAR_FLY, BOLT_FLASH } from '../keep.js';
 import { NET_FLY } from '../../data/rules.js';
 import { drawGourdCell, drawGourdGlow } from './gourd.js';
 import { ROTTEN, ROT_FX } from '../rot.js';
@@ -84,6 +84,7 @@ export function render(){
   if (__RELEASE__ >= 8) drawCrumbles();   // fallen Gatehouses and Archer Towers settling (Release 8)
   drawScarecrows(t);
   drawArrows(t);
+  if (__RELEASE__ >= 8 && G.fcSpears && G.fcSpears.length) drawCountSpears();   // the Fallen Count's blood spears in flight (one baked sprite each)
   if (bands.length) drawFog(t, bands, g.fogClear > 0);
   if (fogCols.length) drawFogCols(t, fogCols, g.fogClear > 0);
   if (bands.length || fogCols.length) drawBossBarsOverFog(g);   // owner: the boss's health bar must show through the mist
@@ -99,6 +100,7 @@ export function render(){
   if (G.aim === 'repair') drawAimWalls(t);
   updatePaintPull(t);   // marks borrowed pumpkins so drawGrid lights them
   drawGrid(t);
+  if (__RELEASE__ >= 8 && G.fcBolt) drawCountBolt(t);   // the Fallen Count's lightning over a patch column: the warning, then the bolt (baked)
   if (__RELEASE__ >= 8 && G.netsFlying) for (const f of G.netsFlying) drawNetFlight(ctx, f.x, f.y, LANE(f.c), GY + f.r * CS + CS / 2, 1 - f.t / NET_FLY, f.kind, f.r + f.c);   // nets in flight
   if (__RELEASE__ >= 5 && G.poison && (G.poison.warn || G.poison.on)) drawPoison(G.poison, t);   // poison fog and its arrows, over the pumpkins (Release 5)
   if (__RELEASE__ >= 4) drawCrowDives();
@@ -390,6 +392,21 @@ function drawFallenPoltFx(m, t){
 /** Scarecrows (world 5 tool): a post with a straw figure and a health bar. */
 export function drawScarecrows(t){ drawScarecrowsFx(ctx, G.scarecrows || [], t, sc => G.monsters.some(m => !m.dead && m.chewing === sc)); }
 /** Archers' arrows. */
+/** The Fallen Count's lightning (Release 8): a pulsing baked wash on the warned column, then the baked bolt fading over it. */
+function drawCountBolt(t){
+  const b = G.fcBolt, x = LANE(b.c) - CS / 2, h = ROWS * CS;
+  ctx.save();
+  if (b.warn > 0){ const sp = countWarnSprite(K); ctx.globalAlpha = 0.55 + 0.35 * Math.sin(t * 14); ctx.drawImage(sp.c, x, GY, CS, h); }
+  else { const sp = countBoltSprite(K), bw = CS * 1.6, bh = h + CS * 1.5; ctx.globalAlpha = Math.max(0, b.strike / BOLT_FLASH); ctx.drawImage(sp.c, LANE(b.c) - bw / 2, GY - CS * 1.5, bw, bh); }
+  ctx.restore();
+}
+/** The Fallen Count's blood spears flying down his lane to the fence (Release 8). */
+function drawCountSpears(){
+  const sp = countSpearSprite(K), s = CS / 70;
+  for (const f of G.fcSpears){ const p = f.p0 + (1 - f.p0) * Math.min(1, f.t / SPEAR_FLY), y = FIELD_TOP + p * (FIELD_BOT - FIELD_TOP);
+    ctx.drawImage(sp.c, LANE(f.lane) - FC_SPEAR.w / 2 * s, y - FC_SPEAR.h * s, FC_SPEAR.w * s, FC_SPEAR.h * s); }
+}
+
 export function drawArrows(t){
   for (const a of G.arrows || []){
     const x = LANE(a.lane), y = FIELD_TOP + a.p * (FIELD_BOT - FIELD_TOP);

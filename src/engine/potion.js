@@ -7,13 +7,14 @@
 // A monster holds at most one of each kind: `m.drank = { bulky?, speed?, colour? }`.
 // Every caller gates on `__RELEASE__ >= 7`, so lower builds drop this module.
 
-import { FIRE_P_RANGE, POTION_CAP, POTION_COLOUR_CHAMELEON } from '../data/rules.js';
+import { BREW_CROWS, BREW_CUT, FIRE_P_RANGE, POTION_CAP, POTION_COLOUR_CHAMELEON } from '../data/rules.js';
 import { ICE_ONLY } from '../data/monsters.js';
 import { SFX, sample } from './audio.js';
 import { addFloat, spark } from './combat.js';
-import { TILE_P, hexMonster, hexable, lanesOf, mY } from './monsters.js';
+import { TILE_P, hexMonster, hexable, lanesOf, mY, spawnMonster } from './monsters.js';
 import { COLS, FIELD_BOT, FIELD_TOP, G, LANE } from './state.js';
 import { shuffle } from './util.js';
+import { banner } from '../ui/hud.js';
 
 export const POTION_KINDS = ['bulky', 'speed', 'colour'];
 /** Each kind's colours: the bottle's glow and the sparks of a drink (render/potion.js paints the bottles). */
@@ -109,7 +110,16 @@ export function drink(m, kind, quiet){
 export function potionEveryNow(){
   const d = G && G.def && G.def.potions;
   if (!d || !(d.every > 0)) return 0;
-  return d.every * Math.pow(0.75, G.bmNext || 0);
+  return d.every * Math.pow(BREW_CUT, G.bmNext || 0);
+}
+
+/** Brew marks (Release 7): a mark on the spawn bar is reached. A banner, a swoop of BREW_CROWS crows at the top of random lanes (as the Fallen
+ *  Gravekeeper's, minions that do not count toward `total`), and the potion clock is cut from now on (potionEveryNow reads G.bmNext). */
+export function dropBrewMark(){
+  G.bmNext = (G.bmNext || 0) + 1; G.bmT = G.t;
+  const [a, b] = BREW_CROWS, n = a + Math.floor(Math.random() * (b - a + 1));
+  for (let i = 0; i < n; i++) spawnMonster('crow', Math.floor(Math.random() * COLS), true, -0.02);
+  banner('The brew boils!', 'Crows swoop in and the potions come faster.', 2.2); SFX.bossAlert();
 }
 
 /** Per-frame: the potions' clocks (drawing reads o.t to grow them in), the level's clock (every potionEveryNow() s, `count` [min, max] new
@@ -143,13 +153,14 @@ export function potionSnapshot(){
   const g = G;
   const drank = g.monsters.filter(m => !m.dead && !m.minion && m.drank && POTION_KINDS.some(k => m.drank[k]))
     .map(m => ({ kinds:POTION_KINDS.filter(k => m.drank[k]), lock:m.colourLock, immune:m.colourImmune }));
-  return { potions:(g.potions || []).map(o => [o.lane, o.p, o.kind]), t:g.potionT, drank };
+  return { potions:(g.potions || []).map(o => [o.lane, o.p, o.kind]), t:g.potionT, drank, bm:g.bmNext || 0 };   // bm: brew marks passed
 }
 /** Put a snapshot back on a continued night (after startGame). */
 export function restorePotions(s){
   if (!s || !G) return;
   G.potions = []; for (const [lane, p, kind] of s.potions || []) placePotion(lane, p, kind, true);
   if (s.t != null) G.potionT = s.t;
+  G.bmNext = s.bm || 0;   // a passed brew mark does not fire again
   G.drankCarry = (s.drank || []).map(d => ({ ...d, kinds:d.kinds.slice() }));
 }
 /** The spawner (spawnOne): a continued night's next unbeaten monster takes the next carried drinker's potions, those it may drink. */

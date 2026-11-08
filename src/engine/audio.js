@@ -292,6 +292,8 @@ export const SFX = {
       case 'bat': S('bat', 0.45, { rate: 1.1 }) || (tone(1800, 0.06, 'square', 0.035, 2400), noise(0.05, 0.08, 2500, 1.5)); break;
       case (__RELEASE__ >= 4 ? 'crow' : ''): S('bat', 0.4, { rate: 0.8 }) || noise(0.05, 0.08, 2000, 1.5); break;   // the Strawlord's crows (Release 4)
       case 'imp': S('imp', 0.4) || tone(700, 0.12, 'sawtooth', 0.05, 1100); break;
+      case (__RELEASE__ >= 7 ? 'flaskbearer' : ''): S('imp', 0.4, { rate: 1.1 }) || tone(760, 0.1, 'sawtooth', 0.05, 1150); S('glassping', 0.25, { delay: 0.03 }); break;   // the Flask Bearer squeaks and its bottles ring (Release 7)
+      case (__RELEASE__ >= 7 ? 'toad' : ''): S('slime', 0.5, { rate: 0.7 }) || squelch(0.1, 300); break;   // the Cauldron Toad: a wet croak
       case 'rider': case (__RELEASE__ >= 5 ? 'comet' : ''): S('imp', 0.35) || tone(700, 0.08, 'sawtooth', 0.03, 900, 0.04); S('cloth', 0.35); break;
       case (__RELEASE__ >= 4 ? 'husker' : ''): case (__RELEASE__ >= 4 ? 'huskerBare' : ''): case (__RELEASE__ >= 4 ? 'huskerBurning' : ''): case (__RELEASE__ >= 4 ? 'huskerCharred' : ''): S('cloth', 0.4, { rate: 1.25 }) || cloth(); S('wood', 0.2); break;   // dry husk and a hollow cob (Release 4)
       case (__RELEASE__ >= 4 ? 'hayrick' : ''): case (__RELEASE__ >= 4 ? 'hayrickBurning' : ''): S('cloth', 0.45) || cloth(); S('heavy', 0.25, { rate: 0.9 }); break;
@@ -324,6 +326,8 @@ export const SFX = {
       case 'bat': S('batdie', 0.45, { rate: 1.3 }) || S('pop', 0.4) || tone(2000, 0.05, 'square', 0.04, 2600); break;
       case (__RELEASE__ >= 4 ? 'crow' : ''): S('batdie', 0.45, { rate: 0.9 }) || S('pop', 0.4) || tone(1400, 0.05, 'square', 0.04, 1800); break;
       case 'imp': case 'rider': case (__RELEASE__ >= 5 ? 'comet' : ''): S('impdie', 0.45) || tone(900, 0.2, 'sawtooth', 0.06, 1500); break;
+      case (__RELEASE__ >= 7 ? 'flaskbearer' : ''): S('impdie', 0.45, { rate: 1.1 }) || tone(900, 0.2, 'sawtooth', 0.06, 1500); S('glass', 0.45, { delay: 0.12 }); break;   // and the bottles shatter (Release 7)
+      case (__RELEASE__ >= 7 ? 'toad' : ''): S('slimedie', 0.65, { rate: 0.75 }) || squelch(0.14, 260); S('splash', 0.45, { delay: 0.18 }); break;   // the Cauldron Toad swells and bursts
       case 'brute': S('giantdie', 0.6, { rate: 0.85 }) || (tone(70, 0.4, 'sawtooth', 0.1, 40), noise(0.3, 0.25, 120, 1)); S('heavy', 0.4, { rate: 0.8, delay: 0.1 }); break;
       case 'hauler': S('giantdie', 0.65) || (tone(70, 0.4, 'sawtooth', 0.1, 40), noise(0.3, 0.25, 120, 1)); break;
       case 'bulwark': S('giantdie', 0.6); S('armorbreak', 0.5, { delay: 0.05 }) || noise(0.3, 0.25, 120, 1); break;
@@ -493,7 +497,7 @@ export const SFX = {
   _chew(type){
     switch (type){
       case 'knight': case 'bulwark': case 'gargoyle': S('metallight', 0.45) || (noise(0.08, 0.22, 2200, 1.5), tone(400, 0.08, 'square', 0.05, 250)); break;   // metal or stone scraping wood
-      case 'slime': case 'blob': case 'crawler': case 'diver': S('slime', 0.4, { rate: 0.9 }) || (noise(0.1, 0.22, 350, 2.5), tone(180, 0.08, 'sine', 0.06, 120)); break;   // wet
+      case 'slime': case 'blob': case 'crawler': case 'diver': case (__RELEASE__ >= 7 ? 'toad' : ''): S('slime', 0.4, { rate: 0.9 }) || (noise(0.1, 0.22, 350, 2.5), tone(180, 0.08, 'sine', 0.06, 120)); break;   // wet
       case 'turtle': S('metallight', 0.45, { rate: 0.7 }) || (tone(240, 0.1, 'triangle', 0.09, 160), noise(0.06, 0.16, 600, 1.5)); break;                                       // hollow knock
       case 'bat': S('crunch', 0.3, { rate: 1.4 }) || (noise(0.05, 0.18, 2500, 2), noise(0.05, 0.14, 2200, 2, 0.08)); break;                                 // quick nibbles
       default: S('crunch', 0.5) || (noise(0.09, 0.28, 700, 1.2, 0, 300), tone(150, 0.09, 'square', 0.07, 90));                                              // wood being gnawed

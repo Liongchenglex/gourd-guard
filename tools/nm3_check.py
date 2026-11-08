@@ -18,7 +18,7 @@ MODE = 'on'
 def nm3_start(page, k, coach=False):
     """Start Nightmare 3-k (night 1200 + k). The gourd coaches (Release 4's Grave Gourd, Release 5's Protector) are marked seen unless
     coach=True, so the other checks get a plain night."""
-    if not coach: page.evaluate("() => { window.__gg.save.seenGourdCoach = true; window.__gg.save.seenProtectorCoach = true; }")
+    if not coach: page.evaluate("() => { window.__gg.save.seenGourdCoach = true; window.__gg.save.seenProtectorCoach = true; window.__gg.save.seenWartlingCoach = true; }")
     start(page, 1200 + k)
 
 
@@ -321,6 +321,454 @@ def check_potion_budget(browser, url):
 
 CHECKS.update({'check_potion_place': check_potion_place, 'check_potion_clock': check_potion_clock, 'check_potion_drink': check_potion_drink, 'check_potion_refuse': check_potion_refuse,
                'check_potion_bulwark': check_potion_bulwark, 'check_potion_continue': check_potion_continue, 'check_potion_budget': check_potion_budget})
+
+
+
+# ---------- Task 7: the Flask Bearer and the Cauldron Toad ----------
+def tile_of(page, p):
+    """The tile row that holds field position p, and the field's row count (engine/potion.js rowOf / rows)."""
+    return page.evaluate("(p) => { const tp = window.__gg.TILE_P(), n = Math.max(1, Math.floor(1 / tp)); return [Math.min(n - 1, Math.max(0, Math.floor(p / tp))), n]; }", p)
+
+
+def potions_rc(page):
+    """Every potion as [lane, row, kind]."""
+    return page.evaluate("() => { const tp = window.__gg.TILE_P(); return window.__gg.G.potions.map(o => [o.lane, Math.floor(o.p / tp), o.kind]); }")
+
+
+KILL = "(i) => { const g = window.__gg, m = window.__ms[i]; m.lastHit = m.colourLock != null ? m.colourLock : -1; g.damage(m, 999); return [m.dead, m.hp]; }"   # a hit any colour hex lets through
+NEW = "([k, l, p]) => { const g = window.__gg, m = g.spawnMonster(k, l, false, p); m.sp = 0; window.__ms = window.__ms || []; window.__ms.push(m); return window.__ms.length - 1; }"
+
+
+def check_flaskbearer(browser, url):
+    if not R7: return
+    page, errors = potion_page(browser, url)
+    t = page.evaluate("() => { const T = window.__gg.TYPES.flaskbearer; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop]; }")
+    ok(t == [2, 0.055, 18, 8, 0.5, 24, 2], f'flaskbearer: hp 2, sp 0.055, r 18, coins 8, eat 0.5, pts 24, drop 2 {t}')
+    ok(page.evaluate("() => window.__gg.MNAME.flaskbearer") == 'Flask Bearer', 'its name is the Flask Bearer')
+    row, _ = tile_of(page, 0.5)
+    i = page.evaluate(NEW, ['flaskbearer', 3, 0.5])
+    d = page.evaluate(KILL, i)
+    ps = potions_rc(page)
+    ok(d[0] is True, f'a Flask Bearer dies {d}')
+    ok(len(ps) == 1 and ps[0][:2] == [3, row] and ps[0][2] in ('bulky', 'speed', 'colour'), f'one potion of a random kind on its tile (lane 3, row {row}) {ps}')
+    # its tile is taken: the potion goes to the nearest free tile. Spawned and killed in one go: given a frame on that tile, a Flask Bearer
+    # drinks the potion standing there (as any monster does) and its own would then land on the freed tile.
+    d = page.evaluate("() => { const g = window.__gg, m = g.spawnMonster('flaskbearer', 3, false, 0.5); m.sp = 0; m.lastHit = -1; g.damage(m, 999); return [m.dead, m.drank || null]; }")
+    ps = potions_rc(page)
+    ok(d == [True, None], f'(the second Flask Bearer died without drinking {d})')
+    ok(len(ps) == 2 and ps[0][:2] == [3, row] and max(abs(ps[1][0] - 3), abs(ps[1][1] - row)) == 1, f'its tile taken: the first potion stays, the second goes on a tile next to it {ps}')
+    # kinds are random: 30 deaths in a clear field show every kind
+    kinds = page.evaluate("""() => { const g = window.__gg, G = g.G, seen = new Set(); for (let n = 0; n < 30; n++){ G.potions.length = 0;
+      const m = g.spawnMonster('flaskbearer', 2, false, 0.4); m.sp = 0; g.damage(m, 999); for (const o of G.potions) seen.add(o.kind); } return [...seen].sort(); }""")
+    ok(kinds == ['bulky', 'colour', 'speed'], f'its potion is a random kind: all three seen in 30 deaths {kinds}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_toad_tongue(browser, url):
+    if not R7: return
+    page, errors = potion_page(browser, url)
+    t = page.evaluate("() => { const T = window.__gg.TYPES.toad; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop, T.tongueHold]; }")
+    ok(t == [5, 0.03, 24, 10, 0.5, 30, 2, 0.67], f'toad: hp 5, sp 0.03, r 24, coins 10, eat 0.5, pts 30, drop 2, tongueHold 0.67 {t}')
+    ok(page.evaluate("() => window.__gg.MNAME.toad") == 'Cauldron Toad', 'its name is the Cauldron Toad')
+    page.evaluate("() => { for (const w of window.__gg.walls){ w.hp = w.max = 99; } }")
+    i = page.evaluate(NEW, ['toad', 2, 0.55]); page.evaluate("(i) => { window.__ms[i].sp = 0.06; }", i)
+    tt = gwait(page, "() => window.__ms[0].eating", 5)
+    p = page.evaluate("() => window.__ms[0].p")
+    ok(tt is not None and abs(p - 0.67) < 1e-6, f'it walks to 0.67 of the field and stops there, lashing ({tt}, p {p})')
+    page.evaluate("() => { window.__gg.walls[2].hp = 99; window.__pmax = 0; window.__t0 = window.__gg.G.t; }")
+    t0 = page.evaluate("() => window.__gg.G.t")
+    pmax = 0
+    while page.evaluate("() => window.__gg.G.t") - t0 < 4:
+        pmax = max(pmax, page.evaluate("() => window.__ms[0].p")); time.sleep(0.05)
+    lost = page.evaluate("([t0]) => [99 - window.__gg.walls[2].hp, window.__gg.G.t - t0]", [t0])
+    rate = lost[0] / lost[1]
+    ok(abs(rate - 0.5) < 0.05, f'its own fence loses about 2 in 4 s ({lost[0]:.2f} in {lost[1]:.2f} s, {rate:.3f}/s)')
+    ok(pmax <= 0.67 + 1e-6, f'it never moves closer (max p {pmax:.4f})')
+    ok(page.evaluate("() => window.__gg.walls.every((w, c) => c === 2 || w.hp === 99)"), 'no other fence is touched')
+    # speed: 1.5x the tongue
+    page.evaluate("() => { const g = window.__gg; g.drink(window.__ms[0], 'speed', true); g.walls[2].hp = 99; }")
+    t0 = page.evaluate("() => window.__gg.G.t"); gsleep(page, 3)
+    lost = page.evaluate("([t0]) => [99 - window.__gg.walls[2].hp, window.__gg.G.t - t0]", [t0])
+    ok(abs(lost[0] / lost[1] - 0.75) < 0.06, f'with a speed potion 1.5x: {lost[0] / lost[1]:.3f}/s')
+    # frozen: no lash
+    page.evaluate("() => { window.__ms[0].frozenT = 2; window.__gg.walls[2].hp = 99; }"); gsleep(page, 1)
+    ok(page.evaluate("() => window.__gg.walls[2].hp") == 99, 'frozen, it does not lash')
+    page.evaluate("() => { window.__ms[0].frozenT = 0; }")
+    # knocked back: it walks back to 0.67 and lashes again
+    page.evaluate("() => { const m = window.__ms[0]; m.eating = false; m.p = 0.6; }")
+    tt = gwait(page, "() => window.__ms[0].eating", 4)
+    ok(tt is not None and abs(page.evaluate("() => window.__ms[0].p") - 0.67) < 1e-6, f'pushed back it returns to 0.67 and lashes again ({tt})')
+    # its fence down: nothing to lash, it walks on to the gap
+    page.evaluate("() => { window.__gg.walls[2].hp = 0; }")
+    tt = gwait(page, "() => window.__ms[0].p > 0.75", 6)
+    ok(tt is not None, f'with its fence down it walks on toward the gap ({tt})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_toad_burst(browser, url):
+    if not R7: return
+    page, errors = potion_page(browser, url)
+    row, _ = tile_of(page, 0.5)
+    i = page.evaluate(NEW, ['toad', 3, 0.5])
+    page.evaluate("(i) => { const g = window.__gg, m = window.__ms[i]; g.drink(m, 'bulky', true); g.drink(m, 'speed', true); }", i)
+    page.evaluate(KILL, i)
+    ps = potions_rc(page)
+    ok(len(ps) == 2 and sorted(k for *_, k in ps) == ['bulky', 'speed'], f'drank bulky + speed: two potions, of those kinds {ps}')
+    ok(all(max(abs(l - 3), abs(r - row)) <= 1 for l, r, _ in ps) and len({(l, r) for l, r, _ in ps}) == 2, f'on two tiles around its death tile (lane 3, row {row}) {ps}')
+    page.evaluate("() => { window.__gg.G.potions.length = 0; }")
+    j = page.evaluate(NEW, ['toad', 4, 0.4])
+    page.evaluate(KILL, j)
+    ok(potions_rc(page) == [], 'drank none: no potions')
+    k = page.evaluate(NEW, ['toad', 1, 0.3])
+    page.evaluate("(i) => { const g = window.__gg, m = window.__ms[i]; for (const q of g.POTION_KINDS) if (g.canDrink(m, q)) g.drink(m, q, true); }", k)
+    page.evaluate(KILL, k)
+    ps = potions_rc(page)
+    ok(sorted(x[2] for x in ps) == ['bulky', 'colour', 'speed'], f'drank all three: three potions, one of each {ps}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_toad_burst_full(browser, url):
+    if not R7: return
+    page, errors = potion_page(browser, url)
+    for lane, p in ((3, 0.5), (0, 0.02)):
+        page.evaluate("() => { window.__gg.G.potions.length = 0; }")
+        row, nrows = tile_of(page, p)
+        i = page.evaluate(NEW, ['toad', lane, p])
+        # in one go (no frame between, so it drinks nothing on the field): it holds all three, every tile around is full, it dies
+        nb = page.evaluate("""([i, L, R]) => { const g = window.__gg, tp = g.TILE_P(), m = window.__ms[i]; g.drink(m, 'bulky', true); g.drink(m, 'speed', true); g.drink(m, 'colour', true);
+          for (let l = L - 1; l <= L + 1; l++) for (let r = R - 1; r <= R + 1; r++) g.placePotion(l, (r + 0.5) * tp, 'colour', true);
+          const n = g.G.potions.length; m.lastHit = m.colourLock != null ? m.colourLock : -1; g.damage(m, 999); return n; }""", [i, lane, row])
+        ps = potions_rc(page)
+        new = ps[nb:]
+        ok(len(new) == 3 and sorted(k for *_, k in new) == ['bulky', 'colour', 'speed'], f'(lane {lane}, row {row}) every tile around full: still its three potions {new}')
+        ok(all(max(abs(l - lane), abs(r - row)) == 2 for l, r, _ in new), f'one ring further out (two tiles away) {new}')
+        ok(len({(l, r) for l, r, _ in ps}) == len(ps), 'one potion per tile')
+        ok(all(0 <= l < 7 and 0 <= r < nrows for l, r, _ in new), f'all on the field (lanes 0-6, rows 0-{nrows - 1}) {new}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_flaskbearer': check_flaskbearer, 'check_toad_tongue': check_toad_tongue, 'check_toad_burst': check_toad_burst, 'check_toad_burst_full': check_toad_burst_full})
+
+
+# ---------- Task 3: brew marks ----------
+BM = """() => { const g = window.__gg, G = g.G, d = G.def; d.total = 12; G.total = 12; d.brewMarks = [0.33, 0.66]; d.potions = { every:8, count:[1, 1] }; G.bmNext = 0; G.bmT = -99; G.spawned = 0; G.spawnTimer = 999; g.updateHud(true); }"""
+BM_STATE = "() => { const G = window.__gg.G; return [G.bmNext, window.__gg.potionEveryNow(), G.monsters.filter(m => m.type === 'crow' && m.minion && !m.dead).length, document.querySelector('#banner').classList.contains('show') && document.querySelector('#bnBig').textContent]; }"
+
+
+def check_brew_marks(browser, url):
+    if not R7: return
+    page, errors = potion_page(browser, url)
+    page.evaluate(BM); time.sleep(0.2)
+    m = page.evaluate("() => [...document.querySelectorAll('.bmMark')].map(e => [Math.round(parseFloat(e.style.left)), e.classList.contains('live'), e.classList.contains('done')])")
+    ok(m == [[33, False, False], [66, False, False]], f'two brew marks on the spawn bar at 33% and 66% {m}')
+    page.evaluate("() => { window.__gg.G.spawned = 2; }"); gsleep(page, 0.3)
+    r = page.evaluate(BM_STATE)
+    ok(r[0] == 0 and r[1] == 8 and r[2] == 0 and r[3] != 'The brew boils!', f'before the first mark: nothing happens {r}')
+    page.evaluate("() => { window.__gg.G.spawned = 3; }"); gsleep(page, 0.3)
+    r = page.evaluate(BM_STATE)
+    ok(r[0] == 1 and r[3] == 'The brew boils!', f'at the first mark: bmNext 1 and the banner "The brew boils!" {r}')
+    ok(page.evaluate("() => document.querySelector('#bnSub').textContent") == 'Crows swoop in and the potions come faster.', 'with its line')
+    ok(4 <= r[2] <= 6, f'4 to 6 crows come down ({r[2]})')
+    ok(r[1] == 6, f'potionEveryNow() = 0.75 x every ({r[1]})')
+    ok(page.evaluate("() => window.__gg.G.spawned") == 3, 'the crows are minions: G.spawned unchanged')
+    ok(page.evaluate("() => document.querySelector('.bmMark.live') !== null"), 'the mark pulses (live) when it fires')
+    gsleep(page, 1.8); gsleep(page, 0.1)
+    m = page.evaluate("() => [...document.querySelectorAll('.bmMark')].map(e => [e.classList.contains('live'), e.classList.contains('done')])")
+    ok(m == [[False, True], [False, False]], f'the first mark shows ticked once passed {m}')
+    page.evaluate("() => { window.__gg.G.spawned = 7; }"); gsleep(page, 0.3)
+    r = page.evaluate(BM_STATE)
+    ok(r[0] == 2 and abs(r[1] - 8 * 0.5625) < 1e-9, f'at the second mark: bmNext 2 and potionEveryNow() = 0.5625 x every ({r})')
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = 12; G.monsters.forEach(m => m.dead = true); }"); gsleep(page, 0.3)
+    ok(page.evaluate("() => window.__gg.G.bmNext") == 2, 'never more than the level has')
+    prog = page.evaluate("() => parseFloat(document.querySelector('#prog').style.width)")
+    ok(prog > 99, f'the bar counts arrivals on a brew-mark night ({prog}%)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_brew_continue(browser, url):
+    if not R7: return
+    page, errors = potion_page(browser, url)
+    page.evaluate(BM)
+    page.evaluate("() => { window.__gg.G.spawned = 3; }"); gsleep(page, 0.3)
+    ok(page.evaluate("() => window.__gg.G.bmNext") == 1, 'the first mark has passed')
+    page.evaluate("() => { const g = window.__gg, c = g.continueState(); window.__c = c; g.continueNight(c); }"); time.sleep(0.3)
+    page.evaluate("() => { const G = window.__gg.G; G.def.total = 12; G.total = 12; G.def.brewMarks = [0.33, 0.66]; G.def.potions = { every:8, count:[1, 1] }; G.spawnTimer = 999; G.monsters.length = 0; G.spawned = 4; }")   # the real N3-1 has no marks: give it these and put the bar just past the first
+    r = page.evaluate("() => [window.__gg.G.bmNext, window.__gg.potionEveryNow()]")
+    ok(r[0] == 1 and r[1] == 6, f'a continued night keeps the marks passed (bmNext {r[0]}, every {r[1]})')
+    page.evaluate("() => { window.__gg.G.spawned = 4; }"); gsleep(page, 0.4)
+    r = page.evaluate(BM_STATE)
+    ok(r[0] == 1 and r[2] == 0 and r[3] != 'The brew boils!', f'a passed mark does not fire again {r}')
+    m = page.evaluate("() => [...document.querySelectorAll('.bmMark')].map(e => e.classList.contains('done'))")
+    ok(m == [True, False], f'and shows ticked {m}')
+    page.evaluate("() => { window.__gg.G.spawned = 7; }"); gsleep(page, 0.3)
+    ok(page.evaluate("() => window.__gg.G.bmNext") == 2, 'the next mark still fires')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_brew_marks': check_brew_marks, 'check_brew_continue': check_brew_continue})
+
+# ---------- Task 4: the Wartling Gourd, the picker with three gourds, the N3-5 tutorial ----------
+R7_NAMES += ['Doubles launch damage', '8a5cc6', 'seenWartlingCoach']   # the Wartling's role line, its violet (render/gourd.js) and its coach flag
+SHOTS = '/private/tmp/claude-501/-Users-liongchenglex-AI-Projects-gourd-guard/c65da5b1-63e4-4082-89bf-e6f9016bb48b/scratchpad/r7'
+GON = "() => window.__gg.gourdsOn().map(o => [o.kind, o.r, o.c])"
+# Quiet the night: no spawns, no sprouts, no monsters, no graves, no potions, nothing on the patch but the gourds.
+GQ = """() => { const g = window.__gg, G = g.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.projs.length = 0; G.drops.length = 0;
+  if (G.fires) G.fires.length = 0; G.fmNext = 99; G.fireTrickleT = 1e9; G.potionT = 1e9; if (G.potions) G.potions.length = 0; G.idle = -1e9; G.hint = null;
+  g.graves.forEach(r => r.fill(false)); g.grid.forEach(row => row.forEach((c, i) => { if (!(c && c.gourd)) row[i] = null; })); g.resolveMatches(); }"""
+ALL3 = ['grave', 'protector', 'wartling']
+
+
+def gpick():   # the picker probe of nm2_check.py, imported on first use (nm2_check imports this module)
+    from nm2_check import GPICK
+    return GPICK
+
+
+def wart_night(page, kinds, k=1, quiet=True):
+    """Start N3-k with the given gourds (slot order), every gourd unlocked and every gourd coach marked seen."""
+    page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true }; s.seenGourdCoach = true; s.seenProtectorCoach = true; s.seenWartlingCoach = true; }")
+    page.evaluate("([n, lo, gk]) => window.__gg.startGame('story', n, lo, gk)", [1200 + k, [0, 1, 2, 3, 4], kinds]); time.sleep(0.3)
+    if quiet: page.evaluate(GQ)
+
+
+def check_wart_damage(browser, url):
+    if not R7: return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { window.__gg.save.lv.green = 1; window.__gg.save.lv.ice = 1; }")
+    wart_night(page, ['grave', 'wartling'])
+    ok(page.evaluate(GON) == [['grave', 2, 1], ['wartling', 2, 5]], f'Grave and Wartling start at (2, 1) and (2, 5) {page.evaluate(GON)}')
+    sq = page.evaluate("() => { const g = window.__gg; return [g.inWartSquare(2, 5), g.inWartSquare(1, 4), g.inWartSquare(3, 6), g.inWartSquare(2, 3), g.inWartSquare(2, 1), g.inWartSquare(0, 5), g.isProtected(2, 5)]; }")
+    ok(sq == [True, True, True, False, False, False, False], f'inWartSquare: the Wartling cell and its 3x3 only; it protects nothing {sq}')
+    # launches: a bunch in its square carries wart, one outside does not
+    page.evaluate("() => { const g = window.__gg; for (const c of [4, 5, 6]) g.grid[1][c] = g.newCell(0); for (const c of [1, 2, 3]) g.grid[4][c] = g.newCell(0); g.resolveMatches(); g.launchGroup(g.grid[1][5]); }")
+    r = page.evaluate("() => window.__gg.G.projs.map(p => [p.lane, !!p.wart, !!p.ward])")
+    ok(sorted(r) == [[4, True, False], [5, True, False], [6, True, False]], f'a bunch launched from the Wartling square: every pumpkin carries wart {r}')
+    page.evaluate("() => { const g = window.__gg; window.__pin = g.G.projs.slice(); g.G.projs.length = 0; g.launchGroup(g.grid[4][2]); window.__pout = g.G.projs.slice(); g.G.projs.length = 0; }")
+    ok(page.evaluate("() => window.__pout.map(p => !!p.wart)") == [False, False, False], 'a bunch launched outside it carries no wart')
+    # the hit: a level-1 Green takes 2 off a 50-health ghoul from the square, 1 from outside
+    d = page.evaluate("""() => { const g = window.__gg; g.G.monsters.length = 0;
+      const m = g.spawnMonster('ghoul', 5, false, 0.4); m.hp = m.maxHp = 50; m.sp = 0;
+      const pr = w => ({ x:g.LANE(5), y:300, vy:-900, type:0, vis:0, lv:1, guar:false, lane:5, hitWalls:new Set(), grp:{ spawned:false, small:false, kills:0 }, size:1, hit:new Set(), trail:[], r:16, dead:false, ...(w ? { wart:true } : {}) });
+      g.hitMonster(pr(true), m); const a = m.hp; g.hitMonster(pr(false), m); const b = m.hp; g.hitMonster(window.__pin[0], m); const c = m.hp;
+      const ice = { ...pr(true), type:2, vis:2 }; m.slowT = 0; m.frozenT = 0; g.hitMonster(ice, m);
+      return [a, b, c, m.hp, m.slowT > 0 || m.frozenT > 0]; }""")
+    ok(d[:3] == [48, 47, 45], f'a level-1 Green from the square takes 2 off the 50-health ghoul, 1 from outside; a launched one takes 2 too {d[:3]}')
+    ok(d[3] == 43 and d[4], f'an Ice from the square does 2 and still slows or freezes {d[3:]}')
+    # immunity still wins over the doubling: a reverse chameleon hit by its own colour takes nothing
+    d = page.evaluate("""() => { const g = window.__gg; g.G.monsters.length = 0;
+      const m = g.spawnMonster('rchameleon', 5, false, 0.4); m.colourImmune = 0; m.hp = m.maxHp = 9; m.sp = 0;
+      g.hitMonster({ x:g.LANE(5), y:300, vy:-900, type:0, vis:0, lv:1, guar:false, lane:5, hitWalls:new Set(), grp:{ spawned:false, small:false, kills:0 }, size:1, hit:new Set(), trail:[], r:16, dead:false, wart:true }, m); return m.hp; }""")
+    ok(d == 9, f'an immune monster stays immune to a wart hit ({d})')
+    # a real flight from the square
+    page.evaluate("""() => { const g = window.__gg; g.G.monsters.length = 0; g.G.projs.length = 0; g.grid.forEach(row => row.forEach((c, i) => { if (!(c && c.gourd)) row[i] = null; }));
+      for (const r of [1, 3]) g.grid[r][4] = g.newCell(0); g.grid[2][4] = g.newCell(0); g.resolveMatches();
+      window.__m = g.spawnMonster('ghoul', 4, false, 0.3); window.__m.hp = window.__m.maxHp = 50; window.__m.sp = 0; g.launchGroup(g.grid[2][4]); }""")
+    time.sleep(1.2)
+    ok(page.evaluate("() => window.__m.hp") == 44, f'a real flight of three from the square takes 6 off it ({page.evaluate("() => window.__m.hp")})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_wart_break_heal(browser, url):
+    if not R7: return
+    page, errors = open_page(browser, url)
+    wart_night(page, ['wartling'])
+    ok(page.evaluate(GON) == [['wartling', 2, 3]], f'the Wartling alone starts in the centre {page.evaluate(GON)}')
+    HP = "() => window.__gg.walls.map(w => w.hp)"
+    SET = "(hp) => { for (const w of window.__gg.walls){ w.max = 20; w.hp = hp; } }"
+    MOVE = "([r, c]) => { const g = window.__gg, p = g.gourdPos('wartling'), x = g.grid[p.r][p.c]; g.grid[p.r][p.c] = null; g.grid[r][c] = x; }"
+    page.evaluate(SET, 4); page.evaluate(MOVE, [0, 3])
+    ok(page.evaluate("() => { const g = window.__gg, p = g.gourdPos('wartling'); return g.destroyGourd(g.grid[p.r][p.c]); }") is True, 'destroyGourd breaks the Wartling')
+    ok(page.evaluate(HP) == [4, 4, 14, 14, 14, 4, 4], f'broken in the top row at column 3: fences 2-4 mend by half (4 -> 14 of 20), 1 and 5 unchanged {page.evaluate(HP)}')
+    ok(page.evaluate("() => [window.__gg.gourdPos('wartling'), !!window.__gg.G.gourdDueOf.wartling, window.__gg.G.gourdDue]") == [None, True, False], 'it is due back (not the Grave flag)')
+    page.evaluate(SET, 15); page.evaluate("() => window.__gg.spawnSprouts()")
+    ok(page.evaluate("() => !!window.__gg.gourdPos('wartling')") is True, 'it comes back on the next sprout tick')
+    page.evaluate(MOVE, [0, 3]); page.evaluate("() => { const g = window.__gg; g.walls[3].hp = 2; const p = g.gourdPos('wartling'); g.destroyGourd(g.grid[p.r][p.c]); }")
+    ok(page.evaluate(HP) == [15, 15, 20, 12, 20, 15, 15], f'never above full (15 -> 20), a low one +10 {page.evaluate(HP)}')
+    page.evaluate("() => window.__gg.spawnSprouts()"); page.evaluate(SET, 4); page.evaluate(MOVE, [0, 0])
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos('wartling'); g.destroyGourd(g.grid[p.r][p.c]); }")
+    ok(page.evaluate(HP) == [14, 14, 4, 4, 4, 4, 4], f'in the corner: only the two fences above its square {page.evaluate(HP)}')
+    page.evaluate("() => window.__gg.spawnSprouts()"); page.evaluate(SET, 4); page.evaluate(MOVE, [2, 3])
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos('wartling'); g.destroyGourd(g.grid[p.r][p.c]); }")
+    ok(page.evaluate(HP) == [4] * 7, f'broken in row 2: nothing heals {page.evaluate(HP)}')
+    page.evaluate("() => window.__gg.spawnSprouts()"); page.evaluate(SET, 4); page.evaluate(MOVE, [1, 3])
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos('wartling'); g.destroyGourd(g.grid[p.r][p.c]); }")
+    ok(page.evaluate(HP) == [4] * 7, f'broken in row 1: nothing heals {page.evaluate(HP)}')
+    # a continued night keeps it
+    page.evaluate("() => window.__gg.spawnSprouts()")
+    page.evaluate("() => { const g = window.__gg, c = g.continueState(); window.__snap = JSON.parse(JSON.stringify(c.gourd)); g.continueNight(c); }"); time.sleep(0.3)
+    ok(page.evaluate("() => [window.__snap[0].kind, window.__gg.G.gourdKinds, window.__gg.gourdsOn().map(o => o.kind)]") == ['wartling', ['wartling'], ['wartling']], 'a continued night keeps the Wartling')
+    time.sleep(0.5)
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def witch_picker(page, gourds, night=1205, seen=True):
+    """Open the picker on N3-k with the given gourds unlocked (every earlier nightmare night beaten), the gourd coaches seen (the Wartling's
+    as `seen`)."""
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 17)}, **{1100 + k: 3 for k in range(1, 17)}, **{1200 + k: 3 for k in range(1, 5)}})
+    page.evaluate("([gs, n, seen]) => { const g = window.__gg; g.save.gourds = gs; g.save.perksOff = { pick4:true }; g.save.seenGourdCoach = true; g.save.seenProtectorCoach = true; g.save.seenWartlingCoach = seen; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.beginNight(n); }",
+                  [{k: True for k in gourds}, night, seen]); time.sleep(0.6)
+    return page.evaluate(gpick())
+
+
+def check_picker_three_gourds(browser, url):
+    """N3-5 offers all three gourds once the Wartling is unlocked: three tiles, two slots. The first two in unlock order start picked (the
+    Wartling instead of the last while its tutorial is unseen, so the coach can run); a third tile tapped with both full replaces the last
+    picked; the picked kinds reach G.gourdKinds. N2-5 and N1-5 are unchanged."""
+    if not R7: return
+    os.makedirs(SHOTS, exist_ok=True)
+    page, errors = open_page(browser, url)
+    u = witch_picker(page, ALL3)
+    ok(u['state'] == 'loadout' and [t[0] for t in u['tiles']] == ALL3 and not any(t[2] for t in u['tiles']), f'N3-5: three gourd tiles in unlock order, none locked {u["tiles"]}')
+    ok(u['slots'] == ['grave', 'protector'] and [t[1] for t in u['tiles']] == ['true', 'true', 'false'], f'two slots; the first two in unlock order start picked {u["slots"]}')
+    ok(u['heading'] == 'Gourds · pick up to 2' and u['label'] == ['Your team', 'Your gourds'] and 'up to 2 gourds' in u['title'], f'"pick up to 2" {[u["heading"], u["label"], u["title"]]}')
+    ok(all(w >= 44 and hh >= 44 for w, hh in u['slotSize']) and u['headFits'] and u['cardFits'], f'44 px slots, the header and card fit {u["slotSize"]}')
+    page.click('#loGourds .pick[data-gourd="wartling"]'); time.sleep(0.2)
+    v = page.evaluate(gpick()); det = page.evaluate("() => document.querySelector('#loDetail').textContent")
+    ok(v['slots'] == ['grave', 'wartling'] and 'Wartling Gourd' in det and 'double' in det.lower(), f'tapping the Wartling with both slots full replaces the last picked and shows its card {v["slots"]} {det[:60]!r}')
+    page.screenshot(path=os.path.join(SHOTS, 'picker.png'))
+    page.click('#loGourds .pick[data-gourd="protector"]'); time.sleep(0.2)
+    ok(page.evaluate(gpick())['slots'] == ['grave', 'protector'], 'tapping the Protector then replaces the Wartling')
+    page.click('#loGourdSlot'); time.sleep(0.2)
+    ok(page.evaluate(gpick())['slots'] == ['protector', None], 'a tapped slot empties')
+    page.click('#loGourds .pick[data-gourd="wartling"]'); time.sleep(0.2)
+    ok(page.evaluate(gpick())['slots'] == ['protector', 'wartling'], 'a tile fills the free slot')
+    page.click('#bLoGo'); time.sleep(0.5)
+    r = page.evaluate("() => [window.__gg.state, window.__gg.G.n, window.__gg.G.gourdKinds, window.__gg.gourdsOn().map(o => [o.kind, o.r, o.c])]")
+    ok(r == ['play', 1205, ['protector', 'wartling'], [['protector', 2, 1], ['wartling', 2, 5]]], f'Start: Protector at (2, 1), Wartling at (2, 5), by slot order {r}')
+    # its tutorial unseen: the Wartling starts picked in place of the last
+    u = witch_picker(page, ALL3, seen=False)
+    ok(u['slots'] == ['grave', 'wartling'], f'with the Wartling tutorial unseen, N3-5 starts with the Grave and the Wartling {u["slots"]}')
+    page.evaluate("() => { const g = window.__gg; g.save.seenWartlingCoach = true; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.openPreview(1205); }"); time.sleep(0.5)
+    ok(page.evaluate(GON) == [['grave', 2, 1], ['protector', 2, 5]], f'the N3-5 preview stands the two gourds the picker starts with {page.evaluate(GON)}')
+    # the Wartling not unlocked yet: N3-5 is a two-gourd night as N2-5
+    u = witch_picker(page, ['grave', 'protector'])
+    ok([t[0] for t in u['tiles']] == ['grave', 'protector'] and u['slots'] == ['grave', 'protector'], f'without the Wartling: two tiles, both picked {u["tiles"]}')
+    # N2-5 and N1-5 unchanged with the Wartling unlocked
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 17)}, **{1100 + k: 3 for k in range(1, 5)}})
+    page.evaluate("() => { const g = window.__gg; g.save.gourds = { grave:true, protector:true, wartling:true }; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.beginNight(1105); }"); time.sleep(0.6)
+    u = page.evaluate(gpick())
+    ok([t[0] for t in u['tiles']] == ['grave', 'protector'] and u['slots'] == ['grave', 'protector'], f'N2-5 still offers two gourds, both picked {u["tiles"]}')
+    page.evaluate("() => { const g = window.__gg; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.beginNight(1005); }"); time.sleep(0.6)
+    u = page.evaluate(gpick())
+    ok(u['tiles'] == [['grave', 'true', True]] and u['slots'] == ['grave'] and u['heading'] == 'Gourd · pick 1', f'N1-5 still offers the Grave alone, one locked slot {u["tiles"]}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_wart_coach(browser, url):
+    """The Wartling tutorial on N3-5 (coach:'wartling'): slide it; launch a bunch from its square at a tough ghoul (doubled numbers); slide it
+    to the top row; hold it until it breaks and the fences above mend; Nice; the night carries on. Each step waits for its action."""
+    if not R7: return
+    STEP = "(s) => { const g = window.__gg; for (let i = 0; i < Math.round(s / 0.05); i++) g.update(0.05); return g.G.coach ? g.G.coach.step : null; }"
+    TIP = "() => document.querySelector('#coachTip').textContent"
+    WP = "() => { const p = window.__gg.gourdPos('wartling'); return p && [p.r, p.c]; }"
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true }; s.seenGourdCoach = true; s.seenProtectorCoach = true; s.seenWartlingCoach = false; s.lv.green = 1; }")
+    page.evaluate("(lo) => window.__gg.startGame('story', 1205, lo, ['grave', 'wartling'])", [0, 1, 2, 3, 4]); time.sleep(0.3)
+    d = page.evaluate("() => { const g = window.__gg; return [g.G.coach && g.G.coach.kind, g.G.coach && g.G.coach.step, g.coachHolds(), g.gourdsOn().map(o => [o.kind, o.r, o.c]), g.grid.flat().filter(x => x && !x.gourd).length]; }")
+    ok(d[:4] == ['wartling', 'wslide', True, [['grave', 2, 1], ['wartling', 2, 5]]] and d[4] == 0, f'N3-5 with the tutorial unseen starts the Wartling script on a clear patch {d}')
+    ok('Wartling Gourd' in page.evaluate(TIP), f'the tip names it {page.evaluate(TIP)[:60]!r}')
+    ok(page.evaluate(STEP, 2) == 'wslide' and page.evaluate("() => [window.__gg.G.monsters.length, window.__gg.G.spawned]") == [0, 0], 'it waits for the slide: no monsters')
+    mv = page.evaluate("() => { const c = window.__gg.G.coach; return c.move && [c.move.dir, c.move.tr, c.move.tc, c.move.ref.gourd]; }")
+    ok(mv and mv[3] == 'wartling' and mv[1] != 0, f'the hand slides the Wartling, not into the top row {mv}')
+    page.evaluate("() => { const g = window.__gg, c = g.G.coach; g.slideOne(c.move.ref, c.move.dir); }")
+    ok(page.evaluate(STEP, 0.4) == 'wlaunch', 'slid: the launch step')
+    d = page.evaluate("() => { const g = window.__gg, p = g.gourdPos('wartling'), lit = g.bestLitGroup(), m = g.G.monsters.filter(m => !m.dead); return [!!lit, m.length, m[0] && m[0].hp, m[0] && m[0].lane, p && [p.r, p.c]]; }")
+    ok(d[0] and d[1] == 1 and d[2] >= 10, f'a lit bunch in its square and one tough ghoul {d}')
+    lane = page.evaluate("() => { const g = window.__gg, lit = g.bestLitGroup(), p = (() => { for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) if (g.grid[r][c] === lit) return [r, c]; })(); return [p, g.inWartSquare(p[0], p[1]), g.G.monsters[0].lane]; }")
+    ok(lane[1] and lane[0][1] == lane[2], f'the bunch is in the square and the ghoul walks its column {lane}')
+    ok('double' in page.evaluate(TIP).lower(), f'the tip says double damage {page.evaluate(TIP)[:60]!r}')
+    ok(page.evaluate(STEP, 2) == 'wlaunch', 'it waits for the launch')
+    hp0 = page.evaluate("() => window.__gg.G.monsters[0].hp")
+    page.evaluate("() => { const g = window.__gg; g.launchGroup(g.bestLitGroup()); }")
+    ok(page.evaluate("() => window.__gg.G.projs.every(p => p.wart)") is True, 'the launched pumpkins carry wart')
+    st = page.evaluate(STEP, 2)
+    hp1 = page.evaluate("() => { const m = window.__gg.G.monsters[0]; return m ? m.hp : 0; }")
+    ok(st == 'wtop' and hp0 - hp1 == 6, f'three doubled hits take 6 off the ghoul, then the top-row step ({hp0} -> {hp1}, {st})')
+    ok('top row' in page.evaluate(TIP).lower(), f'the tip asks for the top row {page.evaluate(TIP)[:60]!r}')
+    wp = page.evaluate(WP)
+    hp = page.evaluate("(c) => [c - 1, c, c + 1].filter(i => i >= 0 && i < 7).map(i => [window.__gg.walls[i].hp, window.__gg.walls[i].max])", wp[1])
+    ok(all(h < m for h, m in hp), f'the fences above it are worn so the mend shows {hp}')
+    mv = page.evaluate("() => { const c = window.__gg.G.coach; return c.move && [c.move.dir, c.move.tr]; }")
+    ok(mv == ['up', 0], f'the hand slides it up into the top row {mv}')
+    ok(page.evaluate(STEP, 2) == 'wtop', 'it waits for the slide')
+    page.evaluate("() => { const g = window.__gg, c = g.G.coach; g.slideOne(c.move.ref, c.move.dir); }")
+    ok(page.evaluate(STEP, 0.4) == 'whold' and page.evaluate(WP)[0] == 0, 'in the top row: the hand holds it')
+    ok('hold' in page.evaluate(TIP).lower() and 'fence' in page.evaluate(TIP).lower(), f'the hold tip names the fences {page.evaluate(TIP)[:60]!r}')
+    ok(page.evaluate(STEP, 3) == 'whold', 'it waits for the break')
+    wp = page.evaluate(WP)
+    before = page.evaluate("(c) => [c - 1, c, c + 1].filter(i => i >= 0 && i < 7).map(i => window.__gg.walls[i].hp)", wp[1])
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos('wartling'); g.destroyGourd(g.grid[p.r][p.c]); }")
+    after = page.evaluate("(c) => [c - 1, c, c + 1].filter(i => i >= 0 && i < 7).map(i => [window.__gg.walls[i].hp, window.__gg.walls[i].max])", wp[1])
+    ok(all(abs(a - min(m, b + m / 2)) < 1e-6 for b, (a, m) in zip(before, after)), f'breaking it mends the fences above by half {before} -> {after}')
+    ok(page.evaluate(STEP, 0.1) == 'praise' and 'Nice' in page.evaluate(TIP), f'Nice {page.evaluate(TIP)[:50]!r}')
+    ok(page.evaluate("() => window.__gg.coachHolds()") is False, 'the praise step lets the night carry on')
+    page.evaluate(STEP, 4)
+    ok(page.evaluate("() => [window.__gg.G.coach, window.__gg.save.seenWartlingCoach]") == [None, True], 'the script ends and seenWartlingCoach is set')
+    page.evaluate("() => { window.__gg.G.spawnTimer = 0; }"); page.evaluate(STEP, 0.5)
+    ok(page.evaluate("() => window.__gg.G.spawned") > 0, 'monsters spawn after the tutorial')
+    # seen: a plain N3-5; without the Wartling: no script, still unseen
+    page.evaluate("(lo) => window.__gg.startGame('story', 1205, lo, ['grave', 'wartling'])", [0, 1, 2, 3, 4]); time.sleep(0.2)
+    ok(page.evaluate("() => [window.__gg.G.coach, window.__gg.coachHolds()]") == [None, False], 'a player who has seen it gets a plain N3-5')
+    page.evaluate("() => { window.__gg.save.seenWartlingCoach = false; }")
+    page.evaluate("(lo) => window.__gg.startGame('story', 1205, lo, ['grave', 'protector'])", [0, 1, 2, 3, 4]); time.sleep(0.2)
+    ok(page.evaluate("() => [window.__gg.G.coach, window.__gg.save.seenWartlingCoach]") == [None, False], 'N3-5 without the Wartling: no script, still unseen')
+    # broken early: it grows back and the lesson goes on from the top row
+    page.evaluate("(lo) => window.__gg.startGame('story', 1205, lo, ['grave', 'wartling'])", [0, 1, 2, 3, 4]); time.sleep(0.2)
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos('wartling'); g.destroyGourd(g.grid[p.r][p.c]); }")
+    ok(page.evaluate(STEP, 0.1) == 'wback', 'breaking it early jumps to the respawn step')
+    st = page.evaluate(STEP, 4)
+    ok(st in ('wtop', 'whold') and page.evaluate(WP) is not None, f'it grows back, then the top-row lesson (the hold if it grew back in the top row) {st}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_wart_unlock(browser, url):
+    if not R7: return
+    page, errors = open_page(browser, url)
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 17)}, **{1100 + k: 3 for k in range(1, 17)}, **{1200 + k: 3 for k in range(1, 4)}})
+    page.evaluate("() => { window.__gg.save.gourds = { grave:true, protector:true }; }")
+    d = page.evaluate("() => { const t = window.__gg.NIGHTMARE_LEVELS[2]; return [t[3] && t[3].unlockGourds, t[4] && t[4].coach, t[4] && t[4].gourds]; }")
+    ok(d == [['wartling'], 'wartling', ALL3], f'N3-4 unlocks the Wartling; N3-5 is its tutorial and offers all three (data) {d}')
+    nm3_start(page, 3); page.evaluate("() => window.__gg.endGame(true)"); time.sleep(1.8)
+    ok(not page.evaluate("() => !!window.__gg.save.gourds.wartling"), 'winning N3-3 does not unlock it')
+    nm3_start(page, 4); page.evaluate("() => window.__gg.endGame(true)"); time.sleep(1.8)
+    ok(page.evaluate("() => window.__gg.save.gourds.wartling") is True, 'winning N3-4 sets save.gourds.wartling')
+    ok(page.evaluate("() => JSON.parse(localStorage.getItem('gourdguard.v1')).gourds.wartling") is True, 'and it is saved')
+    ok(page.evaluate("() => window.__gg.GOURDS.wartling && [window.__gg.GOURDS.wartling.name, window.__gg.GOURDS.wartling.role]") == ['Wartling Gourd', 'Doubles launch damage'], 'GOURDS.wartling: name and role')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_wart_art(browser, url):
+    """The Wartling's baked art: a picker icon and a strip of the gourd on the patch (saved for the owner); drawing it adds no painter calls
+    per frame (one drawImage for the body and one for the glow)."""
+    if not R7: return
+    os.makedirs(SHOTS, exist_ok=True)
+    page, errors = open_page(browser, url)
+    wart_night(page, ['grave', 'wartling'])
+    px = page.evaluate("() => { const c = window.__gg.gourdIcon(96, 'wartling'), d = c.getContext('2d').getImageData(0, 0, 96, 96).data; let n = 0, v = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200){ n++; if (d[i + 2] > d[i + 1] + 30 && d[i] > d[i + 1]) v++; } return [n, v]; }")
+    ok(px[0] > 1500 and px[1] > px[0] * 0.3, f'the icon is a solid, mostly violet gourd {px}')
+    strip = page.evaluate("""() => { const g = window.__gg, W = 96 * 4, c = document.createElement('canvas'); c.width = W; c.height = 120; const x = c.getContext('2d');
+      x.fillStyle = '#2a1e30'; x.fillRect(0, 0, W, 120);
+      ['grave', 'protector', 'wartling', 'wartling'].forEach((k, i) => x.drawImage(g.gourdIcon(i === 3 ? 192 : 96, k), i * 96, 12, 96, 96)); return c.toDataURL(); }""")
+    import base64
+    with open(os.path.join(SHOTS, 'wartling.png'), 'wb') as f: f.write(base64.b64decode(strip.split(',')[1]))
+    page.evaluate("() => { window.__gg.G.paused = false; }"); time.sleep(0.6)
+    page.screenshot(path=os.path.join(SHOTS, 'wartling-patch.png'))
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_wart_damage': check_wart_damage, 'check_wart_break_heal': check_wart_break_heal, 'check_picker_three_gourds': check_picker_three_gourds,
+               'check_wart_coach': check_wart_coach, 'check_wart_unlock': check_wart_unlock, 'check_wart_art': check_wart_art})
 
 
 def main():

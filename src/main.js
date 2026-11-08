@@ -27,7 +27,7 @@ import { lightFire, lightRandomFires, fireAt, putOut, fireMarkPoints, fireFirst 
 import { fieldY, useLantern, gust } from './engine/game.js';
 import { coachHolds } from './engine/coach.js';
 import { updateHud } from './ui/hud.js';
-import { GOURD, isGourd, newGourd, gourdPos, destroyGourd, gourdFill, placeGourdAtStart, bestGourdMove, gourdsOn, gourdKind, isProtected, placeGourdsAtStart, gourdSnapshot, restoreGourd, inGraveSquare } from './engine/gourd.js';
+import { GOURD, isGourd, newGourd, gourdPos, destroyGourd, gourdFill, placeGourdAtStart, bestGourdMove, gourdsOn, gourdKind, isProtected, placeGourdsAtStart, gourdSnapshot, restoreGourd, inGraveSquare, inWartSquare } from './engine/gourd.js';
 import { GOURDS, setAllowSameGourd } from './data/gourds.js';
 import { gourdIcon } from './engine/render/gourd.js';
 import { spawnSprouts, boardScore, paintPull } from './engine/board.js';
@@ -36,7 +36,7 @@ import { rotSprite, rotIcon } from './engine/render/rot.js';
 import { poisonNow, fogged } from './engine/poison.js';
 import { fpSwap, fpShuffle } from './engine/hollow.js';
 import { FALLEN, BESTIARY } from './data/bestiary.js';
-import { POTION_KINDS, potionAt, placePotion, placeRandomPotions, canDrink, drink, updatePotions, potionEveryNow, potionSnapshot, restorePotions } from './engine/potion.js';
+import { POTION_KINDS, potionAt, placePotion, placeRandomPotions, canDrink, drink, updatePotions, potionEveryNow, potionSnapshot, restorePotions, dropBrewMark } from './engine/potion.js';
 import { potionSprite, potionIcon } from './engine/render/potion.js';
 import { FIRE_P_RANGE } from './data/rules.js';
 
@@ -92,6 +92,6 @@ if (new URLSearchParams(location.search).has('test')){
     startGame, beginNight, spawnMonster, save, LANE, launchGroup, groupCells, slideOne, bestMove, bestLitGroup, collectDrop, emptyCells, resolveMatches, SFX, ensureAudio, sfxReady, sample, repairWall, placeMine, endGame, useRepair, openPreview, openBook, LEVELS, isOpen, WORLD_LEVELS, damage, lanesOf, continueState, continueNight, isBaked, openShop, RELEASE, PTYPES, RAINBOW, BEIGE, upgradeCost, lvStats, typesForNight, randSprout, hitMonster, TILE_P, BOSS_NAMES, LIT_HALO, CHARS, atlasBytes, setBakeScale, NM_BASE, nmNight, NIGHTMARE_LEVELS,
     ...(__RELEASE__ >= 4 ? { lightFire, lightRandomFires, fireAt, putOut, fireMarkPoints, fieldY, updateHud, TYPES, burnMonster, newCell, prebake, GOURD, isGourd, newGourd, gourdPos, destroyGourd, gourdFill, placeGourdAtStart, spawnSprouts, boardScore, paintPull, update, coachHolds, fireFirst, bestGourdMove, levelFor, questsFor, QUEST_TYPES, ICE_ONLY } : {}),   // fire tiles, the Grave Gourd (Release 4)
     ...(__RELEASE__ >= 5 ? { gourdsOn, gourdKind, isProtected, placeGourdsAtStart, gourdSnapshot, restoreGourd, GOURDS, setAllowSameGourd, inGraveSquare, gourdIcon, ROTTEN, isRotten, rotCell, hitRule, rotSnapshot, rotSprite, rotIcon, poisonNow, fogged, MNAME, MINTRO, useLantern, BOSS_INTRO, fpSwap, fpShuffle, FALLEN, BESTIARY, VARIANTS } : {}),
-    ...(__RELEASE__ >= 7 ? { WORLDS, POTION_KINDS, potionAt, placePotion, placeRandomPotions, canDrink, drink, updatePotions, potionEveryNow, potionSnapshot, restorePotions, potionSprite, potionIcon, FIRE_P_RANGE, applyBulwarks } : {}),
+    ...(__RELEASE__ >= 7 ? { WORLDS, POTION_KINDS, potionAt, placePotion, placeRandomPotions, canDrink, drink, updatePotions, potionEveryNow, potionSnapshot, restorePotions, dropBrewMark, potionSprite, potionIcon, FIRE_P_RANGE, applyBulwarks, inWartSquare } : {}) };   // Nightmare Witchwood (Release 7): each task adds its test hooks here   // Nightmare Foggy Hollow (Release 5): each task adds its test hooks here
     ...(__RELEASE__ >= 8 ? { ctx, drawWeather, weatherState, weatherReset, weatherForce, weatherBaked, netCount, canNet, pickNetCell, throwNet, isNetted, clearNets, redNetsOf, updateNets, netSnapshot, restoreNets, smash, planMove, gust } : {}) };   // Nightmare Witchwood (Release 7): each task adds its test hooks here   // Nightmare Foggy Hollow (Release 5): each task adds its test hooks here
 }

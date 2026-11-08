@@ -39,6 +39,7 @@ export const PUMPKIN_LORE = {
   brown:'A slow grower with a temper. Leave it in the patch and it comes back twice the size.',
   paint:'Grown in the old painter\u2019s garden, where every bucket was spilled at least once. It never goes anywhere alone.',
   ...(__RELEASE__ >= 3 ? { beige:'Boiled down from the sap of the hollow oak on All Hallows\u2019 Eve. Where it bursts, nothing walks away quickly.' } : {}),   // Release 3
+  ...(__MAGNET__ ? { magnet:'Grown in a copper pot under a lodestone moon. Monsters feel it in their bones and stumble toward it, whether they like it or not.' } : {}),   // Release 6
   rainbow:'Nobody plants these. They simply appear when a patch has been looked after well.',
 };
 

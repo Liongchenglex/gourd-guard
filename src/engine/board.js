@@ -157,11 +157,13 @@ export function planMove(r, c, dir){
   const [dr, dc] = DIRV[dir];
   if (!inside(r + dr, c + dc) || graves[r + dr][c + dc]) return null;
   if (__RELEASE__ >= 4 && grid[r][c] && grid[r][c].pinned > 0) return null;   // pinned by a Hayrick's pitchfork: it cannot slide
+  if (__RELEASE__ >= 8 && grid[r][c] && grid[r][c].net) return null;   // netted (Release 8, engine/nets.js): it cannot slide
   if (!grid[r + dr][c + dc]){ const [tr, tc] = slideDest(r, c, dir); return [[r, c, tr, tc]]; }
   const line = [[r, c]];
   let a = r + dr, b = c + dc;
   while (inside(a, b) && grid[a][b]){
     if (__RELEASE__ >= 4 && grid[a][b].pinned > 0) return null;   // a pinned pumpkin in the line cannot be pushed, so nothing in the line moves (as with a grave at its end)
+    if (__RELEASE__ >= 8 && grid[a][b].net) return null;   // nor can a netted one (Release 8)
     line.push([a, b]); a += dr; b += dc;
   }
   let k = 0;
@@ -278,6 +280,7 @@ export function collectDrop(d){
 
 export function smash(ref){
   if (__RELEASE__ >= 4 && ref && ref.gourd){ destroyGourd(ref); return; }   // holding a gourd breaks it (the Grave clears the graves around it)
+  if (__RELEASE__ >= 8 && ref && ref.net){ const p = findCell(ref); if (p) addFloat('Netted', LANE(p.c), GY + p.r * CS + CS / 2 - 30, '#ffd35a', 16, 0.8); SFX.bad(); return; }   // a net holds it: it cannot be crushed (Release 8)
   const pos = findCell(ref); if (!pos) return;
   grid[pos.r][pos.c] = null; G.smashes = (G.smashes || 0) + 1;   // counted for the 1-1 coach
   const x = LANE(pos.c), y = GY + pos.r * CS + CS / 2;
@@ -316,6 +319,7 @@ export function bestMove(){
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
     const cell = grid[r][c]; if (!cell || cell.fly) continue;
     if (__RELEASE__ >= 4 && cell.pinned > 0) continue;   // pinned: it cannot be slid
+    if (__RELEASE__ >= 8 && cell.net) continue;   // netted: it cannot be slid (Release 8)
     if (__RELEASE__ >= 4 && cell.gourd) continue;   // the Grave Gourd never makes a bunch, so the hint never slides it
     for (const dir of ['up', 'left', 'right', 'down']){
       if (cell.lit && dir === 'up') continue;

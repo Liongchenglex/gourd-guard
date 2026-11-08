@@ -183,8 +183,172 @@ def check_n4_book(browser, url):
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
+# ---------- Task 2: nets on the patch ----------
+# A quiet N4 night with an empty patch: `put(page, r, c, colour)` places a pumpkin, nets are set on cells directly or thrown.
+NQ = """() => { const g = window.__gg, G = g.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.projs.length = 0; G.netsFlying = []; G.idle = -1e9; G.hint = null;
+  g.grid.forEach(r => r.fill(null)); g.graves.forEach(r => r.fill(false)); window.__put = (r, c, col, net) => { const x = g.newCell(col); if (net) x.net = net; g.grid[r][c] = x; return x; }; }"""
 
-CHECKS = {'check_r8_absent': check_r8_absent, 'check_n4_track': check_n4_track, 'check_n4_weather': check_n4_weather, 'check_n4_book': check_n4_book}
+
+def net_night(browser, url):
+    page, errors = keep_page(browser, url)
+    page.evaluate(NQ)
+    return page, errors
+
+
+def check_net_rules(browser, url):
+    if not R8: return
+    page, errors = net_night(browser, url)
+    # A netted at (3,3); C (colour 2) at (3,4) and B (colour 1) at (3,5) push left into it
+    page.evaluate("() => { const p = window.__put; window.__A = p(3, 3, 0, 'net'); p(3, 4, 2); p(3, 5, 1); }")
+    mv = page.evaluate("() => { const g = window.__gg; return [g.planMove(3, 3, 'left'), g.planMove(3, 3, 'up'), g.planMove(3, 5, 'left'), g.planMove(3, 4, 'left')]; }")
+    ok(mv[0] is None and mv[1] is None, f'a netted pumpkin refuses a slide {mv[:2]}')
+    ok(mv[2] is None and mv[3] is None, f'a push line through it is refused {mv[2:]}')
+    page.evaluate("() => { const g = window.__gg; g.grid[3][4] = null; }")
+    ok(page.evaluate("() => window.__gg.planMove(3, 5, 'left')") is not None, 'control: with the line clear the free pumpkin slides')
+    # crushing: refused, a float and the pumpkin stays
+    r = page.evaluate("() => { const g = window.__gg, G = g.G, n = G.smashes || 0, f = G.floats.length; g.smash(window.__A); return [g.grid[3][3] === window.__A, (G.smashes || 0) - n, G.floats.slice(f).map(x => x.text)]; }")
+    ok(r[0] and r[1] == 0 and 'Netted' in r[2], f'crushing a netted pumpkin is refused with a "Netted" float {r}')
+    # no timer
+    page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 300; i++) g.update(0.1); }")
+    ok(page.evaluate("() => window.__gg.grid[3][3] === window.__A && window.__A.net === 'net'"), 'the net is still there after 30 s')
+    # a lone netted pumpkin (not lit) is not launched
+    n0 = page.evaluate("() => { const g = window.__gg; g.launchGroup(window.__A); return g.G.projs.length; }")
+    ok(n0 == 0 and page.evaluate("() => window.__gg.grid[3][3] === window.__A"), f'a lone netted pumpkin is not launched ({n0} projectiles)')
+    # in a lit bunch it flies with the others, taking its net with it
+    page.evaluate(NQ)
+    page.evaluate("() => { const p = window.__put; p(4, 1, 0); window.__N = p(4, 2, 0, 'net'); p(4, 3, 0); window.__gg.resolveMatches(); }")
+    lit = page.evaluate("() => window.__N.lit")
+    ok(lit, 'the netted pumpkin lights up with its bunch')
+    page.evaluate("() => window.__gg.launchGroup(window.__N)")
+    r = page.evaluate("() => { const g = window.__gg; return [g.G.projs.length, g.grid[4].every(x => !x), g.netCount()]; }")
+    ok(r[0] == 3 and r[1] and r[2] == 0, f'the whole bunch flew (3 projectiles), the cells are empty and the net went with it {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_net_cap(browser, url):
+    if not R8: return
+    page, errors = net_night(browser, url)
+    page.evaluate("() => { const p = window.__put; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) p(r, c, (r + c * 2) % 5, r * 7 + c < 15 ? 'net' : null); }")
+    ok(page.evaluate("() => window.__gg.netCount()") == 15, '15 nets on the patch')
+    r = page.evaluate("() => { const g = window.__gg; return [g.throwNet(100, 100, 'net', 1), g.G.netsFlying.length]; }")
+    ok(r == [False, 0], f'at the cap a throw fizzles and nothing flies {r}')
+    time.sleep(1.0)
+    ok(page.evaluate("() => window.__gg.netCount()") == 15, 'and nothing lands')
+    # 14 on the patch: one more fits, a second thrown at once (14 + 1 in flight = the cap) fizzles
+    page.evaluate("() => { const g = window.__gg; g.grid[0][0].net = null; }")
+    ok(page.evaluate("() => window.__gg.netCount()") == 14, '14 nets on the patch')
+    r = page.evaluate("() => { const g = window.__gg; return [g.throwNet(100, 100), g.throwNet(100, 100), g.G.netsFlying.length]; }")
+    ok(r == [True, False, 1], f'one net in flight takes the 15th place: the second throw fizzles {r}')
+    time.sleep(1.2)
+    ok(page.evaluate("() => window.__gg.netCount()") == 15 and page.evaluate("() => window.__gg.G.netsFlying.length") == 0, 'the flying net lands: 15 on the patch')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_net_free_neighbour(browser, url):
+    if not R8: return
+    page, errors = net_night(browser, url)
+    # P in the open: netable
+    page.evaluate("() => { const p = window.__put; p(3, 3, 0); }")
+    ok(page.evaluate("() => window.__gg.canNet(3, 3)") is True, 'a pumpkin in the open can be netted')
+    ok(page.evaluate("() => { const g = window.__gg; g.grid[3][3].fly = 1; const v = g.canNet(3, 3); g.grid[3][3].fly = 0; return v; }") is False, 'a pumpkin in flight cannot')
+    ok(page.evaluate("() => { const g = window.__gg; g.grid[3][3].net = 'net'; const v = g.canNet(3, 3); g.grid[3][3].net = null; return v; }") is False, 'one already netted cannot')
+    ok(page.evaluate("() => { const g = window.__gg; g.grid[3][3].gourd = true; const v = g.canNet(3, 3); delete g.grid[3][3].gourd; return v; }") is False, 'a gourd cannot')
+    ok(page.evaluate("() => window.__gg.canNet(0, 0)") is False, 'an empty cell cannot')
+    # only free neighbour is netted: never picked, 200 picks
+    page.evaluate(NQ)
+    page.evaluate("() => { const g = window.__gg, p = window.__put; p(3, 3, 0); p(3, 4, 1, 'net'); g.graves[2][3] = g.graves[4][3] = g.graves[3][2] = true; }")
+    ok(page.evaluate("() => window.__gg.canNet(3, 3)") is False, 'a pumpkin whose only free neighbour is netted cannot be netted')
+    ok(page.evaluate("() => window.__gg.canNet(3, 4)") is False, 'and the netted one is not offered again')
+    # corner beside a grave and a netted pumpkin
+    page.evaluate(NQ)
+    page.evaluate("() => { const g = window.__gg, p = window.__put; p(0, 0, 0); p(0, 1, 1, 'net'); g.graves[1][0] = true; p(4, 6, 2); }")
+    picks = page.evaluate("() => { const g = window.__gg, out = new Set(); for (let i = 0; i < 200; i++){ const s = g.pickNetCell(); out.add(s ? s.join(',') : 'none'); } return [...out]; }")
+    ok('0,0' not in picks and '0,1' not in picks, f'a corner pumpkin beside a grave and a netted pumpkin is never picked {picks}')
+    ok(picks == ['4,6'], f'only the pumpkin with room is picked {picks}')
+    # nothing netable: null
+    page.evaluate(NQ)
+    ok(page.evaluate("() => window.__gg.pickNetCell()") is None, 'an empty patch has no cell to pick')
+    # a net landing re-checks: its cell lost its last free neighbour in flight
+    page.evaluate("() => { const g = window.__gg, p = window.__put; p(3, 3, 0); p(3, 4, 1); g.graves[2][3] = g.graves[4][3] = g.graves[3][2] = true; window.__thr = g.throwNet(50, 50, 'net', 3); }")
+    page.evaluate("() => { const g = window.__gg; g.G.netsFlying.forEach(f => { f.r = 3; f.c = 3; }); g.grid[3][4].net = 'net'; }")
+    time.sleep(1.0)
+    ok(page.evaluate("() => !window.__gg.grid[3][3].net"), 'a net re-checks on landing: it fizzles when the cell lost its last free neighbour')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_net_hint_wind(browser, url):
+    if not R8: return
+    page, errors = net_night(browser, url)
+    # a board where the netted pumpkin is the obvious hint: two greens in a row, a third (netted) one row below, off to the side
+    page.evaluate("() => { const p = window.__put; p(2, 1, 0); p(2, 2, 0); window.__N = p(2, 5, 0, 'net'); }")
+    free = page.evaluate("() => { const g = window.__gg; window.__N.net = null; const b = g.bestMove(); window.__N.net = 'net'; return b ? b.ref === window.__N : null; }")
+    ok(free is not None, f'control: without the net the hint finds a move ({free})')
+    for i in range(3):
+        b = page.evaluate("() => { const b = window.__gg.bestMove(); return b ? b.ref === window.__N : null; }")
+        ok(b is not True, 'the hint never moves a netted pumpkin')
+    # wind: every direction leaves it in place
+    page.evaluate(NQ)
+    page.evaluate("() => { const p = window.__put; window.__N = p(2, 3, 0, 'net'); p(2, 5, 1); }")
+    for d in ('left', 'right', 'up', 'down'):
+        page.evaluate("([d]) => window.__gg.gust(d)", [d])
+        ok(page.evaluate("() => window.__gg.grid[2][3] === window.__N"), f'a gust {d} leaves the netted pumpkin in place')
+    moved = page.evaluate("() => window.__gg.grid[2].findIndex(x => x && x !== window.__N)")
+    ok(moved != 5, f'control: the free pumpkin was blown along ({moved})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_net_continue(browser, url):
+    if not R8: return
+    page, errors = net_night(browser, url)
+    page.evaluate("() => { const g = window.__gg; g.G.spawned = 5; }")
+    # fill the patch so the continued (fresh) patch has the same shape; net three of them, one red, and one net in flight
+    page.evaluate("""() => { const g = window.__gg, p = window.__put; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) p(r, c, (r + c * 2) % 5);
+      g.grid[1][1].net = 'net'; g.grid[1][1].netBy = 7; g.grid[2][4].net = 'red'; g.grid[2][4].netBy = 9; g.grid[4][2].net = 'net'; g.grid[4][2].netBy = null;
+      g.G.netsFlying = [{ x:120, y:80, kind:'red', by:9, r:3, c:3, t:0.5 }]; }""")
+    before = page.evaluate("() => window.__gg.netSnapshot()")
+    page.evaluate("() => { const g = window.__gg, c = g.continueState(); window.__cs = c; g.continueNight(c); }"); time.sleep(0.3)
+    page.evaluate("() => { const g = window.__gg; g.G.spawnTimer = 999; g.G.sproutT = -999; g.G.monsters.length = 0; }")
+    after = page.evaluate("() => window.__gg.netSnapshot()")
+    ok(len(before['cells']) == 3 and len(after['cells']) == 3, f'three nets on the patch survive a continue ({len(before["cells"])} -> {len(after["cells"])})')
+    ok(sorted(((k, b) for _, _, k, b in after['cells']), key=str) == sorted(((k, b) for _, _, k, b in before['cells']), key=str), f'with their kind and thrower {after["cells"]}')
+    ok(len(after['flying']) == 1 and after['flying'][0][2] == 'red' and after['flying'][0][3] == 9, f'the net in flight keeps flying {after["flying"]}')
+    time.sleep(0.8)
+    ok(page.evaluate("() => window.__gg.netCount()") >= 3, 'and lands (the count did not drop)')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_net_budget(browser, url):
+    """Extends check_fire_budget: 15 nets on the patch add at most 15 drawImage calls a frame and no fill or stroke."""
+    if not R8: return
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script("""(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+      for (const k of ['drawImage', 'fill', 'stroke', 'fillRect', 'fillText', 'strokeText', 'createRadialGradient', 'createLinearGradient']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; } })();""")
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    nm4_start(page, 1); time.sleep(1.0)
+    page.evaluate(NQ)
+    page.evaluate("() => { const p = window.__put; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) p(r, c, (r + c * 2) % 5); }")
+    time.sleep(1.0)
+    count = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 30) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 30, (c.fill || 0) / 30, (c.stroke || 0) / 30, ((c.createRadialGradient || 0) + (c.createLinearGradient || 0)) / 30]); } }; requestAnimationFrame(tick); })"
+    base = page.evaluate(count)
+    page.evaluate("() => { const g = window.__gg; let n = 0; for (let r = 0; r < 5; r++) for (let c = 0; c < 7 && n < 15; c++){ g.grid[r][c].net = n % 3 ? 'net' : 'red'; g.grid[r][c].netAt = -9; n++; } }")
+    time.sleep(0.5)
+    lit = page.evaluate(count)
+    ok(page.evaluate("() => window.__gg.netCount()") == 15, '15 nets on the patch')
+    ok(lit[0] - base[0] <= 15.5, f'15 nets add at most 15 drawImage calls a frame ({base[0]:.1f} -> {lit[0]:.1f})')
+    ok(lit[1] <= base[1] + 0.1 and lit[2] <= base[2] + 0.1 and lit[3] <= base[3] + 0.1, f'and no fill, stroke or gradient (fill {base[1]:.1f} -> {lit[1]:.1f}, stroke {base[2]:.1f} -> {lit[2]:.1f}, gradients {base[3]:.1f} -> {lit[3]:.1f})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS = {'check_r8_absent': check_r8_absent, 'check_n4_track': check_n4_track, 'check_n4_weather': check_n4_weather, 'check_n4_book': check_n4_book,
+          'check_net_rules': check_net_rules, 'check_net_cap': check_net_cap, 'check_net_free_neighbour': check_net_free_neighbour, 'check_net_hint_wind': check_net_hint_wind, 'check_net_continue': check_net_continue, 'check_net_budget': check_net_budget}
 
 
 def main():

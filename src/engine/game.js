@@ -30,6 +30,8 @@ import { SPROUT_EVERY, FIREWORK_TARGETS, FIREWORK_DAMAGE, EMERGENCY_N, POTION_SP
 import { updatePotions, potionSnapshot, restorePotions } from './potion.js';
 import { prebakePotions } from './render/potion.js';
 import { prebakeWeather } from './render/weather.js';
+import { updateNets, netSnapshot, restoreNets } from './nets.js';
+import { prebakeNets } from './render/nets.js';
 import { startCoach, coachHolds, coachUpdate } from './coach.js';
 import { lightFire, lightRandomFires, fireAhead, burnPumpkin, updateFires } from './fire.js';
 import { updateCrowDives } from './nightmare.js';
@@ -138,6 +140,7 @@ export function startGame(mode, n, loadout, gourds){
     t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], glue:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
     loot:{ chests:0, seeds:0 }, chestDropped:false, continued:false, sackT:0, jukebox:null, jukeboxDone:false, jbNext:0,
+    ...(__RELEASE__ >= 8 ? { netsFlying:[] } : {}),   // nets in flight (engine/nets.js)
     ...(__RELEASE__ >= 7 ? { potions:[], potionT:def && def.potions ? def.potions.every : 0, drankCarry:null } : {}),   // potions on the field (engine/potion.js): the potions standing, the clock to the next ones, a continued night's drinkers still to come back
     ...(__RELEASE__ >= 5 ? { poison:{ t:def && def.poison ? def.poison.every : 0, warn:null, on:null } } : {}),   // poison fog (engine/poison.js): the clock to the next fog, the warning and the fog lying now
     ...(__RELEASE__ >= 4 ? { fires:[], fmNext:0, fmT:-99, fireBurst:0, fireBurstT:0, fireTrickleT:null, burstMinion:false, gourdDue:false, gourdDueOf:{}, gourdKinds:nightGourds(def, gourds), crowDives:[] } : {}),   // fire tiles and fire marks (src/engine/fire.js); the night's gourds (slot order) and which are due back: gourdDue the Grave Gourd's flag, gourdDueOf the other kinds' (src/engine/gourd.js)
@@ -150,6 +153,7 @@ export function startGame(mode, n, loadout, gourds){
   if (__RELEASE__ >= 4 && def){ startFires(def); if (def.nightmare) prebakeFire(); }   // after the castles, so random fires skip them; the flame strip is baked now, not on first sight
   if (__RELEASE__ >= 5 && def && def.poison) prebakePoison();   // the fog and its warning strips, baked now
   if (__RELEASE__ >= 7 && def && def.nightmare) prebakePotions();   // the three bottles, their icons and the drink puffs (Release 7), baked now
+  if (__RELEASE__ >= 8 && def && def.nightmare) prebakeNets();   // the rope net, the crimson one and the net in flight, baked now
   if (__RELEASE__ >= 8 && def) prebakeWeather();   // fresh weather timers every night; the Keep storm's rain and bolts baked now (Release 8, render/weather.js)
   if (__RELEASE__ >= 5 && def && def.nightmare) prebakeRot();   // the rotten pumpkin (Release 5), baked now, not on first sight
   if (G.world !== bgWorld) buildBg(G.world);
@@ -292,6 +296,7 @@ export function gust(dir, only){
   for (const r of rows) for (const c of cols){
     const cell = grid[r][c]; if (!cell || cell.fly) continue;
     if (__RELEASE__ >= 4 && cell.pinned > 0) continue;   // pinned by a Hayrick: the wind cannot move it
+    if (__RELEASE__ >= 8 && cell.net) continue;   // netted: the wind cannot move it either (Release 8)
     let nr = r, nc = c;
     while (true){
       const tr = nr + dr, tc = nc + dc;
@@ -431,6 +436,7 @@ export function update(dt){
   }
   g.projs = g.projs.filter(p => !p.dead);
   if (__RELEASE__ >= 4 && g.fires) updateFires(dt);
+  if (__RELEASE__ >= 8) updateNets(dt);   // nets in flight land (engine/nets.js)
   if (__RELEASE__ >= 7 && g.potions) updatePotions(dt);   // potions on the field: the clock, and monsters drinking what they walk onto (engine/potion.js)
   if (__RELEASE__ >= 5) updatePoison(dt);   // poison fog: the warning, the fog, the rot under it (engine/poison.js)
   if (__RELEASE__ >= 4 && g.crowDives && g.crowDives.length) updateCrowDives(dt);   // crows diving into the patch (engine/nightmare.js)
@@ -558,7 +564,8 @@ export function continueState(){
     jukebox:{ next:g.jbNext || 0, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null },   // next: drop points already used (one per jukebox dropped)   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
     ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0, bossPhase2:living.map(m => !!m.phase2), gourd:g.def.gourd ? gourdSnapshot() : null } : {}),
     ...(__RELEASE__ >= 5 ? { bossMood:living.map(bossSnapshot), rot:rotSnapshot(), poison:poisonClock() } : {}),   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
-    ...(__RELEASE__ >= 7 ? { potions:potionSnapshot() } : {}) };   // the potions on the field, their clock and what the drinkers on the field had drunk (Release 7)
+    ...(__RELEASE__ >= 7 ? { potions:potionSnapshot() } : {}),
+    ...(__RELEASE__ >= 8 ? { nets:netSnapshot() } : {}) };   // the nets on the patch and in flight (Release 8)   // the potions on the field, their clock and what the drinkers on the field had drunk (Release 7)
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
 export function continueNight(c){
@@ -570,6 +577,7 @@ export function continueNight(c){
   if (__RELEASE__ >= 4 && c.gourd) restoreGourd(c.gourd);   // each gourd stands where it stood, or comes back on the first sprout
   if (__RELEASE__ >= 5 && c.poison != null && G.poison) G.poison.t = c.poison;   // the clock to the next fog carries on; a fog warning or lying at the loss is gone
   if (__RELEASE__ >= 5 && c.rot) restoreRot(c.rot);   // the rotten pumpkins lie where they lay (after the gourds)
+  if (__RELEASE__ >= 8 && c.nets) restoreNets(c.nets);   // the same nets, on the same pumpkins where they still stand (Release 8)
   if (__RELEASE__ >= 7 && c.potions) restorePotions(c.potions);   // the same potions stand, the clock carries on, and the drinkers come back with what they drank (Release 7)
   if (__RELEASE__ >= 4 && c.bossSpawned && c.bossPhase2) G.bossPhase2 = c.bossPhase2.slice();   // spawner.js puts each returning boss back in its phase
   if (__RELEASE__ >= 5 && c.bossSpawned && c.bossMood) G.bossMood = c.bossMood.slice();   // and a Lamplighter in its mood, its clocks where they were, a Fallen Poltergeist with its marks spent and its reaper phase (Release 5)

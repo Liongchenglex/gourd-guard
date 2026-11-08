@@ -52,6 +52,7 @@ export function resolveMonster(key){
   if (v) return { type:v.base, kind:v.base, T:TYPES[v.base], variant:v };
   return { type:key, kind:key, T:TYPES[key], variant:null };
 }
+let monsterIds = 0;
 export function spawnMonster(key, lane, minion, p, formArg){
   const { type, kind, T, variant } = resolveMonster(key);
   const mod = variant ? MODS[variant.mod] : null;
@@ -116,6 +117,7 @@ export function spawnMonster(key, lane, minion, p, formArg){
   if (__RELEASE__ >= 4 && type === 'boss' && kind === 'fallengravekeeper') initFallenGK(m);
   if (__RELEASE__ >= 5 && type === 'boss' && kind === 'lamplighter') initLamplighter(m);   // the Nightmare Foggy Hollow mini boss (engine/hollow.js)
   if (__RELEASE__ >= 5 && type === 'boss' && kind === 'fallenpoltergeist') initFallenPolt(m);   // the hollow nightmare's boss, N2-16 (engine/hollow.js)
+  if (__RELEASE__ >= 8) m.id = ++monsterIds;   // a stable id: the nets a monster throws are told apart by it (engine/nets.js)
   G.monsters.push(m);
   return m;
 }

@@ -53,3 +53,7 @@ export const POISON_WARN = 1.5, POISON_DUR = 3;
 // it as a witch does: a Chameleon with chance POTION_COLOUR_CHAMELEON, else a Reverse Chameleon (owner: 10% / 90%). A bulky drinker is drawn
 // POTION_BULKY_SCALE times as big (our call). A level's `potions.cap` defaults to POTION_CAP (our number).
 export const POTION_SPEED = 1.5, POTION_COLOUR_CHAMELEON = 0.1, POTION_BULKY_SCALE = 1.15, POTION_CAP = 6;
+
+// Nets on the patch (Release 8, Nightmare Crumbling Keep; spec Part 2; src/engine/nets.js). At most NET_CAP nets lie on the patch at once, both
+// kinds together and counting those in flight (owner); a thrown net takes NET_FLY seconds to land (our number).
+export const NET_CAP = 15, NET_FLY = 0.7;

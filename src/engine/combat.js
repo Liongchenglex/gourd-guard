@@ -46,7 +46,7 @@ export function launchGroup(ref){
   const order = gids.length > 1 ? [...gids.filter(g => !G.groups[g].crook), ...gids.filter(g => G.groups[g].crook)] : gids;
   const seen = new Set(), sets = [];
   for (const g of order){ const own = groupCells(g).filter(o => !seen.has(o.cell)); for (const o of own) seen.add(o.cell); sets.push({ grp:G.groups[g], own, g }); }
-  for (const st of sets) st.pulled = paintPull(st.g).filter(o => !seen.has(o.cell) && seen.add(o.cell));   // Paint: touching pumpkins of any colour launch with the bunch, each as itself (owner, 2026-10-08)
+  for (const st of sets){ st.pulled = paintPull(st.g, seen); for (const o of st.pulled) seen.add(o.cell); }   // Paint: touching pumpkins of any colour launch with the bunch, each as itself (owner, 2026-10-08)
   const nOwn = sets.reduce((a, st) => a + st.own.length, 0), nPulled = sets.reduce((a, st) => a + st.pulled.length, 0);
   if (!nOwn) return;
   const bunch = { spawned:false, small:nOwn < 3, kills:0 };   // shared by every projectile of this launch (Purple's one-per-bunch spawn; Turquoise pairs are half power)

@@ -359,12 +359,31 @@ export function primaryGid(ref){
   return gid;
 }
 
-/** The groups one flick sends (Release 8, spec Part 5): the primary group and, one step out, every Crookneck group sharing a cell with it (a
- *  bunch pulls in the square it reaches into) or, for a Crookneck group, every bunch sharing a cell with it. Just [gid] otherwise. */
+/** The groups one flick sends (Release 8, spec Part 5; controller ruling, Task 7 fix round 1): the Crookneck groups in the launch (the primary
+ *  group if it is one, else every Crookneck group sharing a cell with the primary bunch) and every bunch sharing a cell with any of them. So
+ *  bunch -> square -> bunches, at most these two hops (squares never overlap while ALLOW_SAME_GOURD is false; if two Crooknecks could ever
+ *  stand, it still stops here), and the set is the same whichever of its cells is flicked. A bunch touching no square: just [gid]. */
 export function launchGids(gid){
   const out = [gid], grp = G.groups && G.groups[gid]; if (!(__RELEASE__ >= 8) || !grp) return out;
-  for (const { cell } of groupCells(gid)) for (const g of cell.gids) if (!out.includes(g) && G.groups[g] && (grp.crook || G.groups[g].crook)) out.push(g);
+  const crooks = grp.crook ? [gid] : [];
+  if (!grp.crook) for (const { cell } of groupCells(gid)) for (const g of cell.gids) if (G.groups[g] && G.groups[g].crook && !crooks.includes(g)) crooks.push(g);
+  for (const k of crooks){
+    if (!out.includes(k)) out.push(k);
+    for (const { cell } of groupCells(k)) for (const g of cell.gids) if (!out.includes(g) && G.groups[g] && !G.groups[g].crook) out.push(g);
+  }
   return out;
+}
+
+/** The held launch (Release 8): the cells and columns the held lit pumpkin would send, worked out once per group set and held group (G.groups
+ *  is a new object on every resolveMatches), so the per-frame drawing reads a cached Set and list. Null when nothing is held. */
+let heldCache = { groups:null, gid:null, cells:null, cols:null };
+export function heldLaunch(){
+  const gid = heldGid(); if (gid == null) return null;
+  if (heldCache.groups === G.groups && heldCache.gid === gid) return heldCache;
+  const cells = new Set(), cols = [];
+  for (const g of launchGids(gid)) for (const o of groupCells(g)){ if (cells.has(o.cell)) continue; cells.add(o.cell); if (!cols.includes(o.c)) cols.push(o.c); }
+  heldCache = { groups:G.groups, gid, cells, cols };
+  return heldCache;
 }
 
 export function groupCells(gid){
@@ -375,12 +394,12 @@ export function groupCells(gid){
 
 /** Paint (owner, 2026-10-08/09): the touching pumpkins a lit Paint bunch borrows when it launches. Any colour, even one that
  *  is lit in its own bunch (only the touching ones come; owner 2026-10-09); most threatened columns first, up to PAINT_PULL[level]. */
-export function paintPull(gid){
+export function paintPull(gid, skip){
   const grp = G.groups && G.groups[gid]; if (!grp || grp.color !== PAINT) return [];
-  const own = groupCells(gid), mine = new Set(own.map(o => o.cell)), seen = new Set(), out = [];
+  const own = groupCells(gid), mine = new Set(own.map(o => o.cell)), seen = new Set(), out = [];   // `skip` (Release 8): cells already launching, left out before the cap
   for (const { r, c } of own) for (const [dr, dc] of [[1,0],[-1,0],[0,1],[0,-1]]){
     const a = r + dr, b = c + dc; if (a < 0 || a >= ROWS || b < 0 || b >= COLS) continue;
-    const n = grid[a][b]; if (!n || n.fly || mine.has(n) || seen.has(n) || (__RELEASE__ >= 4 && n.gourd) || (__RELEASE__ >= 5 && n.c === ROTTEN)) continue;   // Paint never pulls a gourd, nor a rotten pumpkin (Release 5)
+    const n = grid[a][b]; if (!n || n.fly || mine.has(n) || seen.has(n) || (skip && skip.has(n)) || (__RELEASE__ >= 4 && n.gourd) || (__RELEASE__ >= 5 && n.c === ROTTEN)) continue;   // Paint never pulls a gourd, nor a rotten pumpkin (Release 5)
     seen.add(n); out.push({ r:a, c:b, cell:n });
   }
   const threat = laneThreat(), cap = PAINT_PULL[lvOf(PAINT) - 1];

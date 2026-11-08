@@ -1575,6 +1575,25 @@ def check_crook_group(browser, url):
     page.evaluate("() => { const g = window.__gg; g.startGame('story', 1303, [0, 1, 2, 3, 4], ['wartling']); }"); time.sleep(0.2); hold(page); page.evaluate(CQ)
     page.evaluate("() => { window.__A = window.__put(1, 2, 0); window.__put(3, 4, 2); window.__gg.resolveMatches(); }")
     ok(page.evaluate("() => window.__A.lit") is False, 'a Wartling square makes no mixed group')
+    # a crook launch from cells that are also in a Protector square and a Wartling square: ward and wart per cell
+    page.evaluate("() => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); g.grid[2][1] = g.newGourd('protector'); g.grid[2][3] = g.newGourd('crookneck'); g.grid[2][5] = g.newGourd('wartling'); }")
+    page.evaluate("() => { window.__put(1, 2, 0); window.__put(3, 4, 2); window.__gg.resolveMatches(); window.__gg.launchGroup(window.__gg.grid[1][2]); }")
+    pr = page.evaluate("() => window.__gg.G.projs.map(p => [p.lane, !!p.ward, !!p.wart]).sort((a, b) => a[0] - b[0])")
+    ok(pr == [[2, True, False], [4, False, True]], f'a crook-launched cell in a Protector square carries ward, one in a Wartling square wart {pr}')
+    # a rotten pumpkin in the square is left out of the group
+    page.evaluate("() => window.__gg.startGame('story', 1303, [0, 1, 2, 3, 4], ['crookneck'])"); time.sleep(0.2); hold(page); page.evaluate(CQ)
+    page.evaluate("() => { const g = window.__gg; window.__R = window.__put(1, 2, g.ROTTEN); window.__A = window.__put(3, 4, 0); g.resolveMatches(); }")
+    ok(page.evaluate("() => [window.__R.lit, window.__A.lit]") == [False, False], 'a rotten pumpkin does not count: with one other, nothing lights')
+    page.evaluate("() => { window.__put(1, 4, 2); window.__gg.resolveMatches(); }")
+    r = page.evaluate("() => [window.__R.lit, window.__A.lit, Object.values(window.__gg.G.groups).map(x => [x.color, x.size])]")
+    ok(r == [False, True, [[-3, 2]]], f'with two others they light as a group of two; the rotten one stays out {r}')
+    # on an edge and in a corner
+    for at, n in (((0, 3), 5), ((4, 6), 3)):
+        page.evaluate(CQ)
+        page.evaluate("([r0, c0]) => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); g.grid[r0][c0] = g.newGourd('crookneck'); for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) if (!g.grid[r][c]) window.__put(r, c, (r + c * 2) % 5); g.resolveMatches(); }", list(at))
+        d = page.evaluate("""() => { const g = window.__gg, sq = [], bad = []; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++){ const i = g.inCrookSquare(r, c); if (i) sq.push([r, c]); if (g.grid[r][c] && !g.grid[r][c].gourd && g.canNet(r, c) === i) bad.push([r, c]); }
+          return [Object.values(g.G.groups).filter(x => x.crook).map(x => x.size), sq.length, bad]; }""")
+        ok(d == [[n], n + 1, []], f'the Crookneck at {at}: a group of {n}, its square {n + 1} cells, canNet false exactly there {d}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
@@ -1604,6 +1623,17 @@ def check_crook_launch_mix(browser, url):
         ok(got == want, f'{label}: ten projectiles, each once as itself at its own level (Rainbow as Green) {got}')
         left = page.evaluate("() => window.__gg.grid.flat().filter(x => x && !x.gourd).length")
         ok(left == 0 and page.evaluate("() => window.__gg.netCount()") == 0, f'{label}: the patch is empty but for the gourd, the net went with its pumpkin ({left} left)')
+    # two bunches of different colours, each with a cell in the square: the same launch whichever cell is flicked (fix round 1, two hops)
+    TWO = """(K) => { const p = window.__put;
+      p(1, 2, K.ice); p(0, 2, K.ice); p(0, 1, K.ice);
+      p(3, 4, K.fire); p(4, 4, K.fire); p(4, 5, K.fire);
+      p(2, 2, K.green); window.__gg.resolveMatches(); }"""
+    for flick, label in (((0, 1), "A's outside cell"), ((2, 2), 'a square cell in no bunch'), ((4, 5), "B's outside cell"), ((1, 2), "A's cell in the square")):
+        page.evaluate(CQ); page.evaluate(TWO, K)
+        page.evaluate("([r, c]) => window.__gg.launchGroup(window.__gg.grid[r][c])", list(flick))
+        got = sorted(page.evaluate("() => window.__gg.G.projs.map(p => [p.lane, p.vis])"))
+        want = sorted([[2, K['ice']], [2, K['ice']], [1, K['ice']], [4, K['fire']], [4, K['fire']], [5, K['fire']], [2, K['green']]])
+        ok(got == want, f'two bunches and the square: flicking {label} launches all seven, each once {got}')
     # Paint pulls as usual: a Paint bunch in the square pulls its touching pumpkins, and each pumpkin still goes once
     page.evaluate(CQ)
     page.evaluate("(K) => { const p = window.__put; for (const c of [2, 3, 4]) p(1, c, K.paint); p(0, 3, K.ice); p(3, 2, K.fire); window.__gg.resolveMatches(); window.__gg.launchGroup(window.__gg.grid[1][3]); }", K)
@@ -1777,6 +1807,10 @@ def check_crook_art(browser, url):
       x.fillStyle = '#2a2420'; x.fillRect(0, 0, W, 120);
       ['grave', 'protector', 'wartling', 'crookneck', 'crookneck'].forEach((k, i) => x.drawImage(g.gourdIcon(i === 4 ? 192 : 96, k), i * 96, 12, 96, 96)); return c.toDataURL(); }""")
     with open(os.path.join(SHOTS8, 'crookneck-strip.png'), 'wb') as f: f.write(base64.b64decode(strip.split(',')[1]))
+    cost = page.evaluate("""() => { const g = window.__gg, c = document.createElement('canvas'), x = c.getContext('2d'), n = { draw:0, fill:0, stroke:0 };
+      g.drawGourdGlow(x, 1); const di = x.drawImage.bind(x); x.drawImage = (...a) => { n.draw++; return di(...a); }; x.fill = () => { n.fill++; }; x.stroke = () => { n.stroke++; };
+      g.drawGourdGlow(x, 1.5); return [g.gourdsOn().length, n.draw, n.fill, n.stroke]; }""")
+    ok(cost == [2, 2, 0, 0], f'the square glows cost one drawImage per gourd and no fill or stroke [gourds, drawImage, fill, stroke] {cost}')
     page.evaluate("() => window.__gg.setState('play')"); time.sleep(0.6)
     page.screenshot(path=os.path.join(SHOTS8, 'crookneck-patch.png'))
     ok(not errors, f'no page errors {errors[:2]}')

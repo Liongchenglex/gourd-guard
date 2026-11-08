@@ -194,7 +194,7 @@ const woosh = (up = false, v = 0.25) => noise(0.3, v, up ? 300 : 2000, 1.2, 0, u
 const boomSynth = () => { noise(0.9, 0.45, 300, 0.6, 0, 120); tone(90, 0.6, 'sine', 0.22, 40); };
 
 export const SFX = {
-  thunder(){ if (!gate('thunder', 400)) return; noise(1.6, 0.08, 220, 0.7, 0, 60); tone(58, 1.3, 'sine', 0.07, 32); tone(41, 1.6, 'sine', 0.05, 28, 0.15); },   // a quiet low rumble from the synthesiser (Release 8: the Keep's storm; the sample bank has no thunder)
+  ...(__RELEASE__ >= 8 ? { thunder(){ if (!gate('thunder', 400)) return; noise(1.6, 0.08, 220, 0.7, 0, 60); tone(58, 1.3, 'sine', 0.07, 32); tone(41, 1.6, 'sine', 0.05, 28, 0.15); } } : {}),   // a quiet low rumble from the synthesiser (Release 8: the Keep's storm; the sample bank has no thunder)
   // ---- board and legacy names still used around the code ----
   slide(){ S('swish', 0.55, { rate: 1.25, jit: 0.12 }) || noise(0.14, 0.14, 700, 1, 0, 260); S('pop', 0.3, { rate: 1.35, delay: 0.09 }); },   // a quick swish and a landing pop (owner: exciting, not dull)
   push(){ S('whistle', 0.45, { rate: 1.1 }) || S('swish', 0.55, { rate: 0.95 }) || noise(0.16, 0.16, 500, 1, 0, 200); S('thud', 0.35, { rate: 1.1, delay: 0.12 }); },   // a cartoon slide whistle as the row shoves over

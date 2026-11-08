@@ -21,7 +21,7 @@ function deadTree(g, x, y, h, col, R, w = 7){   // bare, forking, skeletal
     if (d > 0) for (let k = 0; k < 2 + (R() < .4 ? 1 : 0); k++) branch(x1, y1, a + (R() - .5) * 1.3, len * (.6 + R() * .15), wd * .62, d - 1); };
   branch(x, y, -Math.PI / 2 + (R() - .5) * .2, h * .45, w, 4);
 }
-function bolt(g, x, y0, y1, R, w = 3){   // a jagged lightning bolt with a branch, baked with glow
+export function bolt(g, x, y0, y1, R, w = 3){   // a jagged lightning bolt with a branch, baked with glow
   const pts = [[x, y0]]; let cx = x; for (let y = y0; y < y1; y += 9 + R() * 10){ cx += (R() - .5) * 22; pts.push([cx, y]); } pts.push([cx + (R() - .5) * 10, y1]);
   const draw = (p, lw, col) => { g.strokeStyle = col; g.lineWidth = lw; g.lineJoin = 'miter'; g.beginPath(); p.forEach(([a, b], i) => i ? g.lineTo(a, b) : g.moveTo(a, b)); g.stroke(); };
   g.save(); g.shadowColor = 'rgba(190,210,255,1)'; g.shadowBlur = 18; draw(pts, w * 2.2, 'rgba(170,190,255,.55)'); g.restore();

@@ -27,6 +27,7 @@ import { drawGourdCell, drawGourdGlow } from './gourd.js';
 import { ROTTEN, ROT_FX } from '../rot.js';
 import { rotSprite } from './rot.js';
 import { drawPotions, drawPotionFx } from './potion.js';
+import { drawWeatherFrame } from './weather.js';
 
 // ---------- Render ----------
 
@@ -48,6 +49,7 @@ export function render(){
     }
     ctx.globalAlpha = 1;
   }
+  if (__RELEASE__ >= 8) drawWeatherFrame(ctx);   // the Keep nightmare's rain and lightning (Release 8, render/weather.js), behind the monsters and the patch
   drawPreview(t);
   if ((g.def && g.def.sea) || g.sea) drawSea(t);
   drawPuddles(t);

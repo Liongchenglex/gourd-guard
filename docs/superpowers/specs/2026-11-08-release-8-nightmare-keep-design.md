@@ -24,7 +24,7 @@ The fourth nightmare book. Pumpkin Patch's nightmare was **fire**, Foggy Hollow'
 - Theme: the archived nightmare Keep map (`docs/archive/nightmare-worlds/`, owner: thunderstorm): black storm clouds, forked lightning over the towers, rain across the screen, the Vampire Count on the tallest tower, gargoyles with burning eyes, crows on the battlements, a broken portcullis. Baked once like the other maps; the rain is part of the bake, not a per-frame effect *(our call)*.
 - **Opens** once 4-20 **and** N3-4 are beaten *(our call, the pattern of Releases 5 and 7: N3-4 unlocks the Wartling Gourd)*. Below that the world 4 bookmark page says what is missing.
 - Book page, stamps (16), nightmare bestiary, intro cards and level preview as Releases 4, 5 and 7.
-- Music: `assets/music/drafts/nightmare4.mp3` (owner's draft, untracked on `dev`) if the owner confirms it is this book's track; otherwise the nightmare default.
+- Music: the regular nightmare music, as the other nightmare books (owner).
 
 ## Part 2: Nets (owner)
 - **A netted pumpkin** (`cell.net = 'net' | 'red'`) cannot slide, be pushed (a push whose line holds it is refused, as into a grave or a pinned pumpkin), be moved by `bestMove`, and **cannot be destroyed**: crushing (press and hold) is refused, lightning and any other pumpkin-destroying effect skip it. It **cannot be flicked on its own**; it still bunches with its colour, lights up and **flies with its bunch** (owner), taking the net with it. A net has no timer: it stays until its pumpkin flies or the Swan Gourd is broken.
@@ -105,7 +105,6 @@ The Grave, Protector and Wartling Gourds are on offer from N4-1 on gourd nights 
 ## Merging with Release 7
 `r8` starts from `r7`. Pull new `r7` commits in as they land. Shared tables touched by both: `NIGHTMARE_LEVELS` / `nmNight`, the book bookmarks in `src/ui/screens.js`, `src/data/gourds.js` and the picker, monster tables, bestiary, lore, `vite.config.js`, the release table. Keep Release 8 code in its own files (`src/engine/nets.js`, `src/engine/keep.js`, `render/chars/keep.js`, `nightmare4.js`) so merges stay small.
 
-## Still open (owner)
+## Still open (owner, to revisit later)
 - The Fallen Count's reward.
-- Whether `nightmare4.mp3` is this book's music.
 - All numbers marked *(our number)*.

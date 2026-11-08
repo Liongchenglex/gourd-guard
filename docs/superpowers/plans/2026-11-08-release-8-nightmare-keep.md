@@ -17,7 +17,7 @@
 - Releases 4, 5 and 7 must play exactly as now: `tools/nm_check.py`, `tools/nm2_check.py` and `tools/nm3_check.py --expect on` pass after every task.
 - `r8` follows `r7`: before Tasks 1 and 7, `git merge r7` (Task 7 needs Release 7's three-gourd picker). Resolve shared tables in favour of both releases.
 - A beta (owner): numbers are first guesses from the spec, no bot balance runs.
-- Perf rule (CLAUDE.md): never call the Toy Plastic painter or set `shadowBlur` in per-frame code; nets, veils, the Marshal's square, castle pieces, the lightning column and the Count's spear are baked sprites blitted per frame.
+- Perf rule (CLAUDE.md): never call the Toy Plastic painter or set `shadowBlur` in per-frame code; nets, veils, the Marshal's square, castle pieces, the lightning column, the Count's spear, the rain sheets and the map's bolts are baked sprites blitted per frame.
 - Original IP; no network requests; art ported from `docs/archive/` where it exists.
 - Always test the build: `npm run build:playtest`, then the checks with `--url http://127.0.0.1:4175/`. Lower builds: `VITE_RELEASE=7 npx vite build` (and 6 … 2), `npm run build` (store).
 - Rules change → `docs/GAME_DESIGN.md` changes in the same task (a new §9 section "Nightmare Crumbling Keep (Release 8)").
@@ -39,7 +39,7 @@
 **Files:**
 - Create: `src/data/worlds/nightmare4.js` (gated array; N4-1 only, a plain placeholder night Task 10 replaces)
 - Modify: `src/data/worlds/index.js` (WORLDS entry "Crumbling Keep: Nightmare" with `custom:'nightmare', scene:'keepN', base:3`, palette from the archive's thunderstorm row (`#03050c` `#141c33` `#3a4a6a`; `#c8d4ff`); `NIGHTMARE_LEVELS` gains `nightmare4` under `__RELEASE__ >= 8`; `isOpen` for N4-1 needs `save.stars[60 + 20]`-style 4-20 and `save.stars[nmNight(3, 4)]`)
-- Modify: `src/engine/render/sprites.js` / `render/nightmare/scenes.js` (the `keepN` scene from `docs/archive/nightmare-worlds/entry.js`: storm clouds, forked lightning, rain, `countFigure()`, `gargoyle()`, crows, broken portcullis; baked once)
+- Modify: `src/engine/render/sprites.js` / `render/nightmare/scenes.js` (the `keepN` scene from `docs/archive/nightmare-worlds/entry.js`: storm clouds, forked lightning, rain, `countFigure()`, `gargoyle()`, crows, broken portcullis; baked once), `src/engine/render/weather.js` (new: `bakeRain()` two tileable rain sheets, near and far; `bakeBolts()` three forked bolts; `drawWeather(ctx, dt)` scrolls the sheets and runs the flash; called behind the monsters and patch on the `keepN` scene only), `src/engine/audio.js` (`SFX.thunder()`: a synth low rumble, quiet)
 - Modify: `src/ui/screens.js` (world 4 bookmark page: N4 stamps; locked page says "Beat 4-20" / "Beat Nightmare 3-4"), `src/main.js` (Release 8 test-hook spread)
 - Create: `tools/nm4_check.py` (`--expect on|r7|r6|r5|r4|r3|r2|off`, importing `nm3_check.py`'s helpers)
 - Modify: `tools/nm3_check.py`, `nm2_check.py`, `nm_check.py` (`--expect r7` runs their checks as `on` plus `check_r8_absent`)
@@ -52,6 +52,7 @@
 - [ ] **Step 2: Write the failing checks** in `tools/nm4_check.py`:
   - `check_r8_absent`: below `on`, the bundle holds none of `R8_NAMES = ['Storm Lancer', 'Storm Marshal', 'Blood Glutton', 'Bat Bride', 'Lobber Cart', 'Gatehouse', 'Archer Tower', 'Crookneck Gourd', 'Siege Tower', 'Fallen Count', 'b9cf3c']`.
   - `check_n4_track`: 4-20 only → `isOpen(1301)` false; 4-20 and N3-4 → true; N3-4 only → false; `levelFor(1301).label == 'N4-1'`, `.nightmare`, `.world == 4`; starting N4-1 gives no page error and the `keepN` scene.
+  - `check_n4_weather`: on N4-1 the rain sheets' offsets change between two frames; with `Math.random` forced, a flash fires within 15 s and fades to 0 in under 0.5 s with a bolt drawn; `drawWeather` adds at most 6 `drawImage` and no `fill`/`stroke`/`shadowBlur` per frame; no weather on N3 or story 4-x nights; with reduced motion no flash.
   - `check_n4_book`: the world 4 book's bookmark page shows 16 stamps once both gates are met, the gate text otherwise.
 - [ ] **Step 3:** `npm run build:playtest`; `nm4_check --expect on`. Expected: FAIL (no track).
 - [ ] **Step 4:** Implement the files above.

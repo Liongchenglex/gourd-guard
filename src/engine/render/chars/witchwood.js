@@ -13,6 +13,9 @@
 //                eyes. Clips: walk (a slow shuffle, ash falling), chew, hex (the staff lifts, the skull's eyes flare and smoke).
 //   covenwitch:  the Blood Coven Witch, ported from the same file: a pale witch in a crimson high-collared cloak under a horned hat, a little iron
 //                cauldron of blood swinging from one hand, a bone athame in the other. Clips: walk, chew, hex (the cauldron boils over).
+//   triptych:    the Triptych Sprite, ported from witches-mirror/grand_mirror.js (variant 'grand'): a regal grey mirror sprite with glass-shard wings
+//                and crown carrying a hinged three-panel mirror. Clips: walk, chew, reflect (held open in front), summon (thrown open, the barrier
+//                flash). Her three-lane barrier is baked in render/fx.js (barrierSprite).
 // Drawn around (0,0) in drawing units with the feet near y = 50. Every clip is baked by render/anim.js; nothing random per frame (rng(seed) only).
 // Every palette sits inside a function, so lower builds (which never call these) keep none of it. Later Release 7 monsters go beside these.
 
@@ -559,6 +562,132 @@ export function covenwitch(g, P0 = {}){
   g.restore();
 }
 
+// ---------- the Triptych Sprite (ported from docs/archive/nightmare-monsters/witches-mirror/grand_mirror.js, variant 'grand') ----------
+// pose: { walk, chew, reflect, summon } (each 0..1, one at a time). The three-lane barrier is a baked field prop in render/fx.js.
+let TPALS = null;
+/** Her palettes (lazy): neutral greys with red, the glass kept pale blue so it still reads as a mirror. */
+function TP(){
+  return TPALS || (TPALS = { skin:gpal('#d2d2da'), hair:gpal('#eeeef2'), gown:gpal('#2c2c34'), trim:gpal('#b4b4c0'), wing:gpal('#e4ecf4'), frame:gpal('#a6a6b2'), back:gpal('#3a3a42'), crown:gpal('#dfe8f4'), vein:pal('#c01828') });
+}
+const tstep = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+/** Arched panel: a rectangle w × h centred on (x, y) with a round top. */
+const archP = (x, y, w, h) => g => { const r = w / 2; g.beginPath(); g.moveTo(x - r, y + h / 2); g.lineTo(x - r, y - h / 2 + r); g.arc(x, y - h / 2 + r, r, Math.PI, 0); g.lineTo(x + r, y + h / 2); g.closePath(); };
+/** Mirror glass filling path p: pale gradient, two sheen bands at offset k (-1..1), optionally a few fine cracks. */
+function glassFill(g, p, x, y, w, h, k, lit, cracked){
+  g.save(); if (lit > 0){ g.shadowColor = '#d8ecff'; g.shadowBlur = 6 + lit * 10; }
+  p(g); g.fillStyle = '#9ab4d8'; g.fill(); g.restore();
+  g.save(); p(g); g.clip();
+  const gl = g.createLinearGradient(x - w / 2, y - h / 2, x + w / 2, y + h / 2); gl.addColorStop(0, '#ffffff'); gl.addColorStop(.45, mix('#bcd8f4', '#ffffff', lit * .4)); gl.addColorStop(1, '#6f8cc0'); g.fillStyle = gl; g.fillRect(x - w, y - h, w * 2, h * 2);
+  const o = k * w; g.fillStyle = `rgba(255,255,255,${.55 + lit * .35})`; g.beginPath(); g.moveTo(x - w * .4 + o, y + h / 2); g.lineTo(x - w * .05 + o, y - h / 2); g.lineTo(x + w * .12 + o, y - h / 2); g.lineTo(x - w * .23 + o, y + h / 2); g.closePath(); g.fill();
+  g.fillStyle = `rgba(255,255,255,${.3 + lit * .3})`; g.beginPath(); g.moveTo(x - w * .02 + o, y + h / 2); g.lineTo(x + w * .3 + o, y - h / 2); g.lineTo(x + w * .38 + o, y - h / 2); g.lineTo(x + w * .06 + o, y + h / 2); g.closePath(); g.fill();
+  if (cracked){ g.strokeStyle = 'rgba(40,40,60,.45)'; g.lineWidth = .7; g.beginPath(); g.moveTo(x + w * .3, y + h * .1); g.lineTo(x + w * .05, y + h * .2); g.lineTo(x - w * .2, y + h * .42); g.moveTo(x + w * .05, y + h * .2); g.lineTo(x + w * .12, y + h * .48); g.stroke(); }
+  g.restore();
+}
+/** The triptych at (x, y) (centre of the middle panel): a 22 × 32 arched mirror in a silver frame with a red gem, two hinged doors opening by
+ *  o (0 shut → 1 open), glass lit by `lit` (0..1), sheen offset k. */
+function triptychPanel(g, x, y, o, lit, k){
+  const C = TP(), W = 22, H = 32, F = 3;
+  S.part(g, archP(x, y, W + F * 2, H + F * 2), C.frame, { x, y, r:H * .6 }, { mat:'metal', flat:true, lw:1.3 });
+  glassFill(g, archP(x, y + .5, W - 1, H - 1), x, y, W, H, k, lit, false);
+  S.stroke(g, archP(x, y + .5, W - 1, H - 1), C.frame, 1, .7);
+  S.part(g, PL([[x - 3, y - H / 2 - F + 1], [x, y - H / 2 - F - 6], [x + 3, y - H / 2 - F + 1]]), C.frame, { x, y:y - H / 2 - F - 2, r:4 }, { flat:true, mat:'metal', lw:1 });
+  g.save(); g.shadowColor = RED; g.shadowBlur = 3 + lit * 6; S.dot(g, E(x, y - H / 2 - F - 1, 2.6, 2.6), '#e8101e'); g.restore(); S.dot(g, E(x - .8, y - H / 2 - F - 2, .9, .9), '#fff', .8);
+  S.part(g, RR(x - 6, y + H / 2 + F - 1, 12, 4, 2), C.frame, { x, y:y + H / 2 + F + 1, r:6 }, { flat:true, mat:'metal', lw:1 });
+  // the doors: hinged at the panel's sides; past 90° their glass faces us, before it their backs do
+  const th = Math.PI * (1 - o) + .32 * o, cs = Math.cos(th), sn = Math.sin(th), DW = 13;
+  for (const s of [-1, 1]){
+    const hx = x + s * (W / 2 + F), ox = hx + s * DW * cs, top0 = y - H / 2 + 4, bot0 = y + H / 2 + F - 1, grow = 1 + sn * .1;
+    const yt = top0 - 2 - (grow - 1) * 10, yb = bot0 + (grow - 1) * 6, ot = y - H / 2 + 8 - (grow - 1) * 10;
+    const door = PL([[hx, top0], [hx, bot0], [ox, yb], [ox, ot], [ox + (hx - ox) * .4, yt]]);
+    if (Math.abs(cs) < .08){ S.tube(g, SO([[hx, top0], [hx, bot0]]), C.frame, 3); continue; }
+    if (cs > 0){   // open: glass facing us
+      S.part(g, door, C.frame, { x:(hx + ox) / 2, y, r:H * .5 }, { mat:'metal', flat:true, lw:1.2 });
+      const dg = PL([[hx + s * 1.6, top0 + 2], [hx + s * 1.6, bot0 - 2], [ox - s * 1.8, yb - 2.5], [ox - s * 1.8, ot + 2], [ox + (hx - ox) * .4, yt + 2.5]]);
+      glassFill(g, dg, (hx + ox) / 2, y, Math.abs(ox - hx), H, k * .8 + s * .2, lit * .9, true);
+    } else {   // shut: the back of the door, dark silver-grey with a red eye sigil
+      S.part(g, door, C.back, { x:(hx + ox) / 2, y, r:H * .5 }, { mat:'metal', flat:true, lw:1.2 });
+      g.save(); door(g); g.clip(); const ex = hx + (ox - hx) * .5, ey = y + 1, ew = Math.abs(ox - hx) * .36;
+      g.strokeStyle = rgba(C.frame.light, .55); g.lineWidth = 1; g.beginPath(); g.moveTo(hx + (ox - hx) * .12, y - H * .32); g.lineTo(hx + (ox - hx) * .12, y + H * .4); g.moveTo(hx + (ox - hx) * .88, y - H * .26); g.lineTo(hx + (ox - hx) * .88, y + H * .44); g.stroke();
+      if (ew > 1.5){ S.dot(g, SM([[ex - ew, ey], [ex, ey - ew * .7], [ex + ew, ey], [ex, ey + ew * .7]], .9), '#0c0c10', .9); g.save(); g.shadowColor = RED; g.shadowBlur = 4; S.dot(g, E(ex, ey, ew * .32, ew * .45), RED); g.restore(); }
+      g.restore(); }
+    for (const yy of [top0 + 4, bot0 - 4]) S.rivet(g, hx, yy, 1.4, C.frame);
+  }
+}
+/** Shard-wing: an angular glass wing between points, gel-shaded, with red veins. */
+function shardWing(g, pts, b, veins){
+  const C = TP();
+  g.save(); g.globalAlpha *= .85; S.part(g, SM(pts, .5), C.wing, b, { flat:true, mat:'gel', lw:1.2 }); g.restore();
+  for (const v of veins) S.crease(g, SO(v), C.vein, 1, .55);
+}
+/** The Triptych Sprite: a bigger (×1.2), regal mirror sprite drained grey: silver skin and long floating hair, a crown of glass shards with a red
+ *  gem, a charcoal gown with a shard-cut hem, two pairs of jagged glass-shard wings with red veins. She carries a tall arched mirror with two
+ *  hinged doors: shut at her side on the walk and chew (the doors' backs show a red eye sigil), held open in front of her while she reflects,
+ *  swung up and thrown open in `summon`, which flashes sideways as the three-lane barrier goes up. */
+export function triptych(g, P0 = {}){
+  const G = TP();
+  const w = P0.walk, ch = P0.chew, rf = P0.reflect, sm = P0.summon, t = w ?? rf ?? ch ?? sm ?? 0;
+  const flap = Math.sin(t * TAU * 2), hover = ch == null ? Math.sin(t * TAU) * 3 : Math.sin(ch * TAU) * 2, lean = ch == null ? 0 : .5 + Math.sin(ch * TAU) * .5, jaw = ch == null ? 0 : Math.abs(Math.sin(ch * TAU));
+  // triptych placement: at her right side, shut (walk / chew); in front, open (reflect); summon swings it in, throws it high and open, flashes, then settles in front
+  let tx = 23, ty = 14, tr = .42, ts = .78, open = 0, lit = 0, arms = 0, flash = 0;
+  if (rf != null){ tx = 0; ty = 25; tr = 0; ts = .88; open = 1; lit = .55 + Math.sin(rf * TAU) * .25; arms = 1; }
+  if (sm != null){ const a = tstep(0, .3, sm), up = tstep(.25, .5, sm) * (1 - tstep(.78, 1, sm));
+    tx = 23 * (1 - a); tr = .42 * (1 - a); ts = .78 + .1 * a + up * .1; ty = 14 * (1 - a) + 27 * a;
+    open = tstep(.32, .6, sm); arms = a; lit = tstep(.45, .6, sm) * (1 - tstep(.85, 1, sm) * .45); flash = Math.max(0, Math.sin(clamp01((sm - .52) / .4) * Math.PI)); }
+  const k = -1 + ((rf ?? sm ?? 0) * 2);
+  g.save(); g.translate(0, 50); g.scale(1.2, 1.2); g.translate(0, -50);
+  S.shadow(g, 0, 50, 24 - Math.abs(hover), 4);
+  g.save(); g.translate(0, hover + lean * 6);
+  // sideways flash behind her: the barrier being thrown out across three lanes
+  if (flash > 0){ g.save(); g.globalAlpha *= flash;
+    const gr = g.createLinearGradient(-58, 0, 58, 0); gr.addColorStop(0, 'rgba(220,236,255,0)'); gr.addColorStop(.25, 'rgba(220,236,255,.6)'); gr.addColorStop(.5, 'rgba(255,255,255,.95)'); gr.addColorStop(.75, 'rgba(220,236,255,.6)'); gr.addColorStop(1, 'rgba(220,236,255,0)');
+    g.fillStyle = gr; const by = ty - 4; g.beginPath(); g.moveTo(-58, by - 2); g.quadraticCurveTo(0, by - 14 - flash * 6, 58, by - 2); g.lineTo(58, by + 4); g.quadraticCurveTo(0, by + 12 + flash * 4, -58, by + 4); g.closePath(); g.fill();
+    const R = rng(13); for (let i = 0; i < 10; i++){ const sx = (R() - .5) * 104 * (.4 + flash * .6), sy = by + (R() - .5) * 18, ss = 1.2 + R() * 2; g.strokeStyle = i % 4 ? '#ffffff' : RED; g.lineWidth = 1; g.beginPath(); g.moveTo(sx - ss, sy); g.lineTo(sx + ss, sy); g.moveTo(sx, sy - ss); g.lineTo(sx, sy + ss); g.stroke(); }
+    g.restore(); }
+  // two pairs of glass-shard wings
+  for (const s of [-1, 1]){ const lift = flap * 8 + (sm != null ? flash * 6 : 0);
+    shardWing(g, [[s * 6, -6, 1], [s * 14, -26 - lift, 1], [s * 30, -40 - lift, 1], [s * 34, -30 - lift, 1], [s * 46, -38 - lift * .9, 1], [s * 44, -20 - lift * .6, 1], [s * 50, -12 - lift * .5, 1], [s * 34, -2, 1], [s * 14, 2, 1]], { x:s * 28, y:-18, r:24 },
+      [[[s * 8, -4], [s * 26, -24 - lift * .8], [s * 40, -32 - lift * .9]], [[s * 8, -1], [s * 32, -12 - lift * .4], [s * 46, -14 - lift * .5]]]);
+    shardWing(g, [[s * 6, 6, 1], [s * 22, 8 + lift * .3, 1], [s * 34, 20 + lift * .4, 1], [s * 30, 26, 1], [s * 36, 34 + lift * .3, 1], [s * 20, 30, 1], [s * 10, 18, 1]], { x:s * 22, y:20, r:14 },
+      [[[s * 8, 8], [s * 22, 18], [s * 32, 30]]]); }
+  // a long gown with a shard-cut hem, slippers peeking
+  for (const s of [-1, 1]){ const kk = Math.sin(t * TAU + (s < 0 ? 0 : 2)) * 1.5; S.part(g, PL([[s * 4 + kk, 34], [s * 12 + kk, 36], [s * 6 + kk, 39]]), G.gown, { x:s * 8, y:36, r:5 }, { flat:true, lw:1 }); }
+  const gown = SM([[-9, -2], [-14, 12], [-18, 32, 1], [-12, 28, 1], [-8, 36, 1], [-3, 30, 1], [0, 37, 1], [3, 30, 1], [8, 36, 1], [12, 28, 1], [18, 32, 1], [14, 12], [9, -2]], .8);
+  S.part(g, gown, G.gown, { x:0, y:14, r:18 }, { mat:'cloth', hx:-6, hy:2 });
+  S.crease(g, SO([[-5, 4], [-7, 28]]), G.gown, 1.4, .45); S.crease(g, SO([[5, 4], [7, 28]]), G.gown, 1.4, .45);
+  S.tube(g, SO([[-10, 6], [0, 8], [10, 6]]), G.trim, 2.4); g.save(); g.shadowColor = RED; g.shadowBlur = 4; S.dot(g, E(0, 8, 1.8, 1.8), RED); g.restore();
+  { const fl = Math.sin(t * TAU) * 2;   // long hair hanging behind the shoulders, its ends lifting as if under water
+    const hair = SM([[-14, -30], [-21, -16], [-24, 2 + fl], [-28, 16 + fl * 1.5, 1], [-18, 10], [-10, 2], [10, 2], [18, 10], [28, 16 - fl * 1.5, 1], [24, 2 - fl], [21, -16], [14, -30]], .8);
+    S.part(g, hair, G.hair, { x:0, y:-8, r:24 }, { mat:'skin', hx:-14, hy:-14 }); for (const s of [-1, 1]) S.crease(g, SO([[s * 17, -14], [s * 21, 0], [s * 25, 12]]), G.hair, 1.2, .4); }
+  // the arms: walk = one waving, one holding the shut triptych at her side; reflect / summon = both on the doors' outer frames
+  const wave = Math.sin(t * TAU) * 3, front = arms;
+  const lhx = -21 * (1 - front) + (tx - 30 * ts) * front, lhy = (19 + wave) * (1 - front) + (ty + 4 * ts) * front;
+  const rhx = 20 * (1 - front) + (tx + 30 * ts) * front, rhy = 20 * (1 - front) + (ty + 4 * ts) * front;
+  S.tube(g, SO([[-8, 2], [(-8 + lhx) / 2 - 6, (2 + lhy) / 2 + 2], [lhx, lhy - 3]]), G.skin, 4); S.tube(g, SO([[8, 2], [(8 + rhx) / 2 + 6, (2 + rhy) / 2 + 2], [rhx, rhy - 3]]), G.skin, 4);
+  // head: big, silver, pointed ears, narrowed red eyes, a thin smirk
+  const head = SM([[-16, -22], [-17, -10], [-10, -1], [0, 1], [10, -1], [17, -10], [16, -22], [8, -32], [-8, -32]]);
+  for (const s of [-1, 1]) S.part(g, SM([[s * 12, -18], [s * 28, -28], [s * 20, -12]], .6), G.skin, { x:s * 18, y:-18, r:7 }, { flat:true, mat:'skin' });
+  S.part(g, head, G.skin, { x:0, y:-15, r:17 }, { mat:'skin' }); S.contact(g, gown, 0, -2, 10, 4, .4);
+  S.part(g, SM([[-18, -20], [-14, -36], [0, -41], [14, -36], [18, -20], [13, -27], [7, -24], [0, -30], [-7, -24], [-13, -27]], .8), G.hair, { x:0, y:-30, r:18 }, { mat:'skin', hx:-8, hy:-34 });
+  S.crease(g, SO([[-6, -38], [-3, -30]]), G.hair, 1.2, .35); S.crease(g, SO([[6, -37], [9, -29]]), G.hair, 1.2, .35);
+  // crown of glass shards with a red gem
+  for (const [x, h, wd] of [[-11, 7, 3], [-6, 10, 3.4], [0, 15, 4], [6, 10, 3.4], [11, 7, 3]]){ const by = -38 + Math.abs(x) * .18;
+    S.part(g, PL([[x - wd, by], [x - wd * .3, by - h], [x + wd * .5, by - h + 2], [x + wd, by]]), G.crown, { x, y:by - h / 2, r:h * .6 }, { flat:true, mat:'gel', lw:1 }); }
+  S.tube(g, SO([[-13, -36], [0, -38.5], [13, -36]]), G.frame, 2.6);
+  g.save(); g.shadowColor = RED; g.shadowBlur = 5; S.dot(g, E(0, -38.5, 2.2, 2.4), '#e8101e'); g.restore();
+  const eo = { lx:.15, ly:.2, pr:.44, iris:'#e01828', lid:.18, lidCol:G.skin.base, lidDeep:G.skin.deep };
+  S.eye(g, -6.5, -13, 5.5, 6.5, { ...eo, tilt:-.3 }); S.eye(g, 6.5, -13, 5.5, 6.5, { ...eo, tilt:.3 });
+  if (lit > .3){ g.save(); g.globalAlpha *= (lit - .3) * 1.4; S.glow(g, -5.6, -12, 1.8, RED); S.glow(g, 7.4, -12, 1.8, RED); g.restore(); }
+  if (jaw > .05){ S.dot(g, SM([[-4, -4], [0, -3 + jaw * 5], [4, -4], [0, -5]], .8), '#1a0a14'); S.dot(g, PL([[-3, -4], [-1, -4], [-2, -.5]]), '#fff'); S.dot(g, PL([[1, -4], [3, -4], [2, -.5]]), '#fff'); }
+  else S.stroke(g, SO([[-4, -4.5], [0, -3], [5, -5.5]]), G.skin, 1.4);
+  // the triptych, then the hands over its frame
+  g.save(); g.translate(tx, ty); g.rotate(tr); g.scale(ts, ts);
+  if (open < .05) S.tube(g, SO([[0, 18], [1, 30]]), G.frame, 4);   // a handle under it while carried shut
+  triptychPanel(g, 0, 0, open, lit, k);
+  g.restore();
+  S.hand(g, lhx, lhy, G.skin, front > .5 ? 0 : Math.PI * .7, 3, 3.6); S.hand(g, rhx, rhy, G.skin, front > .5 ? Math.PI : Math.PI / 2, 3, 3.6);
+  g.restore(); g.restore();
+}
+
 // ---------- registry ----------
 // The Ash Crone and the Blood Coven Witch (r 22): the game witch's scale .62 and dy -10 (feet at 21); the crone's box is taller for the skull
 // staff's smoke and wider for the staff. Their hex clip is 6 frames at 12 fps (0.5 s: engine/witchwood.js plays it for 0.5 s as they cast).
@@ -571,4 +700,8 @@ export const WITCHWOOD = {
   toad: { draw:toad, scale:.6, dy:-7.2, box:{ x:-80, y:-62, w:160, h:122 }, clips:{ walk:clipOf(8, 7, 'walk'), chew:clipOf(TOAD_N, TOAD_FPS, 'chew'), die:clipOf(8, 13, 'die', true) }, still:{} },
   ashcrone: { draw:ashcrone, scale:.62, dy:-10, box:{ x:-54, y:-108, w:110, h:164 }, clips:{ walk:clipOf(8, 9, 'walk'), chew:clipOf(4, 8, 'chew'), hex:clipOf(6, 12, 'hex', true) }, still:{ hex:.5 } },
   covenwitch: { draw:covenwitch, scale:.62, dy:-10, box:{ x:-54, y:-100, w:108, h:156 }, clips:{ walk:clipOf(8, 9, 'walk'), chew:clipOf(4, 8, 'chew'), hex:clipOf(6, 12, 'hex', true) }, still:{ hex:.5 } },
+  // The Triptych Sprite (r 26): the archive's 1.2× sprite at scale .7, dy -10 (feet near 25). Reflect while the barrier is up (not chewing), its summon
+  // clip (10 frames at 12 fps, engine/witchwood.js SUMMON_DUR) as it goes up; the box is wide for the open doors and the wings.
+  triptych: { draw:triptych, scale:.7, dy:-10, box:{ x:-62, y:-72, w:124, h:128 }, clips:{ walk:clipOf(8, 12, 'walk'), chew:clipOf(4, 8, 'chew'), reflect:clipOf(6, 10, 'reflect'), summon:clipOf(10, 12, 'summon', true) }, still:{ reflect:.3 },
+    frame(m, clips){ if (m.reflecting && !(m.eating && m.frozenT <= 0) && !(m.anim && m.anim.clip === 'summon')){ const cl = clips.reflect; return ['reflect', Math.floor(m.ph * cl.fps) % cl.n]; } return null; } },
 };

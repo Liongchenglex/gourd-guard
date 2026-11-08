@@ -852,6 +852,121 @@ def check_covenwitch(browser, url):
 CHECKS.update({'check_ashcrone': check_ashcrone, 'check_covenwitch': check_covenwitch})
 
 
+# ---------- Task 6: the Triptych Sprite ----------
+# A level-1 pumpkin (type 0 Green) pushed into the projectile list below the field in `lane`; resolves once it is gone:
+# [dead, the reflected pumpkins flying back down (lane, dmg)].
+TSHOOT = """([type, lane]) => { const g = window.__gg, G = g.G;
+  const pr = { x:g.LANE(lane), y:g.fieldY(1) + 60, vy:-900, type, vis:type, lv:1, guar:false, lane, hitWalls:new Set(), grp:{ spawned:false, small:false, kills:0 }, size:1, rot:0, spin:9, hit:new Set(), trail:[], r:16, dead:false };
+  G.projs.push(pr);
+  return new Promise(res => { const t0 = performance.now();
+    const f = () => { if (G.projs.includes(pr) && performance.now() - t0 < 3000) requestAnimationFrame(f); else res([!!pr.dead, G.arrows.filter(a => a.mirror).map(a => [a.lane, a.dmg])]); };
+    f(); }); }"""
+TRIP = "([l, p]) => { const g = window.__gg, m = g.spawnMonster('triptych', l, false, p); m.sp = 0; m.reflecting = true; m.mirrorT = 99; window.__ms = window.__ms || []; window.__ms.push(m); return window.__ms.length - 1; }"
+FULL = "() => { for (const w of window.__gg.walls) w.hp = w.max; window.__gg.G.arrows.length = 0; }"
+CLEAR = "() => { window.__gg.G.monsters.length = 0; window.__gg.G.arrows.length = 0; window.__ms = []; }"
+
+
+def check_triptych(browser, url):
+    if not R7: return
+    page, errors = potion_page(browser, url)
+    t = page.evaluate("() => { const T = window.__gg.TYPES.triptych; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop, T.reflect, T.open, T.lanes]; }")
+    ok(t == [3, 0.04, 26, 10, 0.5, 32, 2, 2, 2.5, 1], f'triptych: hp 3, sp 0.04, r 26, coins 10, eat 0.5, pts 32, drop 2, reflect 2, open 2.5, lanes 1 {t}')
+    ok(page.evaluate("() => window.__gg.MNAME.triptych") == 'Triptych Sprite' and bool(page.evaluate("() => window.__gg.MINTRO.triptych")), 'its name is the Triptych Sprite, with an intro card')
+    # the cycle: down 2.5 s from the start, up 2 s, down 2.5 s
+    page.evaluate(CLEAR)
+    i = page.evaluate(NEW, ['triptych', 3, 0.3])
+    ok(mon(page, i, "m.reflecting") is False, 'it arrives with its barrier down')
+    tu = gwait(page, "() => window.__ms[0].reflecting", 4)
+    ok(tu is not None and abs(tu - 2.5) < 0.3, f'the barrier goes up after 2.5 s ({tu})')
+    ok(mon(page, i, "m.anim && m.anim.clip") == 'summon', 'it plays its summon clip as the barrier goes up')
+    td = gwait(page, "() => !window.__ms[0].reflecting", 4)
+    ok(td is not None and abs(td - 2) < 0.3, f'and down again after 2 s ({td})')
+    tu = gwait(page, "() => window.__ms[0].reflecting", 4)
+    ok(tu is not None and abs(tu - 2.5) < 0.3, f'and up again after 2.5 s ({tu})')
+    # barrier up (held): a pumpkin in each of its three lanes flies back down that lane into that lane's fence
+    page.evaluate(CLEAR)
+    i = page.evaluate(TRIP, [3, 0.3])
+    q0 = page.evaluate("() => window.__gg.G.q.refl")
+    for lane in (2, 3, 4):
+        page.evaluate(FULL)
+        r = page.evaluate(TSHOOT, [0, lane])
+        ok(r[0] and r[1] == [[lane, 1]], f'lane {lane}: the pumpkin is reflected back down lane {lane} for its power 1 {r}')
+        ok(mon(page, i, "m.hp") == 3, f'lane {lane}: the sprite takes no damage ({mon(page, i, "m.hp")})')
+        w = page.evaluate("(l) => window.__gg.walls[l].max", lane)
+        gwait(page, f"() => window.__gg.walls[{lane}].hp < window.__gg.walls[{lane}].max", 4)
+        hp = page.evaluate("(l) => window.__gg.walls[l].hp", lane)
+        ok(abs(hp - (w - 1)) < 1e-6, f'lane {lane}: its fence takes 1 ({w} -> {hp})')
+        ok(page.evaluate("(l) => window.__gg.walls.every((w, k) => k === l || w.hp === w.max)", lane), f'lane {lane}: no other fence is hurt')
+    q = page.evaluate("() => window.__gg.G.q.refl")
+    ok(q - q0 == 3, f'each reflection counts for the mirror quests ({q0} -> {q})')
+    # two lanes away: it passes
+    for lane in (1, 5):
+        page.evaluate(FULL)
+        r = page.evaluate(TSHOOT, [0, lane])
+        ok(r[1] == [], f'lane {lane} (two lanes away): the pumpkin flies past the barrier {r}')
+    # things are met in the order they stand: a ghoul in front of the barrier in a side lane is hit first; one behind it is never reached
+    page.evaluate(FULL)
+    j = page.evaluate(GHOUL, [2, 0.5, 3, 0])
+    r = page.evaluate(TSHOOT, [0, 2])
+    ok(r[1] == [] and mon(page, j, "m.hp") == 2, f'a ghoul in front of the barrier in lane 2 takes the hit, no reflection {r} (ghoul hp {mon(page, j, "m.hp")})')
+    page.evaluate(FULL)
+    j = page.evaluate(GHOUL, [4, 0.1, 3, 0])
+    r = page.evaluate(TSHOOT, [0, 4])
+    ok(r[1] == [[4, 1]] and mon(page, j, "m.hp") == 3, f'a ghoul behind the barrier in lane 4 is not reached: reflected {r} (ghoul hp {mon(page, j, "m.hp")})')
+    # at the edge: a lane-0 sprite guards lanes 0 and 1 only
+    page.evaluate(CLEAR)
+    i = page.evaluate(TRIP, [0, 0.3])
+    page.evaluate(FULL); r1 = page.evaluate(TSHOOT, [0, 1])
+    page.evaluate(FULL); r2 = page.evaluate(TSHOOT, [0, 2])
+    ok(r1[1] == [[1, 1]] and r2[1] == [], f'a sprite in lane 0 reflects lane 1, not lane 2 {r1} {r2}')
+    # barrier down: a pumpkin beside it passes, one in its lane hits it
+    page.evaluate("(i) => { const m = window.__ms[i]; m.reflecting = false; m.mirrorT = 99; }", i)
+    page.evaluate(FULL); r = page.evaluate(TSHOOT, [0, 1])
+    ok(r[1] == [], f'barrier down: a pumpkin beside it passes {r}')
+    page.evaluate(FULL); r = page.evaluate(TSHOOT, [0, 0])
+    ok(r[1] == [] and mon(page, i, "m.hp") == 2, f'barrier down: a pumpkin in its lane hits it {r} (hp {mon(page, i, "m.hp")})')
+    # down while it chews
+    page.evaluate(CLEAR)
+    i = page.evaluate(TRIP, [3, 0.3])
+    page.evaluate("(i) => { window.__ms[i].eating = true; }", i); gsleep(page, 0.1)
+    ok(mon(page, i, "m.reflecting") is False, 'chewing: its barrier is down')
+    page.evaluate(FULL); r = page.evaluate(TSHOOT, [0, 4])
+    ok(r[1] == [], f'chewing: a pumpkin beside it passes {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_triptych_budget(browser, url):
+    """The barrier is one baked sprite: three reflecting Triptychs add at most one drawImage each a frame over the same three with their
+    barriers down, and no fill, stroke or gradient. Saves a field shot for the owner."""
+    if not R7: return
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script("""(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+      for (const k of ['drawImage', 'fill', 'stroke', 'fillRect', 'fillText', 'strokeText', 'createRadialGradient', 'createLinearGradient']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; } })();""")
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    nm3_start(page, 1); time.sleep(3.2)
+    page.evaluate(PQ)
+    page.evaluate("() => { const g = window.__gg; window.__b = [0, 3, 6].map((l, i) => { const m = g.spawnMonster('triptych', l, true, 0.25 + i * 0.15); m.sp = 0; m.reflecting = false; m.mirrorT = 99; return m; }); }")
+    time.sleep(1.2)
+    count = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 30) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 30, (c.fill || 0) / 30, (c.stroke || 0) / 30, ((c.createRadialGradient || 0) + (c.createLinearGradient || 0)) / 30]); } }; requestAnimationFrame(tick); })"
+    base = page.evaluate(count)
+    page.evaluate("() => { for (const m of window.__b){ m.reflecting = true; m.anim = null; } }")
+    time.sleep(1.0)
+    lit = page.evaluate(count)
+    ok(lit[0] - base[0] >= 2.5, f'three barriers are drawn ({base[0]:.1f} -> {lit[0]:.1f} drawImage a frame)')
+    ok(lit[0] - base[0] <= 3.5, f'three barriers add at most one drawImage each a frame ({base[0]:.1f} -> {lit[0]:.1f})')
+    ok(lit[1] <= base[1] + 0.1 and lit[2] <= base[2] + 0.1 and lit[3] <= base[3] + 0.1, f'and no fill, stroke or gradient (fill {base[1]:.1f} -> {lit[1]:.1f}, stroke {base[2]:.1f} -> {lit[2]:.1f}, gradients {base[3]:.1f} -> {lit[3]:.1f})')
+    os.makedirs(SHOTS, exist_ok=True)
+    page.screenshot(path=os.path.join(SHOTS, 'triptych-field.png'))
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_triptych': check_triptych, 'check_triptych_budget': check_triptych_budget})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

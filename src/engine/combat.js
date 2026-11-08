@@ -206,7 +206,7 @@ export function kill(m){
   G.score += m.pts;
   const reward = m.type === 'sack' ? 'sack' : m.type === 'boss' ? 'boss' : (__RELEASE__ >= 4 && TYPES[m.type] && TYPES[m.type].noReward) ? 'none' : m.lastHit === YELLOW ? 'gold' : rollReward();   // none: Casket Jack's field coffin
   const y = mY(m), s = mS(m);
-  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', chameleon:'#6ab04a', rchameleon:'#3a3a4a', mirror:'#c8d8f0', firemummy:'#ff8a3a', fogwalker:'#b8c8d8', witch:'#6a3a8a', bulwark:'#8090a8', turtle:'#4a7a5a', sack:'#b08850', jukebox:'#c0392b', boss:'#6a3a7a', ...(__RELEASE__ >= 7 ? { flaskbearer:'#8a8a92', toad:'#3a3a42', ashcrone:'#5c5c62', covenwitch:'#9a1022' } : {}) }[m.type] || '#aaa';
+  const col = m.tint || { ghoul:'#8fae78', bat:'#5b3a7a', imp:'#e0503a', brute:'#6f8a45', wisp:'#cfe8f2', wraith:'#b8c8d8', rider:'#cfe8f2', doctor:'#4a6a3a', mummy:'#d8cfb0', knight:'#9aa0b0', hauler:'#8a7a6a', gargoyle:'#7a7c86', archer:'#d8d0c0', vampire:'#5a1a2a', crawler:'#3a7a8a', sailor:'#6a5a4a', diver:'#2a6a7a', slime:'#5ad08a', blob:'#7fe0a0', chameleon:'#6ab04a', rchameleon:'#3a3a4a', mirror:'#c8d8f0', firemummy:'#ff8a3a', fogwalker:'#b8c8d8', witch:'#6a3a8a', bulwark:'#8090a8', turtle:'#4a7a5a', sack:'#b08850', jukebox:'#c0392b', boss:'#6a3a7a', ...(__RELEASE__ >= 7 ? { flaskbearer:'#8a8a92', toad:'#3a3a42', ashcrone:'#5c5c62', covenwitch:'#9a1022', triptych:'#c8ccd8' } : {}) }[m.type] || '#aaa';
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
   ring(m.x, y, m.r * s * 2.2, 'rgba(255,220,150,.8)');
   if (__RELEASE__ >= 7 && G.vfx && (m.type === 'flaskbearer' || m.type === 'toad')) G.vfx.push({ kind:'clip', key:m.type, clip:'die', x:m.x, y, s, t:0, dur:m.type === 'toad' ? 0.6 : 0.55 });   // the bottles shatter and it topples / the toad swells and bursts (render/chars/witchwood.js)
@@ -270,6 +270,14 @@ export function pinkHeal(pr){
   G.q.heal++; w.hp = Math.min(w.max, w.hp + HEAL_AMT[i]); addFloat(`Wall +${HEAL_AMT[i]}`, LANE(pr.lane), FENCE_Y - 40, '#ffb3e6', 16, 0.9); SFX.extra('heal');
   for (let k = 0; k < 6; k++) spark(LANE(pr.lane), FENCE_Y - 10, '#ffb3e6', 100);
 }
+/** A Mirror Sprite's mirror, or a Triptych Sprite's barrier (Release 7, in any of its lanes), sends pumpkin pr back down `lane` into that lane's
+ *  fence for its power (it flies from just in front of the reflector, at the Mirror Sprite's bolt speed). Counts for the mirror quests. */
+export function reflectPumpkin(pr, m, lane){
+  const y = mY(m), x = lane === m.lane ? m.x : LANE(lane);
+  G.q.refl++;
+  G.arrows.push({ lane, p:m.p + 0.03, sp:TYPES.mirror.boltSp, dmg:POWER[pr.lv - 1], dead:false, mirror:true, vis:pr.vis });
+  addFloat('Reflected!', x, y - m.r - 24, '#e8f4ff', 16, 0.9); ring(x, y, 34, 'rgba(232,244,255,.9)'); SFX.monsterAct('mirror', 'reflect');
+}
 let hitBy = null;   // the pumpkin whose hit is being resolved (quest counters credit its kills)
 export function hitMonster(pr, m){ hitBy = pr; try { hitMonsterNow(pr, m); } finally { hitBy = null; } }
 function hitMonsterNow(pr, m){
@@ -288,12 +296,7 @@ function hitMonsterNow(pr, m){
     ring(m.x, y, 42, 'rgba(180,240,255,.9)');
   }
   if (pr.type === 3){ G.q.burn++; m.burnLeft = Math.max(m.burnLeft, BURN_N[i]); m.burnAmt = Math.max(m.burnAmt, BURN_AMT[i]); m.burnTick = BURN_EVERY; }
-  if (m.type === 'mirror' && m.reflecting){   // bounces the pumpkin back down its lane into the wall
-    G.q.refl++;
-    G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:TYPES.mirror.boltSp, dmg:POWER[i], dead:false, mirror:true, vis:pr.vis });
-    addFloat('Reflected!', m.x, y - m.r - 24, '#e8f4ff', 16, 0.9); ring(m.x, y, 34, 'rgba(232,244,255,.9)'); SFX.monsterAct('mirror', 'reflect');
-    return;
-  }
+  if ((m.type === 'mirror' || (__RELEASE__ >= 7 && m.type === 'triptych')) && m.reflecting){ reflectPumpkin(pr, m, m.lane); return; }   // bounces the pumpkin back down its lane into the wall (a Triptych's barrier is normally met first: game.js)
   m.lastHit = pr.type; m.lastHitLv = pr.lv; m.lastHitAlt = pr.vis === PAINT && pr.type !== PAINT ? PAINT : -1;
   const hitPower = pumpkinPower(pr) * (__RELEASE__ >= 7 && pr.wart ? WART_DMG : 1);   // launched from a Wartling Gourd's square (Release 7): its hit damage doubles; damage() still applies every immunity
   if (__RELEASE__ >= 4 && HUSK_STRIP[m.type]) stripHusk(m);   // a Corn Husker's first hit only takes the husk off (Release 4)

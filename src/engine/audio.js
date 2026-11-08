@@ -315,6 +315,7 @@ export const SFX = {
       case 'witch': S('witch', 0.5) || cackle(2, 640); break;
       case (__RELEASE__ >= 7 ? 'ashcrone' : ''): S('witch', 0.45, { rate: 0.8 }) || cackle(2, 520); break;   // the Ash Crone: an older, lower cackle (Release 7)
       case (__RELEASE__ >= 7 ? 'covenwitch' : ''): S('witch', 0.5, { rate: 1.05 }) || cackle(2, 680); break;   // the Blood Coven Witch (Release 7)
+      case (__RELEASE__ >= 7 ? 'triptych' : ''): S('glassping', 0.5, { rate: 0.85 }) || tone(2600, 0.08, 'sine', 0.05, 2000); break;   // the Triptych Sprite: a deeper glass ping (Release 7)
       default: S('thud', 0.4, { rate: 0.9 }) || thump(0.05, 180);
     }
   },
@@ -347,6 +348,7 @@ export const SFX = {
       case 'witch': S('witchdie', 0.55) || (cackle(1, 700), noise(0.1, 0.16, 500, 1, 0.14)); break;
       case (__RELEASE__ >= 7 ? 'ashcrone' : ''): S('witchdie', 0.55, { rate: 0.8 }) || (cackle(1, 560), noise(0.1, 0.16, 400, 1, 0.14)); S('cloth', 0.3, { delay: 0.15 }); break;   // her rags crumple into ash (Release 7)
       case (__RELEASE__ >= 7 ? 'covenwitch' : ''): S('witchdie', 0.55, { rate: 1.05 }) || (cackle(1, 720), noise(0.1, 0.16, 500, 1, 0.14)); S('splash', 0.3, { delay: 0.12 }); break;   // and her cauldron spills (Release 7)
+      case (__RELEASE__ >= 7 ? 'triptych' : ''): S('glass', 0.7, { rate: 0.85 }) || (noise(0.35, 0.28, 3600, 1, 0, 1300), [2800, 2300, 1800].forEach((f, i) => tone(f, 0.08, 'sine', 0.04, null, i * 0.05))); break;   // her triptych shatters (Release 7)
       default: S('pop', 0.5, { rate: 0.7 }) || tone(330, 0.18, 'triangle', 0.1, 700);
     }
   },

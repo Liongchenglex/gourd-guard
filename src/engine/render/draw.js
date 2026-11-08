@@ -12,7 +12,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite } from './tools.js';
-import { castleSprite, coinSprite, discSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
+import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -27,6 +27,7 @@ import { drawGourdCell, drawGourdGlow } from './gourd.js';
 import { ROTTEN, ROT_FX } from '../rot.js';
 import { rotSprite } from './rot.js';
 import { drawPotions, drawPotionFx } from './potion.js';
+import { barrierFront } from '../witchwood.js';
 
 // ---------- Render ----------
 
@@ -69,6 +70,7 @@ export function render(){
     if (m.hidden && m.type !== 'diver') continue;                       // wraith: invisible (a submerged diver still shows ripples)
     if ((m.type === 'sack' || m.type === 'jukebox') && fogOn) continue;   // drawn over the fog below: the ad-summoned Loot Sack must never hide
     if (fogOn && m.type !== 'boss' && m.p > -0.02 && (bands.some(([a, b]) => m.p >= a && m.p <= b) || fogCols.includes(m.lane))) continue;   // inside a fog bank (bosses glow through)
+    if (__RELEASE__ >= 7 && m.type === 'triptych' && m.reflecting && !m.eating) drawTriptychBarrier(m, t);   // its three-lane barrier, behind it (one baked sprite)
     drawMonster(m, t);
   }
   drawVfx();
@@ -317,6 +319,14 @@ export function drawCastles(t){
     ctx.fillStyle = 'rgba(0,0,0,.6)'; rrect(ctx, bx - 1, by - 1, bw + 2, 7, 3); ctx.fill();
     ctx.fillStyle = '#d8d0c8'; rrect(ctx, bx, by, Math.max(0, bw * w.hp / w.maxHp), 5, 2.5); ctx.fill();
   }
+}
+/** The Triptych Sprite's barrier (Release 7): its own lane and TYPES.triptych.lanes either side (fewer at the field's edge), its base line at the
+ *  sprite's front (where pumpkins meet it, engine/witchwood.js barrierFront); it fades in over the first quarter second it is up. Drawn
+ *  at the field's scale (not the monster's depth scale) so its panes stay on the lanes. */
+function drawTriptychBarrier(m, t){
+  const n = TYPES.triptych.lanes, lo = Math.max(0, m.lane - n), hi = Math.min(COLS - 1, m.lane + n), up = TYPES.triptych.reflect - m.mirrorT;
+  const a = (up < 0 ? 1 : clamp(up / 0.25, 0, 1)) * Math.min(1, m.age / 0.5);   // unscaled, so its panes stay on the lanes
+  drawBarrierFx(ctx, (LANE(lo) + LANE(hi)) / 2, mY(m) + barrierFront(m), hi - lo + 1, t, K, 1, a);
 }
 /** Bulwark Knight's aura: 3 lanes × 3 tile heights, steel blue. */
 export function drawBulwarkZone(m, t){

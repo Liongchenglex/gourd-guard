@@ -15,11 +15,16 @@
 //  - The Blood Coven Witch (`covenwitch`): every `brewEvery` s, while she walks the field, her cauldron boils over: brewN[0]..brewN[1] different
 //    random monsters (not herself) each get one random-kind potion on the tile just ahead of them (one row nearer the fence), skipped when
 //    that tile holds a potion already or is past the last row.
+//  - The Triptych Sprite (`triptych`): the Mirror Sprite's up/down cycle (barrier up `reflect` s, down `open` s; monsters.js drops it while it
+//    chews), playing its summon clip as it goes up. Its barrier stands across its own lane and `lanes` lanes either side, at the front of the
+//    sprite (where a pumpkin would hit it). game.js asks triptychAhead for every pumpkin in flight: a pumpkin that reaches a raised barrier in
+//    its lane is reflected back down that lane (combat.js reflectPumpkin) and stops there, unless a monster standing in front of the barrier in
+//    that lane is met first (things are met in the order they stand).
 
 import { TYPES } from '../data/monsters.js';
 import { SFX } from './audio.js';
 import { addFloat, spark } from './combat.js';
-import { TILE_P, mY } from './monsters.js';
+import { TILE_P, mS, mY } from './monsters.js';
 import { POTION_FX, POTION_KINDS, placePotion, potionAt } from './potion.js';
 import { COLS, G, walls } from './state.js';
 import { shuffle } from './util.js';
@@ -74,6 +79,10 @@ export function updateWitchwoodMonster(m, dt){
       m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
       covenBrew(m, dt);
       return true;
+    case 'triptych':   // barrier up / barrier down, as the Mirror Sprite's mirror
+      triptychCycle(m, dt);
+      m.x = m.tx + Math.sin(m.ph * 2) * 3;
+      return true;
   }
   return false;
 }
@@ -113,6 +122,30 @@ function covenBrew(m, dt){
   const y = mY(m);
   for (let i = 0; i < 10; i++) spark(m.x - 10, y - 4, i % 2 ? '#c8101e' : '#ff5a5a', 120);   // the cauldron boils over
   SFX.monsterAct('covenwitch', 'brew'); m.anim = { clip:'hex', t:0, dur:0.5 };
+}
+
+// ---------- the Triptych Sprite ----------
+export const SUMMON_DUR = 10 / 12;   // its summon clip (render/chars/witchwood.js: 10 frames at 12 fps) as the barrier goes up
+function triptychCycle(m, dt){
+  const T = TYPES.triptych;
+  m.mirrorT -= dt;
+  if (m.mirrorT > 0) return;
+  m.reflecting = !m.reflecting; m.mirrorT = m.reflecting ? T.reflect : T.open;
+  if (m.reflecting){ SFX.monsterAct('mirror', 'up'); m.anim = { clip:'summon', t:0, dur:SUMMON_DUR }; }
+}
+/** How far in front of a Triptych its barrier stands (game pixels below its centre): where a pumpkin in its own lane would hit it. */
+export const barrierFront = m => m.r * mS(m) * 0.8;
+/** The raised Triptych barrier pumpkin pr (flying up its lane) has reached this frame, or null: the nearest the fence of those whose lanes
+ *  cover pr's lane (own lane ± TYPES.triptych.lanes) and whose barrier line (mY + barrierFront) it has passed. No allocation (per pumpkin, per frame). */
+export function triptychAhead(pr){
+  const reach = TYPES.triptych.lanes;
+  let best = null;
+  for (const m of G.monsters){
+    if (m.type !== 'triptych' || !m.reflecting || m.eating || m.dead || m.hidden || m.rise > 0 || pr.hit.has(m) || Math.abs(m.lane - pr.lane) > reach) continue;
+    if (pr.y >= mY(m) + pr.r + barrierFront(m)) continue;   // not there yet
+    if (!best || m.p > best.p) best = m;
+  }
+  return best;
 }
 
 // ---------- the Cauldron Toad ----------

@@ -3,7 +3,7 @@
 // and the baked field props: the wooden palisade, graves, puddles, the sea tiles, the mist tiles and the castle walls.
 // Everything is deterministic per frame (seeded), so nothing flickers randomly. Owner asked for these on 2026-09-26.
 
-import { E, PL, RR, S, SM, SO, ell, pal, rgba, rng } from './paint.js';
+import { E, PL, RR, S, SM, SO, ell, mix, pal, rgba, rng } from './paint.js';
 import { CS, W } from '../state.js';
 import { TAU } from '../util.js';
 
@@ -186,6 +186,57 @@ function bake(key, w, h, ox, oy, k, fn){
   sp = { c, w, h, ox, oy }; propCache.set(key, sp); return sp;
 }
 export function resetProps(){ propCache = new Map(); }
+
+// ---------- the Triptych Sprite's barrier (Release 7; ported from docs/archive/nightmare-monsters/witches-mirror/grand_mirror.js) ----------
+// A wall of mirror glass across `lanes` lanes, standing BARRIER_H tall on y = 0, centred on x = 0, in game pixels: one arched pane per lane in a
+// tarnished silver frame, posts with red-gem finials on the lane lines, fine cracks, and a sheen band at offset k (-1..1 across the wall).
+// Baked into BARRIER_N sheen frames per lane count (2 at the field's edge, 3 elsewhere), each on first sight; one drawImage per barrier a frame.
+export const BARRIER_H = 50, BARRIER_N = 6;
+const barrierArch = (x, y, w, h) => g => { const r = w / 2; g.beginPath(); g.moveTo(x - r, y + h / 2); g.lineTo(x - r, y - h / 2 + r); g.arc(x, y - h / 2 + r, r, Math.PI, 0); g.lineTo(x + r, y + h / 2); g.closePath(); };
+function barrier(g, lanes, cs, h, k){
+  const W = lanes * cs, x0 = -W / 2, F = { base:'#a6a6b2', light:mix('#a6a6b2', '#ffffff', .45), dark:mix('#a6a6b2', '#141416', .42), deep:mix('#a6a6b2', '#060608', .68), rim:mix('#a6a6b2', '#ffffff', .6) };
+  // soft glow on the ground and a pale haze behind
+  let gr = g.createLinearGradient(0, -h - 16, 0, 6); gr.addColorStop(0, 'rgba(210,228,255,0)'); gr.addColorStop(.7, 'rgba(210,228,255,.18)'); gr.addColorStop(1, 'rgba(210,228,255,0)'); g.fillStyle = gr; g.fillRect(x0 - 6, -h - 16, W + 12, h + 22);
+  S.shadow(g, 0, 2, W * .55, 6);
+  for (let i = 0; i < lanes; i++){
+    const cx = x0 + cs * (i + .5), pw = cs - 14, ph = h - 8;
+    const pane = barrierArch(cx, -ph / 2 - 4, pw, ph);
+    S.part(g, barrierArch(cx, -ph / 2 - 4, pw + 6, ph + 5), F, { x:cx, y:-h / 2, r:h * .7 }, { mat:'metal', flat:true, lw:1.4 });
+    // glass with a sheen continuous across the whole wall
+    g.save(); g.shadowColor = '#d8ecff'; g.shadowBlur = 10; pane(g); g.fillStyle = 'rgba(150,180,220,.7)'; g.fill(); g.restore();
+    g.save(); pane(g); g.clip();
+    const gl = g.createLinearGradient(cx - pw / 2, -h, cx + pw / 2, 0); gl.addColorStop(0, 'rgba(255,255,255,.95)'); gl.addColorStop(.5, 'rgba(196,220,248,.82)'); gl.addColorStop(1, 'rgba(110,140,196,.8)'); g.fillStyle = gl; g.fillRect(cx - pw, -h - 4, pw * 2, h + 8);
+    const o = k * W * .6 - cx;
+    for (const [a, b, al] of [[-.22, -.06, .7], [.02, .08, .45], [.16, .19, .35]]){ g.fillStyle = `rgba(255,255,255,${al})`; g.beginPath(); g.moveTo(o + a * W, 0); g.lineTo(o + a * W + h * .55, -h); g.lineTo(o + b * W + h * .55, -h); g.lineTo(o + b * W, 0); g.closePath(); g.fill(); }
+    // a faint reflection of the field: a darker band low in the glass
+    gr = g.createLinearGradient(0, -14, 0, 0); gr.addColorStop(0, 'rgba(40,50,70,0)'); gr.addColorStop(1, 'rgba(40,50,70,.35)'); g.fillStyle = gr; g.fillRect(cx - pw, -14, pw * 2, 14);
+    const R = rng(17 + i * 5); g.strokeStyle = 'rgba(30,30,50,.4)'; g.lineWidth = .8;   // fine cracks spidering from one point
+    const px = cx + (R() - .5) * pw * .5, py = -ph * (.3 + R() * .3); g.beginPath(); for (let j = 0; j < 5; j++){ const a = R() * TAU, l = 6 + R() * 10; g.moveTo(px, py); g.lineTo(px + Math.cos(a) * l * .5 + 1, py + Math.sin(a) * l * .5); g.lineTo(px + Math.cos(a + .2) * l, py + Math.sin(a + .2) * l); } g.stroke();
+    g.restore();
+    S.stroke(g, pane, F, 1.2, .7);
+    // a glint star near the top of each pane
+    g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 1.2; const sx = cx + pw * .22, sy = -ph + 6; g.beginPath(); g.moveTo(sx - 4, sy); g.lineTo(sx + 4, sy); g.moveTo(sx, sy - 4); g.lineTo(sx, sy + 4); g.stroke();
+  }
+  // base rail and posts on the lane lines with gem finials
+  S.part(g, RR(x0 + 2, -5, W - 4, 7, 3), F, { x:0, y:-1, r:W * .5 }, { mat:'metal', flat:true, lw:1.2 });
+  for (let i = 0; i <= lanes; i++){ const px = x0 + cs * i + (i === 0 ? 5 : i === lanes ? -5 : 0);
+    S.part(g, RR(px - 3.5, -h + 2, 7, h, 2.5), F, { x:px, y:-h / 2, r:h * .5 }, { mat:'metal', flat:true, lw:1.2 });
+    S.part(g, PL([[px - 4, -h + 3], [px, -h - 9], [px + 4, -h + 3]]), F, { x:px, y:-h - 2, r:6 }, { flat:true, mat:'metal', lw:1 });
+    g.save(); g.shadowColor = '#ff2a3a'; g.shadowBlur = 6; S.dot(g, E(px, -h - 1, 2.8, 3), '#e8101e'); g.restore(); S.dot(g, E(px - 1, -h - 2.2, 1, 1), '#fff', .8);
+    S.rivet(g, px, -10, 1.6, F); S.rivet(g, px, -h * .55, 1.6, F); }
+}
+/** Sheen frame i of the barrier across `lanes` lanes, baked at scale k; its origin is the middle of the wall's base line. */
+export function barrierSprite(k, lanes, i){
+  k = bakeK(k); const pad = 20, w = lanes * CS + 24, h = BARRIER_H + pad + 12;
+  return bake(`barrier:${k}:${lanes}:${i}`, w, h, w / 2, pad + BARRIER_H, k, g => barrier(g, lanes, CS, BARRIER_H, -1.2 + 2.4 * i / BARRIER_N));
+}
+/** Blit the barrier with its base line's middle at (x, y), scaled by s, at alpha a; the sheen sweeps across with the clock t. */
+export function drawBarrierFx(g, x, y, lanes, t, k, s, a){
+  const sp = barrierSprite(k, lanes, Math.floor(t * 5) % BARRIER_N);
+  const ga = g.globalAlpha; g.globalAlpha = ga * a;
+  g.drawImage(sp.c, x - sp.ox * s, y - sp.oy * s, sp.w * s, sp.h * s);
+  g.globalAlpha = ga;
+}
 export const resetCastles = resetProps;
 
 const path = (g, pts) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); };

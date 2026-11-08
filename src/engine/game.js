@@ -9,7 +9,8 @@ import { WORLDS, levelFor, prevLevelFor, progressNight, typesForNight, highestOp
 import { SFX, ensureAudio, musicStart, musicStop } from './audio.js';
 import { MUSIC } from '../data/music.js';
 import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, spawnPumpkin, landingCell, landingNear, flyInto, DIRV } from './board.js';
-import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle, pumpkinPower, pinkHeal } from './combat.js';
+import { addFloat, damage, hitMonster, spark, chunk, ring, castleY, damageCastle, pumpkinPower, pinkHeal, reflectPumpkin } from './combat.js';
+import { triptychAhead } from './witchwood.js';
 import { mS, mY, updateMonster, TILE_P, applyBulwarks, spawnSack } from './monsters.js';
 import { SACK, ENDLESS_AD_MIN_SECONDS } from '../data/economy.js';
 import { showInterstitial } from './ads.js';
@@ -421,12 +422,15 @@ export function update(dt){
         const f = fireAhead(pr, targets);
         if (f){ burnPumpkin(pr, f); continue; }   // Ice puts it out; every pumpkin stops there, with no on-hit power
       }
+      const tb = __RELEASE__ >= 7 ? triptychAhead(pr) : null;   // a raised Triptych barrier it has reached in this lane (engine/witchwood.js)
       for (const m of targets){
+        if (tb && (m === tb || m.p < tb.p)) break;   // the barrier stands in front of this one: what stands in front of the barrier is met first
         if (Math.abs(pr.y - mY(m)) < pr.r + m.r * mS(m) * 0.8 || pr.y < mY(m)){
           hitMonster(pr, m);
           if (pr.type !== 4 || pr.dead){ pr.dead = true; break; }   // Grey pierces, unless the hit used it up (a blocked hit, Release 5)
         }
       }
+      if (tb && !pr.dead){ pr.hit.add(tb); reflectPumpkin(pr, tb, pr.lane); pr.dead = true; }   // reflected back down its own lane; every pumpkin stops there, Grey too
     }
     if (!pr.dead && pr.y < FIELD_TOP - 14){
       pr.dead = true;

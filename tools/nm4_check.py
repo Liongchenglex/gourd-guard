@@ -354,8 +354,73 @@ def check_net_budget(browser, url):
     page.close()
 
 
+# ---------- Task 3: the Lobber Cart ----------
+FILL = "() => { const p = window.__put; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) p(r, c, (r + c * 2) % 5); }"
+THROWN = "() => window.__gg.netCount() + window.__gg.G.netsFlying.length"
+STEP = "([n, dt]) => { const g = window.__gg; for (let i = 0; i < n; i++) g.update(dt); }"
+
+
+def check_lobber(browser, url):
+    if not R8:
+        page, errors = open_page(browser, url)
+        has = page.evaluate("() => !!(window.__gg.TYPES && window.__gg.TYPES.lobbercart)") if page.evaluate("() => !!window.__gg.TYPES") else False
+        ok(not has, 'no Lobber Cart type below Release 8')
+        page.close(); return
+    page, errors = net_night(browser, url)
+    page.evaluate(FILL)
+    T = page.evaluate("() => window.__gg.TYPES.lobbercart")
+    ok(T['hp'] == 6 and T['park'] == 0.15 and T['eat'] == 0 and T['lobEvery'] == [6, 8], f'the cart numbers are the spec ones {T}')
+    wall0 = page.evaluate("() => window.__gg.walls[3].hp")
+    page.evaluate("() => { window.__C = window.__gg.spawnMonster('lobbercart', 3, true); }")
+    mx = 0
+    for i in range(12):   # 60 s of game time, 0.1 s steps: it rolls to 0.15, stops, never passes
+        page.evaluate(STEP, [50, 0.1])
+        mx = max(mx, page.evaluate("() => window.__C.p"))
+    ok(0.149 <= page.evaluate("() => window.__C.p") <= 0.1501 and mx <= 0.1501, f'it parks at 0.15 and never passes it (max p {mx:.4f})')
+    ok(page.evaluate("() => !window.__C.eating && !window.__C.dead") and page.evaluate("() => window.__gg.walls[3].hp") == wall0, 'it never chews: not eating, the fence untouched')
+    ok(page.evaluate(THROWN) >= 6, f'it lobbed several nets in a minute ({page.evaluate(THROWN)})')
+    # timing, from a fresh cart already at its park: a net within 8 s, another within 16 s
+    page.evaluate(NQ); page.evaluate(FILL)
+    page.evaluate("() => { window.__C = window.__gg.spawnMonster('lobbercart', 1, true, 0.15); }")
+    page.evaluate(STEP, [79, 0.1])
+    page.evaluate(STEP, [2, 0.1])
+    ok(page.evaluate(THROWN) >= 1, f'a net thrown within 8 s ({page.evaluate(THROWN)})')
+    page.evaluate(STEP, [79, 0.1])
+    ok(page.evaluate(THROWN) >= 2, f'another within 16 s ({page.evaluate(THROWN)})')
+    ok(page.evaluate("() => window.__gg.G.monsters.every(m => m.id != null)") and page.evaluate("() => { const b = window.__gg.netSnapshot(); return b.cells.some(c => c[3] === window.__C.id) || b.flying.some(f => f[3] === window.__C.id); }"), 'its nets carry its id')
+    # others walk past a parked cart instead of queueing behind it
+    page.evaluate("() => { window.__W = window.__gg.spawnMonster('ghoul', 1, true, 0.0); }")
+    page.evaluate(STEP, [150, 0.1])
+    ok(page.evaluate("() => window.__W.p") > 0.4, f'a ghoul in the same lane walks past the parked cart ({page.evaluate("() => window.__W.p"):.2f})')
+    # dying leaves its nets
+    n = page.evaluate("() => window.__gg.netCount()")
+    page.evaluate("() => { window.__gg.damage(window.__C, 99); }"); page.evaluate(STEP, [10, 0.1])
+    ok(page.evaluate("() => window.__C.dead") and page.evaluate("() => window.__gg.netCount()") >= n and n >= 1, f'a dead cart leaves its nets ({n} -> {page.evaluate("() => window.__gg.netCount()")})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_lobber_continue(browser, url):
+    if not R8: return
+    page, errors = net_night(browser, url)
+    page.evaluate(FILL)
+    page.evaluate("() => { const g = window.__gg; g.G.spawned = 5; window.__C = g.spawnMonster('lobbercart', 2, true, 0.15); }")
+    page.evaluate(STEP, [85, 0.1])
+    before = page.evaluate(THROWN)
+    ok(before >= 1, f'the cart threw before the loss ({before})')
+    page.evaluate("() => { const g = window.__gg, c = g.continueState(); g.continueNight(c); }"); time.sleep(0.3)
+    page.evaluate("() => { const g = window.__gg; g.G.spawnTimer = 999; g.G.sproutT = -999; g.G.monsters.length = 0; }")
+    kept = page.evaluate("() => window.__gg.netCount() + window.__gg.G.netsFlying.length")
+    ok(kept >= 1, f'its nets survive the continue ({before} -> {kept})')
+    page.evaluate("() => { window.__C = window.__gg.spawnMonster('lobbercart', 2, true, 0.15); }")
+    page.evaluate(STEP, [90, 0.1])
+    ok(page.evaluate(THROWN) > kept, f'the returning cart keeps lobbing on its own clock ({kept} -> {page.evaluate(THROWN)})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 CHECKS = {'check_r8_absent': check_r8_absent, 'check_n4_track': check_n4_track, 'check_n4_weather': check_n4_weather, 'check_n4_book': check_n4_book,
-          'check_net_rules': check_net_rules, 'check_net_cap': check_net_cap, 'check_net_free_neighbour': check_net_free_neighbour, 'check_net_hint_wind': check_net_hint_wind, 'check_net_continue': check_net_continue, 'check_net_budget': check_net_budget}
+          'check_net_rules': check_net_rules, 'check_net_cap': check_net_cap, 'check_net_free_neighbour': check_net_free_neighbour, 'check_net_hint_wind': check_net_hint_wind, 'check_net_continue': check_net_continue, 'check_net_budget': check_net_budget, 'check_lobber': check_lobber, 'check_lobber_continue': check_lobber_continue}
 
 
 def main():

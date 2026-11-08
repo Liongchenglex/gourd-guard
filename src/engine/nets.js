@@ -96,7 +96,8 @@ export function netSnapshot(){
   return { cells, flying:(G.netsFlying || []).map(f => [f.x, f.y, f.kind, f.by, f.r, f.c, f.t]) };
 }
 
-/** Put the saved nets back (Task 5 re-tags each red net's `netBy` to the restored monster, ids being new on a continued night): on the same cell when it holds a pumpkin, else on the nearest netable pumpkin (the continued patch is fresh). */
+/** Put the saved nets back: on the same cell when it holds a pumpkin, else on the nearest netable pumpkin (the continued patch is fresh). Ids are new on a
+ *  continued night, so engine/keep.js restoreShields then re-tags each red net for the owner that comes back (and makes orphan red nets ordinary). */
 export function restoreNets(s){
   if (!s) return;
   for (const [r0, c0, kind, by] of s.cells || []){

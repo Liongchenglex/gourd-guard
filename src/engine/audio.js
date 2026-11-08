@@ -365,6 +365,9 @@ export const SFX = {
       case 'mirror:up': S('glassping', 0.4, { rate: 1.2 }) || tone(2400, 0.12, 'sine', 0.04, 3600); break;
       case 'mirror:reflect': S('glassping', 0.5, { rate: 0.8 }) || (tone(3200, 0.12, 'sine', 0.06, 2000), noise(0.06, 0.1, 5000, 2)); S('metallight', 0.3); break;
       case (__RELEASE__ >= 8 ? 'marshal:rally' : ''): S('metallight', 0.5, { rate: 0.8 }) || tone(330, 0.2, 'sawtooth', 0.05, 520); S('whoosh', 0.35, { rate: 0.7, delay: 0.1 }) || noise(0.3, 0.14, 700, 1, 0.1, 1800); break;   // the sword rings and sweeps up (Release 8)
+      case (__RELEASE__ >= 8 ? 'shield:immune' : ''): S('clank', 0.5, { rate: 0.8 }) || tone(300, 0.08, 'square', 0.05); break;   // a shielded monster refuses a hit: the Hollow King's dull clink (Release 8)
+      case (__RELEASE__ >= 8 ? 'glutton:cast' : ''): S('whoosh', 0.45, { rate: 0.7 }) || noise(0.25, 0.16, 800, 1.2, 0, 2000); S('chuckle', 0.3, { rate: 0.7, delay: 0.1 }); break;   // the Glutton flings a red net and chuckles (Release 8)
+      case (__RELEASE__ >= 8 ? 'bride:veil' : ''): S('cloth', 0.4, { rate: 0.8 }) || noise(0.2, 0.14, 1200, 1, 0, 500); S('bat', 0.25, { rate: 0.8, delay: 0.08 }); break;   // the veil sweeps over with a flutter of bats (Release 8)
       case (__RELEASE__ >= 8 ? 'lobbercart:lob' : ''): S('creak', 0.45, { rate: 0.9 }) || tone(140, 0.2, 'triangle', 0.06, 90); S('whoosh', 0.5, { rate: 0.8, delay: 0.4 }) || noise(0.25, 0.18, 900, 1.2, 0.4, 2200); S('wood', 0.3, { delay: 0.42 }); break;   // the crank creaks, the arm swings and the cup knocks (Release 8)
       case 'witch:hex': S('zap', 0.55, { rate: 0.9 }) || shimmer(); S('witch', 0.3, { delay: 0.12 }) || cackle(2, 620, 0.05, 0.04); break;
       case 'slime:split': S('slime', 0.5, { rate: 1.15 }) || (tone(500, 0.06, 'sine', 0.08, 800), tone(560, 0.06, 'sine', 0.08, 900, 0.09)); break;

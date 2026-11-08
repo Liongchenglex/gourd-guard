@@ -16,13 +16,32 @@
 //    (`m.rallied`); while the sword is up (and he is walking) monsters in the square move `rallySp` times faster (keepSpeed). Bosses, mini bosses (also
 //    type `boss`), other Marshals and the standing jukebox / sack are never rallied. The clock lives on the Marshal. A continued night respawns ordinary
 //    monsters fresh, so a returning Marshal starts a new clock and nothing is carried over (`rallied` lives on the monster that came back).
+//  - The Blood Glutton (`glutton`): at spawn it throws `netsAtSpawn` red nets (`throwNet(…, 'red', m.id)`); a clock of `netEvery` s runs all the time
+//    (glutTick, not while frozen) and at each zero it throws one more if it has fewer than `netMax` of its own on the patch or in flight. While any of
+//    its red nets lies on the patch it is shielded (shieldedNow). When it dies (keepFalls) its red nets on the patch and in flight become ordinary
+//    nets with no thrower, so they no longer shield anything.
+//  - The Bat Bride (`bride`): while she has no veil a clock of `veilAgain` s (0 at spawn) runs down; at zero she veils the nearest living other monster
+//    whose lane is within `veilReach` of hers (`o.veilBy = bride.id`, `bride.veil = o`): never herself, never another Bride (two could shield each other
+//    for ever), never one already veiled, the jukebox or the sack; a boss may be veiled. One veil at a time: it stays until the veiled monster or
+//    she is gone, wherever it walks. When the veiled one is gone her clock restarts at `veilAgain`; when she dies every `veilBy` pointing at her clears.
+//  - The shield door: combat.js damage() asks shieldedNow(m) before anything else, so every damage source (pumpkin hits, burn ticks, glue, Black
+//    splash, Deep Blue lightning, mines, fireworks, the bomb) is refused alike, with the Hollow King's "No damage" float and dull clink (shieldPuff).
+//    A Corn Husker's husk-strip (a hit that strips instead of hurting) asks the door too. Ice, knockback and glue's slow still work: only damage is refused.
+//    shieldedNow = red nets of its own on the patch, or a veil from a living Bride, or the Fallen Count's clamp (countClamped, Task 9).
+//  - A continued night (game.js continueState / continueNight) respawns ordinary monsters fresh, with new ids. shieldSnapshot keeps, in field order,
+//    the type of every living monster that owns red nets and the type each living Bride's veil is on; restoreShields (after restoreNets) re-tags each
+//    owner's red nets with a placeholder id (-1, -2, …: no monster has one) and orphan red nets (no living owner at the loss) become ordinary. As
+//    monsters come back (spawnMonster → initKeepMonster → adopt), the first one of an owner's type takes that owner's red nets (a Glutton then throws
+//    only what it lacks of `netsAtSpawn`); the first Bride back takes the first carried veil and puts it at once on the nearest monster of that type on
+//    the field that is not veiled (a boss is 'boss:kind'), in reach or not; if none stands there she veils by her own rule. Once every unbeaten
+//    monster is back (G.spawned >= G.def.total, carryCheck each frame) the red nets nobody came back for become ordinary.
 
 import { TYPES } from '../data/monsters.js';
 import { SFX } from './audio.js';
 import { addFloat, ring, spark, chunk } from './combat.js';
-import { mY } from './monsters.js';
-import { throwNet } from './nets.js';
-import { CS, G, FENCE_Y, walls } from './state.js';
+import { mS, mY } from './monsters.js';
+import { throwNet, redNetsOf } from './nets.js';
+import { CS, COLS, G, FENCE_Y, ROWS, grid, walls } from './state.js';
 import { rnd } from './util.js';
 import { damageWall } from './walls.js';
 
@@ -34,6 +53,9 @@ const LOB_LEAD = LOB_DUR * 0.5;   // the net leaves the cup at half the clip (re
 export function initKeepMonster(m){
   if (m.type === 'lobbercart'){ const T = TYPES.lobbercart; m.lobT = rnd(T.lobEvery[0], T.lobEvery[1]); m.lobbing = false; m.parked = false; }
   if (m.type === 'marshal'){ m.rallyT = TYPES.marshal.rallyEvery; m.rallying = false; m.rallyLeft = 0; }
+  if (G.shieldCarry) adopt(m);   // a continued night: the first of a carried owner's type takes its red nets, the first Bride its veil
+  if (m.type === 'glutton'){ const T = TYPES.glutton; m.netT = T.netEvery; for (let i = ownNets(m); i < T.netsAtSpawn; i++) throwNet(m.x, mY(m), 'red', m.id); }
+  if (m.type === 'bride'){ m.veilT = m.veilT || 0; m.veil = m.veil || null; }
 }
 
 /** Can the Marshal's rally reach this monster at all (speed and health)? */
@@ -118,4 +140,140 @@ export function updateKeepMonster(m, dt){
     }
   }
   return false;
+}
+
+// ---------- the Blood Glutton, the Bat Bride and the shield door ----------
+
+/** The Fallen Count's clamp (Task 9): a hit may not carry him past his next mark while shielded. Not built yet. */
+export const countClamped = m => false;
+
+/** The living Bride whose veil is on m, or null. */
+function brideOf(m){
+  if (m.veilBy == null) return null;
+  for (const o of G.monsters) if (o.id === m.veilBy) return o.dead || o.type !== 'bride' ? null : o;
+  return null;
+}
+
+/** Is m shielded from every damage right now? Red nets of its own on the patch, a veil from a living Bride, or the Fallen Count's clamp. */
+export function shieldedNow(m){
+  return (m.id != null && redNetsOf(m) > 0) || brideOf(m) != null || countClamped(m);
+}
+
+/** A refused hit: a quick flash, and at most every 0.35 s the "No damage" float and the dull clink (the Hollow King's pattern). */
+export function shieldPuff(m){
+  m.flash = 0.06;
+  if (G.t - (m.immuneT == null ? -9 : m.immuneT) < 0.35) return;
+  m.immuneT = G.t;
+  addFloat('No damage', m.x, mY(m) - m.r * mS(m) - 24, '#c8c2b8', 16, 0.7); SFX.monsterAct('shield', 'immune');
+}
+
+/** Red nets of m's on the patch and in flight. */
+function ownNets(m){
+  let n = redNetsOf(m);
+  for (const f of G.netsFlying || []) if (f.kind === 'red' && f.by === m.id) n++;
+  return n;
+}
+
+const CAST_DUR = 6 / 8;   // the `cast` clip (render/chars/keep.js): 6 frames at 8 fps
+
+/** The Glutton's and the Bride's clocks (monsters.js, every frame they are up: walking or chewing, not frozen, knocked back or down). */
+export function keepTick(m, dt){
+  if (m.frozenT > 0) return;
+  if (m.type === 'glutton'){
+    const T = TYPES.glutton;
+    if ((m.netT -= dt) > 0) return;
+    m.netT = T.netEvery;
+    if (ownNets(m) < T.netMax && throwNet(m.x, mY(m), 'red', m.id)){ m.anim = { clip:'cast', t:0, dur:CAST_DUR }; SFX.monsterAct('glutton', 'cast'); }
+    return;
+  }
+  if (m.type === 'bride'){
+    if (m.veil){
+      if (!m.veil.dead && m.veil.veilBy === m.id && G.monsters.includes(m.veil)) return;
+      m.veil = null; m.veilT = TYPES.bride.veilAgain;
+    }
+    if ((m.veilT -= dt) > 0) return;
+    const o = veilTarget(m);
+    if (o) putVeil(m, o); else m.veilT = 0.25;   // nobody in reach: look again in a moment
+  }
+}
+
+/** May a Bride veil o at all? */
+const veilable = (b, o) => o !== b && !o.dead && o.type !== 'bride' && o.type !== 'jukebox' && o.type !== 'sack' && o.veilBy == null && o.rise <= 0 && !o.hidden;
+/** The nearest veilable monster within the Bride's reach, or null. */
+function veilTarget(b){
+  const reach = TYPES.bride.veilReach, by = mY(b);
+  let best = null, bd = Infinity;
+  for (const o of G.monsters){
+    if (!veilable(b, o) || Math.abs(o.lane - b.lane) > reach || o.p < -0.05) continue;
+    const d = Math.hypot(o.x - b.x, mY(o) - by); if (d < bd){ bd = d; best = o; }
+  }
+  return best;
+}
+function putVeil(b, o){
+  o.veilBy = b.id; b.veil = o;
+  b.anim = { clip:'cast', t:0, dur:CAST_DUR };
+  ring(o.x, mY(o), 36, 'rgba(200,30,60,.85)'); for (let i = 0; i < 8; i++) spark(o.x, mY(o) - 10, '#d0203c', 90);
+  SFX.monsterAct('bride', 'veil');
+}
+
+/** kill() (combat.js), once a Release 8 monster is truly dead: a Glutton's red nets turn ordinary, a Bride's veil comes off. */
+export function keepFalls(m){
+  if (m.id != null) releaseNets(m.id);
+  if (m.type === 'bride'){
+    for (const o of G.monsters) if (o.veilBy === m.id){ o.veilBy = null; o.flash = 0.15; }
+    m.veil = null;
+  }
+}
+
+/** Red nets thrown by `id` (on the patch and in flight) become ordinary nets with no thrower. */
+function releaseNets(id){
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){ const cell = grid[r][c]; if (cell && cell.net === 'red' && cell.netBy === id){ cell.net = 'net'; cell.netBy = null; } }
+  for (const f of G.netsFlying || []) if (f.kind === 'red' && f.by === id){ f.kind = 'net'; f.by = null; }
+}
+
+// ---------- a continued night ----------
+const keyOf = o => o.type === 'boss' ? 'boss:' + o.kind : o.type;
+/** What a continued night carries (game.js continueState): the type of each living owner of red nets with its id, and each living Bride's veiled type. */
+export function shieldSnapshot(){
+  const owners = [], veils = [];
+  for (const m of G.monsters){
+    if (m.dead || m.id == null) continue;
+    if (ownNets(m) > 0) owners.push([keyOf(m), m.id]);
+    if (m.type === 'bride' && m.veil && !m.veil.dead) veils.push(keyOf(m.veil));
+  }
+  return { owners, veils };
+}
+/** Put the carry in place on a continued night (game.js continueNight, after restoreNets). */
+export function restoreShields(s){
+  const owners = (s && s.owners) || [], ids = new Map(owners.map(([, id], k) => [id, -(k + 1)]));
+  const tag = by => ids.has(by) ? ids.get(by) : undefined;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
+    const cell = grid[r][c]; if (!cell || cell.net !== 'red') continue;
+    const t = tag(cell.netBy); if (t === undefined){ cell.net = 'net'; cell.netBy = null; } else cell.netBy = t;   // orphan red nets (no living owner at the loss) are ordinary
+  }
+  for (const f of G.netsFlying || []){ if (f.kind !== 'red') continue; const t = tag(f.by); if (t === undefined){ f.kind = 'net'; f.by = null; } else f.by = t; }
+  G.shieldCarry = { owners:owners.map(([key], k) => ({ key, id:-(k + 1) })), veils:((s && s.veils) || []).slice() };
+}
+/** A monster coming back on a continued night (initKeepMonster): the first of a carried owner's type takes its red nets; the first Bride, a veil. */
+function adopt(m){
+  const C = G.shieldCarry, key = keyOf(m);
+  const i = C.owners.findIndex(o => o.key === key);
+  if (i >= 0){
+    const id = C.owners.splice(i, 1)[0].id;
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){ const cell = grid[r][c]; if (cell && cell.net === 'red' && cell.netBy === id) cell.netBy = m.id; }
+    for (const f of G.netsFlying || []) if (f.kind === 'red' && f.by === id) f.by = m.id;
+  }
+  if (m.type === 'bride' && C.veils.length){
+    const want = C.veils.shift(); let best = null, bd = Infinity;
+    for (const o of G.monsters) if (keyOf(o) === want && veilable(m, o)){ const d = Math.hypot(o.x - m.x, mY(o) - mY(m)); if (d < bd){ bd = d; best = o; } }
+    if (best){ best.veilBy = m.id; m.veil = best; m.veilT = 0; }
+  }
+  if (!C.owners.length && !C.veils.length) G.shieldCarry = null;
+}
+/** Every frame on a continued night with red nets still waiting (game.js): once every unbeaten monster is back, nobody is coming for them. */
+export function carryCheck(){
+  const C = G.shieldCarry; if (!C || !G.def || G.spawned < G.def.total) return;
+  for (const o of C.owners) if (!o.key.startsWith('boss:')) releaseNets(o.id);   // a boss comes back on its own (spawner.js), whenever it does
+  C.owners = C.owners.filter(o => o.key.startsWith('boss:')); C.veils = [];
+  if (!C.owners.length) G.shieldCarry = null;
 }

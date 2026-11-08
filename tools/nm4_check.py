@@ -321,8 +321,9 @@ def check_net_continue(browser, url):
     page.evaluate("() => { const g = window.__gg; g.G.spawnTimer = 999; g.G.sproutT = -999; g.G.monsters.length = 0; }")
     after = page.evaluate("() => window.__gg.netSnapshot()")
     ok(len(before['cells']) == 3 and len(after['cells']) == 3, f'three nets on the patch survive a continue ({len(before["cells"])} -> {len(after["cells"])})')
-    ok(sorted(((k, b) for _, _, k, b in after['cells']), key=str) == sorted(((k, b) for _, _, k, b in before['cells']), key=str), f'with their kind and thrower {after["cells"]}')
-    ok(len(after['flying']) == 1 and after['flying'][0][2] == 'red' and after['flying'][0][3] == 9, f'the net in flight keeps flying {after["flying"]}')
+    # an ordinary net keeps its thrower; a red net whose thrower is not on the field at the loss (none is, here) comes back ordinary (Task 5)
+    ok(sorted(((k, b) for _, _, k, b in after['cells']), key=str) == sorted([('net', 7), ('net', None), ('net', None)], key=str), f'with their kind and thrower, the orphan red one ordinary {after["cells"]}')
+    ok(len(after['flying']) == 1 and after['flying'][0][2] == 'net' and after['flying'][0][3] is None, f'the net in flight keeps flying (orphan red: ordinary) {after["flying"]}')
     time.sleep(0.8)
     ok(page.evaluate("() => window.__gg.netCount()") >= 3, 'and lands (the count did not drop)')
     ok(not errors, f'no page errors {errors[:2]}')
@@ -610,8 +611,250 @@ def check_marshal_budget(browser, url):
 
 
 
+# ---------- Task 5: the Blood Glutton, the Bat Bride and the shield door ----------
+OWN = "(id) => { const g = window.__gg; return g.netSnapshot().cells.filter(c => c[2] === 'red' && c[3] === id).length + g.G.netsFlying.filter(f => f.kind === 'red' && f.by === id).length; }"
+NODMG = "() => window.__gg.G.floats.some(f => f.text === 'No damage')"
+
+
+def shield_night(browser, url):
+    page, errors = net_night(browser, url); hold(page)
+    page.evaluate(FILL)
+    return page, errors
+
+
+def check_glutton(browser, url):
+    if not R8:
+        page, errors = open_page(browser, url)
+        has = page.evaluate("() => !!window.__gg.TYPES") and page.evaluate("() => !!(window.__gg.TYPES.glutton || window.__gg.TYPES.bride)")
+        ok(not has, 'no Glutton or Bride type below Release 8')
+        page.close(); return
+    page, errors = shield_night(browser, url)
+    T = page.evaluate("() => window.__gg.TYPES.glutton")
+    ok(T == {'hp': 8, 'sp': 0.03, 'r': 24, 'coins': 12, 'eat': 0.5, 'pts': 34, 'drop': 3, 'netsAtSpawn': 2, 'netEvery': 10, 'netMax': 2}, f'the glutton numbers are the brief ones {T}')
+    spawn_at(page, 'glutton', 3, 0.4, sp=0); page.evaluate("() => { window.__U = window.__last; }")
+    fl = page.evaluate("() => window.__gg.G.netsFlying.map(f => [f.kind, f.by === window.__U.id])")
+    ok(fl == [['red', True], ['red', True]], f'at spawn it throws two red nets of its own {fl}')
+    page.evaluate(STEP, [10, 0.1])
+    ok(page.evaluate("() => window.__gg.redNetsOf(window.__U)") == 2, 'both land: two red nets of its own on the patch')
+    page.evaluate("() => window.__gg.damage(window.__U, 3)")
+    ok(page.evaluate("() => window.__U.hp") == 8 and page.evaluate(NODMG), 'with its nets on the patch it takes no damage ("No damage")')
+    page.evaluate("() => { let one = false; window.__gg.clearNets(c => c.netBy === window.__U.id && !one && (one = true)); }")
+    page.evaluate("() => window.__gg.damage(window.__U, 3)")
+    ok(page.evaluate("() => window.__gg.redNetsOf(window.__U)") == 1 and page.evaluate("() => window.__U.hp") == 8, 'one net left: still no damage')
+    page.evaluate("() => { window.__gg.clearNets(c => c.netBy === window.__U.id); }")
+    page.evaluate("() => window.__gg.damage(window.__U, 3)")
+    ok(page.evaluate("() => window.__U.hp") == 5, f'both nets gone (flown): it takes damage ({page.evaluate("() => window.__U.hp")})')
+    # the clock: every 10 s one more, only while it has fewer than 2
+    page.evaluate(NQ); page.evaluate(FILL)
+    spawn_at(page, 'glutton', 3, 0.4, sp=0); page.evaluate("() => { window.__U = window.__last; }")
+    page.evaluate(STEP, [99, 0.1])     # 9.9 s
+    ok(page.evaluate(OWN, page.evaluate("() => window.__U.id")) == 2, 'two of its own before 10 s')
+    page.evaluate(STEP, [6, 0.1])      # 10.5 s: it holds 2, so no third
+    uid = page.evaluate("() => window.__U.id")
+    ok(page.evaluate(OWN, uid) == 2 and page.evaluate("() => window.__gg.netCount()") == 2, 'at 10 s with two standing it throws none (at most 2)')
+    page.evaluate("() => { let one = false; window.__gg.clearNets(c => c.netBy === window.__U.id && !one && (one = true)); }")
+    ok(page.evaluate(OWN, uid) == 1, 'one of its nets flies away')
+    page.evaluate(STEP, [90, 0.1])     # 19.5 s
+    ok(page.evaluate(OWN, uid) == 1, 'no new net before the next 10 s tick')
+    page.evaluate(STEP, [10, 0.1])     # 20.5 s (the tick lands at 20 s, give or take a step of float drift)
+    ok(page.evaluate(OWN, uid) == 2, f'at 20 s, below 2, it throws one more ({page.evaluate(OWN, uid)})')
+    page.evaluate(STEP, [100, 0.1])    # 30.5 s
+    ok(page.evaluate(OWN, uid) == 2, 'and never a third')
+    # dying with nets in flight: they land as ordinary nets
+    page.evaluate(NQ); page.evaluate(FILL)
+    spawn_at(page, 'glutton', 3, 0.4, sp=0); page.evaluate("() => { window.__U = window.__last; window.__gg.damage(window.__U, 99); }")
+    ok(page.evaluate("() => window.__U.dead"), 'with its nets still in flight it can be killed')
+    page.evaluate(STEP, [10, 0.1])
+    cells = page.evaluate("() => window.__gg.netSnapshot().cells.map(c => [c[2], c[3]])")
+    ok(cells == [['net', None], ['net', None]], f'its red nets land as ordinary nets with no thrower {cells}')
+    # and red nets on the patch turn ordinary when it dies (forced: its shield is up)
+    page.evaluate(NQ); page.evaluate(FILL)
+    spawn_at(page, 'glutton', 3, 0.4, sp=0); page.evaluate("() => { window.__U = window.__last; }"); page.evaluate(STEP, [10, 0.1])
+    ok(page.evaluate("() => window.__gg.redNetsOf(window.__U)") == 2, 'two red nets of its own on the patch')
+    page.evaluate("() => { window.__U.dead = true; window.__gg.keepFalls(window.__U); }")   # forced: no hit can kill it while they stand (a later boss's death may)
+    cells = page.evaluate("() => window.__gg.netSnapshot().cells.map(c => [c[2], c[3]])")
+    ok(cells == [['net', None], ['net', None]], f'its red nets left on the patch turn ordinary {cells}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def bride_scene(page):
+    page.evaluate(NQ); page.evaluate(FILL)
+    spawn_at(page, 'bride', 3, 0.4, sp=0); page.evaluate("() => { window.__R = window.__last; }")
+    spawn_at(page, 'ghoul', 4, 0.45, hp=3, sp=0); page.evaluate("() => { window.__A = window.__last; }")   # nearest, beside her
+    spawn_at(page, 'ghoul', 3, 0.7, hp=3, sp=0); page.evaluate("() => { window.__B = window.__last; }")    # her lane, farther
+    spawn_at(page, 'ghoul', 5, 0.4, hp=3, sp=0); page.evaluate("() => { window.__C = window.__last; }")    # two lanes away: out of reach
+
+
+def check_bride(browser, url):
+    if not R8: return
+    page, errors = shield_night(browser, url)
+    T = page.evaluate("() => window.__gg.TYPES.bride")
+    ok(T == {'hp': 6, 'sp': 0.035, 'r': 22, 'coins': 10, 'eat': 0.5, 'pts': 30, 'drop': 2, 'veilReach': 1, 'veilAgain': 3}, f'the bride numbers are the brief ones {T}')
+    bride_scene(page)
+    page.evaluate(STEP, [2, 0.1])
+    v = page.evaluate("() => [window.__A.veilBy === window.__R.id, window.__B.veilBy || null, window.__C.veilBy || null, window.__R.veilBy || null]")
+    ok(v == [True, None, None, None], f'she veils the nearest other monster within a lane, only one, never herself {v}')
+    page.evaluate("() => { const g = window.__gg; g.damage(window.__A, 1); g.damage(window.__B, 1); }")
+    ok(page.evaluate("() => [window.__A.hp, window.__B.hp]") == [3, 2] and page.evaluate(NODMG), 'the veiled one takes no damage, the other does')
+    # the veiled one leaves the field (a non-damage exit): 3 s later she veils the next
+    page.evaluate("() => { window.__A.dead = true; }")
+    page.evaluate(STEP, [29, 0.1])
+    ok(not page.evaluate("() => window.__B.veilBy"), 'no new veil before 3 s')
+    page.evaluate(STEP, [3, 0.1])
+    ok(page.evaluate("() => window.__B.veilBy === window.__R.id") and not page.evaluate("() => window.__C.veilBy"), 'after 3 s she veils the next in reach')
+    page.evaluate("() => window.__gg.damage(window.__B, 1)")
+    ok(page.evaluate("() => window.__B.hp") == 2, 'and it takes no damage')
+    # another Bride is never veiled (two Brides could shield each other for ever)
+    page.evaluate(NQ); page.evaluate(FILL)
+    spawn_at(page, 'bride', 3, 0.4, sp=0); page.evaluate("() => { window.__R = window.__last; }")
+    spawn_at(page, 'bride', 4, 0.4, sp=0); page.evaluate("() => { window.__R2 = window.__last; }")
+    page.evaluate(STEP, [10, 0.1])
+    ok(page.evaluate("() => !window.__R.veilBy && !window.__R2.veilBy"), 'two Brides side by side never veil each other')
+    # a boss may be veiled
+    page.evaluate(NQ); page.evaluate(FILL)
+    spawn_at(page, 'bride', 3, 0.3, sp=0); page.evaluate("() => { window.__R = window.__last; }")
+    page.evaluate("() => { const b = window.__gg.spawnMonster('boss', 3, true, 0.32); b.summon = 999; b.teleport = 999; window.__BO = b; window.__bh = b.hp; }")
+    page.evaluate(STEP, [2, 0.1])
+    page.evaluate("() => window.__gg.damage(window.__BO, 2)")
+    ok(page.evaluate("() => window.__BO.veilBy === window.__R.id") and page.evaluate("() => window.__BO.hp") == page.evaluate("() => window.__bh"), 'a boss beside her is veiled and takes no damage')
+    # she dies: the veil goes
+    page.evaluate("() => window.__gg.damage(window.__R, 99)")
+    ok(page.evaluate("() => window.__R.dead") and not page.evaluate("() => window.__BO.veilBy"), 'when the Bride dies her veil is cleared')
+    page.evaluate("() => window.__gg.damage(window.__BO, 2)")
+    ok(page.evaluate("() => window.__BO.hp") == page.evaluate("() => window.__bh") - 2, 'and the boss takes damage again')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_glutton_bride(browser, url):
+    if not R8: return
+    page, errors = shield_night(browser, url)
+    spawn_at(page, 'bride', 3, 0.4, sp=0); page.evaluate("() => { window.__R = window.__last; }")
+    spawn_at(page, 'glutton', 4, 0.42, sp=0); page.evaluate("() => { window.__U = window.__last; window.__U.netT = 1e9; }")
+    page.evaluate(STEP, [10, 0.1])
+    ok(page.evaluate("() => window.__U.veilBy === window.__R.id") and page.evaluate("() => window.__gg.redNetsOf(window.__U)") == 2, 'a veiled Glutton with two red nets')
+    page.evaluate("() => { const g = window.__gg; g.clearNets(); g.damage(window.__U, 2); }")
+    ok(page.evaluate("() => window.__U.hp") == 8, 'its nets gone, the veil still shields it')
+    page.evaluate("() => window.__gg.damage(window.__R, 99)")
+    page.evaluate("() => window.__gg.damage(window.__U, 2)")
+    ok(page.evaluate("() => window.__R.dead") and page.evaluate("() => window.__U.hp") == 6, 'nets gone and the Bride dead: it takes damage')
+    # nets back, Bride dead: shielded again by the nets alone
+    page.evaluate("() => { const g = window.__gg; g.grid[0][0].net = 'red'; g.grid[0][0].netBy = window.__U.id; g.damage(window.__U, 2); }")
+    ok(page.evaluate("() => window.__U.hp") == 6, 'a red net of its own alone shields it again')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+# every damage source in the game, run on a shielded Glutton (lane 3, p 0.5) and, as a control, on the same Glutton with no net.
+# A ghoul (hp 50) beside it in lane 4 at the same height is the first target of the splash and lightning hits.
+SRC_SCENE = """([shield, typ]) => { const g = window.__gg, G = g.G; G.monsters.length = 0; G.netsFlying = []; g.clearNets(); G.mines.length = 0; G.glue = []; G.floats.length = 0;
+  const u = g.spawnMonster(typ || 'glutton', 3, true, 0.5); u.sp = 0; u.hp = u.maxHp = 40; u.netT = 1e9; G.netsFlying = []; window.__U = u;
+  const n = g.spawnMonster('ghoul', 4, true, 0.5); n.sp = 0; n.hp = n.maxHp = 50; window.__N = n;
+  if (shield){ g.grid[0][0].net = 'red'; g.grid[0][0].netBy = u.id; } return true; }"""
+PR = "(type, m, extra) => ({ type, vis:type, lv:5, size:1, lane:m.lane, x:m.x, y:0, hit:new Set(), grp:{ spawned:true, small:false, kills:0 }, guar:false, trail:[], ...(extra || {}) })"
+SOURCES = {
+    'pumpkin': f"() => {{ const g = window.__gg, pr = {PR}; g.hitMonster(pr(0, window.__U), window.__U); }}",
+    'wartling hit': f"() => {{ const g = window.__gg, pr = {PR}; g.hitMonster(pr(0, window.__U, {{ wart:true }}), window.__U); }}",
+    'fire burn': "() => { const g = window.__gg, u = window.__U; u.burnLeft = 3; u.burnAmt = 1; u.burnTick = 0.05; g.update(0.1); g.update(1.1); }",
+    'glue': "() => { const g = window.__gg, u = window.__U; g.G.glue = [{ lane:u.lane, row:Math.floor(u.p / g.TILE_P()), t:0, dur:99 }]; for (let i = 0; i < 25; i++) g.update(0.1); }",
+    'black splash': f"() => {{ const g = window.__gg, pr = {PR}; g.hitMonster(pr(7, window.__N), window.__N); }}",
+    'deep blue lightning': f"() => {{ const g = window.__gg, pr = {PR}; g.hitMonster(pr(8, window.__N), window.__N); }}",
+    'mine': "() => { const g = window.__gg, u = window.__U; g.G.mines.push({ lane:u.lane, p:u.p, t:99, dead:false }); g.update(0.1); }",
+    'firework': "() => { const g = window.__gg; g.save.fw = 1; g.setState('play'); g.useFirework(); g.setState('pause'); }",
+    'bomb': "() => { const g = window.__gg, u = window.__U; g.save.bomb = 1; g.dropBomb(u.x, g.fieldY(u.p)); }",
+}
+
+
+def check_shield_all_sources(browser, url):
+    if not R8: return
+    page, errors = shield_night(browser, url)
+    for name, run in SOURCES.items():
+        page.evaluate(SRC_SCENE, [True, None]); page.evaluate(run)
+        hp_s = page.evaluate("() => window.__U.hp")
+        page.evaluate(SRC_SCENE, [False, None]); page.evaluate(run)
+        hp_c = page.evaluate("() => window.__U.hp")
+        ok(hp_s == 40 and hp_c < 40, f'{name}: a shielded Glutton keeps its health ({hp_s}/40), an unshielded one is hurt ({hp_c}/40)')
+    # the Corn Husker's husk (a hit that strips instead of hurting) stays on while it is veiled
+    page.evaluate(SRC_SCENE, [False, 'husker'])
+    page.evaluate("() => { const g = window.__gg, r = g.spawnMonster('bride', 3, true, 0.45); r.sp = 0; window.__R = r; for (let i = 0; i < 3; i++) g.update(0.1); }")
+    ok(page.evaluate("() => window.__U.veilBy === window.__R.id"), 'a Corn Husker is veiled')
+    page.evaluate(SOURCES['pumpkin'])
+    ok(page.evaluate("() => [window.__U.type, window.__U.hp]") == ['husker', 40], f'a pumpkin leaves the veiled husker its husk and health {page.evaluate("() => [window.__U.type, window.__U.hp]")}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_shield_continue(browser, url):
+    """A continued night respawns ordinary monsters fresh. The living Glutton's red nets wait for the first Glutton to come back and are its own;
+    a living Bride's veil goes to the first returning Bride, on a monster of the same type standing on the field. Red nets no Glutton came back for
+    turn ordinary once every unbeaten monster is back on the field."""
+    if not R8: return
+    page, errors = shield_night(browser, url)
+    page.evaluate("() => { window.__gg.G.spawned = 5; }")
+    spawn_at(page, 'glutton', 2, 0.4, sp=0); page.evaluate("() => { window.__U = window.__last; window.__U.netT = 1e9; }")
+    spawn_at(page, 'bride', 5, 0.4, sp=0); page.evaluate("() => { window.__R = window.__last; }")
+    spawn_at(page, 'knight', 5, 0.45, sp=0); page.evaluate("() => { window.__K = window.__last; }")
+    page.evaluate(STEP, [10, 0.1])
+    ok(page.evaluate("() => window.__gg.redNetsOf(window.__U)") == 2 and page.evaluate("() => window.__K.veilBy === window.__R.id"), 'before the loss: two red nets, a veiled knight')
+    page.evaluate("() => { const g = window.__gg, c = g.continueState(); g.continueNight(c); }"); time.sleep(0.3); hold(page)
+    page.evaluate("() => { const g = window.__gg; g.G.spawnTimer = 999; g.G.sproutT = -999; g.G.monsters.length = 0; }")
+    reds = page.evaluate("() => window.__gg.netSnapshot().cells.filter(c => c[2] === 'red').length")
+    ok(reds == 2, f'both red nets are back on the continued patch ({reds})')
+    spawn_at(page, 'ghoul', 1, 0.3, sp=0)
+    spawn_at(page, 'glutton', 2, 0.3, sp=0); page.evaluate("() => { window.__U2 = window.__last; }")
+    ok(page.evaluate("() => window.__gg.redNetsOf(window.__U2)") == 2, 'the first Glutton back owns them')
+    ok(page.evaluate("() => window.__gg.G.netsFlying.length") == 0, 'and, holding two, throws none at spawn')
+    page.evaluate("() => window.__gg.damage(window.__U2, 2)")
+    ok(page.evaluate("() => window.__U2.hp") == 8, 'it is shielded by them')
+    spawn_at(page, 'knight', 6, 0.3, sp=0); page.evaluate("() => { window.__K2 = window.__last; }")
+    spawn_at(page, 'bride', 3, 0.3, sp=0); page.evaluate("() => { window.__R2 = window.__last; }")
+    ok(page.evaluate("() => window.__K2.veilBy === window.__R2.id"), 'the first Bride back veils the returning knight (the type she veiled), out of her reach or not')
+    # a second continue case: the Glutton never comes back
+    page.close()
+    page, errors2 = shield_night(browser, url)
+    page.evaluate("() => { window.__gg.G.spawned = 5; }")
+    spawn_at(page, 'glutton', 2, 0.4, sp=0); page.evaluate("() => { window.__U = window.__last; window.__U.netT = 1e9; }")
+    page.evaluate(STEP, [10, 0.1])
+    page.evaluate("() => { const g = window.__gg, c = g.continueState(); g.continueNight(c); }"); time.sleep(0.3); hold(page)
+    page.evaluate("() => { const g = window.__gg; g.G.spawnTimer = 999; g.G.sproutT = -999; g.G.monsters.length = 0; }")
+    page.evaluate(STEP, [2, 0.1])
+    ok(page.evaluate("() => window.__gg.netSnapshot().cells.filter(c => c[2] === 'red').length") == 2, 'red nets wait while unbeaten monsters are still to come')
+    page.evaluate("() => { const g = window.__gg; g.G.spawned = g.G.def.total; }"); page.evaluate(STEP, [2, 0.1])
+    cells = page.evaluate("() => window.__gg.netSnapshot().cells.map(c => [c[2], c[3]])")
+    ok(len(cells) == 2 and all(c == ['net', None] for c in cells), f'every unbeaten monster back and no Glutton among them: its red nets turn ordinary {cells}')
+    ok(not errors and not errors2, f'no page errors {(errors + errors2)[:2]}')
+    page.close()
+
+
+def check_veil_budget(browser, url):
+    """The veil is one baked sprite: a veiled monster adds at most 1 drawImage a frame, and no fill, stroke or gradient."""
+    if not R8: return
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script("""(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+      for (const k of ['drawImage', 'fill', 'stroke', 'fillRect', 'createRadialGradient', 'createLinearGradient']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; } })();""")
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    nm4_start(page, 1); time.sleep(1.0)
+    page.evaluate(NQ)
+    spawn_at(page, 'ghoul', 3, 0.5, sp=0); page.evaluate("() => { window.__A = window.__last; }")
+    spawn_at(page, 'bride', 6, 0.5, sp=0); page.evaluate("() => { window.__R = window.__last; window.__R.veilT = 1e9; }")
+    time.sleep(0.6)
+    count = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 30) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 30, (c.fill || 0) / 30, (c.stroke || 0) / 30, (c.createRadialGradient || 0) / 30]); } }; requestAnimationFrame(tick); })"
+    base = page.evaluate(count)
+    page.evaluate("() => { window.__A.veilBy = window.__R.id; window.__R.veil = window.__A; }"); time.sleep(0.4)
+    lit = page.evaluate(count)
+    ok(0.9 <= lit[0] - base[0] <= 1.05, f'the veil costs one drawImage a frame ({base[0]:.1f} -> {lit[0]:.1f})')
+    ok(lit[1] <= base[1] + 0.1 and lit[2] <= base[2] + 0.1 and lit[3] <= base[3] + 0.1, 'and no fill, stroke or gradient')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+
 CHECKS = {'check_r8_absent': check_r8_absent, 'check_n4_track': check_n4_track, 'check_n4_weather': check_n4_weather, 'check_n4_book': check_n4_book,
-          'check_net_rules': check_net_rules, 'check_net_cap': check_net_cap, 'check_net_free_neighbour': check_net_free_neighbour, 'check_net_hint_wind': check_net_hint_wind, 'check_net_continue': check_net_continue, 'check_net_budget': check_net_budget, 'check_lobber': check_lobber, 'check_lobber_continue': check_lobber_continue, 'check_lancer': check_lancer, 'check_lancer_edges': check_lancer_edges, 'check_lancer_ride': check_lancer_ride, 'check_marshal': check_marshal, 'check_marshal_continue': check_marshal_continue, 'check_marshal_budget': check_marshal_budget}
+          'check_net_rules': check_net_rules, 'check_net_cap': check_net_cap, 'check_net_free_neighbour': check_net_free_neighbour, 'check_net_hint_wind': check_net_hint_wind, 'check_net_continue': check_net_continue, 'check_net_budget': check_net_budget, 'check_lobber': check_lobber, 'check_lobber_continue': check_lobber_continue, 'check_lancer': check_lancer, 'check_lancer_edges': check_lancer_edges, 'check_lancer_ride': check_lancer_ride, 'check_marshal': check_marshal, 'check_marshal_continue': check_marshal_continue, 'check_marshal_budget': check_marshal_budget,
+          'check_glutton': check_glutton, 'check_bride': check_bride, 'check_glutton_bride': check_glutton_bride, 'check_shield_all_sources': check_shield_all_sources, 'check_shield_continue': check_shield_continue, 'check_veil_budget': check_veil_budget}
 
 
 def main():

@@ -7,7 +7,7 @@ import { POTION_SPEED } from '../data/rules.js';
 import { glueStep } from './glue.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
 import { updateHollowMonster, reapLanes, initHollowMonster, initLamplighter, updateLamplighter, initFallenPolt, updateFallenPolt } from './hollow.js';
-import { initKeepMonster, updateKeepMonster, keepStop, keepParked, keepSpeed, lancerHit } from './keep.js';
+import { initKeepMonster, updateKeepMonster, keepStop, keepParked, keepSpeed, lancerHit, keepTick } from './keep.js';
 import { initWitchwoodMonster, updateWitchwoodMonster, toadStop, tongueFree } from './witchwood.js';
 import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike, initFallenGK, updateFallenGK } from './nightmare.js';
 import { SFX } from './audio.js';
@@ -120,8 +120,8 @@ export function spawnMonster(key, lane, minion, p, formArg){
   if (__RELEASE__ >= 4 && type === 'boss' && kind === 'fallengravekeeper') initFallenGK(m);
   if (__RELEASE__ >= 5 && type === 'boss' && kind === 'lamplighter') initLamplighter(m);   // the Nightmare Foggy Hollow mini boss (engine/hollow.js)
   if (__RELEASE__ >= 5 && type === 'boss' && kind === 'fallenpoltergeist') initFallenPolt(m);   // the hollow nightmare's boss, N2-16 (engine/hollow.js)
-  if (__RELEASE__ >= 8) initKeepMonster(m);   // Nightmare Crumbling Keep's monsters (engine/keep.js)
-  if (__RELEASE__ >= 8) m.id = ++monsterIds;   // a stable id: the nets a monster throws are told apart by it (engine/nets.js)
+  if (__RELEASE__ >= 8) m.id = ++monsterIds;   // a stable id: the nets a monster throws and the Bride's veil are told apart by it (engine/nets.js, engine/keep.js)
+  if (__RELEASE__ >= 8) initKeepMonster(m);   // Nightmare Crumbling Keep's monsters (engine/keep.js; after the id: a Glutton throws its red nets at once)
   G.monsters.push(m);
   return m;
 }
@@ -221,6 +221,7 @@ export function updateMonster(m, dt){
     if (Math.random() < dt * 16) G.parts.push({ x:m.x + rnd(-m.r * 0.6, m.r * 0.6), y:mY(m) + rnd(-4, 10), vx:rnd(-10, 10), vy:-rnd(50, 90), t:0, life:0.5, size:rnd(3, 6), color:'#ff8a3a', kind:'flame', grav:0 });
     if (m.burnTick <= 0){ m.burnLeft--; m.burnTick = BURN_EVERY; m.lastHit = 3; SFX.extra('burn'); damage(m, m.burnAmt, '#ff9a4a', true); if (m.dead) return; }
   }
+  if (__RELEASE__ >= 8 && (m.type === 'glutton' || m.type === 'bride')) keepTick(m, dt);   // the Glutton's net clock and the Bride's veil, walking or chewing (engine/keep.js)
   if (m.kb > 0){
     const st = Math.min(m.kb, dt * 2.2);
     m.p = Math.max(-0.05, m.p - st); m.kb -= st;

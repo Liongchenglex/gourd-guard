@@ -508,3 +508,26 @@ function bakeCastle(k, state){
   });
 }
 export function castleSprite(k, hpFrac){ return bakeCastle(bakeK(k), hpFrac > .66 ? 0 : hpFrac > .33 ? 1 : 2); }
+
+// ---------- the Bat Bride's veil (Release 8): a sheer crimson veil with a lace hem, draped over a veiled monster; baked once, one drawImage ----------
+// Drawn for a monster of radius 40 around its centre: the crown of the veil 1.8 r above, the hem 0.8 r below. render/monsters.js scales it to m.r.
+export const VEIL_R = 40;
+export function veilSprite(k){ k = bakeK(k); return bake(`veil:${k}`, 124, 112, 62, 76, k, g => {
+  const R = rng(11), hem = [];
+  for (let i = 0; i <= 12; i++){ const u = i / 12, x = -54 + u * 108; hem.push([x, 26 + Math.sin(u * Math.PI) * 6 + (i % 2 ? 7 : 0)]); }   // scalloped lace hem
+  const shape = gg => { gg.beginPath(); gg.moveTo(-54, 26); gg.bezierCurveTo(-60, -20, -34, -72, 0, -72); gg.bezierCurveTo(34, -72, 60, -20, 54, 26); for (let i = hem.length - 1; i >= 0; i--) gg.lineTo(hem[i][0], hem[i][1]); gg.closePath(); };
+  const gr = g.createLinearGradient(0, -72, 0, 34); gr.addColorStop(0, 'rgba(150,12,40,.5)'); gr.addColorStop(.55, 'rgba(190,24,56,.32)'); gr.addColorStop(1, 'rgba(220,40,70,.42)');
+  shape(g); g.fillStyle = gr; g.fill();
+  g.save(); shape(g); g.clip();
+  g.strokeStyle = 'rgba(255,170,190,.18)'; g.lineWidth = 1;   // the sheer weave
+  for (let x = -60; x <= 60; x += 9){ g.beginPath(); g.moveTo(x, -76); g.quadraticCurveTo(x * 1.1, -10, x * 1.25, 40); g.stroke(); }
+  g.strokeStyle = 'rgba(255,200,215,.35)'; g.lineWidth = 2.4;   // soft folds
+  for (const fx of [-30, -8, 16, 36]){ g.beginPath(); g.moveTo(fx * .4, -64); g.quadraticCurveTo(fx * .9 + (R() - .5) * 6, -16, fx * 1.15, 30); g.stroke(); }
+  g.restore();
+  g.strokeStyle = 'rgba(255,210,220,.75)'; g.lineWidth = 1.6; g.lineJoin = 'round';   // the lace hem and its picots
+  g.beginPath(); hem.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke();
+  g.fillStyle = 'rgba(255,220,228,.85)'; for (let i = 0; i < hem.length; i += 2){ g.beginPath(); g.ellipse(hem[i][0], hem[i][1] + 3, 1.8, 1.8, 0, 0, TAU); g.fill(); }
+  g.strokeStyle = 'rgba(110,6,28,.7)'; g.lineWidth = 1.4; shape(g); g.stroke();   // a dark edge so it reads on any monster
+  g.fillStyle = '#e0203a'; g.beginPath(); g.ellipse(0, -70, 4, 4, 0, 0, TAU); g.fill(); g.fillStyle = 'rgba(255,230,235,.9)'; g.beginPath(); g.ellipse(-1.2, -71.4, 1.2, 1.2, 0, 0, TAU); g.fill();   // the Bride's blood-red gem pinning it
+}); }
+

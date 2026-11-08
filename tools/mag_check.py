@@ -211,6 +211,40 @@ CHECKS.update({'check_pull_row': check_pull_row, 'check_pull_rows': check_pull_r
                'check_dead_anchor': check_dead_anchor, 'check_slide': check_slide, 'check_movers': check_movers, 'check_no_kb': check_no_kb})
 
 
+# ---------- Task 3: look and sound ----------
+COUNT = """(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+  for (const k of ['stroke', 'drawImage', 'createRadialGradient', 'createLinearGradient']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; } })();"""
+FRAMES = """(n) => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < n) requestAnimationFrame(tick); else { window.__ccOn = false;
+  const c = window.__cc; res(['stroke', 'drawImage', 'createRadialGradient', 'createLinearGradient'].map(k => (c[k] || 0) / n)); } }; requestAnimationFrame(tick); })"""
+
+
+def check_art(browser, url):
+    if not MAG: return
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script(COUNT)
+    page.goto(url + '?test'); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => { Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true, magnetOwned:true }); }")
+    page.evaluate("() => window.__gg.startGame('story', 2, [0, 1, 2, window.__gg.MAGNET])"); time.sleep(1.5)
+    page.evaluate(SETUP); page.evaluate("() => { " + HELP + " }")
+    h = page.evaluate("() => { const g = window.__gg; return [g.LIT_HALO.length === g.RAINBOW + 1, !!g.LIT_HALO[g.MAGNET]]; }")
+    ok(h == [True, True], f'Magnet bunches glow in their own colour {h}')
+    page.evaluate("() => { const h = window.__mg; window.__a = h.ghoul(3, h.row(2), 999); window.__vs = []; for (let k = 0; k < 6; k++) window.__vs.push(h.ghoul([0, 1, 2, 4, 5, 6][k], h.row(2))); }")
+    time.sleep(0.4)
+    base = page.evaluate(FRAMES, 8)
+    page.evaluate("() => { window.__gg.G.vfx.length = 0; window.__mg.hit(5, window.__a); for (const v of window.__gg.G.vfx) if (v.kind === 'magpull') v.dur = 30; for (const m of window.__vs) m.pullT = 0; }")
+    n = page.evaluate("() => window.__gg.G.vfx.filter(v => v.kind === 'magpull').length")
+    ok(n == 6, f'six pulls leave six spark-line effects ({n})')
+    pull = page.evaluate(FRAMES, 8)
+    ok(pull[1] - base[1] >= 6, f'the spark lines are drawn (drawImage per frame {base[1]:.1f} -> {pull[1]:.1f})')
+    ok(pull[0] - base[0] <= 1 and pull[2] - base[2] <= 0.5 and pull[3] - base[3] <= 0.5, f'and baked: no extra strokes or gradients per frame (stroke/radial/linear {base} -> {pull})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_art': check_art})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

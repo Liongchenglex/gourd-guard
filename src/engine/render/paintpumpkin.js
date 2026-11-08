@@ -39,3 +39,22 @@ export function glueDrips(g, R){
   }
   g.restore();
 }
+
+/** Magnet (Release 6): a small red horseshoe magnet with silver tips hugging the stem; drawn into the baked pumpkin sprite only. */
+export function magnetBand(g, R){
+  g.save(); g.translate(0, -R * .74);
+  const w = R * .1, rad = R * .26;
+  g.lineCap = 'butt'; g.lineWidth = w * 1.5; g.strokeStyle = '#5a0e0e';   // dark rim
+  g.beginPath(); g.arc(0, 0, rad, Math.PI * .05, Math.PI * .95, true); g.stroke();
+  g.lineWidth = w; g.strokeStyle = '#d8262a';   // the red horseshoe, arching over the stem
+  g.beginPath(); g.arc(0, 0, rad, Math.PI * .05, Math.PI * .95, true); g.stroke();
+  g.lineWidth = w * .35; g.strokeStyle = 'rgba(255,190,180,.8)';   // gloss along its top
+  g.beginPath(); g.arc(0, 0, rad - w * .2, Math.PI * 1.2, Math.PI * 1.55); g.stroke();
+  for (const sx of [-1, 1]){   // silver pole tips
+    const x = sx * rad * Math.cos(Math.PI * .05), y = rad * Math.sin(Math.PI * .05);
+    g.fillStyle = '#5a5e66'; g.fillRect(x - w * .75, y - w * .1, w * 1.5, w * 1.15);
+    g.fillStyle = '#e8ecf2'; g.fillRect(x - w * .6, y, w * 1.2, w * .9);
+    g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(x - w * .45, y + w * .1, w * .35, w * .6);
+  }
+  g.restore();
+}

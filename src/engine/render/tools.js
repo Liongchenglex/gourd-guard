@@ -248,3 +248,14 @@ export function glueSprite(){
     for (const [x, y, r] of [[R * 0.9, R * 0.1, R * 0.12], [-R * 0.95, R * 0.16, R * 0.09], [R * 0.4, R * 0.42, R * 0.08]]){ g.fillStyle = edge; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
   });
 }
+
+/** The Magnet pull (Release 6): one copper spark streak, baked once; draw.js stretches it from a pulled monster to the hit tile. */
+export function magSparkSprite(){
+  return sprite('magspark', 100, 14, 0, 7, g => {
+    const gr = g.createLinearGradient(0, 0, 100, 0); gr.addColorStop(0, 'rgba(255,170,90,0)'); gr.addColorStop(.5, 'rgba(255,170,90,.55)'); gr.addColorStop(1, 'rgba(255,230,180,.95)');
+    g.strokeStyle = gr; g.lineCap = 'round';
+    g.lineWidth = 5; g.beginPath(); g.moveTo(0, 0); for (let i = 1; i <= 10; i++) g.lineTo(i * 10, (i % 2 ? -1 : 1) * (i < 10 ? 3 : 0)); g.stroke();
+    g.lineWidth = 1.6; g.strokeStyle = 'rgba(255,250,235,.9)'; g.beginPath(); g.moveTo(30, 0); for (let i = 4; i <= 10; i++) g.lineTo(i * 10, (i % 2 ? -1 : 1) * (i < 10 ? 3 : 0)); g.stroke();
+    g.fillStyle = 'rgba(255,240,200,.95)'; g.beginPath(); g.arc(98, 0, 3.5, 0, Math.PI * 2); g.fill();
+  });
+}

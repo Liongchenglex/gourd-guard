@@ -11,7 +11,7 @@ import { drawMonster } from './monsters.js';
 import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
-import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite } from './tools.js';
+import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite, magSparkSprite } from './tools.js';
 import { castleSprite, coinSprite, discSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
@@ -239,6 +239,13 @@ function drawHkTell(t){
     gr.addColorStop(0, 'rgba(255,140,42,0)'); gr.addColorStop(.2, 'rgba(255,120,30,.8)'); gr.addColorStop(1, 'rgba(255,60,10,.95)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 256); tellSp = c; }
   const k = G.hkTell, x = LANE(k.col) - CS / 2;
   ctx.globalAlpha = 0.75 + 0.25 * Math.sin(t * 18); ctx.drawImage(tellSp, x, GY - CS * 0.5, CS, CS * (ROWS + 0.5)); ctx.globalAlpha = 1;
+}
+/** The Magnet pull (Release 6): a baked copper spark streak stretched from where a monster was to the hit tile, flickering out. */
+function drawMagPull(v){
+  const sp = magSparkSprite(), p = v.t / v.dur, dx = v.x2 - v.x1, dy = v.y2 - v.y1, len = Math.hypot(dx, dy); if (len < 4) return;
+  ctx.save(); ctx.translate(v.x1, v.y1); ctx.rotate(Math.atan2(dy, dx));
+  ctx.globalAlpha = (1 - p) * (0.75 + 0.25 * Math.sin(v.t * 60)); ctx.globalCompositeOperation = 'lighter';
+  ctx.drawImage(sp.c, 0, -sp.oy, len, sp.h); ctx.restore();
 }
 /** Beige glue tiles (Release 3): the baked splat, fading out over its last half second. */
 export function drawGlue(){
@@ -590,6 +597,7 @@ function drawVfx(){
     } else if (v.kind === 'bolt') drawBolt(ctx, v);
     else if (v.kind === 'blast') drawBlast(ctx, v);
     else if (v.kind === 'hexbolt') drawHexBolt(ctx, v);
+    else if (__MAGNET__ && v.kind === 'magpull') drawMagPull(v);
     else if (v.kind === 'sigil') drawSigil(ctx, v);
     else if (__RELEASE__ >= 4 && (v.kind === 'firehiss' || v.kind === 'fireflare' || v.kind === 'firewave')) drawFireFx(v);   // Ice puts a fire out / a pumpkin burns up in one / the Fallen Gravekeeper's smash   // Ice puts a fire out / a pumpkin burns up in one
     else if (v.kind === 'clip'){

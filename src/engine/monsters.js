@@ -70,9 +70,9 @@ export function spawnMonster(key, lane, minion, p, formArg){
   }
   let puddle = null;
   const seaEdge = shoreP();
-  if (type === 'diver' && seaEdge > 0.05 && p == null && (Math.random() < 0.5 || !(G.puddles && G.puddles.length))){   // divers may lurk anywhere in the sea (always, when there are no puddles: a diver never walks while there is water to hide in)
+  if ((type === 'diver' || (__RELEASE__ >= 9 && type === 'eel')) && seaEdge > 0.05 && p == null && (Math.random() < 0.5 || !(G.puddles && G.puddles.length))){   // divers may lurk anywhere in the sea (always, when there are no puddles: a diver never walks while there is water to hide in)
     puddle = { lane:lane != null ? lane : pickLane(), p:rnd(0.02, seaEdge - 0.03) }; lane = puddle.lane; p = puddle.p;
-  } else if ((type === 'crawler' || type === 'diver' || type === 'turtle') && G.puddles && G.puddles.length && p == null){   // rise from a random puddle
+  } else if ((type === 'crawler' || type === 'diver' || type === 'turtle' || (__RELEASE__ >= 9 && (type === 'eel' || type === 'turtlerider'))) && G.puddles && G.puddles.length && p == null){   // rise from a random puddle
     puddle = G.puddles[Math.floor(Math.random() * G.puddles.length)];
     lane = puddle.lane; p = puddle.p;
   }
@@ -96,7 +96,7 @@ export function spawnMonster(key, lane, minion, p, formArg){
   if (T.noKnockback) m.noKnockback = true;
   if (form === 2 && T.form2 && T.form2.hold != null) m.hold = T.form2.hold;
   if (G.def && G.def.hexAll && hexable(m)) hexMonster(m, G.def.hexAll === 'reverse', true);
-  if (type === 'turtle' && !puddle && G.puddles && G.puddles.length && p == null){ const pd = G.puddles[Math.floor(Math.random() * G.puddles.length)]; m.lane = pd.lane; m.x = m.tx = LANE(pd.lane); m.p = pd.p; }
+  if ((type === 'turtle' || (__RELEASE__ >= 9 && type === 'turtlerider')) && !puddle && G.puddles && G.puddles.length && p == null){ const pd = G.puddles[Math.floor(Math.random() * G.puddles.length)]; m.lane = pd.lane; m.x = m.tx = LANE(pd.lane); m.p = pd.p; }
   if (type === 'chameleon' || type === 'rchameleon'){   // takes one of the player's colours
     const pool = (G.loadout || [0, 1]).filter(t => t !== RAINBOW);
     const col = pool[Math.floor(Math.random() * pool.length)];
@@ -141,6 +141,7 @@ function standsStill(o){
   if (o.type === 'boss') return o.p >= (o.hold || 1) - 0.001;
   if (o.type === 'archer') return o.p >= TYPES.archer.hold;
   if (o.type === 'diver') return !o.walker;
+  if (__RELEASE__ >= 9 && o.type === 'eel') return true;   // a Storm Eel never walks (engine/marsh.js)
   if (o.type === 'sack' || o.type === 'jukebox') return true;
   if (__RELEASE__ >= 8 && keepParked(o)) return true;   // a parked Lobber Cart never moves on (engine/keep.js)
   if (__RELEASE__ >= 4 && o.type === 'coffin') return true;   // Casket Jack's Fallen Casket lies still: others walk round it

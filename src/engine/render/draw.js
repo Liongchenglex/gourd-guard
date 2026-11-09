@@ -81,7 +81,7 @@ export function render(){
   const fogCols = (mapDef && mapDef.fogCols) || [];
   const fogOn = (bands.length || fogCols.length) && !(g.fogClear > 0);
   for (const m of ms){
-    if (m.hidden && m.type !== 'diver') continue;                       // wraith: invisible (a submerged diver still shows ripples)
+    if (m.hidden && m.type !== 'diver' && !(__RELEASE__ >= 9 && m.type === 'eel')) continue;                       // wraith: invisible (a submerged diver still shows ripples)
     if ((m.type === 'sack' || m.type === 'jukebox') && fogOn) continue;   // drawn over the fog below: the ad-summoned Loot Sack must never hide
     if (fogOn && m.type !== 'boss' && m.p > -0.02 && (bands.some(([a, b]) => m.p >= a && m.p <= b) || fogCols.includes(m.lane))) continue;   // inside a fog bank (bosses glow through)
     if (__RELEASE__ >= 7 && m.type === 'triptych' && m.reflecting && !m.eating) drawTriptychBarrier(m, t);   // its three-lane barrier, behind it (one baked sprite)
@@ -485,6 +485,7 @@ export function drawArrows(t){
     const x = LANE(a.lane), y = FIELD_TOP + a.p * (FIELD_BOT - FIELD_TOP);
     if (__RELEASE__ >= 4 && a.fork){ drawFlyingFork(ctx, x, y, (a.spin || 0) + t * 14); continue; }   // a Hayrick's fork thrown at the fence
     if (a.mirror){ const sz = CS * 0.5; ctx.drawImage(sprites[a.vis][0], x - sz / 2, y - sz / 2, sz, sz); continue; }   // a reflected pumpkin
+    if (__RELEASE__ >= 9 && a.zap){ ctx.save(); ctx.translate(x, y); ctx.scale(1.4, 1.4); drawChar(ctx, {}, 'stormbolt', null, ['fly', Math.floor(t * 14) % 6]); ctx.restore(); continue; }   // a Storm Eel's bolt: a baked frame (render/chars/marsh.js)
     if (a.water){   // divers and Twin Tides hurl water balls: a wobbling blue blob with a highlight and a spray of droplets behind it
       const r = 11 + Math.sin(t * 18 + a.lane) * 1.5, ry = 11 - Math.sin(t * 18 + a.lane) * 1.5;
       for (let i = 1; i <= 3; i++){ ctx.fillStyle = `rgba(120,190,235,${0.5 - i * 0.12})`; ctx.beginPath(); ctx.arc(x + Math.sin(t * 25 + i * 2.1) * 5, y - 12 - i * 8, 4 - i * 0.7, 0, Math.PI * 2); ctx.fill(); }
@@ -721,6 +722,10 @@ function drawVfx(){
     else if (v.kind === 'hexbolt') drawHexBolt(ctx, v);
     else if (__MAGNET__ && v.kind === 'magpull') drawMagPull(v);
     else if (__RELEASE__ >= 9 && v.kind === 'pirateshot') drawPirateShot(v);
+    else if (__RELEASE__ >= 9 && v.kind === 'rotshot'){   // a Turtle Rider's rotten pumpkin lobbed to its cell: a baked frame on an arc
+      ctx.save(); ctx.translate(v.x0 + (v.x1 - v.x0) * p, v.y0 + (v.y1 - v.y0) * p - Math.sin(p * Math.PI) * 70); ctx.scale(1.5, 1.5);
+      drawChar(ctx, {}, 'rotshot', null, ['fly', Math.floor(v.t * 12) % 6]); ctx.restore();
+    }
     else if (v.kind === 'sigil') drawSigil(ctx, v);
     else if (__RELEASE__ >= 7 && v.kind === 'potiondrink') drawPotionFx(v);   // a monster drinks a potion (Release 7)
     else if (__RELEASE__ >= 4 && (v.kind === 'firehiss' || v.kind === 'fireflare' || v.kind === 'firewave')) drawFireFx(v);   // Ice puts a fire out / a pumpkin burns up in one / the Fallen Gravekeeper's smash   // Ice puts a fire out / a pumpkin burns up in one

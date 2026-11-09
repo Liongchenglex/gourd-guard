@@ -21,7 +21,7 @@ import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
 import { reaperFalls, cometBreaks, fpAfterHit, fpReaperHit } from './hollow.js';
 import { witchwoodFalls, fhGate, fhAfterHit } from './witchwood.js';
-import { splitBlood } from './marsh.js';
+import { splitBlood, releaseImp } from './marsh.js';
 import { shieldedNow, shieldPuff, keepFalls, pieceFalls, knockArcher, archersGuard, siegeFalls, countGate, fcCross, countFalls } from './keep.js';
 import { inWartSquare, isProtected } from './gourd.js';
 import { ROTTEN, ROT_FX, hitRule } from './rot.js';
@@ -263,6 +263,7 @@ export function kill(m){
     for (let i = 0; i < TYPES.slime.splits; i++){ const l = Math.max(0, Math.min(COLS - 1, m.lane + (i ? 1 : -1))); const bl = spawnMonster('blob', l, true, Math.max(0, m.p - 0.02)); bl.age = 0.2; }
     addFloat('Split!', m.x, y - 30, '#7fe0a0', 16, 0.9); SFX.monsterAct('slime', 'split');
   }
+  if (__RELEASE__ >= 9 && m.type === 'turtlerider') releaseImp(m);   // the rider's Imp is loose where it fell (engine/marsh.js)
   if (__RELEASE__ >= 9 && m.type === 'bloodslime') splitBlood(m, y);   // three Bloodlets, as many as the cap leaves room for (engine/marsh.js)
   if (__RELEASE__ >= 3 && m.hkClone) onHkFormDown(m);
   if (__RELEASE__ >= 3 && m.kind === 'hollowking' && !m.hkClone) onKingDown();

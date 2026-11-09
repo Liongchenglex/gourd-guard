@@ -33,7 +33,7 @@ def marsh_page(browser, url):
 # ---------- Task 1: the track, the book page, the blood sea ----------
 # Names no lower build may hold. Not listed, because older builds already hold them for story reasons: 'Kraken' and 'Turtle Rider'
 # (comments in ported art, absent from a minified bundle but not from the source) and 'e4d9bd' (the Protector Gourd's shell colour).
-R9_NAMES = ['Blood Slime', 'Storm Eel', 'Siren', 'Swan Gourd', 'Fallen Twin Tides', 'Whirlpool', 'Drowned Pirate', 'Bloodlet', 'pirateshot', 'Beat Nightmare 4-4', 'marshN-blood', 'The tide rises!', '#4affd0']
+R9_NAMES = ['Blood Slime', 'Storm Eel', 'Siren', 'Swan Gourd', 'Fallen Twin Tides', 'Whirlpool', 'Drowned Pirate', 'Bloodlet', 'pirateshot', 'Beat Nightmare 4-4', 'marshN-blood', 'The tide rises!', '#4affd0', 'turtlerider', 'rotshot']
 
 
 def check_r9_absent(browser, url):
@@ -571,6 +571,170 @@ def check_slime_budget(browser, url):
 
 CHECKS.update({'check_bloodslime': check_bloodslime, 'check_slime_cap': check_slime_cap, 'check_slime_win': check_slime_win, 'check_slime_frozen': check_slime_frozen,
                'check_pirate': check_pirate, 'check_slime_budget': check_slime_budget})
+
+
+# ---------- Task 5: the Turtle Rider and the Storm Eel ----------
+ROTTEN_N = "() => { const g = window.__gg; let n = 0; const at = []; for (let r = 0; r < g.grid.length; r++) for (let c = 0; c < g.grid[r].length; c++) if (g.isRotten(g.grid[r][c])) { n++; at.push([r, c]); } return { n, at }; }"
+
+
+def check_turtlerider(browser, url):
+    if not R9: return
+    page, errors = slime_page(browser, url)
+    T = page.evaluate("() => { const T = window.__gg.TYPES.turtlerider, S = window.__gg.TYPES.turtle; return [T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.noKnockback, T.rotEvery, S.noKnockback]; }")
+    ok(T == [10, 26, 0.03, 14, 0.3, 34, 3, True, 7, True], f'Turtle Rider numbers, and it shrugs knockback off as the Shell Turtle does {T}')
+    page.evaluate("() => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); for (const [r, c] of [[0, 1], [2, 2], [4, 3], [1, 4], [3, 0]]) g.grid[r][c] = g.newCell((r + c) % 4); const m = g.spawnMonster('turtlerider', 2, true, 0.3); m.sp = 0; m.age = 5; window.__t = m; window.__seen = false; }")
+    page.evaluate(STEP, [6.8, 0.05])
+    ok(page.evaluate(ROTTEN_N)['n'] == 0, 'nothing rots before its 7 s are up')
+    seen = False
+    for _ in range(16):
+        page.evaluate(STEP, [0.05, 0.05])
+        if page.evaluate("() => window.__gg.G.vfx.some(v => v.kind === 'rotshot')"): seen = True
+    ok(seen, 'a rotten pumpkin is in the air after 7 s')
+    r = page.evaluate(ROTTEN_N)
+    ok(r['n'] == 0, 'it flies for 0.7 s before it lands')
+    page.evaluate(STEP, [0.1, 0.05])
+    r = page.evaluate(ROTTEN_N)
+    ok(r['n'] == 1 and abs(r['at'][0][1] - 2) <= 1, f'by 7.8 s one cell in its column or a neighbour is rotten {r}')
+    page.evaluate(STEP, [7.3, 0.05])
+    ok(page.evaluate(ROTTEN_N)['n'] == 2, 'and again 7 s later')
+    # it never throws at a cell rotCell would refuse: only gourds and empties in reach means no throw
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; g.grid.forEach(r => r.fill(null)); g.grid[1][2] = g.newGourd('grave'); g.grid[2][0] = g.newCell(0); const m = g.spawnMonster('turtlerider', 2, true, 0.3); m.sp = 0; m.age = 5; }")
+    page.evaluate(STEP, [16, 0.05])
+    ok(page.evaluate(ROTTEN_N)['n'] == 0 and page.evaluate("() => !!window.__gg.grid[1][2].gourd"), 'a gourd and a pumpkin two columns away are never thrown at')
+    # an imp appears where it dies
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; const m = g.spawnMonster('turtlerider', 3, true, 0.42); m.age = 5; window.__t = m; g.kill(m); }")
+    imp = page.evaluate("() => window.__gg.G.monsters.filter(m => m.type === 'imp' && !m.dead).map(m => [m.lane, m.p])")
+    ok(len(imp) == 1 and imp[0][0] == 3 and abs(imp[0][1] - 0.42) < 0.03, f'an Imp is released where it dies {imp}')
+    # it walks like a turtle: slowly down its lane
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; const m = g.spawnMonster('turtlerider', 1, true, 0.1); m.age = 5; window.__t = m; }")
+    page.evaluate(STEP, [10, 0.05])
+    d = page.evaluate("() => window.__t.p")
+    ok(0.3 < d < 0.5, f'it walks at 0.03 a second {d:.2f}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+EEL_ST = "() => { const m = window.__e; return [m.lane, m.p, m.hidden]; }"
+
+
+def eel_page(browser, url):
+    page, errors = slime_page(browser, url)
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; g.G.arrows.length = 0; g.G.vfx.length = 0; const m = g.spawnMonster('eel', 2, true, 0.08); m.age = 5; window.__e = m; g.walls.forEach(w => { w.hp = w.max = 200; }); }")
+    return page, errors
+
+
+def check_eel(browser, url):
+    if not R9: return
+    page, errors = eel_page(browser, url)
+    T = page.evaluate("() => { const T = window.__gg.TYPES.eel; return [T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.up, T.down, T.charge, T.bolt, T.boltSp]; }")
+    ok(T == [3, 20, 0, 10, 0, 28, 2, 2.5, 3, 0.5, 2, 0.35], f'Storm Eel numbers {T}')
+    ok(page.evaluate("() => window.__e.hidden") is True, 'it starts under the water')
+    # its first bolt: surfaces after 3 s, charges 0.5 s, then a bolt; the fence loses the Diver\'s 2
+    t = 0.0; t_up = t_bolt = None
+    while t < 8:
+        page.evaluate(STEP, [0.05, 0.05]); t += 0.05
+        if t_up is None and page.evaluate("() => !window.__e.hidden"): t_up = t
+        if t_bolt is None and page.evaluate("() => window.__gg.G.arrows.some(a => a.zap)"): t_bolt = t
+        if t_bolt is not None: break
+    ok(t_up is not None and 2.9 <= t_up <= 3.2, f'it surfaces after 3 s ({t_up})')
+    ok(t_bolt is not None and t_bolt - t_up >= 0.5 and t_bolt - t_up <= 1.4, f'it charges at least 0.5 s before the bolt ({None if t_bolt is None else round(t_bolt - t_up, 2)})')
+    a = page.evaluate("() => window.__gg.G.arrows.find(a => a.zap)")
+    ok(a is not None and a['dmg'] == 2 and a['sp'] == 0.35 and a['lane'] == 2, f'the bolt is the Diver\'s {a}')
+    w0 = page.evaluate("() => window.__gg.walls[2].hp")
+    page.evaluate(STEP, [2.9, 0.05])
+    w1 = page.evaluate("() => window.__gg.walls[2].hp")
+    ok(w0 - w1 == 2, f'the bolt takes 2 off its fence ({w0} -> {w1})')
+    ok(page.evaluate("() => window.__gg.G.vfx.length >= 0"), 'impact effect queued')
+    # resurfacing: each time at a new spot that is in water
+    spots = []; last = None
+    page.evaluate("() => { const e = window.__e; e.sp = 0; }")
+    for _ in range(1200):
+        page.evaluate(STEP, [0.05, 0.05])
+        st = page.evaluate(EEL_ST)
+        if not st[2] and (last is None or last[2]): spots.append(st)
+        last = st
+        if len(spots) >= 8: break
+    ok(len(spots) >= 8, f'it keeps coming up ({len(spots)} times)')
+    bad = [s for s in spots if not page.evaluate("([l, p]) => window.__gg.inWater(l, p)", [s[0], s[1]])]
+    ok(not bad, f'every spot is in water {bad[:2]}')
+    same = [i for i in range(1, len(spots)) if spots[i][0] == spots[i - 1][0] and abs(spots[i][1] - spots[i - 1][1]) < 1e-6]
+    ok(not same, 'never the same spot twice in a row')
+    ok(len({(s[0], round(s[1], 3)) for s in spots}) >= 4, 'it moves about')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_eel_tide(browser, url):
+    if not R9: return
+    page, errors = tide_page(browser, url, [{'at': 0.3, 'to': 0.6}], puddles=[], shore=0.2)
+    page.evaluate("() => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); g.walls.forEach(w => { w.hp = w.max = 500; }); g.G.monsters.length = 0; const m = g.spawnMonster('eel', 2, true, 0.1); m.age = 5; window.__e = m; g.G.spawned = 6; }")
+    far = 0; spots = []; last = None
+    for _ in range(900):
+        page.evaluate(STEP, [0.05, 0.05]); st = page.evaluate(EEL_ST)
+        if not st[2] and (last is None or last[2]): spots.append(st)
+        last = st
+    sh = page.evaluate("() => window.__gg.shoreP()")
+    ok(abs(sh - 0.6) < 1e-6, f'the tide rose to 0.6 {sh}')
+    ok(any(s[1] > 0.2 + 1e-6 for s in spots), f'after the surge it comes up in the new tide {[round(s[1], 2) for s in spots]}')
+    ok(all(s[1] <= 0.6 + 1e-6 for s in spots), 'and never on dry land')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_eel_hidden(browser, url):
+    if not R9: return
+    page, errors = eel_page(browser, url)
+    page.evaluate("""() => { const g = window.__gg, e = window.__e; e.p = 0.12; e.upT = 99; e.sp = 0; for (const r of [1, 2, 3]) g.grid[r][2] = g.newCell(0); g.resolveMatches(); g.launchGroup(g.grid[2][2]); }""")
+    page.evaluate(STEP, [3, 0.02])
+    ok(page.evaluate("() => [window.__e.hp, window.__e.dead]") == [3, False], 'hits while it is hidden do nothing')
+    page.evaluate("""() => { const g = window.__gg, e = window.__e; g.G.arrows.length = 0; e.hidden = false; e.fired = true; e.upT = 99; for (const r of [1, 2, 3]) g.grid[r][2] = g.newCell(0); g.resolveMatches(); g.launchGroup(g.grid[2][2]); }""")
+    page.evaluate(STEP, [3, 0.02])
+    ok(page.evaluate("() => window.__e.dead || window.__e.hp < 3"), 'but it can be hit while it is up')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_eel_no_leap(browser, url):
+    if not R9: return
+    page, errors = slime_page(browser, url)
+    info = page.evaluate("""() => { const g = window.__gg, C = g.CHARS, A = g.atlas('eel'); return { eel:Object.keys(C.eel.clips), baked:Object.keys(A.clips), bolt:Object.keys(C.stormbolt.clips),
+      tr:Object.keys(C.turtlerider.clips), rot:Object.keys(C.rotshot.clips), trBaked:Object.keys(g.atlas('turtlerider').clips) }; }""")
+    ok('leap' not in info['eel'] and 'leap' not in info['baked'], f'no leap clip in the Storm Eel {info["baked"]}')
+    ok(set(['hidden', 'surface', 'idle', 'charge', 'shoot', 'down']) <= set(info['baked']), 'the other clips are all there')
+    ok(set(info['bolt']) == {'fly', 'zap'} and set(info['rot']) == {'fly', 'splat'}, 'the bolt and the rotten pumpkin have their clips')
+    ok(set(['walk', 'chew', 'throw']) <= set(info['trBaked']), f'Turtle Rider clips {info["trBaked"]}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_eel_budget(browser, url):
+    if not R9: return
+    page, errors = slime_page(browser, url)
+    probe = """() => new Promise(res => { const g = window.__gg, c = g.ctx, f = c.fill, s = c.stroke, n = { fill:0, stroke:0 }; let fr = 0;
+      c.fill = function(...a){ n.fill++; return f.apply(this, a); }; c.stroke = function(...a){ n.stroke++; return s.apply(this, a); };
+      const tick = () => { if (++fr < 20) requestAnimationFrame(tick); else { delete c.fill; delete c.stroke; res(n); } }; requestAnimationFrame(tick); })"""
+    page.evaluate("() => { window.__gg.setState('play'); window.__gg.G.spawnTimer = 999; window.__gg.G.sproutT = -999; }")
+    # the same crowd of old things first (Divers, Shell Turtles, a Diver's water balls) as the yardstick: health bars and shadows are theirs
+    page.evaluate("""() => { const g = window.__gg; for (let i = 0; i < 4; i++){ const e = g.spawnMonster('diver', i, true, 0.1); e.age = 5; e.hidden = false; e.upT = 99; e.sp = 0; }
+      for (let i = 0; i < 4; i++){ const t = g.spawnMonster('turtle', i, true, 0.4); t.age = 5; t.sp = 0; }
+      for (let i = 0; i < 4; i++) g.G.arrows.push({ lane:i, p:0.5, sp:0, dmg:2, dead:false, water:true }); }""")
+    page.evaluate("() => new Promise(r => setTimeout(r, 400))")
+    page.evaluate(probe)
+    base = page.evaluate(probe)
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; g.G.arrows.length = 0; }")
+    page.evaluate("""() => { const g = window.__gg; for (let i = 0; i < 4; i++){ const e = g.spawnMonster('eel', i, true, 0.1); e.age = 5; e.hidden = false; e.upT = 99; e.fired = true; e.sp = 0; }
+      for (let i = 0; i < 4; i++){ const t = g.spawnMonster('turtlerider', i, true, 0.4); t.age = 5; t.sp = 0; t.rotT = 999; }
+      for (let i = 0; i < 4; i++){ g.G.arrows.push({ lane:i, p:0.5, sp:0, dmg:2, dead:false, zap:true }); g.G.vfx.push({ kind:'rotshot', x0:100, y0:200, x1:150, y1:500, t:0, dur:99 }); } }""")
+    page.evaluate("() => new Promise(r => setTimeout(r, 400))")
+    page.evaluate(probe)
+    n = page.evaluate(probe)
+    ok(n['fill'] <= base['fill'] + 20 and n['stroke'] <= base['stroke'] + 20, f'four eels, four Turtle Riders, bolts and thrown pumpkins add no fill/stroke over 20 frames beside Divers, Turtles and water balls (old {base}, new {n})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_turtlerider': check_turtlerider, 'check_eel': check_eel, 'check_eel_tide': check_eel_tide, 'check_eel_hidden': check_eel_hidden,
+               'check_eel_no_leap': check_eel_no_leap, 'check_eel_budget': check_eel_budget})
 
 
 def main():

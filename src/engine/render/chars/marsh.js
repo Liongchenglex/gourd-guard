@@ -5,11 +5,14 @@
 // and nothing in this file may be painted per frame.
 //   bloodslime / bloodblob: a blood jelly with a skull and bones floating in it; the blob is the Bloodlet (0.6 size, one bone). Clips: walk, chew. The split
 //               clip of the archive is not used: a kill pops the last frame (render/draw.js), and the Bloodlets swell in place while they regrow.
+//   turtlerider / rotshot: an imp on a Shell Turtle and the rotten pumpkin it throws (riders/riders.js); eel / stormbolt: the Storm Eel and its bolt (storm-eel/storm_eel.js,
+//               without the `leap` clip). Sections 3 and 4 below, each in a scope of its own.
 //   pirate: a green-skinned Drowned Pirate with a peg leg, a hook and a flintlock. Clips: walk, chew, shoot (once: the gun comes up, fires, recoils;
 //               played by engine/marsh.js as the aim runs out).
 
 import { E, PL, RR, S, SM, SO, ell, pal, rgba, rng } from '../paint.js';
 import { TAU } from '../../util.js';
+import { TYPES } from '../../../data/monsters.js';
 
 
 // ---------- palettes ----------
@@ -200,6 +203,520 @@ export function pirate(g, P = {}){
   g.restore();
 }
 
+// =====================================================================
+// 3. The Turtle Rider and its rotten pumpkin (ported from docs/archive/nightmare-monsters/riders/riders.js, without the Comet Rider; the archive's
+//    `hide` clip is not used). A scope of its own: the archive's helper names would clash with the Pirate's above.
+//    turtlerider: a red imp on a Shell Turtle. Clips: walk, chew, throw (once: the imp swings the pumpkin up and lets go at t = .63, played by engine/marsh.js
+//               so that it lets go as the throw starts to fly).
+//    rotshot: the thrown rotten pumpkin (fly, loop) and where it lands (splat, once). Flown and placed by render/draw.js ('rotshot' vfx).
+// =====================================================================
+const RIDERS = (() => {
+  // ---------- palettes (imp from w1.js, wisp from w2.js, turtle from w5.js) ----------
+  const IMP = pal('#ec5a3c'), IMPB = pal('#ffb98a'), HORN = pal('#f4dfa0'), WINGM = pal('#b8344a'),
+    BRASS = pal('#c99a3a'), STRAP = pal('#4a3320'), SCARF = pal('#7a4ad0'), WOOD = pal('#b48a58'), IRON = pal('#9aa0ae'), LEATH = pal('#6b4a2e'),
+    SHELLD = pal('#2f5e48'), SHELLR = pal('#7fb08a'), TSKIN = pal('#6a9a62'), TSKIND = pal('#4c7644'), KEEL = pal('#8cbf96'), SCUTE = pal('#3d7a5a'),
+    MOSS = pal('#5c9a3a'), BARN = pal('#d8d0c0'), TCLAW = '#e8e8d8', SADDLE = pal('#8a2f3a');
+  const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+  const ease = t => t * t * (3 - 2 * t);
+
+  // ---------- shared helpers ----------
+  function puff(g, x, y, r, a = .7, col = '#e6f4fb'){
+    const gr = g.createRadialGradient(x - r * .3, y - r * .3, 0, x, y, r); gr.addColorStop(0, rgba('#ffffff', a)); gr.addColorStop(.55, rgba(col, a * .75)); gr.addColorStop(1, rgba(col, 0));
+    g.fillStyle = gr; ell(g, x, y, r, r * .9); g.fill();
+  }
+  function crSample(pts, n){ const out = [], m = pts.length; for (let i = 0; i < m - 1; i++){ const p0 = pts[Math.max(i - 1, 0)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(i + 2, m - 1)]; for (let k = 0; k < n; k++){ const t = k / n, t2 = t * t, t3 = t2 * t; out.push([.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3), .5 * (2 * p1[1] + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)]); } } out.push(pts[m - 1]); return out; }
+  /** A tapered ribbon along a spline: { path, left, right, centre, dirs }. */
+  function ribbon(pts, wf, n = 6){ const c = crSample(pts, n), L = [], R = [], D = []; for (let i = 0; i < c.length; i++){ const a = c[Math.max(i - 1, 0)], b = c[Math.min(i + 1, c.length - 1)]; let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l; D.push([dx, dy]); const w = wf(i / (c.length - 1)); L.push([c[i][0] - dy * w, c[i][1] + dx * w]); R.push([c[i][0] + dy * w, c[i][1] - dx * w]); } const poly = [...L, ...R.slice().reverse()]; return { path:SM(poly, .5), left:L, right:R, centre:c, dirs:D }; }
+  function barnacle(g, x, y, r = 4){ S.part(g, E(x, y, r, r * .8), BARN, { x, y, r }, { flat:true, mat:'stone', noEdge:true }); S.dot(g, E(x, y, r * .35, r * .3), '#3a3028', .9); }
+  function wet(g, clip, b){ g.save(); clip(g); g.clip(); g.fillStyle = 'rgba(255,255,255,.35)'; ell(g, b.x - b.r * .3, b.y - b.r * .2, b.r * .32, b.r * .1, -.5); g.fill(); ell(g, b.x + b.r * .25, b.y + b.r * .3, b.r * .18, b.r * .06, -.4); g.fill(); g.restore(); }
+
+  // ---------- the imp rider (imp-local units: seat near y 28, horn tips near y -60, as the w1 imp) ----------
+  /** Body, head and face. o: jaw 0..1, gog 0 (goggles up on the brow) .. 1 (pulled down over the eyes), wind 0..1 (blown back:
+   *  ears and scarf stream up the lane), flap (wing beat, -1..1), lean (radians), grin (open laugh). Arms are drawn after the mount. */
+  function impBody(g, o = {}){
+    const jaw = o.jaw ?? 0, gog = o.gog ?? 0, wind = o.wind ?? 0, flap = o.flap ?? 0, ph = o.ph ?? 0;
+    // scarf tails behind everything: flutter to the side, stream straight up the lane in the wind
+    for (const s of [-1, 1]){ const L = 26 + wind * 26, sw = Math.sin(ph + s) * (6 - wind * 3);
+      const pts = [[s * 4, 6], [s * (12 - wind * 6) + sw * .4, 2 - L * .35], [s * (16 - wind * 10) + sw, 4 - L * .7], [s * (14 - wind * 12) + sw * 1.3, 6 - L]];
+      const rb = ribbon(pts, u => 5.2 - u * 2, 4); S.part(g, rb.path, SCARF, { x:s * 10, y:4 - L * .5, r:L * .6 }, { flat:true, mat:'cloth', lw:1.2 });
+      const tip = pts[3]; S.thread(g, tip[0], tip[1] - 2, s, SCARF); }
+    // little bat wings behind the shoulders
+    for (const s of [-1, 1]){ const a = -.2 - flap * .35 - wind * .25; g.save(); g.translate(s * 14, 2); g.scale(s, 1); g.rotate(a);
+      const wing = SM([[0, 0], [12, -14], [26, -20, 1], [24, -10], [30, -4, 1], [20, -2], [22, 6, 1], [10, 4]], .5);
+      S.part(g, wing, WINGM, { x:14, y:-8, r:16 }, { flat:true, mat:'skin', lw:1.3 }); S.ln(g, [[2, 0], [26, -20]], IMP, 1.6, .8); S.ln(g, [[8, -6], [30, -4]], IMP, 1.2, .6); S.ln(g, [[8, -4], [22, 6]], IMP, 1.2, .6); g.restore(); }
+    const body = SM([[-17, 2], [-20, 20], [-10, 34], [10, 34], [20, 20], [17, 2], [0, -6]]); S.part(g, body, IMP, { x:0, y:16, r:20 }, { mat:'skin' });
+    const belly = SM([[-9, 12], [-11, 24], [0, 31], [11, 24], [9, 12], [0, 9]]); S.part(g, belly, IMPB, { x:0, y:20, r:11 }, { noEdge:true, flat:true }); S.contact(g, belly, 0, 10, 10, 4, .3);
+    // scarf knot at the throat
+    S.part(g, SM([[-14, 0], [0, 6], [14, 0], [12, 8], [0, 12], [-12, 8]], .7), SCARF, { x:0, y:6, r:13 }, { flat:true, mat:'cloth', lw:1.2 }); S.part(g, E(3, 8, 4.5, 4), SCARF, { x:3, y:8, r:4.5 }, { flat:true, mat:'cloth', lw:1 });
+    // ears (blown back by the wind) and horns
+    for (const s of [-1, 1]){ g.save(); g.translate(s * 22, -14); g.rotate(-s * wind * .55); g.translate(-s * 22, 14); S.part(g, SM([[s * 22, -14], [s * 40, -28], [s * 44, -16], [s * 34, -2]], .7), IMP, { x:s * 32, y:-16, r:12 }, { flat:true, mat:'skin' }); S.dot(g, SM([[s * 26, -14], [s * 37, -23], [s * 39, -16], [s * 33, -8]], .7), rgba(IMPB.base, .5)); g.restore(); }
+    for (const s of [-1, 1]) S.part(g, SM([[s * 10, -28], [s * 14, -46], [s * (8 + wind * 6), -60 + wind * 4], [s * 22, -48], [s * 22, -28]], .8), HORN, { x:s * 15, y:-42, r:14 }, { flat:true, mat:'horn' });
+    const head = SM([[-24, -18], [-27, -4], [-18, 10], [0, 14], [18, 10], [27, -4], [24, -18], [12, -32], [-12, -32]]);
+    S.part(g, head, IMP, { x:0, y:-10, r:27 }, { mat:'skin' }); S.contact(g, body, 0, 4, 14, 5, .5);
+    // goggle strap round the head, then the eyes, then the lenses either on the brow or over the eyes
+    const gy = -26 + gog * 14, lr = 7 + gog * 2.6;
+    S.tube(g, SO([[-26, gy + 3], [0, gy - 1], [26, gy + 3]]), STRAP, 3.4);
+    S.eye(g, -10, -12, 8.5, 9.5, { lx:.15, ly:.2, iris:'#c04a2a' }); S.eye(g, 10, -12, 8.5, 9.5, { lx:.15, ly:.2, iris:'#c04a2a' });
+    // mean brows: this imp is a tougher, older hand
+    S.ln(g, [[-18, -23 + gog * 2], [-5, -19 + gog * 2]], IMP, 2.4, .9); S.ln(g, [[18, -23 + gog * 2], [5, -19 + gog * 2]], IMP, 2.4, .9);
+    for (const s of [-1, 1]){ const x = s * 10, y = gog ? -12 + (1 - gog) * -14 : gy;
+      S.part(g, E(x, y, lr + 2.4, lr + 2), BRASS, { x, y, r:lr + 2.4 }, { flat:true, mat:'metal', lw:1.2 });
+      const gl = E(x, y, lr, lr * .92); if (gog > .5){ g.save(); g.globalAlpha *= .5; S.dot(g, gl, '#6fd8e8'); g.restore(); } else S.dot(g, gl, '#3f8a9a');
+      g.save(); gl(g); g.clip(); g.fillStyle = 'rgba(255,255,255,.7)'; ell(g, x - lr * .35, y - lr * .4, lr * .45, lr * .2, -.6); g.fill(); g.fillStyle = 'rgba(255,255,255,.35)'; ell(g, x + lr * .35, y + lr * .35, lr * .2, lr * .12, -.6); g.fill(); g.restore(); }
+    S.ln(g, [[-10 + lr * .6, gog > .5 ? -12 : gy], [10 - lr * .6, gog > .5 ? -12 : gy]], BRASS, 2, .9);
+    // fanged grin
+    const op = jaw * 5;
+    S.dot(g, SM([[-13, 2], [-6, 8 + op * .6], [0, 10 + op], [6, 8 + op * .6], [13, 2], [0, 4]], .9), '#3a1420'); S.dot(g, E(0, 8 + op * .6, 6, 3), '#c8384a', .8);
+    S.dot(g, PL([[-10, 3], [-4, 3], [-7, 10]]), '#fff'); S.dot(g, PL([[4, 3], [10, 3], [7, 10]]), '#fff');
+    S.blush(g, 0, -2, .8);
+  }
+  /** One arm from the shoulder to a hand at (hx, hy), imp-local. */
+  function impArm(g, s, hx, hy, dir, grip = true){ const sx = s * 18, sy = 14, mx = s * Math.max(30, Math.abs(hx) + 8), my = Math.max(sy + 6, (sy + hy) / 2 + 4); S.tube(g, SO([[sx, sy], [mx, my], [hx, hy]]), IMP, 6); S.hand(g, hx, hy, IMP, dir, 3, grip ? 4.6 : 5); }
+  /** Legs straddling a mount: hip to a dangling foot at (fx, fy), imp-local. */
+  function impLeg(g, s, fx, fy){ S.tube(g, SO([[s * 8, 24], [s * 20, 32], [fx, fy]]), IMP, 7); S.part(g, E(fx + s * 2, fy + 2, 7.5, 4.2), IMP, { x:fx, y:fy, r:7.5 }, { flat:true, mat:'skin' }); for (const d of [-3.5, 0, 3.5]) S.claw(g, fx + s * 2 + d, fy + 5, Math.PI / 2, 3.2); }
+
+  // ---------- Turtle Rider ----------
+  function hexPts(x, y, r, ry){ return [[x, y - ry], [x + r, y - ry * .5], [x + r, y + ry * .5], [x, y + ry], [x - r, y + ry * .5], [x - r, y - ry * .5]]; }
+  function scute(g, x, y, r, ry, c = SCUTE){
+    const pts = hexPts(x, y, r, ry), p = PL(pts), inner = hexPts(x, y, r * .74, ry * .74);
+    S.part(g, p, c, { x, y, r:r * 1.15 }, { flat:true, mat:'stone', hx:x - r * .3, hy:y - ry * .45, lw:2.4 });
+    g.lineWidth = 1.6; g.lineJoin = 'round'; g.lineCap = 'round';
+    g.strokeStyle = 'rgba(255,255,255,.4)'; g.beginPath(); g.moveTo(inner[4][0], inner[4][1]); g.lineTo(inner[5][0], inner[5][1]); g.lineTo(inner[0][0], inner[0][1]); g.lineTo(inner[1][0], inner[1][1]); g.stroke();
+    g.strokeStyle = rgba(c.deep, .55); g.beginPath(); g.moveTo(inner[1][0], inner[1][1]); g.lineTo(inner[2][0], inner[2][1]); g.lineTo(inner[3][0], inner[3][1]); g.lineTo(inner[4][0], inner[4][1]); g.stroke();
+  }
+  /** A short horn spike on a scute: the tougher turtle's armour. */
+  function spike(g, x, y, a, len, w){ const ca = Math.cos(a), sa = Math.sin(a); S.part(g, PL([[x - sa * w, y + ca * w], [x + ca * len, y + sa * len], [x + sa * w, y - ca * w]]), pal('#e4dcc4'), { x:x + ca * len * .4, y:y + sa * len * .4, r:len * .6 }, { flat:true, mat:'horn', lw:1.1 }); }
+  /** The goad: a wooden pole with an iron point, held at (x, y) pointing along angle a (imp-local). */
+  function goad(g, x, y, a, len = 62){ const ca = Math.cos(a), sa = Math.sin(a), bx = x - ca * 14, by = y - sa * 14, tx = x + ca * len, ty = y + sa * len;
+    S.tube(g, SO([[bx, by], [tx, ty]]), WOOD, 3.6);
+    S.part(g, PL([[tx - sa * 3.4, ty + ca * 3.4], [tx + ca * 13, ty + sa * 13], [tx + sa * 3.4, ty - ca * 3.4]]), IRON, { x:tx + ca * 4, y:ty + sa * 4, r:8 }, { flat:true, mat:'metal', lw:1.1 });
+    S.part(g, E(tx, ty, 3.6, 3.6), BRASS, { x:tx, y:ty, r:3.6 }, { flat:true, mat:'metal', lw:.9 }); }
+  // ---------- the rotten pumpkin the Turtle Rider's imp throws ----------
+  const ROT = pal('#cf7a2c'), ROTG = pal('#7d8a34'), ROTD = pal('#5e4222'), DSTEM = pal('#3a3424'), NET = pal('#8a7550'), MOULD = '#d6e6b8', STINK = '#9ac25a';
+  /** A slumped, bruised pumpkin gone bad: lopsided ribs, brown rot, white mould, a wilted stem and X eyes. Centre (x, y), radius R. */
+  function rotten(g, x, y, R, spin = 0){
+    g.save(); g.translate(x, y); g.rotate(spin);
+    const ribs = [[-.6, .42, .64], [.58, .44, .7], [-.22, .5, .74], [.2, .5, .78]];
+    const union = g2 => { g2.beginPath(); for (const [ox, rw, rh] of ribs) g2.ellipse(ox * R * .9, R * .06, rw * R * 1.1, R * rh, 0, 0, TAU); };
+    for (const [ox, rw, rh] of ribs){ const cx = ox * R * .9; S.part(g, E(cx, R * .06, rw * R * 1.1, R * rh), ROT, { x:cx, y:0, r:R * .8 }, { flat:Math.abs(ox) > .4, mat:'pumpkin', hx:cx - R * .12, hy:-R * .5 }); }
+    g.save(); union(g); g.clip();
+    for (const xx of [-.42, 0, .4]){ g.beginPath(); g.moveTo(xx * R, -R * .55); g.quadraticCurveTo(xx * R * 1.35, 0, xx * R, R * .6); g.strokeStyle = rgba(ROTD.deep, .4); g.lineWidth = R * .07; g.lineCap = 'round'; g.stroke(); }
+    S.dot(g, SM([[R * .12, -R * .12], [R * .5, -R * .32], [R * .74, R * .1], [R * .44, R * .44], [R * .08, R * .26]], .8), ROTG.base, .9);   // green rot patch
+    S.dot(g, E(R * .4, R * .08, R * .17, R * .12), ROTD.deep, .75);                                                                      // caved-in bruise
+    S.dot(g, E(-R * .48, R * .4, R * .24, R * .14), ROTG.dark, .7);
+    for (const [mx, my, mr] of [[-.42, -.36, .1], [-.3, -.26, .07], [.58, .34, .08], [-.08, .5, .06], [.64, -.08, .06], [.5, .2, .045]]) S.dot(g, E(mx * R, my * R, mr * R, mr * R), MOULD, .9);   // mould fuzz
+    g.restore();
+    S.ln(g, [[R * .18, -R * .46], [R * .3, -R * .24], [R * .2, -R * .04], [R * .34, R * .16]], ROTD, R * .06, .9);                       // a split oozing
+    S.tube(g, SO([[R * .02, -R * .6], [-R * .04, -R * .88], [-R * .28, -R * 1.0], [-R * .46, -R * .86]]), DSTEM, R * .14);               // wilted stem, flopped over
+    // X eyes and a wobbly frown: a pumpkin that has gone over to the other side
+    const ey = -R * .12, ex = R * .32, e = R * .11;
+    for (const sx of [-ex, ex]){ S.ln(g, [[sx - e, ey - e], [sx + e, ey + e]], ROTD, R * .07, .95); S.ln(g, [[sx + e, ey - e], [sx - e, ey + e]], ROTD, R * .07, .95); }
+    S.ln(g, [[-R * .26, R * .3], [-R * .12, R * .24], [0, R * .3], [R * .12, R * .24], [R * .26, R * .3]], ROTD, R * .06, .9);
+    g.restore();
+  }
+  /** Green stink curls trailing up the lane behind a rotten pumpkin (phase ph 0..1). */
+  function stink(g, x, y, R, ph, a = 1){
+    g.save(); g.globalAlpha *= a; g.lineCap = 'round';
+    for (const [dx, k] of [[-.45, 0], [0, .33], [.45, .66]]){ const u = (ph + k) % 1, yy = y - R * (1.1 + u * 1.4), xx = x + dx * R, w = R * .18;
+      g.strokeStyle = rgba(STINK, .75 * (1 - u)); g.lineWidth = R * .1; g.beginPath(); g.moveTo(xx, yy + R * .5);
+      g.bezierCurveTo(xx + w * 2, yy + R * .3, xx - w * 2, yy + R * .15, xx + w * .5, yy - R * .1); g.stroke(); }
+    g.restore();
+  }
+  /** The thrown pumpkin as its own sprite: fly (spins, stink trailing up the lane) and splat (bursts on the wall). */
+  function rottenShot(g, P = {}){
+    if (P.splat == null){ const t = P.fly ?? 0; S.shadow(g, 0, 50, 14, 4); stink(g, 0, 0, 18, t); rotten(g, 0, 0, 18, t * TAU); return; }
+    const t = P.splat, sq = clamp(t / .25), burst = clamp((t - .15) / .85), fade = 1 - .75 * clamp((t - .6) / .4);
+    // the puddle of rot spreading where it hit
+    g.save(); g.globalAlpha *= fade; S.dot(g, SM([[-30, 34], [-18, 26], [0, 30], [16, 24], [32, 32], [24, 42], [0, 44], [-22, 42]].map(([x, y]) => [x * (.4 + burst * .6), 34 + (y - 34) * (.4 + burst * .6)]), .8), ROTD.base, .9);
+    S.dot(g, E(-6, 33, 10 * burst, 3.5 * burst), ROT.base, .9); g.restore();
+    // the pumpkin squashing flat, then gone
+    if (t < .35){ g.save(); g.translate(0, 18 + sq * 14); g.scale(1 + sq * .5, 1 - sq * .55); rotten(g, 0, 0, 18); g.restore(); }
+    // chunks and mould flying out
+    g.save(); g.globalAlpha *= fade;
+    for (const [a, d, r, c] of [[-2.7, 34, 4.5, ROT], [-2.1, 30, 3.5, ROTD], [-1.3, 36, 4, ROT], [-.6, 32, 3.2, ROTD], [-.2, 26, 4, ROT], [-3.0, 22, 3, ROTD], [-1.7, 20, 2.6, ROT]]){
+      const x = Math.cos(a) * d * burst, y = 30 + Math.sin(a) * d * burst + burst * burst * 18; S.part(g, E(x, y, r, r * .8), c, { x, y, r }, { flat:true, mat:'pumpkin', noEdge:true }); }
+    for (const [a, d] of [[-2.4, 24], [-.9, 28], [-1.6, 30]]){ const x = Math.cos(a) * d * burst, y = 30 + Math.sin(a) * d * burst; S.dot(g, E(x, y, 2.2, 2.2), MOULD, .9); }
+    g.restore();
+    // a green stink cloud rising
+    g.save(); g.globalAlpha *= fade * clamp(t / .3);
+    for (const [x, y, r] of [[-14, 18, 12], [10, 14, 14], [0, 2, 11], [-4, -12 - burst * 8, 9]]) puff(g, x, y - burst * 10, r * (.6 + burst * .5), .55, STINK);
+    g.restore();
+  }
+  /** The net of spare rotten pumpkins tied on the shell's right flank, by the saddle. */
+  function netBag(g, n = 2){
+    S.ln(g, [[22, -38], [36, -42]], NET, 2.2, .9);
+    if (n > 1) rotten(g, 47, -26, 12, .2);
+    rotten(g, 34, -38, 12.5, -.15);
+    g.save(); g.lineCap = 'round'; g.strokeStyle = rgba(NET.dark, .9); g.lineWidth = 1.1;
+    for (const k of [-1, 0, 1]){ g.beginPath(); g.moveTo(30 + k * 9, -50); g.quadraticCurveTo(42 + k * 6, -32, 40 + k * 10, -20); g.stroke(); }
+    for (const yy of [-40, -31, -24]){ g.beginPath(); g.moveTo(28, yy); g.quadraticCurveTo(44, yy + 4, 58, yy + 2); g.stroke(); }
+    g.restore();
+  }
+  const lerp2 = (a, b, u) => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+  /** Throw clip, right hand path in drawing units: rest → into the net → wound up over the head → hurled down the lane → follow-through. */
+  const THROW_KEYS = [[0, [22, -46]], [.28, [40, -40]], [.52, [32, -94]], [.66, [20, -58]], [.8, [10, -34]], [1, [22, -46]]];
+  function throwHand(t){ for (let i = 1; i < THROW_KEYS.length; i++){ const [t0, a] = THROW_KEYS[i - 1], [t1, b] = THROW_KEYS[i]; if (t <= t1) return lerp2(a, b, ease((t - t0) / (t1 - t0))); } return THROW_KEYS[THROW_KEYS.length - 1][1]; }
+  const RELEASE = .63;
+
+  function turtleRider(g, P = {}){
+    const w = P.walk, ch = P.chew, hd = P.hide, th = P.throw, ph = (w ?? ch ?? 0) * TAU, sw = w == null ? 0 : Math.sin(ph), cs = ch == null ? 0 : Math.sin(ch * TAU);
+    const k = hd == null ? 0 : ease(clamp(hd)), kHead = ease(clamp(hd == null ? 0 : hd * 1.6)), kImp = ease(clamp(hd == null ? 0 : (hd - .2) / .8));
+    const rock = sw * .04 + cs * .025, bob = w != null ? -Math.abs(sw) * 2.2 : cs * 1.5, sink = k * 7, bite = ch == null ? 0 : .5 + .5 * cs;
+    S.shadow(g, 0, 50, 60 - k * 6, 8);
+    // hind feet peeking out behind the shell (pulled in when it hides)
+    for (const s of [-1, 1]){ if (k > .8) break; const p2 = ph + (s < 0 ? 0 : Math.PI), lift = w == null ? 0 : Math.max(0, Math.sin(p2)) * 3; g.save(); g.translate(-s * k * 14, -k * 8);
+      S.part(g, E(s * 40, 36 - lift, 9, 5), TSKIND, { x:s * 40, y:36 - lift, r:9 }, { flat:true, mat:'scaly' }); g.restore(); }
+    // the shell sways as one body with the imp on its back
+    g.save(); g.translate(0, 10 + bob + sink); g.rotate(rock); g.translate(0, -10);
+    // 1. the imp: behind the crest of the dome, so the shell hides his lower half; ducks down to peek over it when the turtle hides
+    const iy = -60 + kImp * 17 + (w != null ? Math.abs(sw) * 2.2 : 0) + bite * 2, is = .7;
+    g.save(); g.translate(0, iy); g.scale(is, is); const wind = th == null ? 0 : Math.sin(clamp((th - .25) / .35) * Math.PI / 2) * (th < RELEASE ? 1 : 0), hurl = th == null ? 0 : Math.sin(clamp((th - .5) / .4) * Math.PI);
+    g.rotate(th != null ? -wind * .14 + hurl * .12 : ch != null ? -.04 + bite * .08 : sw * .05);
+    impBody(g, { jaw:th != null ? .2 + hurl * .9 : ch != null ? bite * .8 : kImp * .3, gog:kImp, wind:0, flap:hd != null ? -.5 * kImp : Math.sin(ph * 2) * .8, ph });
+    g.restore();
+    // 2. the dome, seen from the front and above: big raised scutes, a keel, horn spikes, a crimson saddle cloth by the crest
+    const shell = SM([[-56, 18], [-58, -2], [-50, -24], [-30, -40], [0, -46], [30, -40], [50, -24], [58, -2], [56, 18], [36, 28], [0, 32], [-36, 28]]);
+    S.part(g, shell, SHELLD, { x:0, y:-4, r:56 }, { mat:'stone', hx:-24, hy:-28, lw:2.2 });
+    g.save(); shell(g); g.clip();
+    for (const [x, y, r, ry] of [[-30, -18, 12, 10], [30, -18, 12, 10], [-34, 8, 12, 10], [34, 8, 12, 10], [0, -6, 15, 12.5], [0, 18, 13, 8]]) scute(g, x, y, r, ry);
+    const rim = SM([[-62, 14], [-30, 22], [0, 24], [30, 22], [62, 14], [62, 40], [-62, 40]], .8);
+    S.part(g, rim, SHELLR, { x:0, y:30, r:58 }, { flat:true, mat:'stone', lw:1.6 });
+    for (const x of [-44, -30, -15, 15, 30, 44]) S.ln(g, [[x, 22 - Math.abs(x) * .1], [x * 1.04, 36]], SHELLD, 1.6, .55);
+    for (const [x, y, r] of [[-48, 12, 6], [44, -10, 4.5], [-20, -30, 4]]) S.part(g, E(x, y, r, r * .65), MOSS, { x, y, r }, { flat:true, noEdge:true, mat:'moss' });
+    g.restore(); S.stroke(g, shell, SHELLD, 2.2, .9);
+    // saddle cloth over the crest, under where the imp sits, with brass studs
+    const cloth = SM([[-22, -41], [0, -45], [22, -41], [26, -32], [14, -28], [0, -30], [-14, -28], [-26, -32]], .7);
+    S.part(g, cloth, SADDLE, { x:0, y:-36, r:24 }, { flat:true, mat:'cloth', lw:1.4 }); for (const x of [-18, -6, 6, 18]) S.rivet(g, x, -33 + Math.abs(x) * .05, 1.6, BRASS);
+    S.dot(g, PL([[-24, -31], [-20, -24], [-16, -29]]), SADDLE.dark, .9); S.dot(g, PL([[24, -31], [20, -24], [16, -29]]), SADDLE.dark, .9);
+    for (const [x, y, a] of [[-30, -18, -2.1], [30, -18, -1.04], [-34, 8, -2.6], [34, 8, -.54], [0, -6, -Math.PI / 2]]) if (x !== 0) spike(g, x, y - 3, a, 9, 3.4);
+    barnacle(g, -50, 20, 4); barnacle(g, 46, 24, 3.5); barnacle(g, 52, 4, 3);
+    wet(g, shell, { x:0, y:-4, r:56 });
+    netBag(g);
+    // 3. the imp's hands grip the crest when he ducks; otherwise reins in the left, the goad in the right
+    g.save(); g.translate(0, iy); g.scale(is, is);
+    const toL = (x, y) => [x / is, (y - iy) / is];
+    if (hd != null && kImp > .5){ const [ax, ay] = toL(-16, -44), [bx, by] = toL(16, -44); impArm(g, -1, ax, ay, Math.PI / 2 + .3); impArm(g, 1, bx, by, Math.PI / 2 - .3);
+      const [gx, gy] = toL(30, -40); goad(g, gx, gy, -Math.PI / 2 - .5, 40); }
+    else if (th != null){
+      // left fist keeps the reins and stands the goad up; the right arm takes a rotten pumpkin from the net and hurls it down the lane
+      const [lx, ly] = toL(-18, -38); impArm(g, -1, lx, ly, Math.PI / 2 + .6); goad(g, lx, ly, -Math.PI / 2 - .35, 46);
+      const [hxD, hyD] = throwHand(th), [hx, hy] = toL(hxD, hyD), sx = 18, sy = 14, ex = (sx + hx) / 2 + 14, ey = Math.min(sy, hy) + (Math.max(sy, hy) - Math.min(sy, hy)) * .45;
+      const holding = th >= .26 && th < RELEASE;
+      S.tube(g, SO([[sx, sy], [ex, ey], [hx, hy]]), IMP, 6);
+      if (holding) rotten(g, hx, hy - 8 / is, 13 / is, -wind * .6);
+      S.hand(g, hx, hy, IMP, hy < sy ? -Math.PI / 2 : Math.PI / 2, 3, 4.6);
+      g.restore(); g.save();
+      const hyb = 38 + bob * .2;
+      for (const s of [-1, 1]){ const fx = -18, fy = -38, ex2 = s * 16, ey2 = hyb - 2, pp = crSample([[fx, fy], [(fx + ex2) / 2 + s * 12, (fy + ey2) / 2 + 6], [ex2, ey2]], 6);
+        S.ln(g, pp, LEATH, 3.4, .95); }
+    }
+    else {
+      const jab = ch != null ? bite : 0, [rx, ry] = toL(22 - jab * 2, -46 + jab * 12 + (w != null ? sw * 2 : 0)), [lx, ly] = toL(-18, -38);
+      impArm(g, -1, lx, ly, Math.PI / 2 + .6);
+      goad(g, rx, ry, Math.PI / 2 - .55 + jab * .25 - kImp * .6, 62 + jab * 14);
+      impArm(g, 1, rx, ry, -.2);
+      g.restore(); g.save();
+      // reins from the left fist over the dome down to the bridle rings (slack as the head comes in)
+      const hx = 0, hyb = 38 + bob * .2 + bite * 5 - kHead * 18;
+      for (const s of [-1, 1]){ const fx = -18, fy = -38, ex = hx + s * 16, ey = hyb - 2, pp = crSample([[fx, fy], [(fx + ex) / 2 + s * 12, (fy + ey) / 2 + 6 + kHead * 12], [ex, ey]], 6);
+        S.ln(g, pp, LEATH, 3.4, .95); g.strokeStyle = rgba(LEATH.light, .5); g.lineWidth = 1; g.beginPath(); pp.forEach((p, i) => i ? g.lineTo(p[0] - .6, p[1] - .8) : g.moveTo(p[0] - .6, p[1] - .8)); g.stroke(); }
+    }
+    g.restore();
+    g.restore();
+    // 4. front legs at the sides of the rim (they tuck in under the shell when it hides)
+    for (const s of [-1, 1]){ const p = ph + (s < 0 ? Math.PI : 0), lift = w == null ? 0 : Math.max(0, Math.sin(p)) * 6, dx = w == null ? 0 : Math.cos(p) * 3;
+      g.save(); g.translate(-s * k * 18, -k * 14 + sink * .5); g.globalAlpha *= 1 - clamp((k - .6) / .4);
+      S.tube(g, SO([[s * 44, 22], [s * 52 + dx, 34 - lift]]), TSKIND, 14);
+      const fx = s * 54 + dx, fy = 42 - lift; S.part(g, E(fx, fy, 11, 6), TSKIN, { x:fx, y:fy, r:11 }, { flat:true, mat:'scaly' }); for (const d of [-6, 0, 6]) S.claw(g, fx + d, fy + 4, Math.PI / 2, 4, TCLAW);
+      g.restore(); }
+    // 5. the head, out in front under the rim notch: bridled, heavy-lidded, a hooked beak that gapes on the bite
+    if (kHead < .98){
+      g.save(); g.translate(0, 10 + bob + sink); g.rotate(rock); g.translate(0, -10);
+      const hx = 0, hy = 38 + bob * .2 + bite * 5 - kHead * 18, hs = 1 - kHead * .35;
+      // clip to below the rim so the head slides in under the shell
+      g.save(); g.beginPath(); g.rect(-80, 26 - kHead * 4, 160, 60); g.clip();
+      g.translate(hx, hy); g.scale(hs, hs);
+      S.tube(g, SO([[0, -16], [0, -4]]), TSKIND, 18);
+      const jaw = bite * 6;
+      const head = SM([[-21, -10], [-25, 0], [-20, 11], [-8, 16], [8, 16], [20, 11], [25, 0], [21, -10], [10, -16], [-10, -16]]);
+      S.part(g, SM([[-12, 6], [-10, 14 + jaw], [0, 18 + jaw], [10, 14 + jaw], [12, 6]], .8), TSKIND, { x:0, y:12 + jaw, r:12 }, { flat:true, mat:'scaly' });
+      S.part(g, head, TSKIN, { x:0, y:0, r:24 }, { mat:'scaly', hx:-9, hy:-8 }); wet(g, head, { x:0, y:0, r:24 });
+      if (jaw > 1) S.dot(g, SM([[-10, 9], [0, 11 + jaw], [10, 9], [0, 10]], .8), '#3a1a20');
+      S.stroke(g, SO([[-13, 8], [-5, 11], [0, 13], [5, 11], [13, 8]]), TSKIND, 2, .9);   // beak line
+      S.dot(g, PL([[-3, 11], [3, 11], [0, 15]]), '#e8e4c8', .95);   // hooked beak tip
+      S.dot(g, E(-3, 3, 1.4, 1), TSKIND.deep, .8); S.dot(g, E(3, 3, 1.4, 1), TSKIND.deep, .8);
+      for (const s of [-1, 1]) S.eye(g, s * 11, -4, 6.5, 6.5, { lx:-s * .05, ly:.2, pr:.44, lid:.42, tilt:s * -.3, lidCol:TSKIN.base, lidDeep:TSKIN.deep, iris:'#d8a23a' });
+      // bridle: a strap over the snout and brass rings for the reins
+      S.tube(g, SO([[-22, -2], [-10, 4], [0, 5], [10, 4], [22, -2]]), LEATH, 3); for (const s of [-1, 1]) { S.part(g, E(s * 16, 0, 3.6, 3.6), BRASS, { x:s * 16, y:0, r:3.6 }, { flat:true, mat:'metal', lw:1 }); S.dot(g, E(s * 16, 0, 1.6, 1.6), '#2a2018'); }
+      barnacle(g, -14, -12, 3); barnacle(g, 17, -11, 2.4);
+      g.restore(); g.restore();
+    }
+    // in the shell: two wary eyes glinting in the dark front notch
+    if (kHead > .7){ g.save(); g.translate(0, 10 + bob + sink); g.rotate(rock); g.translate(0, -10); g.globalAlpha *= clamp((kHead - .7) / .3);
+      S.dot(g, SM([[-16, 26], [0, 22], [16, 26], [12, 32], [-12, 32]], .8), '#14201a', .9); for (const s of [-1, 1]) S.glow(g, s * 6, 27, 1.8, '#f0c040'); g.restore(); }
+    // the thrown pumpkin flying off down the lane (toward the wall), growing as it comes forward; the game takes over with the rotten sprite
+    if (th != null && th >= RELEASE){ const u = (th - RELEASE) / (1 - RELEASE), [x0, y0] = throwHand(RELEASE);
+      g.save(); g.globalAlpha *= 1 - clamp((u - .75) / .25); const x = x0 + u * 6, y = y0 - 8 + u * 86 - Math.sin(u * Math.PI) * 10, r = 13 * (1 + u * .35);
+      stink(g, x, y, r, u, .8); rotten(g, x, y, r, u * 5); g.restore(); }
+  }
+
+  return { turtleRider, rottenShot };
+})();
+
+// =====================================================================
+// 4. The Storm Eel and its bolt (ported from docs/archive/nightmare-monsters/storm-eel/storm_eel.js; the archive's `leap` clip is NOT ported: the Eel dives
+//    and comes up elsewhere, owner).
+//    eel: clips hidden (loop), surface, idle (loop), charge, shoot (the bolt leaves the mouth at t = .3), down.
+//    stormbolt: the projectile, fly (loop, the ball at the foot of a zig-zag tail up the lane) and zap (once: it bursts on the fence).
+// =====================================================================
+const EELART = (() => {
+  // ---------- palette (Drowned Marsh teal, storm yellow) ----------
+  const EEL = pal('#24606e'), EELD = pal('#163e4a'), BELLY = pal('#a6ccb2'), FIN = pal('#3aa2b6'), SPINE = pal('#1c4c58'),
+    WOOD = pal('#7c5a3a'), SPLINT = pal('#c8a47a'), ROPE = pal('#b8a070'), IRON = pal('#7a5a4c'), RUSTO = '#b8582a', HOOKC = pal('#8a6a5a'),
+    BARN = pal('#d8d0c0'), KELP = pal('#2f6b3a');
+  const ZAP = { hot:'#fff6b0', glow:'#ffe04a', halo:'#ffbe1a', deep:'#e09a10' };
+  const MOUTH = '#0c1418', TOOTH = '#f4fbf0';
+  const WL = 38;
+  const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+  const ease = t => t * t * (3 - 2 * t);
+  const lerp = (a, b, t) => a + (b - a) * t;
+
+  // ---------- splines (as in riders.js) ----------
+  function crSample(pts, n){ const out = [], m = pts.length; for (let i = 0; i < m - 1; i++){ const p0 = pts[Math.max(i - 1, 0)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(i + 2, m - 1)]; for (let k = 0; k < n; k++){ const t = k / n, t2 = t * t, t3 = t2 * t; out.push([.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3), .5 * (2 * p1[1] + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)]); } } out.push(pts[m - 1]); return out; }
+  /** A tapered ribbon along a spline: { path, left, right, centre, dirs }. */
+  function ribbon(pts, wf, n = 6){ const c = crSample(pts, n), L = [], R = [], D = []; for (let i = 0; i < c.length; i++){ const a = c[Math.max(i - 1, 0)], b = c[Math.min(i + 1, c.length - 1)]; let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l; D.push([dx, dy]); const w = wf(i / (c.length - 1)); L.push([c[i][0] - dy * w, c[i][1] + dx * w]); R.push([c[i][0] + dy * w, c[i][1] - dx * w]); } const poly = [...L, ...R.slice().reverse()]; return { path:SM(poly, .5), left:L, right:R, centre:c, dirs:D }; }
+
+  // ---------- water (copied from w5.js so this file stays self-contained) ----------
+  /** A disc of water with drifting ripple rings; ph 0..1 animates the rings; zap 0..1 tints it with electric light. */
+  function water(g, x, y, rx, ry, ph = 0, a = .85, zap = 0){
+    g.save(); g.globalAlpha *= a;
+    const gr = g.createRadialGradient(x, y, 0, x, y, rx); gr.addColorStop(0, 'rgba(130,205,228,.95)'); gr.addColorStop(1, 'rgba(50,130,160,.7)');
+    ell(g, x, y, rx, ry); g.fillStyle = gr; g.fill(); g.strokeStyle = 'rgba(25,80,100,.7)'; g.lineWidth = 1.4; g.stroke();
+    if (zap > 0){ const zg = g.createRadialGradient(x, y, 0, x, y, rx); zg.addColorStop(0, rgba(ZAP.hot, .7 * zap)); zg.addColorStop(1, rgba(ZAP.glow, 0)); ell(g, x, y, rx, ry); g.fillStyle = zg; g.fill(); }
+    g.lineWidth = 1.3; for (let i = 0; i < 2; i++){ const k = (ph + i * .5) % 1; g.strokeStyle = zap > .3 ? rgba(ZAP.hot, (1 - k) * .8) : `rgba(225,248,255,${(1 - k) * .75})`; ell(g, x, y, rx * (.3 + k * .65), ry * (.3 + k * .65)); g.stroke(); }
+    g.fillStyle = 'rgba(255,255,255,.55)'; ell(g, x - rx * .45, y - ry * .3, rx * .16, ry * .18, -.3); g.fill(); ell(g, x + rx * .4, y + ry * .25, rx * .1, ry * .14, -.3); g.fill();
+    g.restore();
+  }
+  /** Splash droplets flying up from (x, y); t 0..1 is how far along the arc they are. */
+  function splash(g, x, y, t, seed = 1, n = 10, spread = 34){
+    if (t <= 0 || t >= 1) return;
+    const R = rng(seed); g.save(); g.globalAlpha *= 1 - t * t;
+    for (let i = 0; i < n; i++){ const a = -Math.PI * .92 + R() * Math.PI * .84, sp = spread * (.5 + R()), px = x + Math.cos(a) * sp * t, py = y + Math.sin(a) * sp * t + t * t * 46, r = 1.6 + R() * 2.2;
+      S.dot(g, E(px, py, r, r * 1.3), '#bfeeff'); S.dot(g, E(px - r * .3, py - r * .4, r * .35, r * .35), '#fff', .9); }
+    g.restore();
+  }
+  /** Clip to everything above the waterline while drawing `fn`. */
+  function aboveWater(g, wl, fn){ g.save(); g.beginPath(); g.rect(-300, -400, 600, 400 + wl); g.clip(); fn(); g.restore(); }
+  function barnacle(g, x, y, r = 4){ S.part(g, E(x, y, r, r * .8), BARN, { x, y, r }, { flat:true, mat:'stone', noEdge:true }); S.dot(g, E(x, y, r * .35, r * .3), '#3a3028', .9); }
+
+  // ---------- electricity ----------
+  /** Jagged points from (x1, y1) to (x2, y2), amp is the sideways jitter. */
+  function zig(x1, y1, x2, y2, R, amp, n){ const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, out = [[x1, y1]];
+    for (let i = 1; i < n; i++){ const f = i / n, o = (R() - .5) * 2 * amp * Math.sin(f * Math.PI) + (i % 2 ? 1 : -1) * amp * .45; out.push([x1 + dx * f + nx * o, y1 + dy * f + ny * o]); }
+    out.push([x2, y2]); return out; }
+  /** A glowing electric line: amber halo, yellow-white body, white core. */
+  function arc(g, pts, w = 2, a = 1){
+    if (a <= 0) return;
+    const path = () => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); };
+    g.save(); g.globalAlpha *= Math.min(1, a); g.lineCap = 'round'; g.lineJoin = 'round';
+    g.shadowColor = ZAP.glow; g.shadowBlur = 4 + w * 2; path(); g.strokeStyle = rgba(ZAP.halo, .6); g.lineWidth = w * 2.4; g.stroke();
+    g.shadowBlur = 0; path(); g.strokeStyle = ZAP.hot; g.lineWidth = w; g.stroke(); path(); g.strokeStyle = '#fff'; g.lineWidth = w * .45; g.stroke();
+    g.restore();
+  }
+  /** A little spark: three jagged prongs and a white pip. */
+  function spark(g, x, y, r, R, a = 1){
+    for (let k = 0; k < 3; k++){ const an = R() * TAU, l = r * (.6 + R() * .6); arc(g, zig(x, y, x + Math.cos(an) * l, y + Math.sin(an) * l, R, l * .22, 3), 1, a); }
+    g.save(); g.globalAlpha *= a; g.shadowColor = ZAP.glow; g.shadowBlur = 6; S.dot(g, E(x, y, r * .28, r * .28), '#fff'); g.restore();
+  }
+  /** A ball of lightning: glow, yellow-white core, crackling prongs. */
+  function zapBall(g, x, y, r, R, a = 1){
+    g.save(); g.globalAlpha *= a;
+    let gr = g.createRadialGradient(x, y, 0, x, y, r * 2.2); gr.addColorStop(0, rgba(ZAP.glow, .7)); gr.addColorStop(1, rgba(ZAP.halo, 0)); g.fillStyle = gr; g.fillRect(x - r * 2.2, y - r * 2.2, r * 4.4, r * 4.4);
+    g.shadowColor = ZAP.glow; g.shadowBlur = r; gr = g.createRadialGradient(x - r * .2, y - r * .2, 0, x, y, r); gr.addColorStop(0, '#ffffff'); gr.addColorStop(.55, ZAP.hot); gr.addColorStop(1, ZAP.glow); ell(g, x, y, r, r); g.fillStyle = gr; g.fill();
+    g.restore();
+    for (let k = 0; k < 4; k++){ const an = k / 4 * TAU + R() * 1.2, l = r * (1.2 + R() * .8); arc(g, zig(x + Math.cos(an) * r * .5, y + Math.sin(an) * r * .5, x + Math.cos(an) * l, y + Math.sin(an) * l, R, r * .25, 3), Math.max(.8, r * .14), a); }
+  }
+
+  // ---------- the eel ----------
+  /** Angry glowing eye: yellow-white glow, slit pupil looking down at the wall, a lid slanting down to the middle and a heavy brow. */
+  function stormEye(g, x, y, rx, ry, s, glow){
+    g.save(); g.shadowColor = ZAP.glow; g.shadowBlur = 6 + glow * 6; ell(g, x, y, rx, ry); g.fillStyle = ZAP.glow; g.fill(); g.restore();
+    const gr = g.createRadialGradient(x - rx * .15, y + ry * .1, 0, x, y, rx * 1.05); gr.addColorStop(0, '#ffffff'); gr.addColorStop(.5, ZAP.hot); gr.addColorStop(1, '#f2b418'); ell(g, x, y, rx, ry); g.fillStyle = gr; g.fill();
+    const px = x - s * rx * .14, py = y + ry * .16; S.dot(g, E(px, py, rx * .2, ry * .6), '#1a1206'); S.dot(g, E(px - rx * .1, py - ry * .26, rx * .1, ry * .13), '#fff', .9);
+    g.save(); ell(g, x, y, rx, ry); g.clip(); g.translate(x, y); g.rotate(-s * .5); g.fillStyle = EELD.base; g.fillRect(-rx - 6, -ry - 8, rx * 2 + 12, ry * .62 + 8); g.restore();
+    g.save(); g.translate(x, y); g.rotate(-s * .5); S.tube(g, SO([[-rx - 3, -ry * .38 - 1], [0, -ry * .5 - 1.5], [rx + 3, -ry * .38 - 1]]), EELD, 4.2); g.restore();
+    ell(g, x, y, rx, ry); g.strokeStyle = rgba(ZAP.deep, .7); g.lineWidth = 1; g.stroke();
+  }
+  /** The frilled fin crest fanned out behind the head (head-local, centred on (0, cy)); c 0..1 raises it; tips spark with glow. */
+  function crest(g, cy, c, glow, R){
+    const n = 7, spread = 1.28, Ls = [32, 37, 41, 43, 41, 37, 32], k = .84 + c * .22, tips = [], bases = [];
+    for (let i = 0; i < n; i++){ const a = -Math.PI / 2 + (i / (n - 1) * 2 - 1) * spread, L = Ls[i] * k; tips.push([Math.cos(a) * L, cy + Math.sin(a) * L]); bases.push([Math.cos(a) * 10, cy + Math.sin(a) * 10]); }
+    const pts = [bases[0]]; for (let i = 0; i < n; i++){ pts.push(tips[i]); if (i < n - 1){ const a = -Math.PI / 2 + ((i + .5) / (n - 1) * 2 - 1) * spread, L = (Ls[i] + Ls[i + 1]) / 2 * k * .74; pts.push([Math.cos(a) * L, cy + Math.sin(a) * L]); } } pts.push(bases[n - 1]);
+    const mem = SM(pts, .45);
+    g.save(); g.globalAlpha *= .94; S.part(g, mem, FIN, { x:0, y:cy - 22, r:38 }, { flat:true, mat:'gel', lw:1.3 }); g.restore();
+    g.save(); mem(g); g.clip(); const gr = g.createRadialGradient(0, cy, 14, 0, cy, 46); gr.addColorStop(0, rgba(ZAP.glow, 0)); gr.addColorStop(1, rgba(ZAP.glow, .18 + glow * .18)); g.fillStyle = gr; g.fillRect(-60, cy - 60, 120, 70); g.restore();
+    for (let i = 0; i < n; i++) S.tube(g, SO([bases[i], [(bases[i][0] + tips[i][0]) / 2, (bases[i][1] + tips[i][1]) / 2 - 1], tips[i]]), SPINE, 2.4);
+    for (let i = 0; i < n; i++){ g.save(); g.shadowColor = ZAP.glow; g.shadowBlur = 5 + glow * 4; S.dot(g, E(tips[i][0], tips[i][1], 2 + glow * .5, 2 + glow * .5), ZAP.hot); g.restore(); S.dot(g, E(tips[i][0] - .5, tips[i][1] - .6, .8, .8), '#fff'); }
+    // crackle jumping between neighbouring tips
+    const m = glow > 1.2 ? n - 1 : glow > .5 ? 2 : 1;
+    for (let j = 0; j < m; j++){ const i = glow > 1.2 ? j : Math.floor(R() * (n - 1)); arc(g, zig(tips[i][0], tips[i][1], tips[i + 1][0], tips[i + 1][1], R, 3.2, 4), 1, .55 + glow * .3); }
+    return tips;
+  }
+  /** A side fin at the neck, fanned out sideways (s = -1 left, 1 right) from (x, y). */
+  function sideFin(g, x, y, s, flap){
+    g.save(); g.translate(x, y); g.scale(s, 1); g.rotate(flap * .25);
+    const f = SM([[0, -4], [12, -11], [22, -9], [25, -2], [21, 5], [9, 6]], .6); S.part(g, f, FIN, { x:12, y:-2, r:13 }, { flat:true, mat:'gel', lw:1.1 });
+    for (const [ex, ey] of [[22, -9], [25, -2], [21, 5]]) S.ln(g, [[2, -1], [ex - 2, ey]], SPINE, 1.2, .7);
+    g.restore();
+  }
+  /** The broken harpoon: a snapped shaft stuck in the eel's back, angled up and out, with a rusted collar and a frayed rope. */
+  function harpoon(g, x, y, ang, len){
+    const cx = Math.cos(ang), cy = Math.sin(ang), ex = x + cx * len, ey = y + cy * len;
+    S.tube(g, SO([[x, y], [ex, ey]]), WOOD, 4.4);
+    // splintered break
+    const nx = -cy, ny = cx; S.part(g, PL([[ex + nx * 2.6, ey + ny * 2.6], [ex + cx * 6 + nx * 1.4, ey + cy * 6 + ny * 1.4], [ex + cx * 3, ey + cy * 3], [ex + cx * 7.5 - nx * .6, ey + cy * 7.5 - ny * .6], [ex + cx * 2 - nx * 1.6, ey + cy * 2 - ny * 1.6], [ex - nx * 2.6, ey - ny * 2.6]]), SPLINT, { x:ex, y:ey, r:5 }, { flat:true, mat:'wood', lw:.9 });
+    // rusted iron collar where the head was, and rope lashing
+    const kx = x + cx * len * .32, ky = y + cy * len * .32; g.save(); g.translate(kx, ky); g.rotate(ang); S.part(g, PL([[-4, -3.6], [4, -3.6], [4, 3.6], [-4, 3.6]]), IRON, { x:0, y:0, r:5 }, { flat:true, mat:'metal', lw:1 }); S.dot(g, E(1, -1, 1.6, 1.2), RUSTO, .8); S.dot(g, E(-2, 1.6, 1.2, .9), RUSTO, .7); g.restore();
+    const rx = x + cx * len * .58, ry = y + cy * len * .58; for (const d of [-1.6, 1.6]) S.ln(g, [[rx + cx * d + nx * 2.8, ry + cy * d + ny * 2.8], [rx + cx * d - nx * 2.8, ry + cy * d - ny * 2.8]], ROPE, 1.4, .9);
+    S.tube(g, SO([[rx, ry + 2], [rx - 2, ry + 9], [rx + 1, ry + 15]]), ROPE, 1.8); S.thread(g, rx + 1, ry + 15, 1, ROPE);
+  }
+  /** The whole eel. Neck at (off(0), -2), spine running down `len` units to the tail. o: off(u) sideways offset along the body
+   *  (u 0 neck .. 1 tail), jaw 0..1, glow 0..2, crest 0..1, ball 0..1 (lightning in the mouth), tilt (head), tail (draw the tail fin), seed. */
+  function eelFigure(g, o){
+    const len = o.len ?? 112, off = o.off ?? (() => 0), jaw = o.jaw ?? .12, glow = o.glow ?? .8, R = rng(o.seed ?? 1);
+    const spine = []; for (let i = 0; i <= 5; i++){ const u = i / 5; spine.push([off(u), -2 + u * len]); }
+    const rb = ribbon(spine, u => u < .12 ? 13 + u * 25 : Math.max(4.5, 16 - Math.max(0, u - .5) * (o.tail ? 22 : 8)), 6), C = rb.centre, N = C.length;
+    const hx = spine[0][0], d0 = rb.dirs[0], tilt = (o.tilt ?? 0) + Math.atan2(-d0[0], d0[1]) * .6;
+    // behind the body: the harpoon, the side fins, the tail fin
+    { const i = Math.round(N * .14), [bx, by] = C[i]; harpoon(g, bx - 4, by, -Math.PI + .42, 42); }
+    { const i = Math.round(N * .1); sideFin(g, rb.left[i][0] + 3, rb.left[i][1], -1, Math.sin((o.ph ?? 0)) ); sideFin(g, rb.right[i][0] - 3, rb.right[i][1], 1, Math.sin((o.ph ?? 0) + 1)); }
+    if (o.tail){ const [tx, ty] = C[N - 1], [dx, dy] = rb.dirs[N - 1], nx = -dy, ny = dx;
+      const fin = SM([[tx - nx * 3, ty - ny * 3], [tx + dx * 6 - nx * 13, ty + dy * 6 - ny * 13], [tx + dx * 16, ty + dy * 16], [tx + dx * 6 + nx * 13, ty + dy * 6 + ny * 13], [tx + nx * 3, ty + ny * 3]], .6);
+      S.part(g, fin, FIN, { x:tx + dx * 8, y:ty + dy * 8, r:12 }, { flat:true, mat:'gel', lw:1.1 }); arc(g, zig(tx, ty, tx + dx * 15, ty + dy * 15, R, 2, 3), .8, .6 * glow); }
+    // body: slick teal with a pale belly down the front and glowing lightning chevrons
+    const mid = C[Math.round(N * .3)];
+    S.part(g, rb.path, EEL, { x:mid[0] - 4, y:mid[1] - 6, r:30 }, { mat:'skin', hx:mid[0] - 9, hy:mid[1] - 20 });
+    const belly = ribbon(spine, u => (u < .12 ? 13 + u * 25 : Math.max(4.5, 16 - Math.max(0, u - .5) * (o.tail ? 22 : 8))) * .42, 6);
+    S.part(g, belly.path, BELLY, { x:mid[0], y:mid[1], r:20 }, { flat:true, noEdge:true, mat:'skin' });
+    g.save(); rb.path(g); g.clip();
+    let acc = 0, next = 12; for (let i = 1; i < N - 1; i++){ acc += Math.hypot(C[i][0] - C[i - 1][0], C[i][1] - C[i - 1][1]); if (acc < next) continue; next += 17; const L = rb.left[i], Rr = rb.right[i], [dx, dy] = rb.dirs[i], pts = [];
+      for (let k = 0; k <= 4; k++){ const f = k / 4, sh = (k % 2 ? 1 : -1) * 3.4 + (k === 0 || k === 4 ? -2 : 0); pts.push([L[0] + (Rr[0] - L[0]) * f + dx * sh, L[1] + (Rr[1] - L[1]) * f + dy * sh]); }
+      arc(g, pts, 2, .55 + glow * .3); }
+    g.restore();
+    S.overlay(g, rb.path, EEL, { x:mid[0] - 4, y:mid[1] - 6, r:30 }, .35);
+    // a couple of barnacles and a weed strand low on the body
+    { const i = Math.round(N * .3); barnacle(g, rb.right[i][0] - 4, rb.right[i][1] - 2, 3.2); barnacle(g, rb.right[i + 1][0] - 7, rb.right[i + 1][1] + 2, 2.4); }
+    // charged arcs running down the body's edges
+    if (glow > 1.05){ const a = (glow - 1.05) * 1.4; for (const side of [rb.left, rb.right]){ const i0 = 2 + Math.floor(R() * 4); arc(g, zig(side[i0][0], side[i0][1], side[i0 + 6][0], side[i0 + 6][1], R, 3, 5), 1.1, a); } }
+
+    // head
+    g.save(); g.translate(hx, -2); g.rotate(tilt);
+    const tips = crest(g, -24, o.crest ?? 0, glow, R);
+    const head = SM([[-22, -4], [-27, -16], [-25, -30], [-16, -42], [0, -46], [16, -42], [25, -30], [27, -16], [22, -4], [10, 0], [-10, 0]]);
+    S.part(g, head, EEL, { x:0, y:-24, r:28 }, { mat:'skin', hx:-12, hy:-36 });
+    S.contact(g, head, 0, -2, 18, 6, .35);
+    // brow blaze: a little lightning bolt between the eyes
+    arc(g, [[-3, -44], [2, -40], [-2, -38.5], [3, -33]], 1.6, .8 + glow * .2);
+    // gill slits
+    for (const s of [-1, 1]) for (let k = 0; k < 3; k++) S.ln(g, [[s * (19 + k * 2.4), -19 + k * 1.2], [s * (21 + k * 2.4), -10 + k * 1.2]], EELD, 1.3, .55);
+    stormEye(g, -12, -28, 9.5, 9, -1, glow); stormEye(g, 12, -28, 9.5, 9, 1, glow);
+    for (const s of [-1, 1]) S.dot(g, E(s * 4, -16, 1.4, 1), EELD.deep, .8);   // nostrils
+    // mouth: the upper lip; it gapes as the jaw drops, lit from inside by the charge
+    const J = jaw * 11, ball = o.ball ?? 0;
+    if (J > .6){ const m = SM([[-19, -9], [-10, -10.5], [0, -11], [10, -10.5], [19, -9], [16, -7 + J * .9], [0, -6 + J], [-16, -7 + J * .9]], .7); S.dot(g, m, MOUTH);
+      if (ball > 0){ g.save(); m(g); g.clip(); const gr = g.createRadialGradient(0, -6 + J * .5, 0, 0, -6 + J * .5, 22); gr.addColorStop(0, rgba(ZAP.hot, .9 * ball)); gr.addColorStop(1, rgba(ZAP.glow, 0)); g.fillStyle = gr; g.fillRect(-24, -14, 48, 30); g.restore(); }
+      for (let i = 0; i < 6; i++){ const x = -12.5 + i * 5; S.dot(g, PL([[x - 1.2, -10.4], [x + 1.2, -10.4], [x, -7.4]]), TOOTH); } }
+    S.stroke(g, SO([[-20, -9], [-10, -10.5], [0, -11], [10, -10.5], [20, -9]]), EELD, 1.5, .8);
+    // the underbite: a jutting lower jaw, a pale chin, fangs standing up over the upper lip
+    g.save(); g.translate(0, J);
+    const jawP = SM([[-24, -10], [-28, -3], [-20, 5], [0, 8], [20, 5], [28, -3], [24, -10], [12, -7.5], [0, -7], [-12, -7.5]], .8);
+    S.part(g, jawP, EEL, { x:0, y:-2, r:26 }, { flat:true, mat:'skin', lw:1.4 });
+    S.part(g, SM([[-14, -4], [0, -3], [14, -4], [10, 4], [0, 6], [-10, 4]], .8), BELLY, { x:0, y:1, r:14 }, { flat:true, noEdge:true, mat:'skin' });
+    for (const [x, L] of [[-19, 7], [-10, 5], [10, 5], [19, 7.5]]){ const b = -8.4 + Math.abs(x) * .03; S.part(g, PL([[x - 2.2, b], [x + 2.2, b], [x + (x < 0 ? .6 : -.6), b - L]]), pal('#eef6e4'), { x, y:b - L / 2, r:L / 2 + 1 }, { flat:true, mat:'bone', lw:.8 }); }
+    for (let i = 0; i < 5; i++){ const x = -6 + i * 3; S.dot(g, PL([[x - 1, -7.6], [x + 1, -7.6], [x, -10]]), TOOTH); }
+    // rusty fish hook through the jaw corner, a snapped line trailing off
+    g.save(); g.lineCap = 'round'; g.strokeStyle = rgba(HOOKC.deep, .9); g.lineWidth = 2.6; g.beginPath(); g.moveTo(24, -14); g.lineTo(24, -4); g.arc(20, -4, 4, 0, Math.PI * .95); g.stroke();
+    g.strokeStyle = HOOKC.base; g.lineWidth = 1.5; g.beginPath(); g.moveTo(24, -14); g.lineTo(24, -4); g.arc(20, -4, 4, 0, Math.PI * .95); g.stroke(); g.restore();
+    S.dot(g, PL([[16, -4], [15, -8], [18.5, -5.5]]), HOOKC.base); S.dot(g, E(24, -9, 1.2, 1.6), RUSTO, .85); S.dot(g, E(22.5, -1.5, 1, .8), RUSTO, .8);
+    S.dot(g, E(24, -15, 1.8, 1.4), IRON.base); g.strokeStyle = 'rgba(220,230,230,.55)'; g.lineWidth = .7; g.beginPath(); g.moveTo(24, -15.5); g.quadraticCurveTo(32, -22, 30, -34); g.stroke();
+    g.restore();
+    // wet sheen on the head
+    g.save(); head(g); g.clip(); g.fillStyle = 'rgba(255,255,255,.3)'; ell(g, -10, -38, 9, 2.6, -.4); g.fill(); g.restore();
+    // lightning in the mouth
+    if (ball > 0) zapBall(g, 0, -6 + J * .55, 3 + ball * 6, R, clamp(ball * 1.5));
+    g.restore();
+    // stray sparks around the crest and body
+    const ns = glow > 1.2 ? 4 : glow > .7 ? 2 : 1;
+    for (let k = 0; k < ns; k++){ const t = tips[Math.floor(R() * tips.length)], sx = hx + t[0] * 1.08 + (R() - .5) * 6, sy = -2 + t[1] * 1.05; spark(g, sx, sy, 4 + R() * 3, R, .6 + Math.min(.4, glow * .25)); }
+  }
+
+  // ---------- poses ----------
+  /** Side-to-side sway along the body for a phase ph (radians) and amount a. */
+  const swayOf = (ph, a = 1) => u => (Math.sin(ph + u * 3.2) * 8 - Math.sin(ph) * 3) * a * (1 - u * .35);
+  const LIFT = 18;   // surfaced, the neck stands this far above the Diver's so a good length of body shows
+  function eel(g, P = {}){
+    if (P.hidden != null){ const t = P.hidden, R = rng(1 + Math.floor(t * 4) * 13);
+      // under water: a glow of the stripes below the surface, bubbles and a spark breaking the surface now and then
+      water(g, 0, WL + 3, 42, 10, t, .78);
+      g.save(); const gr = g.createRadialGradient(0, WL + 4, 0, 0, WL + 4, 30); gr.addColorStop(0, rgba(ZAP.glow, .35 + Math.sin(t * TAU) * .12)); gr.addColorStop(1, rgba(ZAP.glow, 0)); ell(g, 0, WL + 3, 40, 9); g.fillStyle = gr; g.fill(); g.restore();
+      arc(g, zig(-14, WL + 5, 12, WL + 2, R, 2.5, 4), .9, .45);
+      for (const [x, y, r] of [[-10, WL - 1, 2.5], [8, WL - 4 - t * 4, 1.8], [16, WL + 1, 1.4]]) S.dot(g, E(x, y, r, r), '#e8f8ff', .7);
+      if (Math.floor(t * 4) % 2 === 0) spark(g, 6 + R() * 10, WL - 3, 4, R, .7);
+      return;
+    }
+    if (P.surface != null || P.down != null){
+      const t = P.surface != null ? P.surface : 1 - P.down, sink = (1 - ease(t)) * 132;
+      aboveWater(g, WL, () => { g.translate(0, sink - LIFT); eelFigure(g, { len:130, off:swayOf(0, .5), glow:.7, crest:.2 + t * .3, seed:3 }); });
+      water(g, 0, WL + 3, 42, 10, t * .9, .8);
+      if (P.surface != null){ splash(g, 0, WL, Math.min(1, t * 1.3), 4, 12, 44); splash(g, 0, WL, Math.max(0, t * 1.5 - .5), 8, 8, 30); }
+      else splash(g, 0, WL, Math.max(0, P.down * 1.2 - .1), 6, 8, 26);
+      return;
+    }
+    if (P.idle != null){ const ph = P.idle * TAU;
+      aboveWater(g, WL, () => { g.translate(0, Math.sin(ph * 2) * 1.2 - LIFT); eelFigure(g, { len:130, off:swayOf(ph), tilt:Math.sin(ph) * .05, jaw:.12 + Math.max(0, Math.sin(ph)) * .1, glow:.75 + Math.sin(ph * 2) * .2, crest:.4 + Math.sin(ph) * .1, ph, seed:5 + Math.floor(P.idle * 6) }); });
+      water(g, 0, WL + 3, 42, 10, P.idle, .8);
+      return;
+    }
+    if (P.charge != null){ const k = ease(P.charge), ph = P.charge * TAU * .5;
+      aboveWater(g, WL, () => { g.translate(0, -5 * k - LIFT); g.scale(1 - .05 * k, 1 - .05 * k); eelFigure(g, { len:130, off:u => swayOf(ph, 1 - k * .6)(u) - k * 3 * (1 - u), tilt:-k * .06, jaw:.12 + k * .4, glow:.8 + k * 1.2, crest:.4 + k * .6, ball:k * .75, ph, seed:11 + Math.floor(P.charge * 5) }); });
+      water(g, 0, WL + 3, 42, 10, P.charge * .9, .8, k * .6);
+      return;
+    }
+    if (P.shoot != null){ const t = P.shoot, REL = .3, lunge = t < REL ? ease(t / REL) : 1 - ease((t - REL) / (1 - REL)), drain = clamp((t - REL) / .5);
+      aboveWater(g, WL, () => { g.translate(0, lunge * 7 - LIFT); g.scale(1 + lunge * .07, 1 + lunge * .07); eelFigure(g, { len:130, off:u => -2 * (1 - u) * lunge, tilt:0, jaw:t < REL ? .5 + lunge * .5 : 1 - drain * .85, glow:2 - drain * 1.3, crest:1 - drain * .6, ball:t < REL ? .75 + lunge * .25 : 0, seed:17 + Math.floor(t * 7) }); });
+      water(g, 0, WL + 3, 42, 10, t * .9, .8, (1 - drain) * .7);
+      // the bolt leaving the mouth down the lane (toward the wall); the engine takes over with the bolt sprite
+      if (t >= REL){ const u = (t - REL) / (1 - REL), R = rng(23 + Math.floor(t * 8)), my = 1 - LIFT + 6, by = lerp(my + 4, 42, ease(clamp(u * 1.4))), a = 1 - clamp((u - .55) / .45);
+        if (u < .35){ g.save(); g.globalAlpha *= 1 - u / .35; const gr = g.createRadialGradient(0, my, 0, 0, my, 34); gr.addColorStop(0, 'rgba(255,255,240,.95)'); gr.addColorStop(.4, rgba(ZAP.glow, .5)); gr.addColorStop(1, rgba(ZAP.glow, 0)); g.fillStyle = gr; g.fillRect(-34, my - 34, 68, 68); g.restore(); }
+        arc(g, zig(0, my, 0, by, R, 5, 6), 2.4, a); zapBall(g, 0, by, 8, R, a); }
+      return;
+    }
+    eel(g, { idle:0 });
+  }
+
+  // ---------- the bolt (projectile) ----------
+  function bolt(g, P = {}){
+    if (P.zap == null){ const t = P.fly ?? 0, R = rng(41 + Math.floor(t * 6) * 7);
+      // zig-zag tail streaming up the lane behind the ball (the ball flies down at the wall)
+      arc(g, zig(0, 0, (R() - .5) * 8, -54, R, 6, 6), 2.2, .85); arc(g, zig(0, -4, (R() - .5) * 14, -36, R, 5, 4), 1.3, .6);
+      zapBall(g, 0, 0, 10 + Math.sin(t * TAU) * 1.2, R, 1);
+      return;
+    }
+    const t = P.zap, R = rng(53 + Math.floor(t * 7) * 5), fl = 1 - clamp(t / .4), sp = ease(clamp(t / .7)), fade = 1 - clamp((t - .55) / .45);
+    // scorch on the wall
+    g.save(); g.globalAlpha *= .55 * clamp(t * 3) * (1 - .5 * clamp((t - .6) / .4)); S.dot(g, SM([[-18, 6], [-10, -4], [0, -2], [12, -6], [20, 4], [12, 12], [-4, 14], [-16, 12]], .7), '#1c1a14'); g.restore();
+    // flash
+    if (fl > 0){ g.save(); g.globalAlpha *= fl; const gr = g.createRadialGradient(0, 0, 0, 0, 0, 40); gr.addColorStop(0, 'rgba(255,255,245,1)'); gr.addColorStop(.35, rgba(ZAP.glow, .7)); gr.addColorStop(1, rgba(ZAP.glow, 0)); g.fillStyle = gr; g.fillRect(-40, -40, 80, 80); g.restore(); }
+    // forks spraying out over the wall
+    for (let k = 0; k < 6; k++){ const an = -Math.PI + (k + .5) / 6 * Math.PI * 1.3 - .15 + (R() - .5) * .3, L = 12 + sp * 26 * (.7 + R() * .5); arc(g, zig(0, 0, Math.cos(an) * L, Math.sin(an) * L * .8, R, 4, 4), 1.6 * (1 - sp * .4), fade); }
+    if (t < .5) zapBall(g, 0, 0, 9 * (1 - t * 1.6), R, 1);
+    // sparks falling off
+    for (let k = 0; k < 6; k++){ const an = -Math.PI * .9 + R() * Math.PI * .8, d = 10 + sp * 22 * (.6 + R() * .6), x = Math.cos(an) * d, y = Math.sin(an) * d + sp * sp * 22; g.save(); g.globalAlpha *= fade; g.shadowColor = ZAP.glow; g.shadowBlur = 5; S.dot(g, E(x, y, 1.6, 1.6), ZAP.hot); g.restore(); }
+  }
+
+  return { eel, bolt };
+})();
+
 // ---------- registry (format of ./index.js) ----------
 const C = (n, fps, key, once = false) => ({ n, fps, once, pose:t => ({ [key]:t }) });
 export const MARSH = {
@@ -208,4 +725,24 @@ export const MARSH = {
   bloodblob: { draw:bloodlet, scale:.64, dy:-11, box:{ x:-32, y:-6, w:64, h:64 }, clips:{ walk:C(8, 12, 'walk'), chew:C(4, 8, 'chew') }, still:{} },
   // r 22; the shoot clip's arm and muzzle flash need the width
   pirate: { draw:pirate, scale:.6, dy:-11, box:{ x:-48, y:-86, w:142, h:140 }, clips:{ walk:C(8, 8, 'walk'), chew:C(4, 8, 'chew'), shoot:C(8, 12, 'shoot', true) }, still:{} },
+  // r 26 like the Shell Turtle; the imp stands tall on the shell
+  turtlerider: { draw:RIDERS.turtleRider, scale:.56, dy:-8, box:{ x:-70, y:-118, w:140, h:190 }, clips:{ walk:C(8, 6, 'walk'), chew:C(4, 6, 'chew'), throw:C(10, 14, 'throw', true) }, still:{} },
+  rotshot: { draw:RIDERS.rottenShot, scale:.56, dy:0, box:{ x:-44, y:-56, w:88, h:110 }, clips:{ fly:C(6, 12, 'fly'), splat:C(7, 14, 'splat', true) }, still:{ fly:0 } },
+  // the Puddle Diver's footprint (waterline 38, scale .6, dy -11). The pose follows the engine's cycle (engine/marsh.js): surface 0.4 s, charge TYPES.eel.charge s, shoot 0.57 s
+  // (the bolt leaves 0.17 s in), then idle, and the down clip for its last 0.33 s.
+  eel: { draw:EELART.eel, scale:.6, dy:-11, box:{ x:-88, y:-108, w:176, h:174 }, still:{ idle:0 },
+    clips:{ hidden:C(4, 6, 'hidden'), surface:C(6, 14, 'surface', true), idle:C(6, 8, 'idle'), charge:C(6, 12, 'charge', true), shoot:C(8, 14, 'shoot', true), down:C(4, 12, 'down', true) },
+    frame(m, clips){
+      if (m.hidden) return ['hidden', Math.floor(m.ph * clips.hidden.fps) % clips.hidden.n];
+      const T = TYPES.eel, el = T.up - m.upT, c = clips;
+      const at = (name, t, d) => [name, Math.max(0, Math.min(c[name].n - 1, Math.floor(t / d * c[name].n)))];
+      if (el < 0.4) return at('surface', el, 0.4);
+      if (el < 0.4 + T.charge) return at('charge', el - 0.4, T.charge);
+      const sd = c.shoot.n / c.shoot.fps;
+      if (el < 0.4 + T.charge + sd) return at('shoot', el - 0.4 - T.charge, sd);
+      if (m.upT < c.down.n / c.down.fps) return at('down', c.down.n / c.down.fps - m.upT, c.down.n / c.down.fps);
+      return ['idle', Math.floor(m.ph * c.idle.fps) % c.idle.n];
+    } },
+  stormbolt: { draw:EELART.bolt, scale:.6, dy:0, box:{ x:-50, y:-62, w:100, h:112 }, clips:{ fly:C(6, 14, 'fly'), zap:C(7, 16, 'zap', true) }, still:{ fly:0 } },
 };
+

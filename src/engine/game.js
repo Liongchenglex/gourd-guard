@@ -522,6 +522,7 @@ export function update(dt){
   g.mines = g.mines.filter(m => !m.dead);
   for (const a of g.arrows){   // skeleton archers' arrows fly down their lane into the wall
     a.p += a.sp * dt;
+    if (__RELEASE__ >= 9 && a.zap && a.p >= 1 && g.vfx) g.vfx.push({ kind:'clip', key:'stormbolt', clip:'zap', n:7, x:LANE(a.lane), y:FENCE_Y - 10, s:1, t:0, dur:0.45 });   // a Storm Eel's bolt bursts on the fence (render/chars/marsh.js)
     if (a.p >= 1){ a.dead = true; if (__RELEASE__ >= 4 && a.fork){ const w = walls[a.lane], amt = w ? Math.min(w.max * a.hit, w.hp - 1) : 0; if (amt > 0) damageWall(a.lane, amt); G.shake = Math.max(G.shake || 0, 0.5); } else damageWall(a.lane, a.dmg); for (let i = 0; i < 8; i++) spark(LANE(a.lane), FENCE_Y - 10, a.water ? '#9fe0f0' : '#d8d0c0', 120); SFX.monsterAct(a.water ? 'water' : 'arrow', 'land'); }   // a Hayrick's fork (Release 4): a third of the fence, never the last 1
   }
   g.arrows = g.arrows.filter(a => !a.dead);
@@ -606,7 +607,11 @@ export function commonFx(dt){
     if (p.kind !== 'ring'){ p.x += p.vx * dt; p.y += p.vy * dt; p.vy += (p.grav || 0) * dt; p.vx *= 1 - dt * 1.5; if (p.rot != null) p.rot += dt * 8; }
   }
   g.parts = g.parts.filter(p => p.t < p.life);
-  if (g.vfx){ for (const v of g.vfx) v.t += dt; g.vfx = g.vfx.filter(v => v.t < v.dur); }
+  if (g.vfx){
+    for (const v of g.vfx) v.t += dt;
+    if (__RELEASE__ >= 9) for (const v of g.vfx) if (v.done && v.t >= v.dur){ const f = v.done; v.done = null; f(v); }   // an effect that does something when it lands: a Turtle Rider's rotten pumpkin (engine/marsh.js)
+    g.vfx = g.vfx.filter(v => v.t < v.dur);
+  }
   for (const f of g.floats){ f.t += dt; f.y -= 38 * dt; }
   g.floats = g.floats.filter(f => f.t < f.life);
   for (const c of g.coinFx){ c.t += dt; if (c.t >= c.dur && !c.done){ c.done = true; SFX.coin(); } }

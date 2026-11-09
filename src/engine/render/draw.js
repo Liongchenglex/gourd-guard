@@ -17,6 +17,8 @@ import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBol
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
+import { crestStrip, SURGE_FRAMES, CREST_H } from './tide.js';
+import { SURGE_TIME, TIDE_STOP } from '../tide.js';
 import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, GX, GY, H, HOLD_TIME, LANE, ROWS, W, gest, graves, grid, state, walls, HOLD_TIME_QUICK } from '../state.js';
 import { TAU, clamp, mulberry } from '../util.js';
 import { save } from '../../save.js';
@@ -301,7 +303,7 @@ function bloodSeaOn(){ const w = G.def && G.def.nightmare ? WORLDS[G.world] : nu
 export function drawSea(t){
   const y0 = FIELD_TOP - 6, h = Math.max(0.1, shoreP()) * (FIELD_BOT - FIELD_TOP) + 6, y1 = y0 + h;
   const blood = __RELEASE__ >= 9 && bloodSeaOn();
-  const sea = seaSprite(K, h, blood); ctx.drawImage(sea.c, 0, y0, W, h);
+  const sea = seaSprite(K, __RELEASE__ >= 9 && G.tide ? TIDE_STOP() * (FIELD_BOT - FIELD_TOP) + 6 : h, blood); ctx.drawImage(sea.c, 0, y0, W, h);   // a rising tide: one sprite baked at its highest line, stretched to the live one (no bake per frame)
   const wt = waveTile(K, blood), rows = Math.max(1, Math.floor(h / 34)), n = Math.ceil(W / 240) + 1;
   ctx.save(); ctx.beginPath(); ctx.rect(0, y0, W, h); ctx.clip();
   for (let i = 0; i < rows; i++){
@@ -319,6 +321,12 @@ export function drawSea(t){
   ctx.fillStyle = blood ? 'rgba(60,6,8,.34)' : 'rgba(12,44,62,.28)'; ctx.fillRect(0, y1 + 4, W, 8);   // wet sand under the foam
   const ft = foamTile(K, blood), off = ((t * 22) % 240 + 240) % 240 - 240, bob = Math.sin(t * 1.6) * 2;
   for (let j = 0; j <= n; j++) ctx.drawImage(ft.c, off + j * 240, y1 - 14 + bob, 240, 30);
+  if (__RELEASE__ >= 9 && G.tide && G.tide.t >= 0){   // a surge: the crimson crest rides the leading shore (one baked frame; Release 9)
+    const cs = crestStrip(K), f = Math.floor(t * 14) % SURGE_FRAMES, u = Math.min(1, G.tide.t / SURGE_TIME);
+    ctx.globalAlpha = Math.sin(u * Math.PI) * 0.9;
+    ctx.drawImage(cs.c, 0, f * CREST_H * cs.k, W * cs.k, CREST_H * cs.k, 0, y1 - 24, W, CREST_H);
+    ctx.globalAlpha = 1;
+  }
 }
 /** Twin Tides: a serpent tail curling out of the water where a bolt is thrown from. */
 export function drawTails(t){

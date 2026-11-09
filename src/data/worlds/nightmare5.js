@@ -8,6 +8,6 @@ const L = d => ({ world:5, theme:10, nightmare:true, graves:0, boss:null, bossFo
 const ALL4 = () => ['grave', 'protector', 'wartling', 'crookneck'];   // the gourds the first four books gave: pick two of four
 
 export default __RELEASE__ >= 9 ? [
-  L({ level: 1, name:'The Red Tide', pattern:0, total:16, interval:3.3, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL4(), puddles:2, shoreFrac:0.2,
+  L({ level: 1, name:'The Red Tide', pattern:0, total:16, interval:3.3, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL4(), puddles:2, shoreFrac:0.2, tideMarks:[{ at:0.5, to:0.3 }],
     pool:[['drownedGhoul', 10], ['tideImp', 5]], quests:[['noTools'], ['wallMin', 55]] }),
 ] : [];

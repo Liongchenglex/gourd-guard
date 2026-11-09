@@ -33,7 +33,7 @@ def marsh_page(browser, url):
 # ---------- Task 1: the track, the book page, the blood sea ----------
 # Names no lower build may hold. Not listed, because older builds already hold them for story reasons: 'Kraken' and 'Turtle Rider'
 # (comments in ported art, absent from a minified bundle but not from the source) and 'e4d9bd' (the Protector Gourd's shell colour).
-R9_NAMES = ['Blood Slime', 'Storm Eel', 'Siren', 'Swan Gourd', 'Fallen Twin Tides', 'Whirlpool', 'Beat Nightmare 4-4', 'marshN-blood']
+R9_NAMES = ['Blood Slime', 'Storm Eel', 'Siren', 'Swan Gourd', 'Fallen Twin Tides', 'Whirlpool', 'Beat Nightmare 4-4', 'marshN-blood', 'The tide rises!']
 
 
 def check_r9_absent(browser, url):
@@ -127,7 +127,143 @@ def check_n5_book(browser, url):
     page.close()
 
 
-CHECKS = {'check_r9_absent': check_r9_absent, 'check_n5_track': check_n5_track, 'check_n5_blood_sea': check_n5_blood_sea, 'check_n5_book': check_n5_book}
+# ---------- Task 2: the rising blood tide ----------
+def tide_page(browser, url, marks, total=20, puddles=None, shore=0.2):
+    """A paused N5 night with tide marks set by hand: spawned/total drive the spawn bar. Returns (page, errors)."""
+    page, errors = marsh_page(browser, url)
+    page.evaluate("""([marks, total, puddles, shore]) => { const g = window.__gg, G = g.G; G.def.tideMarks = marks; G.def.total = total; G.total = total; G.def.shoreFrac = shore; G.spawned = 0;
+      G.puddles.length = 0; for (const pd of puddles || []) G.puddles.push({ lane:pd[0], p:pd[1] }); g.initTide(G.def); }""", [marks, total, puddles, shore])
+    return page, errors
+
+
+def step(page, secs, dt=0.05):
+    page.evaluate("([s, dt]) => { const g = window.__gg; for (let t = 0; t < s; t += dt) g.updateTide(dt); }", [secs, dt])
+
+
+def check_tide_marks(browser, url):
+    if not R9: return
+    page, errors = tide_page(browser, url, [{'at': 0.3, 'to': 0.4}, {'at': 0.6, 'to': 0.6}])
+    sh = lambda: page.evaluate("() => window.__gg.shoreP()")
+    ok(abs(sh() - 0.2) < 1e-6, f'the night starts at its own shore {sh()}')
+    step(page, 2); ok(abs(sh() - 0.2) < 1e-6, 'no surge before the first mark')
+    page.evaluate("() => { window.__gg.G.spawned = 6; }")   # 30% of 20
+    step(page, 0.4); mid = sh(); ok(0.2 < mid < 0.4, f'mid-surge the shore is between the lines {mid}')
+    step(page, 0.5); ok(abs(sh() - 0.4) < 1e-6, f'the shore reaches 0.4 within 0.8 s {sh()}')
+    page.evaluate("() => { window.__gg.G.spawned = 12; }")
+    step(page, 1.0); ok(abs(sh() - 0.6) < 1e-6, f'at 60% it reaches 0.6 {sh()}')
+    step(page, 2); ok(abs(sh() - 0.6) < 1e-6, 'and rests there')
+    page.evaluate("() => { window.__gg.G.t += 3; window.__gg.updateHud(true); }")
+    n = page.evaluate("() => document.querySelectorAll('.tdMark').length")
+    ok(n == 2, f'two tide marks on the spawn bar ({n})')
+    ok(page.evaluate("() => document.querySelectorAll('.tdMark.done').length") == 2, 'both ticked after they fire')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_tide_live_shore(browser, url):
+    if not R9: return
+    page, errors = tide_page(browser, url, [{'at': 0.3, 'to': 0.5}])
+    page.evaluate("() => { window.__gg.G.spawned = 6; }"); step(page, 1.2)
+    sh = page.evaluate("() => window.__gg.liveShore()")
+    ok(abs(sh - 0.5) < 1e-6, f'liveShore after the surge {sh}')
+    ps = [page.evaluate("() => { const m = window.__gg.spawnMonster('drownedGhoul'); const p = m.p; m.dead = true; return p; }") for _ in range(4)]
+    ok(all(abs(p - (sh - 0.02)) < 1e-6 for p in ps), f'new walkers appear at liveShore - 0.02 {ps}')
+    dp = [page.evaluate("() => { const m = window.__gg.spawnMonster('diver'); const p = m.p; m.dead = true; return p; }") for _ in range(30)]
+    ok(all(p <= sh + 1e-6 for p in dp) and max(dp) > 0.2 + 0.03, f'lurking divers use the tide (max p {max(dp):.2f}, shore {sh})')
+    page.evaluate("() => { const G = window.__gg.G; G.puddles.length = 0; for (let i = 0; i < 20; i++){ G.puddles.length = 0; window.__gg.placePuddles(3); if (G.puddles.some(p => p.p < window.__gg.liveShore() + 0.06 - 1e-9)) window.__bad = true; } }")
+    ok(page.evaluate("() => !window.__bad"), 'placePuddles puts pools below the live shore')
+    # the level preview draws the start shore
+    page.evaluate("() => window.__gg.openPreview(1401)"); time.sleep(0.4)
+    ok(page.evaluate("() => !window.__gg.G.tide") and abs(page.evaluate("() => window.__gg.shoreP()") - 0.2) < 1e-6, 'the level preview draws the start shore')
+    ok(page.evaluate("() => window.__gg.inWater(0, 0.1)") is True and page.evaluate("() => window.__gg.inWater(0, 0.9)") is False, 'inWater: sea yes, dry land no')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_tide_limits(browser, url):
+    if not R9: return
+    page, errors = tide_page(browser, url, [{'at': 0.1, 'to': 0.99}])
+    page.evaluate("""() => { const g = window.__gg, G = g.G; G.spawned = 5; const m = g.spawnMonster('drownedGhoul', 2, false, 0.5); m.hold = 99; window.__m = m; window.__p0 = m.p; }""")
+    step(page, 1.5)
+    stop = page.evaluate("() => window.__gg.TIDE_STOP()")
+    sh = page.evaluate("() => window.__gg.liveShore()")
+    ok(abs(sh - stop) < 1e-6 and sh < 0.99, f'the shore stops at TIDE_STOP {sh} / {stop}')
+    ok(abs((1 - stop) - page.evaluate("() => window.__gg.TILE_P()")) < 1e-6, 'TIDE_STOP leaves one tile row before the fence')
+    ok(page.evaluate("() => window.__gg.walls.every(w => w.hp > 0)"), 'the fence is untouched')
+    # a monster in the newly covered band keeps walking
+    p1 = page.evaluate("() => { const g = window.__gg; g.G.monsters.forEach(m => { m.sp = 0.2; }); for (let i = 0; i < 20; i++) g.update(0.05); return window.__m.p; }")
+    ok(p1 > page.evaluate("() => window.__p0") + 0.01 and not page.evaluate("() => window.__m.dead"), f'a monster in the covered band keeps walking {p1}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_tide_swallow_diver(browser, url):
+    if not R9: return
+    page, errors = tide_page(browser, url, [{'at': 0.3, 'to': 0.5}], puddles=[[1, 0.45], [3, 0.8]], shore=0.3)
+    page.evaluate("""() => { const g = window.__gg, G = g.G; const pd = G.puddles[0]; const m = g.spawnMonster('diver', 1, false, 0.45);
+      m.puddle = pd; m.walker = false; m.sp = 0; m.hidden = true; m.upT = 0.3; window.__d = m; G.spawned = 6; }""")
+    step(page, 1.2)
+    r = page.evaluate("() => { const G = window.__gg.G; return [G.puddles.length, G.puddles[0].lane, window.__d.puddle && window.__d.puddle.lane, window.__d.lane, window.__d.p, window.__gg.liveShore()]; }")
+    ok(r[0] == 1 and r[1] == 3, f'the pool at 0.45 is swallowed, the dry one stays {r}')
+    ok(r[3] == 1 and r[4] <= r[5] + 1e-6 and r[2] == 1, f'the diver now lurks in the tide in its lane {r}')
+    step(page, 1.5)
+    ok(page.evaluate("() => !window.__d.hidden || window.__d.upT > 0"), 'its cycle carries on (it surfaces from the tide)')
+    page.evaluate("() => { window.__d.upT = 0.01; window.__d.hidden = true; }"); step(page, 0.2)
+    page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 2; i++) g.update(0.05); }")
+    ok(page.evaluate("() => window.__d.hidden") is False, 'the diver surfaces from the tide')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_tide_continue(browser, url):
+    if not R9: return
+    page, errors = tide_page(browser, url, [{'at': 0.3, 'to': 0.4}, {'at': 0.6, 'to': 0.6}], puddles=[[2, 0.7]])
+    page.evaluate("() => { window.__gg.G.spawned = 6; }"); step(page, 1.2)
+    cs = page.evaluate("() => { const s = window.__gg.continueState(); return s && s.tide; }")
+    ok(cs and cs.get('marks') == 1 and abs(cs.get('shore') - 0.4) < 1e-6, f'the snapshot holds the marks passed and the shore {cs}')
+    r = page.evaluate("""() => { const g = window.__gg, c = g.continueState(); c.remaining = 8; g.continueNight(c); const G = g.G; const first = [g.shoreP(), G.tide && G.tide.marksDone, G.tide && G.tide.t];
+      const real = G.def.tideMarks; return first; }""")
+    ok(r[1] == 1 and abs(r[0] - 0.4) < 1e-6 and r[2] < 0, f'the continued night keeps its shore and mark {r}')
+    step(page, 1.5)
+    ok(abs(page.evaluate("() => window.__gg.shoreP()") - 0.4) < 1e-6 and page.evaluate("() => window.__gg.G.tide.t") < 0, 'no surge replays on the continued night')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_tide_budget(browser, url):
+    if not R9: return
+    page, errors = tide_page(browser, url, [{'at': 0.3, 'to': 0.5}])
+    probe = """() => { const g = window.__gg, c = g.ctx, d = c.drawImage, f = c.fill, s = c.stroke, n = { img:0, fill:0, stroke:0 };
+      c.drawImage = function(...a){ n.img++; return d.apply(this, a); }; c.fill = function(...a){ n.fill++; return f.apply(this, a); }; c.stroke = function(...a){ n.stroke++; return s.apply(this, a); };
+      try { g.drawSea(1.0); } finally { delete c.drawImage; delete c.fill; delete c.stroke; } return n; }"""
+    page.evaluate("() => { const G = window.__gg.G; G.spawned = 6; }"); step(page, 0.4)
+    ok(page.evaluate("() => window.__gg.G.tide.t") >= 0, 'a surge is in progress')
+    sur = page.evaluate(probe)
+    page.evaluate("() => { window.__t = window.__gg.G.tide.t; window.__gg.G.tide.t = -1; }")   # the same shore with no wave
+    base = page.evaluate(probe)
+    page.evaluate("() => { window.__gg.G.tide.t = window.__t; }")
+    ok(sur['img'] - base['img'] <= 3 and sur['img'] - base['img'] >= 1, f'the surge adds 1..3 drawImage ({base["img"]} -> {sur["img"]})')
+    ok(sur['fill'] - base['fill'] == 0 and sur['stroke'] - base['stroke'] == 0, f'and no fill/stroke ({base} -> {sur})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_story_shore_unchanged(browser, url):
+    if not R9: return   # the shoreP hook is a Release 9 one
+    page, errors = open_page(browser, url)
+    start(page, 92); time.sleep(0.3)   # 5-12, a story shoreline night
+    page.evaluate("() => { const g = window.__gg, G = g.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; g.setState('pause'); }")
+    r = page.evaluate("""() => { const g = window.__gg, G = g.G, d = G.def, want = d.shoreFrac ? Math.min(0.8, d.shoreFrac) : d.shore ? Math.min(0.8, d.shore * g.TILE_P()) : d.sea ? 0.1 : 0;
+      const seen = [g.shoreP()]; for (let i = 0; i < 40; i++){ g.update(0.1); seen.push(g.shoreP()); } return [want, seen.every(x => x === want), !!G.tide, d.label]; }""")
+    ok(r[1] and r[0] > 0, f'{r[3]} keeps its shoreline value {r[0]} throughout')
+    ok(r[2] is False or not R9 and r[2] is False, 'no tide object on a story night')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS = {'check_r9_absent': check_r9_absent, 'check_n5_track': check_n5_track, 'check_n5_blood_sea': check_n5_blood_sea, 'check_n5_book': check_n5_book,
+          'check_tide_marks': check_tide_marks, 'check_tide_live_shore': check_tide_live_shore, 'check_tide_limits': check_tide_limits, 'check_tide_swallow_diver': check_tide_swallow_diver,
+          'check_tide_continue': check_tide_continue, 'check_tide_budget': check_tide_budget, 'check_story_shore_unchanged': check_story_shore_unchanged}
 
 
 def main():

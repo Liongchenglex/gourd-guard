@@ -33,6 +33,8 @@ import { prebakePotions } from './render/potion.js';
 import { prebakeWeather } from './render/weather.js';
 import { prebakeCastlePieces } from './render/castlepieces.js';
 import { updateNets, netSnapshot, restoreNets } from './nets.js';
+import { initTide, updateTide, tideSnapshot, restoreTide } from './tide.js';
+import { prebakeTide } from './render/tide.js';
 import { lancerHit, shieldSnapshot, restoreShields, carryCheck, newCastle, updateCastlePieces, siegeSnapshot, countSnapshot } from './keep.js';
 import { prebakeNets } from './render/nets.js';
 import { prebakeCountFx } from './render/fx.js';
@@ -178,6 +180,7 @@ export function startGame(mode, n, loadout, gourds){
   });
   if (mode === 'story' && takeSack()) G.sackT = SACK.spawnAt;
   if (def) prebake(bakeKeys(def));   // bake this level's sprite strips now, not on first sight
+  if (__RELEASE__ >= 9 && def){ initTide(def); if (G.tide) prebakeTide(); }   // the blood tide (Release 9): the start shore is the level's own; the surge wave is baked now
   if (def && def.castlesLayout) for (const [lane, p, kind] of def.castlesLayout) G.castles.push(castleEntry(lane, p, kind, def.castles ? def.castles.hp : 12));
   else if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def && def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def && def.puddles) placePuddles(def.puddles);
@@ -317,7 +320,8 @@ export function placePuddles(n){
   for (const lane of lanes) G.puddles.push({ lane, p:rnd(top, Math.max(top + 0.05, 0.7)) });
 }
 /** Where the sea ends (fraction of the field): `shore` tile rows down, or the thin 10% band on plain sea levels. */
-export function shoreP(){ const d = G.def; if (!d) return G && G.sea ? 0.1 : 0; return d.shoreFrac ? Math.min(0.8, d.shoreFrac) : d.shore ? Math.min(0.8, d.shore * TILE_P()) : d.sea ? 0.1 : 0; }
+export function shoreP(){ if (__RELEASE__ >= 9 && G && G.tide) return G.tide.shore;   // a rising tide (Release 9, engine/tide.js) is the live line
+  const d = G.def; if (!d) return G && G.sea ? 0.1 : 0; return d.shoreFrac ? Math.min(0.8, d.shoreFrac) : d.shore ? Math.min(0.8, d.shore * TILE_P()) : d.sea ? 0.1 : 0; }
 /** Explicit grave cells: clears any pumpkin there and plants the grave. */
 export function applyGravesLayout(cells){
   for (const [r, c] of cells) if (r >= 0 && r < ROWS && c >= 0 && c < COLS){ grid[r][c] = null; graves[r][c] = true; }
@@ -492,6 +496,7 @@ export function update(dt){
   if (__RELEASE__ >= 8 && G.shieldCarry) carryCheck();   // a continued night: red nets nobody came back for turn ordinary (engine/keep.js)
   if (__RELEASE__ >= 7 && g.roots && g.roots.length) updateRoots(dt);   // the Treant's roots: their age, and the fence roots squeezing (engine/witchwood.js)
   if (__RELEASE__ >= 7 && g.potions) updatePotions(dt);   // potions on the field: the clock, and monsters drinking what they walk onto (engine/potion.js)
+  if (__RELEASE__ >= 9 && g.tide) updateTide(dt);   // the blood tide: the next mark, and the surge sweeping the shore (engine/tide.js)
   if (__RELEASE__ >= 5) updatePoison(dt);   // poison fog: the warning, the fog, the rot under it (engine/poison.js)
   if (__RELEASE__ >= 4 && g.crowDives && g.crowDives.length) updateCrowDives(dt);   // crows diving into the patch (engine/nightmare.js)
   if (g.fogClear > 0) g.fogClear -= dt;
@@ -621,7 +626,8 @@ export function continueState(){
     ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0, bossPhase2:living.map(m => !!m.phase2), gourd:g.def.gourd ? gourdSnapshot() : null } : {}),
     ...(__RELEASE__ >= 5 ? { bossMood:living.map(m => bossSnapshot(m) || (__RELEASE__ >= 7 ? treantSnapshot(m) || fallenHexSnapshot(m) : null) || (__RELEASE__ >= 8 ? siegeSnapshot(m) || countSnapshot(m) : null)), rot:rotSnapshot(), poison:poisonClock() } : {}),   // a Treant's root clock, the Fallen Hexwitch's marks and standing altar too (Release 7)   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
     ...(__RELEASE__ >= 7 ? { potions:potionSnapshot(), roots:rootSnapshot() } : {}),   // the Treant's roots as they stand; the potions on the field, their clock and what the drinkers on the field had drunk (Release 7)
-    ...(__RELEASE__ >= 8 ? { nets:netSnapshot(), shields:shieldSnapshot() } : {}) };   // the nets on the patch and in flight (Release 8)
+    ...(__RELEASE__ >= 8 ? { nets:netSnapshot(), shields:shieldSnapshot() } : {}),   // the nets on the patch and in flight (Release 8)
+    ...(__RELEASE__ >= 9 ? { tide:tideSnapshot() } : {}) };   // the blood tide's marks passed and the shore reached (Release 9)
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
 export function continueNight(c){
@@ -636,6 +642,7 @@ export function continueNight(c){
   if (__RELEASE__ >= 8 && c.nets) restoreNets(c.nets);   // the same nets, on the same pumpkins where they still stand (Release 8)
   if (__RELEASE__ >= 8 && c.nets) restoreShields(c.shields);   // red nets wait for their owner's type to come back, a Bride's veil for the next Bride (engine/keep.js)
   if (__RELEASE__ >= 7 && c.potions) restorePotions(c.potions);   // the same potions stand, the clock carries on, and the drinkers come back with what they drank (Release 7)
+  if (__RELEASE__ >= 9 && c.tide) restoreTide(c.tide);   // the same shore and marks; no surge replays (Release 9)
   if (__RELEASE__ >= 7 && c.roots) restoreRoots(c.roots);   // the Treant's roots stand where they stood, with their hits left and their age (Release 7)
   if (__RELEASE__ >= 4 && c.bossSpawned && c.bossPhase2) G.bossPhase2 = c.bossPhase2.slice();   // spawner.js puts each returning boss back in its phase
   if (__RELEASE__ >= 5 && c.bossSpawned && c.bossMood) G.bossMood = c.bossMood.slice();   // and a Lamplighter in its mood, its clocks where they were, a Fallen Poltergeist with its marks spent and its reaper phase (Release 5)

@@ -25,6 +25,8 @@ import { upgradeCost } from './data/economy.js';
 import { BOSS_NAMES, BOSS_INTRO, TYPES, ICE_ONLY, MNAME, MINTRO, VARIANTS, PIECES, ALSO_BAKE } from './data/monsters.js';
 import { QUEST_TYPES, questsFor } from './data/quests.js';
 import { lightFire, lightRandomFires, fireAt, putOut, fireMarkPoints, fireFirst } from './engine/fire.js';
+import { shoreP, placePuddles } from './engine/game.js';
+import { initTide, updateTide, liveShore, inWater, swallowPools, tideSnapshot, restoreTide, TIDE_STOP, SURGE_TIME } from './engine/tide.js';
 import { fieldY, useLantern, gust, useFirework, dropBomb, offeredGourds, defaultGourds } from './engine/game.js';
 import { shieldedNow, veiledNow, keepFalls, newCastle } from './engine/keep.js';
 import { pieceBakeStats, prebakeCastlePieces, resetPieces } from './engine/render/castlepieces.js';
@@ -104,6 +106,6 @@ if (new URLSearchParams(location.search).has('test')){
     ...(__RELEASE__ >= 7 ? { WORLDS, POTION_KINDS, potionAt, placePotion, placeRandomPotions, canDrink, drink, updatePotions, potionEveryNow, potionSnapshot, restorePotions, dropBrewMark, potionSprite, potionIcon, FIRE_P_RANGE, applyBulwarks, inWartSquare, barrierBaked, raiseRoot, inHexZone, layGlue, useFirework, dropBomb, fhBaked:fallenHexBaked, hexZoneBaked, tongueBaked, atlas } : {}),   // Nightmare Witchwood (Release 7): each task adds its test hooks here   // Nightmare Foggy Hollow (Release 5): each task adds its test hooks here
     ...(__RELEASE__ >= 8 ? { inCrookSquare, CROOK, launchGids, offeredGourds, defaultGourds, drawGourdGlow } : {}),   // the Crookneck Gourd (Release 8, Task 7)
     ...(__RELEASE__ >= 8 ? { ctx, drawWeather, weatherState, weatherReset, weatherForce, weatherBaked, netCount, canNet, pickNetCell, throwNet, isNetted, clearNets, redNetsOf, updateNets, netSnapshot, restoreNets, smash, planMove, gust, setState, shieldedNow, veiledNow, keepFalls, useFirework, dropBomb, damageCastle, castleY, newCastle, PIECES, pieceBakeStats, prebakeCastlePieces, resetPieces, kill, pumpkinPower, ALSO_BAKE } : {}),   // Release 8
-    ...(__RELEASE__ >= 9 ? { drawSea } : {}),   // Release 9: the blood sea probe (tools/nm5_check.py)
+    ...(__RELEASE__ >= 9 ? { drawSea, shoreP, initTide, updateTide, liveShore, inWater, swallowPools, tideSnapshot, restoreTide, TIDE_STOP, SURGE_TIME, placePuddles } : {}),   // Release 9: the blood sea probe (tools/nm5_check.py)
   };
 }

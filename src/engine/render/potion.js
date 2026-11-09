@@ -124,10 +124,10 @@ export function drawPotions(potions, t){
     ctx.drawImage(c, x - OX * s, y - OY * s + bob, BW * s, BH * s);
   }
 }
-/** A drinker's icons, one per potion it drank, in kind order, leftward from x (the left end of its health pips), centred on y. */
+/** A drinker's icons, one per potion it drank (stacked ones repeat), in kind order, leftward from x (the left end of its health pips), centred on y. */
 export function drawPotionIcons(cx, drank, x, y){
   let n = 0;
-  for (const kd of KINDS) if (drank[kd]){ cx.drawImage(potionIcon(kd, K), x - (n + 1) * (IW + 1), y - IH / 2, IW, IH); n++; }
+  for (const kd of KINDS) for (let i = +drank[kd] || 0; i > 0; i--){ cx.drawImage(potionIcon(kd, K), x - (n + 1) * (IW + 1), y - IH / 2, IW, IH); n++; }
 }
 /** The drink puff (vfx kind 'potiondrink'): it swells and fades. */
 export function drawPotionFx(v){

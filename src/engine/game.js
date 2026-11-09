@@ -27,7 +27,7 @@ import { initWalls, damageWall } from './walls.js';
 import { persist, save } from '../save.js';
 import { banner, updateHud } from '../ui/hud.js';
 import { openLoadout, setState, showResult } from '../ui/screens.js';
-import { SPROUT_EVERY, FIREWORK_TARGETS, FIREWORK_DAMAGE, EMERGENCY_N, POTION_SPEED } from '../data/rules.js';
+import { SPROUT_EVERY, FIREWORK_TARGETS, FIREWORK_DAMAGE, EMERGENCY_N, potionSpeed } from '../data/rules.js';
 import { updatePotions, potionSnapshot, restorePotions } from './potion.js';
 import { prebakePotions } from './render/potion.js';
 import { prebakeWeather } from './render/weather.js';
@@ -131,9 +131,19 @@ export function offeredGourds(def){
  *  gourd's tutorial night (`coach` names an offered gourd) whose tutorial has not played, that gourd takes the last slot instead, so the
  *  coach can run (Release 7's Wartling on N3-5; N2-5 offers only two, so nothing changes there). */
 export function defaultGourds(def){
-  const offer = offeredGourds(def), pick = offer.slice(0, GOURD_SLOTS);
-  if (__RELEASE__ >= 7 && def && def.coach === 'wartling' && !save.seenWartlingCoach && offer.includes('wartling') && !pick.includes('wartling')) pick[pick.length - 1] = 'wartling';
-  if (__RELEASE__ >= 8 && def && def.gourdLock && offer.includes(def.gourdLock)) return [def.gourdLock, ...offer.filter(k => k !== def.gourdLock)].slice(0, GOURD_SLOTS);   // N4-3: the locked gourd in slot 1, the first other in unlock order in slot 2
+  const offer = offeredGourds(def);
+  let pick = offer.slice(0, GOURD_SLOTS);
+  if (__RELEASE__ >= 7 && offer.length > 1 && Array.isArray(save.lastGourds)) pick = rememberedGourds(offer, save.lastGourds);   // the last night's picks (owner 2026-11-09)
+  if (__RELEASE__ >= 7 && def && def.coach === 'wartling' && !save.seenWartlingCoach && offer.includes('wartling') && !pick.includes('wartling')){ if (pick.length < GOURD_SLOTS) pick.push('wartling'); else pick[pick.length - 1] = 'wartling'; }
+  if (__RELEASE__ >= 8 && def && def.gourdLock && offer.includes(def.gourdLock)) return [def.gourdLock, ...pick.filter(k => k !== def.gourdLock), ...offer.filter(k => k !== def.gourdLock && !pick.includes(k))].slice(0, GOURD_SLOTS);   // N4-3: the locked gourd in slot 1, then the remembered (or first other) one
+  return pick;
+}
+/** The picker remembers the gourds last taken on a night with a choice (save.lastGourds, set as Start is pressed; owner 2026-11-09): those this
+ *  night offers start picked, in their slots. A remembered gourd this night does not offer leaves its slot to the first offered one not picked
+ *  yet (unlock order), so a night never starts with fewer than were taken; an empty pick (none taken) is remembered as empty. */
+function rememberedGourds(offer, last){
+  const want = Math.min(GOURD_SLOTS, last.length), pick = last.filter((k, i) => offer.includes(k) && last.indexOf(k) === i).slice(0, GOURD_SLOTS);
+  for (const k of offer) if (pick.length < want && !pick.includes(k)) pick.push(k);
   return pick;
 }
 
@@ -528,7 +538,7 @@ export function update(dt){
   for (const sc of g.scarecrows){   // monsters in the lane stop to chew the scarecrow
     if (__RELEASE__ >= 8) for (const m of g.monsters) if (!m.dead && m.type === 'lancer' && !m.spent && m.lane === sc.lane && m.rise <= 0 && m.p >= sc.p - 0.01 && sc.hp > 0 && lancerHit(m, sc)) break;   // a Storm Lancer's strike lands on a scarecrow in its path, not the fence (Release 8, engine/keep.js)
     for (const m of g.monsters) if (!m.dead && m.lane === sc.lane && m.type !== 'boss' && m.rise <= 0 && !(__RELEASE__ >= 8 && m.type === 'lancer' && !m.spent) && m.p >= sc.p - 0.01 && m.p < 0.99){
-      m.p = Math.min(m.p, sc.p); m.chewing = sc; sc.hp -= m.eat * (m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1) * (__RELEASE__ >= 7 && m.drank && m.drank.speed ? POTION_SPEED : 1) * dt;   // a speed potion chews a scarecrow faster too (Release 7)
+      m.p = Math.min(m.p, sc.p); m.chewing = sc; sc.hp -= m.eat * (m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1) * (__RELEASE__ >= 7 && m.drank ? potionSpeed(m) : 1) * dt;   // a speed potion chews a scarecrow faster too (Release 7)
       if (Math.random() < dt * 4) chunk(sc.x + rnd(-8, 8), sc.y, '#c8b060', 80);
     }
     if (sc.age != null) sc.age += dt;

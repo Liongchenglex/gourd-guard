@@ -4,10 +4,10 @@
 // past and leaves it for the next. The player cannot remove potions: pumpkins fly over them and tools ignore them.
 // Kinds: bulky (health and full health double), speed (walks and chews POTION_SPEED times as fast; read in engine/monsters.js and the
 // scarecrow chew in engine/game.js), colour (hexed as a witch hexes: a Chameleon at POTION_COLOUR_CHAMELEON, else a Reverse Chameleon).
-// A monster holds at most one of each kind: `m.drank = { bulky?, speed?, colour? }`.
+// A monster holds a count of each kind: `m.drank = { bulky?, speed?, colour? }`, up to POTION_STACK (bulky 3, speed 3, colour 1; owner 2026-11-09).
 // Every caller gates on `__RELEASE__ >= 7`, so lower builds drop this module.
 
-import { BREW_CROWS, BREW_CUT, FIRE_P_RANGE, POTION_CAP, POTION_COLOUR_CHAMELEON } from '../data/rules.js';
+import { BREW_CROWS, BREW_CUT, FIRE_P_RANGE, POTION_CAP, POTION_COLOUR_CHAMELEON, POTION_STACK, drankN } from '../data/rules.js';
 import { ICE_ONLY } from '../data/monsters.js';
 import { SFX, sample } from './audio.js';
 import { addFloat, spark } from './combat.js';
@@ -20,7 +20,7 @@ import { coachHolds } from './coach.js';
 export const POTION_KINDS = ['bulky', 'speed', 'colour'];
 /** Each kind's colours: the bottle's glow and the sparks of a drink (render/potion.js paints the bottles). */
 export const POTION_FX = { bulky:['#ff4a4a', '#ffb0a0'], speed:['#6cf05a', '#e8ff7a'], colour:['#b46cff', '#f0c8ff'] };
-const FLOAT = { bulky:['Bulky!', '#ff8a7a'], speed:['Speedy!', '#a6f06a'] };   // colour says "Hexed!" itself (hexMonster)
+const FLOAT = { bulky:[['Bulky!', 'Bulkier!', 'Bulkiest!'], '#ff8a7a'], speed:[['Speedy!', 'Speedier!', 'Speediest!'], '#a6f06a'] };   // colour says "Hexed!" itself (hexMonster)
 
 /** Field tile rows: as many whole tiles as fit between the top of the field and the fence (as fire tiles). */
 const rows = () => Math.max(1, Math.floor(1 / TILE_P()));
@@ -83,26 +83,31 @@ export function placeRandomPotions(n, kinds, quiet){
 }
 
 /** Who may drink: any monster except bosses and mini bosses (type boss), the Loot Sack, the jukebox, mummies of every kind (ICE_ONLY too) and
- *  crows; never one that is down (rising) or dead, never the same kind twice; the colour potion only lands where a hex may (hexable: never a
+ *  crows; never one that is down (rising) or dead, never more of a kind than POTION_STACK allows (bulky and speed 3, colour 1); the colour potion only lands where a hex may (hexable: never a
  *  true Chameleon or Reverse Chameleon). */
 const NO_DRINK = new Set(['boss', 'sack', 'jukebox', 'mummy', 'crow', ...ICE_ONLY]);
 export function canDrink(m, kind){
   if (!m || m.dead || m.rise > 0 || NO_DRINK.has(m.type)) return false;
-  if (m.drank && m.drank[kind]) return false;
+  if (drankN(m, kind) >= (POTION_STACK[kind] || 1)) return false;
   return kind !== 'colour' || hexable(m);
 }
 
-/** m drinks a potion of `kind` (the caller has checked canDrink). Bulky doubles its health and full health once (the Bulwark aura halves and
- *  doubles around it, so the potion's doubling stays); speed is read where the monster walks and chews; colour hexes it. */
+/** m drinks a potion of `kind` (the caller has checked canDrink). Bulky: the first doubles its health and full health (the Bulwark aura halves
+ *  and doubles around it, so the potion's doubling stays), each more adds the full health it had before the first (x3, x4); speed is read
+ *  where the monster walks and chews (potionSpeed in data/rules.js); colour hexes it. */
 export function drink(m, kind, quiet){
-  (m.drank || (m.drank = {}))[kind] = true;
-  if (kind === 'bulky'){ m.hp *= 2; m.maxHp *= 2; }
+  const n = drankN(m, kind) + 1;
+  (m.drank || (m.drank = {}))[kind] = n;
+  if (kind === 'bulky'){
+    if (n === 1){ m.bulkBase = m.maxHp; m.hp *= 2; m.maxHp *= 2; }
+    else { const b = m.bulkBase || m.maxHp / n; m.hp += b; m.maxHp += b; }
+  }
   else if (kind === 'colour') hexMonster(m, Math.random() >= POTION_COLOUR_CHAMELEON, quiet);
   if (quiet) return;
   const x = m.x, y = mY(m), [a, b] = POTION_FX[kind];
   for (let i = 0; i < 10; i++) spark(x, y - 6, i % 2 ? a : b, 130);
   if (G.vfx) G.vfx.push({ kind:'potiondrink', potion:kind, x, y:y - m.r * 0.4, t:0, dur:0.6 });   // a coloured puff (render/potion.js)
-  if (FLOAT[kind]) addFloat(FLOAT[kind][0], x, y - m.r - 24, FLOAT[kind][1], 16, 0.9);
+  if (FLOAT[kind]) addFloat(FLOAT[kind][0][Math.min(n, 3) - 1], x, y - m.r - 24, FLOAT[kind][1], 16, 0.9);
   m.flash = Math.max(m.flash || 0, 0.15);
   if (once('drink', 80)) sample('bubbles', 0.5) || SFX.extra('splash');
 }
@@ -153,7 +158,7 @@ export function updatePotions(dt){
 export function potionSnapshot(){
   const g = G;
   const drank = g.monsters.filter(m => !m.dead && !m.minion && m.drank && POTION_KINDS.some(k => m.drank[k]))
-    .map(m => ({ kinds:POTION_KINDS.filter(k => m.drank[k]), lock:m.colourLock, immune:m.colourImmune }));
+    .map(m => ({ kinds:POTION_KINDS.flatMap(k => Array(drankN(m, k)).fill(k)), lock:m.colourLock, immune:m.colourImmune }));   // one entry per potion drunk
   return { potions:(g.potions || []).map(o => [o.lane, o.p, o.kind]), t:g.potionT, drank, bm:g.bmNext || 0 };   // bm: brew marks passed
 }
 /** Put a snapshot back on a continued night (after startGame). */

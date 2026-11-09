@@ -41,7 +41,7 @@ export default __RELEASE__ >= 7 ? [
   Gd({ level: 6, name:'Bottle Imps', pattern:0, total:20, interval:3.1, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL3(),
     pool:[['flaskbearer', 7], ['woodGhoul', 8], ['broomImp', 4], ['owlBat', 4]], intro:['flaskbearer'], potions:POT(11, 1), brewMarks:BREW(),
     quests:[['oneLaunch', 3], ['wallMin', 50]] }),
-  // N3-7 Toad Song: Cauldron Toads lash the fence from a third of the field away and burst into the potions they drank. Flask Bearers feed them.
+  // N3-7 Toad Song: Cauldron Toads lash the fence from halfway down the field and burst into the potions they drank. Flask Bearers feed them.
   Gd({ level: 7, name:'Toad Song', pattern:1, total:20, interval:3.2, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL3(),
     pool:[['toad', 5], ['woodGhoul', 8], ['flaskbearer', 4], ['wisp', 4]], intro:['toad'], potions:POT(9), brewMarks:BREW(),
     quests:[['noTools'], ['wallMin', 50]] }),

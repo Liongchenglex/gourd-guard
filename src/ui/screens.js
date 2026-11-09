@@ -1137,7 +1137,7 @@ export function wireButtons(){
 
   $('#bLoBack').onclick = () => { if (loadoutFromEndless) openEndless(); else if (loadoutFromPreview) openPreview(previewNight); else setState('title'); };   // back to the level card the night was started from (owner)
 
-  $('#bLoGo').onclick = () => { if ($('#bLoGo').disabled || loadoutSel.size < teamSize()) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo, __RELEASE__ >= 4 ? loadoutGourdSel.slice() : undefined); };   // the gourd picks go along, in slot order (Release 4: the one Grave Gourd; Release 5: up to two, maybe none); startGame places them
+  $('#bLoGo').onclick = () => { if ($('#bLoGo').disabled || loadoutSel.size < teamSize()) return; const lo = loadoutAvail.filter(t => loadoutSel.has(t)); save.loadout = lo; if (__RELEASE__ >= 7 && loadoutGourdSlots > 1) save.lastGourds = loadoutGourdSel.slice(); persist(); const f = loadoutNext; loadoutNext = null; if (f) f(lo, __RELEASE__ >= 4 ? loadoutGourdSel.slice() : undefined); };   // the gourd picks go along, in slot order (Release 4: the one Grave Gourd; Release 5: up to two, maybe none); startGame places them
 
   for (const b of document.querySelectorAll('#shopTabs .tab')) b.onclick = () => { SFX.ui('tap'); setShopTab(b.dataset.tab); };
   $('#bSeedAd').onclick = () => watchSeedAd(renderShop);

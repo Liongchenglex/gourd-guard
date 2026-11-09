@@ -370,7 +370,7 @@ def check_lobber(browser, url):
     page, errors = net_night(browser, url)
     page.evaluate(FILL)
     T = page.evaluate("() => window.__gg.TYPES.lobbercart")
-    ok(T['hp'] == 6 and T['park'] == 0.15 and T['eat'] == 0 and T['lobEvery'] == [6, 8], f'the cart numbers are the spec ones {T}')
+    ok(T['hp'] == 12 and T['park'] == 0.15 and T['eat'] == 0 and T['lobEvery'] == [3.5, 4.5] and T['lobFirst'] == 1 and T['noKnockback'] is True, f'the cart numbers (owner 2026-11-09) {T}')
     wall0 = page.evaluate("() => window.__gg.walls[3].hp")
     page.evaluate("() => { window.__C = window.__gg.spawnMonster('lobbercart', 3, true); }")
     mx = 0
@@ -383,11 +383,13 @@ def check_lobber(browser, url):
     # timing, from a fresh cart already at its park: a net within 8 s, another within 16 s
     page.evaluate(NQ); page.evaluate(FILL)
     page.evaluate("() => { window.__C = window.__gg.spawnMonster('lobbercart', 1, true, 0.15); }")
-    page.evaluate(STEP, [79, 0.1])
-    page.evaluate(STEP, [2, 0.1])
-    ok(page.evaluate(THROWN) >= 1, f'a net thrown within 8 s ({page.evaluate(THROWN)})')
-    page.evaluate(STEP, [79, 0.1])
-    ok(page.evaluate(THROWN) >= 2, f'another within 16 s ({page.evaluate(THROWN)})')
+    page.evaluate(STEP, [8, 0.1])
+    ok(page.evaluate(THROWN) == 0, f'no net in the first 0.8 s ({page.evaluate(THROWN)})')
+    page.evaluate(STEP, [4, 0.1])
+    ok(page.evaluate(THROWN) >= 1, f'its first net about 1 s after it parks ({page.evaluate(THROWN)})')
+    page.evaluate(STEP, [46, 0.1])
+    ok(page.evaluate(THROWN) >= 2, f'another within 4.5 s more ({page.evaluate(THROWN)})')
+    ok(page.evaluate("() => window.__C.noKnockback === true") and page.evaluate("() => window.__gg.magnetPullable ? !window.__gg.magnetPullable(window.__C) : true"), 'never knocked back, never pulled by a Magnet: it stays put')
     ok(page.evaluate("() => window.__gg.G.monsters.every(m => m.id != null)") and page.evaluate("() => { const b = window.__gg.netSnapshot(); return b.cells.some(c => c[3] === window.__C.id) || b.flying.some(f => f[3] === window.__C.id); }"), 'its nets carry its id')
     # others walk past a parked cart instead of queueing behind it
     page.evaluate("() => { window.__W = window.__gg.spawnMonster('ghoul', 1, true, 0.0); }")
@@ -453,14 +455,14 @@ def check_lancer(browser, url):
         page.close(); return
     page, errors = net_night(browser, url); hold(page)
     T = page.evaluate("() => window.__gg.TYPES.lancer")
-    ok(T['hp'] == 5 and T['charge'] == 4 and T['fenceHit'] == 0.5 and T['sp'] == 0.03 and T['eat'] == 0, f'the lancer numbers are the spec ones {T}')
+    ok(T['hp'] == 5 and T['charge'] == 5 and T['fenceHit'] == 0.5 and T['sp'] == 0.03 and T['eat'] == 0, f'the lancer numbers are the spec ones {T}')
     # a full fence loses half; charges at 4x from spawn
     page.evaluate("() => { const w = window.__gg.walls[3]; w.max = 20; w.hp = 20; window.__c0 = window.__gg.G.coins; window.__k0 = window.__gg.G.kills; window.__d0 = window.__gg.G.drops.length; }")
     spawn_at(page, 'lancer', 3, -0.02)
     page.evaluate("() => { window.__L = window.__last; }")
     page.evaluate(STEP, [1, 0.1])
     d = page.evaluate("() => window.__L.p") + 0.02
-    ok(abs(d - 0.012) < 1e-6, f'it moves at 4x its walk from the first step (dp {d:.4f}, a walk would be 0.003)')
+    ok(abs(d - 0.015) < 1e-6, f'it moves at 5x its walk from the first step (dp {d:.4f}, a walk would be 0.003)')
     until_spent(page, 'L')
     ok(not page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[3].hp") == 10, f'at the fence it takes half: 20/20 -> {page.evaluate("() => window.__gg.walls[3].hp")}/20, and it stays')
     ok(abs(page.evaluate("() => window.__L.eat") - 0.6) < 1e-9 and page.evaluate("() => window.__gg.TYPES.knight.eat") == 0.6, 'its charge spent, it chews at 0.6, a Shield Knight\'s rate')
@@ -495,7 +497,7 @@ def check_lancer_edges(browser, url):
     ok(abs(page.evaluate("() => window.__L.p") - 0.2) < 1e-6, 'frozen mid-charge it stops')
     page.evaluate(STEP, [11, 0.1]); p0 = page.evaluate("() => window.__L.p")
     page.evaluate("() => { window.__L.slowT = 5; }"); page.evaluate(STEP, [1, 0.1]); p1 = page.evaluate("() => window.__L.p")
-    ok(abs((p1 - p0) - 0.006) < 1e-6, f'slowed, it charges at half the charge ({p1 - p0:.4f})')
+    ok(abs((p1 - p0) - 0.0075) < 1e-6, f'slowed, it charges at half the charge ({p1 - p0:.4f})')
     stop_lancer(page, 'L')   # it would strike lane 1 and then chew it down (it stays now), ending the night mid-check
     # passes a castle wall
     page.evaluate("() => { window.__gg.G.castles.push({ lane:2, p:0.5, hp:12, maxHp:12, flash:0, dead:false }); }")
@@ -933,7 +935,7 @@ def check_gatehouse(browser, url):
         ok(nm, 'a plain castle wall carries no kind below Release 8')
         page.close(); return
     page, errors = piece_night(browser, url)
-    ok(page.evaluate("() => window.__gg.PIECES.gateHp === 2.5 && window.__gg.PIECES.gateEvery === 8 && window.__gg.PIECES.towerHp === 1.5 && window.__gg.PIECES.towerShot === 5"), 'the piece numbers are the spec ones')
+    ok(page.evaluate("() => window.__gg.PIECES.gateHp === 2.5 && window.__gg.PIECES.gateEvery === 8 && window.__gg.PIECES.towerHp === 3 && window.__gg.PIECES.towerShot === 5"), 'the piece numbers are the spec ones')
     page.evaluate("() => { window.__gg.G.def.gatePool = ['ghoul']; }")
     page.evaluate(PUT, [3, 0.5, 'gate'])
     ok(page.evaluate("() => [window.__w.kind, window.__w.hp, window.__w.maxHp]") == ['gate', 30, 30], 'a Gatehouse has 2.5 x the level castle health (12 -> 30)')
@@ -976,7 +978,7 @@ def check_archer_tower(browser, url):
     if not R8: return
     page, errors = piece_night(browser, url)
     page.evaluate(PUT, [4, 0.5, 'tower'])
-    ok(page.evaluate("() => [window.__w.kind, window.__w.hp, window.__w.maxHp]") == ['tower', 18, 18], 'an Archer Tower has 1.5 x the level castle health (12 -> 18)')
+    ok(page.evaluate("() => [window.__w.kind, window.__w.hp, window.__w.maxHp]") == ['tower', 36, 36], 'an Archer Tower has 3 x the level castle health (12 -> 36)')
     page.evaluate(STEP, [49, 0.1])
     ok(page.evaluate("() => window.__gg.G.arrows.length") == 0, 'no arrow in the first 4.9 s')
     page.evaluate(STEP, [10, 0.1])
@@ -992,7 +994,7 @@ def check_archer_tower(browser, url):
     page.evaluate("() => { window.__gg.G.monsters.length = 0; }")
     spawn_at(page, 'ghoul', 4, 0.3, hp=10, sp=0)
     page.evaluate(PR, [4, 4]); fl = page.evaluate(FLY)
-    ok(fl and page.evaluate("() => window.__w.hp") < 18 and page.evaluate("() => window.__last.hp") == 10, 'a Grey stops at the tower and does not reach the archer-side monster behind it')
+    ok(fl and page.evaluate("() => window.__w.hp") < 36 and page.evaluate("() => window.__last.hp") == 10, 'a Grey stops at the tower and does not reach the archer-side monster behind it')
     page.evaluate("() => window.__gg.G.castles.push(window.__gg.newCastle(2, 0.5, 'wall', 12))")
     spawn_at(page, 'ghoul', 2, 0.3, hp=10, sp=0)
     page.evaluate(PR, [4, 2]); page.evaluate(FLY)
@@ -1022,7 +1024,7 @@ def check_castle_pieces_continue(browser, url):
     page.evaluate("() => { const G = window.__gg.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; }")
     ok(page.evaluate("() => window.__gg.pieceBakeStats().canvases") == 141, 'a night whose layout holds a gate or tower bakes all 141 frames at night start')
     c = page.evaluate("() => window.__gg.G.castles.map(c => [c.lane, c.kind, c.hp, c.maxHp])")
-    ok(c == [[2, 'gate', 30, 30], [4, 'tower', 18, 18], [6, 'wall', 12, 12]], f'castlesLayout kinds build the pieces {c}')
+    ok(c == [[2, 'gate', 30, 30], [4, 'tower', 36, 36], [6, 'wall', 12, 12]], f'castlesLayout kinds build the pieces {c}')
     page.evaluate(STEP, [30, 0.1])
     page.evaluate("() => { const g = window.__gg; g.G.castles[0].hp = 7; g.damageCastle(g.G.castles[1], 1000); }")
     page.evaluate(STEP, [3, 0.1])
@@ -1031,7 +1033,7 @@ def check_castle_pieces_continue(browser, url):
     page.evaluate("() => { const g = window.__gg; g.continueNight(g.continueState()); }"); time.sleep(0.4); hold(page)
     page.evaluate("() => { const G = window.__gg.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; }")
     c = page.evaluate("() => window.__gg.G.castles.map(c => [c.lane, c.kind, c.hp, c.maxHp, c.t])")
-    ok([x[:4] for x in c] == [[2, 'gate', 30, 30], [4, 'tower', 18, 18], [6, 'wall', 12, 12]] and 7 < c[0][4] <= 8 and 4 < c[1][4] <= 5, f'the pieces come back as walls do: their kind, full health, a fresh clock {c}')
+    ok([x[:4] for x in c] == [[2, 'gate', 30, 30], [4, 'tower', 36, 36], [6, 'wall', 12, 12]] and 7 < c[0][4] <= 8 and 4 < c[1][4] <= 5, f'the pieces come back as walls do: their kind, full health, a fresh clock {c}')
     page.evaluate(STEP, [85, 0.1])
     ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.fromGate).length") == 1, 'and the returned Gatehouse summons on its fresh clock')
     page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; [L.castlesLayout, L.castles, L.gatePool] = window.__L0; }")
@@ -1750,7 +1752,8 @@ def check_picker_four_gourds(browser, url):
     page.click('#bLoGo'); time.sleep(0.5)
     r = page.evaluate("() => [window.__gg.state, window.__gg.G.n, window.__gg.G.gourdKinds, window.__gg.gourdsOn().map(o => o.kind).sort()]")
     ok(r[:3] == ['play', 1303, ['crookneck', 'protector']] and r[3] == ['crookneck', 'protector'], f'Start: the Crookneck and the Protector stand on the patch {r}')
-    # N3-5 and N2-5 unchanged with the Crookneck unlocked
+    # N3-5 and N2-5 unchanged with the Crookneck unlocked (the remembered pick cleared: the picker remembers, owner 2026-11-09)
+    page.evaluate("() => { delete window.__gg.save.lastGourds; }")
     set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 17)}, **{1100 + k: 3 for k in range(1, 17)}, **{1200 + k: 3 for k in range(1, 5)}})
     page.evaluate("() => { const g = window.__gg; g.save.gourds = { grave:true, protector:true, wartling:true, crookneck:true }; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.beginNight(1205); }"); time.sleep(0.6)
     u = page.evaluate(gpick())

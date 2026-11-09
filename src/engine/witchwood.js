@@ -7,7 +7,7 @@
 //    lashes its own fence from range: it is `eating` with `tongue` set, so monsters.js's chewing step wears its fence down at `eat` a second
 //    with the same multipliers as any chew (frozen 0, slowed half, a speed potion POTION_SPEED). A tongue chewer keeps its own spot (it does
 //    not line up with the chewers at the fence, and they walk past it). With its fence down it has nothing to lash and walks on to the gap,
-//    as any monster would (our call). When it dies it bursts: one potion per kind it drank, on the free tiles nearest where it died.
+//    as any monster would (our call). When it dies it bursts: every potion it drank (stacked ones too), on the free tiles nearest where it died.
 //  - The Ash Crone (`ashcrone`): every `zoneEvery` s, while she walks the field (as the witch casts), she raises an undead zone: a Hexwitch box
 //    (G.hexZones, 3 lanes × 3 tiles, `zoneLast` s) centred on a random living non-boss monster other than herself within 2 lanes of her
 //    (none near: no zone that time, our call). combat.js's hex-zone rule makes anything non-boss killed inside rise after 4 s. She arrives ringed
@@ -73,7 +73,8 @@ export function dropPotionsNear(lane, p, kinds){
 /** A new monster's Release 7 set-up (spawnMonster, before it joins the field). */
 export function initWitchwoodMonster(m){
   if (m.type === 'toad') m.tongue = false;
-  if (m.type === 'covenwitch') m.brewT = TYPES.covenwitch.brewEvery;   // the Ash Crone's zoneT is spawnMonster's (T.zoneEvery)
+  if (m.type === 'covenwitch') m.brewT = TYPES.covenwitch.brewFirst;   // her first brew comes soon after she is on the field (owner 2026-11-09)
+  if (m.type === 'ashcrone') m.zoneT = TYPES.ashcrone.zoneFirst;   // her first zone too
 }
 
 /** The type switch of updateMonster's default branch (a monster that is walking: not frozen, chewing, knocked back or down). True when handled. */
@@ -112,7 +113,7 @@ function ashZone(m, dt){
   if (m.zoneT > 0 || m.p <= 0.05) return;
   m.zoneT = T.zoneEvery;
   const near = G.monsters.filter(o => onField(o, m) && o.type !== 'boss' && Math.abs(o.lane - m.lane) <= 2);
-  if (!near.length) return;
+  if (!near.length){ m.zoneT = 1; return; }   // nobody near: she tries again in a second, not a whole zoneEvery later (owner 2026-11-09)
   const o = near[Math.floor(Math.random() * near.length)];
   G.hexZones.push({ shape:'box', lane:o.lane, p:o.p, t:T.zoneLast, src:'crone' });
   const y = mY(o);
@@ -128,7 +129,7 @@ function covenBrew(m, dt){
   if (m.brewT > 0 || m.p <= 0.05) return;
   m.brewT = T.brewEvery;
   const pick = shuffle(G.monsters.filter(o => onField(o, m)));
-  if (!pick.length) return;
+  if (!pick.length){ m.brewT = 1; return; }   // nobody to brew for: again in a second
   const n = T.brewN[0] + Math.floor(Math.random() * (T.brewN[1] - T.brewN[0] + 1)), tp = TILE_P(), last = rows() - 1;
   for (const o of pick.slice(0, n)){
     const r = Math.floor(o.p / tp) + 1;   // the tile just ahead of it
@@ -277,9 +278,10 @@ export function restoreRoots(list){ G.roots = (list || []).map(r => ({ lane:r.la
 //  - Potions (potionEvery): potionN[0]..potionN[1] on random field tiles (engine/potion.js placeRandomPotions).
 //  - Crows (crowEvery): crows[0]..crows[1] at the top of random lanes (minions), as the Fallen Gravekeeper's.
 //  - Smash (smashEvery): her lane's fence loses smashHit of its full health at once, never its last 1; GLIDE_AFTER s later she glides glide[0]..glide[1]
-//    lanes left or right (clamped to the field; never onto the altar's lane when another choice exists, our call: there she would shield it herself).
+//    lanes left or right (clamped to the field; never onto the altar's lane when another choice exists, our call: there she would shield it herself),
+//    and every glide brings crows[0]..crows[1] crows with it (owner 2026-11-09).
 //  - The altar (altarAt, three times a fight): when her health reaches a mark an altar rises (G.altar = { lane, p:ALTAR_P, hp:altarHp, t }) in a random
-//    lane other than hers. While it stands every damage to her is 0 ("No damage" and a dull clink: fhGate, called from damage() in combat.js, so every
+//    lane other than hers, and that lane's fence drops to 1 health (owner 2026-11-09; a fence already down stays down). While it stands every damage to her is 0 ("No damage" and a dull clink: fhGate, called from damage() in combat.js, so every
 //    source is covered); a hit that would carry her past the next mark stops at it. Only pumpkins hurt the altar (game.js asks altarAhead for every
 //    pumpkin in flight; a monster in front of it in its lane is met first; every pumpkin stops there, Grey too; its hit power, doubled from a Wartling
 //    square; rot splats on it). Tools and area damage only ever look at G.monsters, so they skip it. One altar at a time: health past two marks (a
@@ -326,6 +328,7 @@ function raiseAltar(m){
   m.altDone++;
   const a = { lane, p:ALTAR_P, hp:FHT().altarHp, t:0 };
   G.altar = a;
+  const w = walls[lane]; if (w && w.hp > 1) damageWall(lane, w.hp - 1);   // the altar's lane: its fence drops to 1 health as it rises (owner 2026-11-09)
   for (const pr of G.projs || []) if (pr.lane === lane && !pr.dead && pr.y < altarY(a)) (pr.passed || (pr.passed = new Set())).add(a);   // pumpkins already past it fly on
   const x = LANE(lane), y = altarY(a);
   for (let i = 0; i < 16; i++) chunk(x, y + 10, i % 2 ? '#55555c' : '#8a8a92', 180);
@@ -402,6 +405,7 @@ function fhGlide(m){
   m.lane = pool[Math.floor(Math.random() * pool.length)]; m.tx = LANE(m.lane);
   bloodSparks(m.x, mY(m) - 10, 8, 110);
   SFX.bossSfx('fallenhexwitch', 'glide');
+  fhCrows();   // crows swoop in as she glides (owner 2026-11-09), on top of her crowEvery clock
 }
 /** One frame of the Fallen Hexwitch. */
 export function updateFallenHex(m, dt){
@@ -435,7 +439,7 @@ export function witchwoodFalls(m){
     return;
   }
   if (m.type === 'toad'){
-    const kinds = POTION_KINDS.filter(k => m.drank && m.drank[k]);
+    const kinds = POTION_KINDS.flatMap(k => Array((m.drank && +m.drank[k]) || 0).fill(k));   // every potion it drank, stacked ones too
     const y = mY(m);
     for (let i = 0; i < 14; i++) spark(m.x, y - 6, i % 2 ? '#3a3a40' : '#c8c8cc', 170);   // the burst: grey hide and a splash
     for (const k of kinds){ const [a, b] = POTION_FX[k]; for (let i = 0; i < 6; i++) spark(m.x, y - 10, i % 2 ? a : b, 160); }

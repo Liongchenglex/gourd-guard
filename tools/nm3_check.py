@@ -198,8 +198,14 @@ def check_potion_drink(browser, url):
     t = gwait(page, "() => !window.__gg.potionAt(3, 0.5)", 4)
     ok(t is not None, f'a ghoul walking onto the bulky potion drinks it: the potion is gone ({t})')
     ok(mon(page, i, "[m.hp, m.maxHp, !!(m.drank && m.drank.bulky)]") == [6, 6, True], f'bulky: 3 hp -> 6/6 and drank.bulky {mon(page, i, "[m.hp, m.maxHp]")}')
-    page.evaluate("() => { window.__ms[0].sp = 0; window.__gg.placePotion(3, window.__ms[0].p, 'bulky'); window.__gg.updatePotions(0); }")
-    ok(page.evaluate("() => !!window.__gg.potionAt(3, window.__ms[0].p)") and mon(page, i, "[m.hp, m.maxHp]") == [6, 6], 'a second bulky: unchanged, the potion stays')
+    # stacking (owner 2026-11-09): a second and third bulky add the 3 it started with (9/9, 12/12); a fourth is left standing
+    for want in ([9, 9], [12, 12]):
+        page.evaluate("() => { window.__ms[0].sp = 0; window.__gg.placePotion(3, window.__ms[0].p, 'bulky'); window.__gg.updatePotions(0); }")
+        ok(not page.evaluate("() => !!window.__gg.potionAt(3, window.__ms[0].p)") and mon(page, i, "[m.hp, m.maxHp]") == want, f'another bulky stacks: {want} {mon(page, i, "[m.hp, m.maxHp, m.drank.bulky]")}')
+    page.evaluate("() => { window.__gg.placePotion(3, window.__ms[0].p, 'bulky'); window.__gg.updatePotions(0); }")
+    ok(page.evaluate("() => !!window.__gg.potionAt(3, window.__ms[0].p)") and mon(page, i, "[m.hp, m.maxHp]") == [12, 12], 'a fourth bulky: unchanged, the potion stays')
+    r = page.evaluate("() => { const g = window.__gg, m = window.__ms[0]; g.drink(m, 'speed', true); g.drink(m, 'speed', true); g.drink(m, 'speed', true); return [g.canDrink(m, 'speed'), m.drank.speed, g.potionSnapshot().drank.length]; }")
+    ok(r[:2] == [False, 3], f'three speed potions stack, a fourth may not be drunk {r}')
     page.evaluate("() => { const g = window.__gg; g.G.potions.length = 0; g.G.monsters.length = 0; window.__ms = []; }")
     # speed: two ghouls at the same pace; the one that drank covers 1.5x the distance
     a = page.evaluate(GHOUL, [1, 0.1, 3, 0.05]); b = page.evaluate(GHOUL, [5, 0.1, 3, 0.05])
@@ -369,13 +375,13 @@ def check_toad_tongue(browser, url):
     if not R7: return
     page, errors = potion_page(browser, url)
     t = page.evaluate("() => { const T = window.__gg.TYPES.toad; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop, T.tongueHold]; }")
-    ok(t == [5, 0.03, 24, 10, 0.5, 30, 2, 0.67], f'toad: hp 5, sp 0.03, r 24, coins 10, eat 0.5, pts 30, drop 2, tongueHold 0.67 {t}')
+    ok(t == [5, 0.03, 24, 10, 0.5, 30, 2, 0.45], f'toad: hp 5, sp 0.03, r 24, coins 10, eat 0.5, pts 30, drop 2, tongueHold 0.45 {t}')
     ok(page.evaluate("() => window.__gg.MNAME.toad") == 'Cauldron Toad', 'its name is the Cauldron Toad')
     page.evaluate("() => { for (const w of window.__gg.walls){ w.hp = w.max = 99; } }")
-    i = page.evaluate(NEW, ['toad', 2, 0.55]); page.evaluate("(i) => { window.__ms[i].sp = 0.06; }", i)
+    i = page.evaluate(NEW, ['toad', 2, 0.35]); page.evaluate("(i) => { window.__ms[i].sp = 0.06; }", i)
     tt = gwait(page, "() => window.__ms[0].eating", 5)
     p = page.evaluate("() => window.__ms[0].p")
-    ok(tt is not None and abs(p - 0.67) < 1e-6, f'it walks to 0.67 of the field and stops there, lashing ({tt}, p {p})')
+    ok(tt is not None and abs(p - 0.45) < 1e-6, f'it walks to 0.45 of the field and stops there, lashing ({tt}, p {p})')
     page.evaluate("() => { window.__gg.walls[2].hp = 99; window.__pmax = 0; window.__t0 = window.__gg.G.t; }")
     t0 = page.evaluate("() => window.__gg.G.t")
     pmax = 0
@@ -384,7 +390,7 @@ def check_toad_tongue(browser, url):
     lost = page.evaluate("([t0]) => [99 - window.__gg.walls[2].hp, window.__gg.G.t - t0]", [t0])
     rate = lost[0] / lost[1]
     ok(abs(rate - 0.5) < 0.05, f'its own fence loses about 2 in 4 s ({lost[0]:.2f} in {lost[1]:.2f} s, {rate:.3f}/s)')
-    ok(pmax <= 0.67 + 1e-6, f'it never moves closer (max p {pmax:.4f})')
+    ok(pmax <= 0.45 + 1e-6, f'it never moves closer (max p {pmax:.4f})')
     ok(page.evaluate("() => window.__gg.walls.every((w, c) => c === 2 || w.hp === 99)"), 'no other fence is touched')
     # speed: 1.5x the tongue
     page.evaluate("() => { const g = window.__gg; g.drink(window.__ms[0], 'speed', true); g.walls[2].hp = 99; }")
@@ -396,9 +402,9 @@ def check_toad_tongue(browser, url):
     ok(page.evaluate("() => window.__gg.walls[2].hp") == 99, 'frozen, it does not lash')
     page.evaluate("() => { window.__ms[0].frozenT = 0; }")
     # knocked back: it walks back to 0.67 and lashes again
-    page.evaluate("() => { const m = window.__ms[0]; m.eating = false; m.p = 0.6; }")
+    page.evaluate("() => { const m = window.__ms[0]; m.eating = false; m.p = 0.38; }")
     tt = gwait(page, "() => window.__ms[0].eating", 4)
-    ok(tt is not None and abs(page.evaluate("() => window.__ms[0].p") - 0.67) < 1e-6, f'pushed back it returns to 0.67 and lashes again ({tt})')
+    ok(tt is not None and abs(page.evaluate("() => window.__ms[0].p") - 0.45) < 1e-6, f'pushed back it returns to 0.45 and lashes again ({tt})')
     # its fence down: nothing to lash, it walks on to the gap
     page.evaluate("() => { window.__gg.walls[2].hp = 0; }")
     tt = gwait(page, "() => window.__ms[0].p > 0.75", 6)
@@ -642,6 +648,10 @@ def check_picker_three_gourds(browser, url):
     page.click('#bLoGo'); time.sleep(0.5)
     r = page.evaluate("() => [window.__gg.state, window.__gg.G.n, window.__gg.G.gourdKinds, window.__gg.gourdsOn().map(o => [o.kind, o.r, o.c])]")
     ok(r == ['play', 1205, ['protector', 'wartling'], [['protector', 2, 1], ['wartling', 2, 5]]], f'Start: Protector at (2, 1), Wartling at (2, 5), by slot order {r}')
+    ok(page.evaluate("() => window.__gg.save.lastGourds") == ['protector', 'wartling'], 'Start remembers the gourds picked, in slot order')
+    u = witch_picker(page, ALL3)
+    ok(u['slots'] == ['protector', 'wartling'], f'the next night with a choice starts with the remembered gourds (owner 2026-11-09) {u["slots"]}')
+    page.evaluate("() => { delete window.__gg.save.lastGourds; }")
     # its tutorial unseen: the Wartling starts picked in place of the last
     u = witch_picker(page, ALL3, seen=False)
     ok(u['slots'] == ['grave', 'wartling'], f'with the Wartling tutorial unseen, N3-5 starts with the Grave and the Wartling {u["slots"]}')
@@ -819,7 +829,7 @@ def check_ashcrone(browser, url):
     if not R7: return
     page, errors = potion_page(browser, url)
     t = page.evaluate("() => { const T = window.__gg.TYPES.ashcrone; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop, T.zoneEvery, T.zoneLast, T.crows]; }")
-    ok(t == [4, 0.035, 22, 9, 0.5, 30, 2, 10, 8, 4], f'ashcrone: hp 4, sp 0.035, r 22, coins 9, eat 0.5, pts 30, drop 2, zoneEvery 10, zoneLast 8, crows 4 {t}')
+    ok(t == [4, 0.035, 22, 9, 0.5, 30, 2, 6, 8, 4], f'ashcrone: hp 4, sp 0.035, r 22, coins 9, eat 0.5, pts 30, drop 2, zoneEvery 6, zoneLast 8, crows 4 {t}')
     ok(page.evaluate("() => window.__gg.MNAME.ashcrone") == 'Ash Crone' and bool(page.evaluate("() => window.__gg.MINTRO.ashcrone")), 'her name is the Ash Crone, with an intro card')
     # ringed by crows: left, right, ahead and behind (the Vampire's spots); none when she is a minion
     c = sorted(page.evaluate("() => { const m = window.__gg.spawnMonster('ashcrone', 3, false, 0.3); m.sp = 0; return (" + CROWS + ")(); }"))   # read before a frame moves them (crows are fast)
@@ -834,7 +844,8 @@ def check_ashcrone(browser, url):
     page.evaluate(GHOUL, [0, 0.6, 3, 0])   # 3 lanes away: never her centre
     tz = gwait(page, "() => window.__gg.G.hexZones.length >= 1", 12)
     z = page.evaluate("() => window.__gg.G.hexZones.map(z => [z.shape, z.lane, Math.round(z.p * 1000) / 1000, z.t])")
-    ok(tz is not None and abs(tz - 10) < 0.4, f'her first zone comes at 10 s ({tz})')
+    ok(tz is not None and abs(tz - 1.5) < 0.4, f'her first zone comes 1.5 s after she spawns ({tz})')
+    page.evaluate("() => { window.__z0 = window.__gg.G.hexZones[0]; }")
     ok(len(z) == 1 and z[0][:3] == ['box', 5, 0.5] and abs(z[0][3] - 8) < 0.3, f'one box zone centred on the ghoul in lane 5 (2 lanes away), 8 s to run {z}')
     ok(mon(page, i, "m.anim && m.anim.clip") == 'hex', 'she plays her hex clip as she casts')
     # a ghoul killed inside it collapses and rises after 4 s
@@ -842,7 +853,7 @@ def check_ashcrone(browser, url):
     ok(d == [False, 0] and mon(page, j, "m.rise") > 3.5, f'the ghoul killed inside collapses to rise {d}')
     tr = gwait(page, "() => window.__ms[1].rise <= 0", 6)
     ok(tr is not None and abs(tr - 4) < 0.4 and mon(page, j, "[m.dead, m.hp > 0]") == [False, True], f'and rises again after 4 s ({tr})')
-    tg = gwait(page, "() => window.__gg.G.hexZones.length === 0 || window.__gg.G.hexZones[0].t > 7.5", 6)
+    tg = gwait(page, "() => !window.__gg.G.hexZones.includes(window.__z0)", 8)
     ok(tg is not None, f'the zone runs out 8 s after it was cast ({tg})')
     # nobody else within 2 lanes: no zone
     page.evaluate("() => { const g = window.__gg, G = g.G; G.monsters.length = 0; G.hexZones.length = 0; window.__ms = []; }")
@@ -858,14 +869,14 @@ def check_covenwitch(browser, url):
     if not R7: return
     page, errors = potion_page(browser, url)
     t = page.evaluate("() => { const T = window.__gg.TYPES.covenwitch; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop, T.brewEvery, T.brewN]; }")
-    ok(t == [3, 0.04, 22, 9, 0.5, 28, 2, 7, [1, 2]], f'covenwitch: hp 3, sp 0.04, r 22, coins 9, eat 0.5, pts 28, drop 2, brewEvery 7, brewN [1, 2] {t}')
+    ok(t == [3, 0.04, 22, 9, 0.5, 28, 2, 5, [1, 2]], f'covenwitch: hp 3, sp 0.04, r 22, coins 9, eat 0.5, pts 28, drop 2, brewEvery 5, brewN [1, 2] {t}')
     ok(page.evaluate("() => window.__gg.MNAME.covenwitch") == 'Blood Coven Witch' and bool(page.evaluate("() => window.__gg.MINTRO.covenwitch")), 'her name is the Blood Coven Witch, with an intro card')
     i = page.evaluate(NEW, ['covenwitch', 0, 0.1])
     page.evaluate(GHOUL, [3, 0.5, 3, 0]); page.evaluate(GHOUL, [5, 0.3, 3, 0]); page.evaluate(GHOUL, [6, 0.6, 3, 0])
     ahead = {(3, tile_of(page, 0.5)[0] + 1), (5, tile_of(page, 0.3)[0] + 1), (6, tile_of(page, 0.6)[0] + 1)}
     tb = gwait(page, "() => window.__gg.G.potions.length >= 1", 9)
     ps = potions_rc(page)
-    ok(tb is not None and abs(tb - 7) < 0.4, f'her first brew at 7 s ({tb})')
+    ok(tb is not None and abs(tb - 1.5) < 0.4, f'her first brew 1.5 s after she spawns ({tb})')
     ok(1 <= len(ps) <= 2 and all((l, r) in ahead for l, r, _ in ps) and all(k in ('bulky', 'speed', 'colour') for *_, k in ps), f'1-2 potions, each one tile ahead of a ghoul {ps} (ahead tiles {sorted(ahead)})')
     ok(mon(page, i, "m.anim && m.anim.clip") == 'hex', 'she plays her hex clip as she brews')
     # many brews: one or two potions each, never two on a tile, all kinds seen
@@ -1370,7 +1381,7 @@ def check_fallen_hex(browser, url):
     page.evaluate("() => { const g = window.__gg; g.G.altar.hp = 8; g.damage(window.__b, 5, '#fff'); }")
     ok(page.evaluate("() => [window.__b.hp, window.__gg.G.floats.some(f => f.text === 'No damage')]") == [33.75, True], 'while it stands she takes no damage ("No damage")')
     al = page.evaluate("() => window.__gg.G.altar.lane")
-    page.evaluate("() => { window.__gg.G.altar.hp = 1; }")
+    page.evaluate("() => { const G = window.__gg.G; G.altar.hp = 1; for (let i = G.monsters.length - 1; i >= 0; i--) if (G.monsters[i].type === 'crow') G.monsters.splice(i, 1); }")   # her glides' crows (owner 2026-11-09) would meet the pumpkin first
     page.evaluate(TSHOOT, [0, al])
     ok(page.evaluate(ALTAR) is None, 'a pumpkin up its lane breaks it')
     page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 5, '#fff'); }")

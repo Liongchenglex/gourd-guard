@@ -289,11 +289,11 @@ export function drawGlue(){
 /** Puddles (world 5): baked glossy pools (render/fx.js) with two slow live ripples each. */
 export function drawPuddles(t){
   const pds = G.puddles; if (!pds || !pds.length) return;
-  const rx = CS * 0.44, ry = 14;
-  ctx.lineWidth = 1.3; ctx.strokeStyle = '#b8e6f4';
+  const rx = CS * 0.44, ry = 14, blood = __RELEASE__ >= 9 && bloodSeaOn();   // the Marsh nightmare's pools are blood red like its sea (owner 2026-11-09)
+  ctx.lineWidth = 1.3; ctx.strokeStyle = blood ? '#ff9a90' : '#b8e6f4';
   for (const pd of pds){
     const x = LANE(pd.lane), y = FIELD_TOP + pd.p * (FIELD_BOT - FIELD_TOP) + 8;
-    const sp = puddleSprite(K, pd.lane); ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h);
+    const sp = puddleSprite(K, pd.lane, blood); ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h);
     for (let j = 0; j < 2; j++){
       const f = (t * 0.28 + j * 0.5 + pd.lane * 0.19) % 1, s = 0.12 + 0.68 * f;
       ctx.globalAlpha = (1 - f) * 0.55 * Math.min(1, f * 12);

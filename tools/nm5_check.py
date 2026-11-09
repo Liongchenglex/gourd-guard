@@ -69,7 +69,7 @@ def check_n5_track(browser, url):
     ok(w == ['Drowned Marsh: Nightmare', 'marshN'], f'its theme {d[4]} is the blood Marsh map {w}')
     ok(page.evaluate("() => window.__gg.NIGHTMARE_LEVELS.length") == 5, 'NIGHTMARE_LEVELS holds the patch, hollow, witchwood, keep and marsh tables')
     ok(page.evaluate("() => window.__gg.nmNight(5, 1)") == 1401, 'nmNight(5, 1) = 1401')
-    ok(page.evaluate("() => window.__gg.isOpen(1402)") is False, 'N5-2 does not exist yet / stays shut')
+    ok(page.evaluate("() => window.__gg.isOpen(1402)") is False, 'N5-2 stays shut on a fresh save')
     nm5_start(page, 1)
     g = page.evaluate("() => { const G = window.__gg.G; return [G.def.label, G.world, G.n, window.__gg.state, !!G.def.sea]; }")
     ok(g == ['N5-1', d[4], 1401, 'play', True], f'N5-1 starts on the blood Marsh map, with its sea {g}')
@@ -247,7 +247,7 @@ def check_tide_continue(browser, url):
       const real = G.def.tideMarks; return first; }""")
     ok(r[1] == 1 and abs(r[0] - 0.4) < 1e-6 and r[2] < 0, f'the continued night keeps its shore and mark {r}')
     pc = page.evaluate("() => { const g = window.__gg, G = g.G; return [G.puddles.length, G.def.puddles, G.puddles.every(p => p.p > g.shoreP())]; }")
-    ok(pc[0] == pc[1] == 2 and pc[2], f'the continued night has the level\'s pools, all below the restored shore {pc}')
+    ok(pc[0] == pc[1] and pc[0] > 0 and pc[2], f'the continued night has the level\'s pools, all below the restored shore {pc}')
     step(page, 1.5)
     ok(abs(page.evaluate("() => window.__gg.shoreP()") - 0.4) < 1e-6 and page.evaluate("() => window.__gg.G.tide.t") < 0, 'no surge replays on the continued night')
     ok(not errors, f'no page errors {errors[:2]}')
@@ -1795,6 +1795,208 @@ def check_fallen_tides_budget(browser, url):
 CHECKS.update({'check_fallen_tides': check_fallen_tides, 'check_ft_window': check_ft_window, 'check_ft_story_twins': check_ft_story_twins, 'check_ft_dive': check_ft_dive, 'check_ft_aura': check_ft_aura,
                'check_ft_spear': check_ft_spear, 'check_ft_whirl': check_ft_whirl, 'check_fallen_tides_continue': check_fallen_tides_continue, 'check_fallen_tides_baked': check_fallen_tides_baked,
                'check_fallen_tides_level': check_fallen_tides_level, 'check_fallen_tides_art': check_fallen_tides_art, 'check_fallen_tides_budget': check_fallen_tides_budget})
+
+
+# ---------- Task 10: the 16 designed nights, their intro cards, bestiary, prebake, blood puddles ----------
+N5_NAMES = ['The Red Tide', 'Blood Slime', 'Drowned Pirate', 'The Kraken', 'The Swan Gourd', 'Turtle Rider', 'Storm Eel', 'Siren', 'Siren and Pirates', 'Chameleon tide',
+            'Slime flood', 'Eel storm', 'The Kraken 2', 'Maelstrom', 'The gauntlet', 'The Fallen Twin Tides']
+N5_NEW = {'bloodslime': 2, 'pirate': 3, 'tentacle': 4, 'turtlerider': 6, 'eel': 7, 'siren': 8}   # new monster -> the night that brings it (spec Part 6)
+ALL4_5 = ['grave', 'protector', 'wartling', 'crookneck']
+N5_LEVELS_JS = """() => { const g = window.__gg; return g.NIGHTMARE_LEVELS[4].map((d, i) => { const L = g.levelFor(1401 + i);
+  return { level:d.level, name:d.name, theme:d.theme, pool:d.pool.map(e => e[0]), types:d.pool.every(([k]) => !!(g.TYPES[k] || g.VARIANTS[k])), gourd:!!d.gourd, gourds:d.gourds || null,
+    gourdLock:d.gourdLock || null, coach:d.coach || null, unlockGourds:d.unlockGourds || null, boss:d.boss, bossForm:d.bossForm, bossChest:d.bossChest || null, intro:d.intro || [],
+    also:d.boss ? (g.ALSO_BAKE[d.boss] || []) : [], sea:!!d.sea, shoreFrac:d.shoreFrac || 0, shore:d.shore || 0, puddles:d.puddles || 0, layout:d.puddlesLayout || null,
+    marks:d.tideMarks || [], whirls:d.whirlpools || [], spawnGap:d.spawnGap, spawnBurst:d.spawnBurst, total:d.total, interval:d.interval,
+    quests:g.questsFor(L), questsOk:g.questsFor(L).every(([t, p]) => !!g.QUEST_TYPES[t] && (!['must', 'team'].includes(t) || p.every(k => g.PTYPES.some(q => q.key === k)))) }; }); }"""
+
+
+def n5_open_all(page):
+    """Every story level and nightmare level of books 1 to 4 beaten, N5-1 to N5-15 too (so all of N5 is open); every gourd unlocked and every coach seen."""
+    set_stars(page, {**story_done(100), **{b + k: 3 for b in (1000, 1100, 1200, 1300) for k in range(1, 17)}, **{1400 + k: 3 for k in range(1, 16)}})
+    page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true, crookneck:true, swan:true }; s.seenGourdCoach = s.seenProtectorCoach = s.seenWartlingCoach = s.seenCrookneckCoach = s.seenSwanCoach = true; }")
+
+
+def check_n5_levels(browser, url):
+    """The 16 designed nights (spec Parts 6 and 7): names, pools, gourds, bosses, tide marks, whirlpools and pacing are data; every preview opens."""
+    if not R9: return
+    page, errors = open_page(browser, url)
+    L = page.evaluate(N5_LEVELS_JS)
+    tile = page.evaluate("() => window.__gg.TILE_P()"); stop = page.evaluate("() => window.__gg.TIDE_STOP()")
+    ok(len(L) == 16 and [d['level'] for d in L] == list(range(1, 17)), f'16 marsh nightmare levels in order ({len(L)})')
+    ok([d['name'] for d in L] == N5_NAMES, f"each level has the spec's name {[d['name'] for d in L]}")
+    ok(all(d['theme'] == 10 for d in L), 'every level is on the blood Marsh map (theme 10)')
+    ok(all(d['pool'] and d['types'] for d in L), 'every pool is non-empty and every pool type exists in TYPES or VARIANTS')
+    intros = {k + 1: [t for t in d['intro']] for k, d in enumerate(L) if d['intro']}
+    ok(intros == {n: [t] for t, n in N5_NEW.items()}, f'each new monster is introduced on the level that first brings it {intros}')
+    ok(all(t in d['pool'] or t in d['also'] or t == 'tentacle' for d in L for t in d['intro']), 'every introduced monster walks in from its level pool or its boss')
+    early = [(t, k + 1) for k, d in enumerate(L) for t in d['pool'] + d['also'] if t in N5_NEW and k + 1 < N5_NEW[t]]
+    ok(not early, f'no new monster walks in before its introduction {early}')
+    ok(all(t in L[14]['pool'] for t in ('bloodslime', 'pirate', 'turtlerider', 'eel', 'siren')), f"N5-15 (The gauntlet) holds every new monster {L[14]['pool']}")
+    story = {'crawler', 'sailor', 'diver', 'slime', 'turtle'}
+    ok(story <= {t for d in L for t in d['pool']}, 'the story Marsh monsters are mixed in somewhere')
+    ok({'mummy', 'firemummy'} <= set(L[4]['pool']), f"N5-5: Mummies and Flaming Mummies so the splash matters {L[4]['pool']}")
+    ok({'chameleon', 'rchameleon'} <= set(L[9]['pool']), f"N5-10: Chameleons and Reverse Chameleons {L[9]['pool']}")
+    ok(sum(1 for t in L[10]['pool'] if t == 'bloodslime') == 1 and L[10]['pool'][0] == 'bloodslime', f"N5-11: a flood of Blood Slimes, the top of the pool {L[10]['pool']}")
+    ok('eel' in L[11]['pool'] and 'eel' in L[6]['pool'], 'N5-7 and N5-12 have Storm Eels')
+    # gourds
+    ok(all(d['gourd'] for d in L), 'every level is a gourd night')
+    ok(all(d['gourds'] == ALL4_5 for d in L[:4]) and all(d['gourds'] == ALL4_5 + ['swan'] for d in L[4:]), f"N5-1 to N5-4 offer four gourds; the Swan joins from N5-5 {[d['gourds'] for d in L]}")
+    ok(L[4]['gourdLock'] == 'swan' and [k + 1 for k, d in enumerate(L) if d['gourdLock']] == [5], 'the Swan is locked into slot 1 on N5-5 only')
+    ok(L[4]['coach'] == 'swan' and [k + 1 for k, d in enumerate(L) if d['coach']] == [5], 'N5-5 holds the Swan tutorial (the only coach)')
+    ok(L[3]['unlockGourds'] == ['swan'] and [k + 1 for k, d in enumerate(L) if d['unlockGourds']] == [4], 'N5-4 unlocks the Swan')
+    # bosses
+    ok(L[3]['boss'] == 'kraken' and L[3]['bossForm'] == 1 and L[3]['bossChest'] == 'normal', 'N5-4: the Kraken, one normal chest')
+    ok(L[12]['boss'] == 'kraken' and L[12]['bossForm'] == 2 and L[12]['bossChest'] == 'normal', 'N5-13: the Kraken in form 2, one normal chest')
+    ok(L[15]['boss'] == 'fallentides' and L[15]['bossChest'] == 'normal', 'N5-16: the Fallen Twin Tides, one normal chest')
+    ok([k + 1 for k, d in enumerate(L) if d['boss']] == [4, 13, 16], 'bosses on N5-4, N5-13 and N5-16 only')
+    # water: sea, shore, pools, tide marks, whirlpools
+    ok(all(d['sea'] and (d['shoreFrac'] or d['shore']) for d in L), 'every night has a sea and a shore (walkers spawn at the live shore only when it is set)')
+    ok(all(d['puddles'] and d['layout'] and len(d['layout']) >= d['puddles'] for d in L), 'every night has its pools (a layout, so whirlpool ends are exact)')
+    ok(all(d['marks'] for d in L), 'every night has tide marks')
+    reach = [max(m['to'] for m in d['marks']) for d in L]
+    ok(all(r <= 0.5 + 1e-9 for k, r in enumerate(reach, 1) if k <= 10 or k in (13, 16)), f'N5-1 to N5-10, N5-13 and N5-16 reach at most 0.5 {reach}')
+    ok(all(0.6 - 1e-9 <= reach[k - 1] <= 0.7 + 1e-9 for k in (11, 12, 14, 15)), f'N5-11, N5-12, N5-14 and N5-15 reach 0.6 to 0.7 {reach}')
+    ok(all(r <= stop + 1e-9 for r in reach), f'every tideMarks.to is at most TIDE_STOP ({stop:.3f})')
+    ok(all([m['at'] for m in d['marks']] == sorted(m['at'] for m in d['marks']) and all(0 < m['at'] < 1 for m in d['marks']) for d in L), 'tide marks are sorted, inside the night')
+    ok(all(d['marks'][0]['to'] > (d['shoreFrac'] or d['shore'] * tile) for d in L), 'a mark always rises above the start shore')
+    ok(len(L[13]['whirls']) == 4 and len(L[11]['whirls']) == 3 and len(L[0]['whirls']) >= 1, f"N5-14 has 4 whirlpool pairs, N5-12 has 3, N5-1 has one {[len(d['whirls']) for d in L]}")
+    ok(all(len(d['whirls']) <= 4 for d in L), 'never more than four pairs')
+    dry = []
+    for k, d in enumerate(L, 1):
+        pools = d['layout'] or []
+        for pr in d['whirls']:
+            for e in pr:
+                if not (e['p'] <= d['shoreFrac'] or any(l == e['lane'] and abs(p - e['p']) <= tile * 0.5 for l, p in pools)): dry.append((k, e))
+    ok(not dry, f'every whirlpool end is in water at level start {dry}')
+    nowater = [k for k, d in enumerate(L, 1) if 'eel' in d['pool'] and not (d['sea'] and d['shoreFrac']) and not d['layout']]
+    ok(not nowater, f'every night with a Storm Eel gives it water {nowater}')
+    ok(all(isinstance(d['spawnGap'], (int, float)) and isinstance(d['spawnBurst'], (int, float)) for d in L), 'every level sets spawnGap and spawnBurst')
+    ok(all(d['questsOk'] and len(d['quests']) == 3 for d in L), 'every level has three quests of existing types')
+    ok(len({(d['total'], d['interval'], tuple(d['pool'])) for d in L}) == 16, 'no two levels share pool and pacing')
+    n5_open_all(page)
+    info = {}
+    for k in range(1, 17):
+        page.evaluate(f"() => {{ document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); window.__gg.openPreview({1400 + k}); }}"); time.sleep(0.25)
+        info[k] = page.evaluate("() => [document.querySelector('#pvTitle').textContent, document.querySelector('#pvInfo').textContent, [...document.querySelectorAll('#pvMonsters small')].map(e => e.textContent)]")
+    ok(info[1][0] == 'Nightmare 5-1', f'the preview is titled Nightmare 5-1 {info[1][0]!r}')
+    ok(all('tide' in info[k][1].lower() for k in range(1, 17)), 'every preview says the tide rises')
+    ok('whirlpool' in info[1][1].lower() and 'whirlpool' not in info[3][1].lower(), f'the previews of whirlpool nights say so {info[1][1]!r}')
+    ok('Blood Slime' in info[2][2] and 'Drowned Pirate' in info[3][2], f'the previews list the new monsters {info[2][2]} {info[3][2]}')
+    ok(not errors, f'every preview opens without a page error {errors[:2]}')
+    page.close()
+
+
+def n5_intro_titles(page, n):
+    """Play night n from its preview card and read the intro cards it shows, in order."""
+    page.evaluate(f"() => {{ document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); window.__gg.openPreview({n}); }}"); time.sleep(0.4)
+    page.click('#bPvGo'); time.sleep(0.4)
+    out = []
+    for _ in range(10):
+        if page.evaluate("() => window.__gg.state") != 'intro': break
+        out.append([page.evaluate("() => document.querySelector('#inTitle').textContent"), page.evaluate("() => document.querySelector('#inText').textContent")])
+        page.click('#bIntroOk'); time.sleep(0.3)
+    return out
+
+
+def check_n5_intros(browser, url):
+    """First appearances on the marsh track show a card: the blood tide and Whirlpools (N5-1), each new monster, the Swan Gourd (N5-5), the Kraken in both forms."""
+    if not R9: return
+    page, errors = open_page(browser, url)
+    n5_open_all(page)
+    page.evaluate("() => { window.__gg.save.seenIntro = { quests:true, gourd:true, 'gourd:protector':true, 'gourd:wartling':true, 'gourd:crookneck':true, puddles:true, sea:true }; }")
+    t = {k: n5_intro_titles(page, 1400 + k) for k in (1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16)}
+    T = {k: [x[0] for x in v] for k, v in t.items()}
+    ok(T[1][:2] == ['The blood tide', 'Whirlpools'], f'N5-1 opens with the blood tide and Whirlpools cards {T[1]}')
+    tx = {x[0]: x[1] for x in t[1]}
+    ok('rising' in tx.get('The blood tide', '').lower() and 'mark' in tx.get('The blood tide', '').lower(), f"the blood tide card explains the rising shore and its marks ({tx.get('The blood tide', '')[:80]}...)")
+    ok('lane' in tx.get('Whirlpools', '').lower() and 'pair' in tx.get('Whirlpools', '').lower(), f"the Whirlpools card explains the linked pairs ({tx.get('Whirlpools', '')[:80]}...)")
+    ok(not any(x in ('The blood tide', 'Whirlpools') for k in T if k > 1 for x in T[k]), 'later levels do not repeat them')
+    for k, name in ((2, 'Blood Slime'), (3, 'Drowned Pirate'), (6, 'Turtle Rider'), (7, 'Storm Eel'), (8, 'Siren')):
+        ok(any(x.startswith('New monster') and name in x for x in T[k]), f'N5-{k} introduces the {name} {T[k]}')
+    ok(any('Kraken' in x and 'full form' not in x for x in T[4]) and any('tentacles' in x[1] for x in t[4]), f'N5-4 introduces the Kraken and its tentacles {T[4]}')
+    ok(T[5] == ['The Swan Gourd'], f'N5-5 explains the Swan Gourd, once {T[5]}')
+    ok(not T[9], f'N5-9 brings nothing new {T[9]}')
+    ok(any('Kraken' in x and 'full form' in x for x in T[13]), f"N5-13 shows the Kraken's form-2 card {T[13]}")
+    ok(any('Fallen Twin Tides' in x for x in T[16]), f'N5-16 introduces the Fallen Twin Tides {T[16]}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_n5_bestiary(browser, url):
+    """The marsh nightmare bestiary lists the new monsters in first-met order (a companion beside its parent) and the Fallen Twin Tides last; story monsters are not repeated."""
+    if not R9: return
+    page, errors = open_page(browser, url)
+    def flip(w):
+        page.evaluate(f"() => window.__gg.openBook({w})"); time.sleep(0.6)
+        if page.evaluate("() => !document.querySelector('#spread').classList.contains('nightmare')"): page.click('#bBookmark')
+        time.sleep(0.8)
+        page.evaluate("() => { if (document.querySelector('#bestiary').hidden) document.querySelector('#bBkFlip').click(); }"); time.sleep(0.7)
+    n5_open_all(page); page.evaluate("() => { window.__gg.save.stars['1416'] = 3; }")
+    flip(4)
+    b = page.evaluate("() => [document.querySelector('#bsTitle').textContent, [...document.querySelectorAll('#bestiary .bs')].map(e => e.classList.contains('unmet') ? null : [e.querySelector('b').textContent, e.querySelector('.ab').textContent, (e.querySelector('.lo') || {}).textContent || ''])]")
+    names = [x and x[0] for x in b[1]]
+    ok('Nightmare' in b[0] and 'Drowned Marsh' in b[0], f'the page is titled as the marsh nightmare edition ({b[0]!r})')
+    ok(names and names[-1] == 'The Fallen Twin Tides', f'the Fallen Twin Tides come last {names}')
+    ok(all(names), f'every entry is met with all of N5 open {names}')
+    for want in ('Blood Slime', 'Bloodlet', 'Drowned Pirate', 'The Kraken', 'Tentacle', 'Turtle Rider', 'Storm Eel', 'Siren'):
+        ok(want in names, f'{want} has a bestiary entry {names}')
+    ok(names.index('Blood Slime') < names.index('Drowned Pirate') < names.index('The Kraken') < names.index('Turtle Rider') < names.index('Storm Eel') < names.index('Siren'), f'first-met order {names}')
+    ok(names.index('Bloodlet') == names.index('Blood Slime') + 1 and names.index('Tentacle') == names.index('The Kraken') + 1, 'companions sit beside their parent')
+    ok(all(x[1] and x[2] for x in b[1] if x), 'every entry has an ability and a lore line')
+    ok(not any(n in names for n in ('Drowned Ghoul', 'Tide Imp', 'Puddle Crawler', 'Drunk Sailor', 'Puddle Diver', 'Splitter Slime', 'Shell Turtle')), 'story marsh monsters are not repeated')
+    ok(page.evaluate("() => window.__gg.FALLEN && window.__gg.FALLEN[4] && window.__gg.FALLEN[4].key") == 'fallentides', 'FALLEN[4] is the Fallen Twin Tides')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_n5_prebake(browser, url):
+    """Each night bakes what it can spawn when it starts: its pool, its boss and what the boss brings (the Kraken's tentacle and anchor, the twins' summons). Every night starts and runs a moment."""
+    if not R9: return
+    page, errors = open_page(browser, url)
+    L = page.evaluate(N5_LEVELS_JS)
+    missing = []
+    for k, d in enumerate(L, 1):
+        page.reload(); page.wait_for_function('() => !!window.__gg'); time.sleep(0.3)
+        page.evaluate("() => { Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true }); const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true, crookneck:true, swan:true }; s.seenSwanCoach = true; }")
+        nm5_start(page, k)
+        want = set(d['pool']) | set(d['also']) | ({d['boss']} if d['boss'] else set())
+        if 'bloodslime' in want: want.add('bloodblob')
+        got = page.evaluate("""(ks) => { const g = window.__gg, V = g.VARIANTS; return ks.filter(k => { const b = V[k] ? V[k].base : null;
+          return !g.isBaked(k) && !g.isBaked(k + '|form2') && !g.isBaked(k + '-blood') && !(b && (g.isBaked(b + '|' + k) || g.isBaked(b))); }); }""", sorted(want))
+        if got: missing.append((k, got))
+        time.sleep(0.4)
+    ok(not missing, f'every level bakes its monsters, its boss and what the boss brings at night start {missing}')
+    ok(not errors, f'no page errors on any night {errors[:2]}')
+    page.close()
+
+
+PUDDLE_PROBE = """() => { const g = window.__gg, c = g.ctx, f = c.drawImage, srcs = [];
+  c.drawImage = function(s, ...a){ srcs.push([s, a]); return f.call(this, s, ...a); };
+  try { g.drawPuddles(0); } finally { delete c.drawImage; }
+  if (!srcs.length) return null;
+  const s = srcs[0][0], x = s.getContext('2d'), w = s.width, h = s.height, ox = w / 2, oy = h * 42 / 64; let r = 0, gg = 0, b = 0, n = 0;
+  for (const [dx, dy] of [[0.12, 0.05], [0.22, -0.05], [-0.18, 0.1], [0.3, 0.12], [-0.3, 0.02]]){ const d = x.getImageData(Math.round(ox + dx * w), Math.round(oy + dy * h), 1, 1).data; r += d[0]; gg += d[1]; b += d[2]; n++; }
+  return [r / n, gg / n, b / n, srcs.length]; }"""
+
+
+def check_blood_puddles(browser, url):
+    """Pools on the marsh nightmare's nights are blood red to match the blood sea (owner 2026-11-09); the story Marsh's pools stay blue."""
+    if not R9: return
+    page, errors = marsh_page(browser, url)
+    ok(page.evaluate("() => window.__gg.G.puddles.length") > 0, 'N5-1 has pools')
+    v = page.evaluate(PUDDLE_PROBE)
+    ok(v is not None and v[0] > 1.5 * v[2] and v[0] > v[1], f'the N5 pool sprite is blood red {v}')
+    ok(page.evaluate("() => window.__gg.G.puddles.length") == v[3], 'one pool sprite is drawn per pool')
+    start(page, 81); time.sleep(0.3)
+    page.evaluate("() => { const g = window.__gg, G = g.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; g.setState('pause'); }")
+    ok(page.evaluate("() => window.__gg.G.puddles.length") > 0, '5-1 (story) has a pool')
+    v = page.evaluate(PUDDLE_PROBE)
+    ok(v is not None and v[2] > 1.2 * v[0], f'the story pool stays blue {v}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_n5_levels': check_n5_levels, 'check_n5_intros': check_n5_intros, 'check_n5_bestiary': check_n5_bestiary, 'check_n5_prebake': check_n5_prebake, 'check_blood_puddles': check_blood_puddles})
 
 
 def main():

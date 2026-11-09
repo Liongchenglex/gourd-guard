@@ -471,25 +471,26 @@ export function graveSprite(k, v){
 
 // ---------- puddles: glossy dark water in a muddy rim, with reeds and a lily pad ----------
 const MUD = pal('#4a3524'), REED = pal('#6a9a3c'), PAD = pal('#4e9448'), CAT = pal('#6e4b2b');
-export function puddleSprite(k, seed){
-  k = bakeK(k); const rx = CS * .44, ry = 14;
-  return bake(`puddle:${k}:${seed}`, CS + 16, 64, CS / 2 + 8, 42, k, g => {
+// Release 9: `blood` bakes the Marsh nightmare's crimson pool (water #2a0608 to #8a1a1a, glints #ff8a80) to match its blood sea, under its own key; the story pool is unchanged.
+export function puddleSprite(k, seed, blood){
+  k = bakeK(k); const rx = CS * .44, ry = 14, B = __RELEASE__ >= 9 && !!blood;
+  return bake(`puddle:${B ? 'marshN-blood:' : ''}${k}:${seed}`, CS + 16, 64, CS / 2 + 8, 42, k, g => {
     const R = rng(seed * 19 + 3), side = seed % 2 ? 1 : -1;
     S.part(g, E(0, 1.5, rx + 6, ry + 4.5), MUD, { x:0, y:0, r:rx + 6 }, { flat:true, mat:'stone', lw:1.1 });
     const wp = E(0, 0, rx, ry);
-    let gr = g.createLinearGradient(0, -ry, 0, ry); gr.addColorStop(0, '#0b2436'); gr.addColorStop(.5, '#164561'); gr.addColorStop(1, '#2c7593');
+    let gr = g.createLinearGradient(0, -ry, 0, ry); if (B){ gr.addColorStop(0, '#2a0608'); gr.addColorStop(.5, '#6a1010'); gr.addColorStop(1, '#9a1c1c'); } else { gr.addColorStop(0, '#0b2436'); gr.addColorStop(.5, '#164561'); gr.addColorStop(1, '#2c7593'); }
     wp(g); g.fillStyle = gr; g.fill();
     g.save(); wp(g); g.clip();
-    gr = g.createRadialGradient(rx * .15, ry * .7, 0, rx * .15, ry * .7, rx * .8); gr.addColorStop(0, 'rgba(120,190,215,.45)'); gr.addColorStop(1, 'rgba(120,190,215,0)'); g.fillStyle = gr; g.fillRect(-rx, -ry, rx * 2, ry * 2);
+    gr = g.createRadialGradient(rx * .15, ry * .7, 0, rx * .15, ry * .7, rx * .8); gr.addColorStop(0, B ? 'rgba(255,138,128,.4)' : 'rgba(120,190,215,.45)'); gr.addColorStop(1, B ? 'rgba(255,138,128,0)' : 'rgba(120,190,215,0)'); g.fillStyle = gr; g.fillRect(-rx, -ry, rx * 2, ry * 2);
     g.save(); g.shadowColor = 'rgba(255,255,255,.9)'; g.shadowBlur = 6; g.fillStyle = 'rgba(255,255,255,.55)'; ell(g, -rx * .3, -ry * .3, rx * .3, 2.2, -.12); g.fill(); g.fillStyle = 'rgba(255,255,255,.35)'; ell(g, rx * .1, -ry * .05, rx * .14, 1.4, -.12); g.fill(); g.restore();
-    gr = g.createLinearGradient(0, -ry, 0, -ry * .2); gr.addColorStop(0, 'rgba(4,14,22,.75)'); gr.addColorStop(1, 'rgba(4,14,22,0)'); g.fillStyle = gr; g.fillRect(-rx, -ry, rx * 2, ry);
+    gr = g.createLinearGradient(0, -ry, 0, -ry * .2); gr.addColorStop(0, B ? 'rgba(30,2,4,.75)' : 'rgba(4,14,22,.75)'); gr.addColorStop(1, B ? 'rgba(30,2,4,0)' : 'rgba(4,14,22,0)'); g.fillStyle = gr; g.fillRect(-rx, -ry, rx * 2, ry);
     g.restore();
-    g.lineWidth = 1.8; g.strokeStyle = 'rgba(160,220,240,.6)'; g.beginPath(); g.ellipse(0, 0, rx - .5, ry - .5, 0, .15 * Math.PI, .85 * Math.PI); g.stroke();
-    g.strokeStyle = 'rgba(6,18,28,.8)'; g.lineWidth = 1.4; g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 1.1 * Math.PI, 1.9 * Math.PI); g.stroke();
+    g.lineWidth = 1.8; g.strokeStyle = B ? 'rgba(255,150,140,.6)' : 'rgba(160,220,240,.6)'; g.beginPath(); g.ellipse(0, 0, rx - .5, ry - .5, 0, .15 * Math.PI, .85 * Math.PI); g.stroke();
+    g.strokeStyle = B ? 'rgba(28,4,6,.8)' : 'rgba(6,18,28,.8)'; g.lineWidth = 1.4; g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 1.1 * Math.PI, 1.9 * Math.PI); g.stroke();
     // lily pad with a notch and a tiny flower
     const lx = -side * rx * .4, ly = ry * .25;
     S.part(g, E(lx, ly, 9, 5.5), PAD, { x:lx, y:ly, r:9 }, { flat:true, mat:'skin', lw:1 });
-    g.fillStyle = '#164561'; g.beginPath(); g.moveTo(lx, ly); g.lineTo(lx + 10, ly - 5.5); g.lineTo(lx + 10, ly - 1); g.closePath(); g.fill();
+    g.fillStyle = B ? '#6a1010' : '#164561'; g.beginPath(); g.moveTo(lx, ly); g.lineTo(lx + 10, ly - 5.5); g.lineTo(lx + 10, ly - 1); g.closePath(); g.fill();
     S.dot(g, E(lx - 3, ly - 2, 2.2, 2), '#ff9ec8'); S.dot(g, E(lx - 3, ly - 2.4, .9, .9), '#ffe27a');
     // reeds on the bank with one cattail and a leaf blade
     const bx = side * rx * .72;

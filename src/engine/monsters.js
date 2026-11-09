@@ -8,7 +8,7 @@ import { glueStep } from './glue.js';
 import { magnetSlide } from './magnet.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
 import { updateHollowMonster, reapLanes, initHollowMonster, initLamplighter, updateLamplighter, initFallenPolt, updateFallenPolt } from './hollow.js';
-import { initMarshMonster, updateMarshMonster, marshStop } from './marsh.js';
+import { initMarshMonster, updateMarshMonster, marshStop, growBlob } from './marsh.js';
 import { newCastle, initKeepMonster, updateKeepMonster, keepStop, keepParked, keepSpeed, lancerHit, keepTick, updateSiege, updateFallenCount } from './keep.js';
 import { initWitchwoodMonster, updateWitchwoodMonster, toadStop, tongueFree, initTreant, updateTreant, initFallenHex, updateFallenHex } from './witchwood.js';
 import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike, initFallenGK, updateFallenGK } from './nightmare.js';
@@ -235,6 +235,7 @@ export function updateMonster(m, dt){
     if (m.burnTick <= 0){ m.burnLeft--; m.burnTick = BURN_EVERY; m.lastHit = 3; SFX.extra('burn'); damage(m, m.burnAmt, '#ff9a4a', true); if (m.dead) return; }
   }
   if (__RELEASE__ >= 8 && (m.type === 'glutton' || m.type === 'bride')) keepTick(m, dt);   // the Glutton's net clock and the Bride's veil, walking or chewing (engine/keep.js)
+  if (__RELEASE__ >= 9 && m.type === 'bloodblob' && m.frozenT <= 0 && (m.eating || m.kb > 0)){ growBlob(m, dt); if (m.dead) return; }   // a Bloodlet swells while it chews or is knocked back too; only Ice holds it (engine/marsh.js)
   if (m.kb > 0){
     const st = Math.min(m.kb, dt * 2.2);
     m.p = Math.max(-0.05, m.p - st); m.kb -= st;

@@ -486,6 +486,15 @@ def check_slime_frozen(browser, url):
     page.evaluate("() => { window.__b.frozenT = 0; }")
     page.evaluate(STEP, [6.2, 0.05])
     ok(page.evaluate("() => window.__b.dead") is True, 'unfrozen, it regrows after its 6 s')
+    # a chewing blob keeps growing (owner); a frozen chewing one does not
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; g.walls.forEach(w => { w.hp = w.max = 500; }); const b = g.spawnMonster('bloodblob', 2, true, 1.0); b.age = 5; b.eating = true; window.__c = b; const f = g.spawnMonster('bloodblob', 4, true, 1.0); f.age = 5; f.eating = true; f.frozenT = 30; window.__f = f; }")
+    page.evaluate(STEP, [3, 0.05])
+    ok(page.evaluate("() => window.__c.eating && window.__c.growT > 2.9 && !window.__c.dead") and page.evaluate("() => window.__f.growT") == 0, 'a chewing blob swells while a frozen chewing one does not')
+    page.evaluate(STEP, [3.3, 0.05])
+    ok(page.evaluate("() => window.__c.dead && window.__gg.G.monsters.some(m => m.type === 'bloodslime' && !m.dead && m.lane === 2)") and page.evaluate("() => !window.__f.dead && window.__f.growT") == 0, 'the chewing blob becomes a full Blood Slime at the fence; the frozen one stays small')
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; const b = g.spawnMonster('bloodblob', 2, true, 0.5); b.age = 5; b.sp = 0; b.kb = 5; window.__k = b; }")
+    page.evaluate(STEP, [3, 0.05])
+    ok(page.evaluate("() => window.__k.growT > 2.9"), 'a knocked-back blob swells too')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 

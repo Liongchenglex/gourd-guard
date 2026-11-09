@@ -2,8 +2,7 @@
 // Every caller gates on `__RELEASE__ >= 9`, so lower builds drop this module. One section per monster; each new monster adds a case to initMarshMonster /
 // updateMarshMonster and, when it stops or acts outside the walk, a line in monsters.js beside the Release 8 ones.
 //  - The Blood Slime (`bloodslime`): killed, it splits into `splits` Bloodlets (`bloodblob`) in the lanes round it (splitBlood, from combat.js kill). At most
-//    SLIME_CAP Blood Slimes and Bloodlets live at once, so a split makes min(splits, SLIME_CAP - alive) of them. A Bloodlet's clock `growT` runs only while it
-//    walks (updateMarshMonster is skipped while it is frozen, chewing, knocked back or down), so ice holds it small; at `regrow` s it is replaced by a full Blood
+//    SLIME_CAP Blood Slimes and Bloodlets live at once, so a split makes min(splits, SLIME_CAP - alive) of them. A Bloodlet's clock `growT` runs every frame it is not frozen (walking, chewing the fence or knocked back: growBlob, called from monsters.js; owner), so ice alone holds it small; at `regrow` s it is replaced by a full Blood
 //    Slime at its lane and place (no reward for the Bloodlet: it was not killed). `swell` (1..SWELL_MAX) is how big it is drawn, so the player sees it coming.
 //    Blobs are minions, so they never count in the night's arrivals, and a night whose total is reached is not won while any monster stands (game.js).
 //  - The Drowned Pirate (`pirate`): at spawn he picks 1..2 shots (`shots`) and that many stop points, one in each equal slice of `stopAt` (so they are apart).
@@ -53,6 +52,20 @@ export function initMarshMonster(m){
   if (m.type === 'eel'){   // lurks in the water from the start, as a Diver in its pool
     m.hidden = true; m.upT = TYPES.eel.down; m.fired = false; m.charged = false;
     if (!m.puddle) m.puddle = { lane:m.lane, p:Math.max(0, m.p) };
+  }
+}
+
+/** A Bloodlet's regrow clock: it swells and, at `regrow` s, is a full Blood Slime again where it stands (no reward: it was not killed). monsters.js runs it
+ *  every frame the Bloodlet is not frozen: walking, chewing the fence or knocked back (owner: only Ice holds it small). */
+export function growBlob(m, dt){
+  const T = TYPES.bloodblob;
+  m.growT += dt;
+  m.swell = 1 + (SWELL_MAX - 1) * Math.min(1, m.growT / T.regrow);
+  if (m.growT >= T.regrow && !m.dead){
+    m.dead = true;   // it did not die: no reward, no split
+    const s = spawnMonster('bloodslime', m.lane, true, m.p); s.age = 0.2; s.flash = 0.25;
+    for (let i = 0; i < 8; i++) spark(m.x, mY(m), '#ff6a78', 110);
+    SFX.monsterAct('bloodslime', 'regrow');
   }
 }
 
@@ -143,19 +156,7 @@ export function marshStop(m){
 export function updateMarshMonster(m, dt){
   switch (m.type){
     case 'bloodslime': m.x = m.tx; return true;
-    case 'bloodblob': {
-      const T = TYPES.bloodblob;
-      m.x = m.tx;
-      m.growT += dt;
-      m.swell = 1 + (SWELL_MAX - 1) * Math.min(1, m.growT / T.regrow);
-      if (m.growT >= T.regrow){
-        m.dead = true;   // it did not die: no reward, no split
-        const s = spawnMonster('bloodslime', m.lane, true, m.p); s.age = 0.2; s.flash = 0.25;
-        for (let i = 0; i < 8; i++) spark(m.x, mY(m), '#ff6a78', 110);
-        SFX.monsterAct('bloodslime', 'regrow');
-      }
-      return true;
-    }
+    case 'bloodblob': m.x = m.tx; growBlob(m, dt); return true;
     case 'turtlerider': {
       const T = TYPES.turtlerider;
       m.x = m.tx + Math.sin(m.ph * 1.6) * 2;

@@ -8,7 +8,7 @@ export const COMPANIONS = { hauler:['gargoyle'], slime:['blob'], vampire:['bat']
   ...(__RELEASE__ >= 5 ? { reaper:['crow'], fogwalker2:['brute'] } : {}),   // Release 5: the crow out of a fallen Reaper, Fogwalker 2's Mossbacks (a world 1 monster, new to the hollow's books)
   ...(__RELEASE__ >= 7 ? { ashcrone:['crow'] } : {}),   // Release 7: the four crows the Ash Crone arrives with (new to the witchwood books)
   ...(__RELEASE__ >= 8 ? { siegetower:['marshal'] } : {}),
-  ...(__RELEASE__ >= 9 ? { bloodslime:['bloodblob'] } : {}) };   // Release 9: the Bloodlets a fallen Blood Slime leaves   // Release 8: the Storm Marshal first walks down the Siege Tower's ramp (N4-4)
+  ...(__RELEASE__ >= 9 ? { bloodslime:['bloodblob'], kraken:['tentacle'] } : {}) };   // Release 9: the Bloodlets a fallen Blood Slime leaves   // Release 8: the Storm Marshal first walks down the Siege Tower's ramp (N4-4)
 
 /** The boss at the end of each nightmare book (Release 4), listed last in its nightmare bestiary. Once its fight is built (N1-16, the Fallen
  *  Gravekeeper, 2026-11-05) the level lists it like any boss; until then this entry holds its place (an entry may give `icon` [type, form] to draw). */
@@ -114,6 +114,8 @@ export const BESTIARY = {
     turtlerider:{ lore:'A little imp who found a very large turtle, a bag of old pumpkins from the bottom of the marsh, and no one to tell him not to.', ability:'Ten health, walks backward shell first like the Shell Turtle and shrugs off knockback; Grey pierces it. Every seven seconds throws a rotten pumpkin that rots a pumpkin in its column or one beside it. When it falls, the imp is loose.' },
     eel:        { lore:'It followed the storm into the marsh and has been catching lightning in its teeth ever since.', ability:'Three health. Rises from a pool or the tide, crackles for half a second, shoots a bolt at your fence, then dives and comes up in another spot of the water. It can only be hit while it is up.' },
     siren:      { lore:'She sits on a rock in the blood tide and hums the lullaby that drowned the village. Everyone who heard it forgot what they were holding.', ability:'Six health. Never walks. Every twelve seconds she sings: a row of your patch is warned for a second and a half, then every pumpkin in it is drawn as a red sphere for six seconds. They still bunch, light and launch by their true colour. Kill her to stop the song.' },
+    kraken:     { lore:'It slept under the wreck until the moon went red. Now it keeps its head below the tide, where nothing can reach it, and lets its arms do the work.', ability:'Twenty health. Its head stays under the water while its tentacles stand. Bring down all three at once and the head surfaces for eight seconds: hit it then. It never moves, and nothing freezes or pushes it.' },
+    tentacle:   { lore:'One of the Kraken\u2019s arms, still holding the anchor of the ship it dragged under.', ability:'Three health. Never moves. Every six seconds it throws an anchor down its lane at your fence, for one and a half Diver bolts. A fallen tentacle rises again six seconds later, while the head is down.' },
   } : {}),
   twintides:  { lore:'Two serpents hatched from one egg on the night the village drowned. They finish each other’s sentences.', ability:'Never reach the wall. Both must die within a short window or the fallen one rises again.' },
 };

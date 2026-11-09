@@ -21,7 +21,7 @@ import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
 import { reaperFalls, cometBreaks, fpAfterHit, fpReaperHit } from './hollow.js';
 import { witchwoodFalls, fhGate, fhAfterHit } from './witchwood.js';
-import { splitBlood, releaseImp } from './marsh.js';
+import { splitBlood, releaseImp, krakenGuard, krakenFalls } from './marsh.js';
 import { shieldedNow, shieldPuff, keepFalls, pieceFalls, knockArcher, archersGuard, siegeFalls, countGate, fcCross, countFalls } from './keep.js';
 import { inWartSquare, inSwanSquare, isProtected } from './gourd.js';
 import { ROTTEN, ROT_FX, hitRule } from './rot.js';
@@ -90,6 +90,7 @@ export function damage(m, amt, color, small, big){
   if (m.dead) return;
   if (__RELEASE__ >= 8 && shieldedNow(m)){ shieldPuff(m); return; }   // the one shield door (engine/keep.js): red nets, a Bride's veil, the Fallen Count's clamp; every damage source comes through here
   if (__RELEASE__ >= 8 && archersGuard(m)) return;   // a Siege Tower with archers up: only a pumpkin's own hit gets past them, and that knocks one off instead (knockArcher, hitMonsterNow)
+  if (__RELEASE__ >= 9 && krakenGuard(m)) return;   // the Kraken's head under the water takes nothing (engine/marsh.js)
   if (m.type === 'jukebox' && m.lastHit === -1){ m.flash = 0.1; addFloat('Pumpkins only', m.x, mY(m) - m.r - 14, '#ffd35a', 15, 0.7); return; }   // tools never hurt the jukebox (owner)
   if (__RELEASE__ >= 5 && m.rotOnly && !rotDmg){ blockedPuff(m); return; }   // only rot can hurt it (Release 5): every other damage (splash, lightning, burn, mines, tools) is refused
   if (m.shield){   // shield knight marching: the hit bounces off
@@ -227,6 +228,7 @@ export function kill(m){
   if (__RELEASE__ >= 5 && m.type === 'reaper') reaperFalls(m);   // a crow bursts out where the Reaper fell (engine/hollow.js)
   if (__RELEASE__ >= 7) witchwoodFalls(m);   // the Flask Bearer's potion, the Cauldron Toad's burst (engine/witchwood.js)
   if (__RELEASE__ >= 8) countFalls(m);   // the Fallen Count's nets, bolt, spears and castle pieces go with him (engine/keep.js)
+  if (__RELEASE__ >= 9) krakenFalls(m);   // the Kraken's tentacles and anchors go with its head (engine/marsh.js)
   if (__RELEASE__ >= 8) siegeFalls(m);   // the Siege Tower's own nets go with it (engine/keep.js)
   if (__RELEASE__ >= 8) keepFalls(m);   // a Glutton's red nets turn ordinary, a Bride's veil comes off (engine/keep.js)
   if (__RELEASE__ >= 4 && m.type === 'casketjack') dropCoffin(m);   // Casket Jack falls into a field coffin with one last mummy in it (engine/nightmare.js)

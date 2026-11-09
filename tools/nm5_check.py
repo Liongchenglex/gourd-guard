@@ -33,7 +33,7 @@ def marsh_page(browser, url):
 # ---------- Task 1: the track, the book page, the blood sea ----------
 # Names no lower build may hold. Not listed, because older builds already hold them for story reasons: 'Kraken' and 'Turtle Rider'
 # (comments in ported art, absent from a minified bundle but not from the source) and 'e4d9bd' (the Protector Gourd's shell colour).
-R9_NAMES = ['Blood Slime', 'Storm Eel', 'Siren', 'Swan Gourd', 'Fallen Twin Tides', 'Whirlpool', 'Drowned Pirate', 'Bloodlet', 'pirateshot', 'Beat Nightmare 4-4', 'marshN-blood', 'The tide rises!', '#4affd0', 'turtlerider', 'rotshot', 'sirennote', 'hiddensphere']
+R9_NAMES = ['The Kraken', 'anchorEvery', 'Blood Slime', 'Storm Eel', 'Siren', 'Swan Gourd', 'Fallen Twin Tides', 'Whirlpool', 'Drowned Pirate', 'Bloodlet', 'pirateshot', 'Beat Nightmare 4-4', 'marshN-blood', 'The tide rises!', '#4affd0', 'turtlerider', 'rotshot', 'sirennote', 'hiddensphere']
 
 
 def check_r9_absent(browser, url):
@@ -1214,6 +1214,199 @@ def check_ring_budget(browser, url):
 CHECKS.update({'check_swan_splash': check_swan_splash, 'check_swan_gates': check_swan_gates, 'check_swan_shields': check_swan_shields, 'check_swan_black': check_swan_black,
                'check_swan_break': check_swan_break, 'check_picker_five_gourds': check_picker_five_gourds, 'check_swan_unlock': check_swan_unlock, 'check_swan_intro': check_swan_intro,
                'check_swan_coach': check_swan_coach, 'check_swan_coach_edges': check_swan_coach_edges, 'check_swan_art': check_swan_art, 'check_ring_budget': check_ring_budget})
+
+
+# ---------- Task 8: the Kraken (mini boss, N5-4) ----------
+KR_UP = """([form]) => { const g = window.__gg, G = g.G; G.monsters.length = 0; G.arrows.length = 0; G.vfx.length = 0; g.walls.forEach(w => { w.hp = w.max = 200; });
+  G.def.boss = 'kraken'; G.def.bossForm = form; G.def.bossChest = 'normal'; G.bossSpawned = true; G.bossDead = false;
+  const b = g.spawnMonster('boss'); window.__b = b; return [b.kind, b.hp, b.maxHp, b.form, b.hidden]; }"""
+KR_ST = """() => { const g = window.__gg, b = window.__b, ts = g.G.monsters.filter(m => m.type === 'tentacle' && !m.dead);
+  return { hidden:b.hidden, hp:b.hp, n:ts.length, minion:ts.every(t => t.minion), lanes:ts.map(t => t.lane), water:ts.every(t => g.inWater(t.lane, t.p)), upT:b.upT, dead:b.dead,
+    headWater:g.inWater(b.lane, b.p), arrows:g.G.arrows.filter(a => a.anchor).map(a => [a.lane, a.dmg])}; }"""
+KR_KILL = "([n]) => { const g = window.__gg; g.G.monsters.filter(m => m.type === 'tentacle' && !m.dead).slice(0, n).forEach(t => { t.lastHit = 0; g.damage(t, 99, '#fff'); }); }"
+
+
+def kraken_page(browser, url, form=1):
+    page, errors = slime_page(browser, url)
+    r = page.evaluate(KR_UP, [form])
+    return page, errors, r
+
+
+def check_kraken(browser, url):
+    if not R9:
+        page, errors = open_page(browser, url)
+        ok(page.evaluate("() => !(window.__gg.TYPES && (window.__gg.TYPES.kraken || window.__gg.TYPES.tentacle)) && !(window.__gg.BOSS_NAMES && window.__gg.BOSS_NAMES.kraken)"), 'no Kraken below Release 9')
+        page.close(); return
+    page, errors, r = kraken_page(browser, url)
+    T = page.evaluate("() => { const T = window.__gg.TYPES.kraken, U = window.__gg.TYPES.tentacle; return [[T.boss, T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.upFor, T.tentacles, T.regrow, T.noItems, T.form2.hp, T.form2.tentacles], [U.hp, U.r, U.sp, U.coins, U.eat, U.pts, U.drop, U.anchorEvery, U.anchorDmg, window.__gg.TYPES.diver.bolt]]; }")
+    ok(T[0] == [True, 20, 34, 0, 40, 0, 300, 6, 8, 3, 6, True, 32, 5], f'Kraken numbers {T[0]}')
+    ok(T[1][:8] == [3, 20, 0, 3, 0, 8, 0, 6] and T[1][8] == 1.5 * T[1][9], f'Tentacle numbers, the anchor a Diver bolt and a half {T[1]}')
+    ok(page.evaluate("() => window.__gg.BOSS_NAMES.kraken") == 'The Kraken', 'its name on screen is "The Kraken"')
+    ok(bool(page.evaluate("() => window.__gg.BOSS_INTRO.kraken && window.__gg.BOSS_INTRO.kraken['1'] && window.__gg.BOSS_INTRO.kraken['2']")), 'it has boss intro texts for both forms')
+    ok(r == ['kraken', 20, 20, 1, True], f'the head starts down {r}')
+    page.evaluate(STEP, [0.2, 0.05])
+    s = page.evaluate(KR_ST)
+    ok(s['n'] == 3 and s['minion'] and s['water'] and len(set(s['lanes'])) == 3, f'three tentacles rise in distinct lanes, in the water, as minions {s}')
+    # the down head takes no damage, from a pumpkin or anything else
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 5, '#fff'); }")
+    ok(page.evaluate("() => window.__b.hp") == 20, 'hits on the down head do nothing')
+    # kill two of three: they come back on their own 6 s clocks, the head stays down
+    page.evaluate(KR_KILL, [2]); page.evaluate(STEP, [5.5, 0.05])
+    s = page.evaluate(KR_ST)
+    ok(s['n'] == 1 and s['hidden'], f'two killed: one stands and the head is down after 5.5 s {s["n"]}')
+    page.evaluate(STEP, [1, 0.05])
+    s = page.evaluate(KR_ST)
+    ok(s['n'] >= 2 and s['hidden'], f'after 6 s they are back and the head is still down {s["n"]}')
+    # all three within 6 s: the head rises in the tide
+    page.evaluate(KR_KILL, [9]); page.evaluate(STEP, [0.2, 0.05])
+    s = page.evaluate(KR_ST)
+    ok(not s['hidden'] and s['n'] == 0 and s['headWater'] and 7 < s['upT'] <= 8, f'all down at once: the head rises in the water for 8 s {s}')
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 1, '#fff'); }")
+    ok(page.evaluate("() => window.__b.hp") == 19, 'the up head takes damage')
+    # it can be frozen / knocked back / whirled by nothing
+    page.evaluate("() => { const g = window.__gg, b = window.__b; const pr = { type:2, vis:2, lv:3, size:1, lane:b.lane, x:b.x, y:0, hit:new Set(), grp:{ spawned:true, small:false, kills:0 }, guar:false, trail:[] }; g.hitMonster(pr, b); }")   # an Ice hit
+    ok(page.evaluate("() => [window.__b.frozenT, window.__b.kb, window.__b.sp]") == [0, 0, 0], 'it is never frozen, knocked back or walking')
+    hp = page.evaluate("() => window.__b.hp"); page.evaluate(STEP, [8.2, 0.05])
+    s = page.evaluate(KR_ST)
+    ok(s['hidden'] and s['hp'] == hp and s['n'] == 3, f'after 8 s it dives, its health kept, and a fresh three rise {s}')
+    # the anchor: every 6 s down the tentacle's lane for 1.5x a Diver bolt; held while its fence is down
+    page.evaluate("() => { const g = window.__gg, G = g.G; G.arrows.length = 0; g.G.monsters.filter(m => m.type === 'tentacle' && !m.dead).forEach((t, i) => { t.anchT = i ? 99 : 6; if (!i) window.__t = t; }); }")
+    page.evaluate(STEP, [5.5, 0.05])
+    ok(page.evaluate("() => window.__gg.G.arrows.filter(a => a.anchor).length") == 0, 'no anchor in the first 5.5 s')
+    page.evaluate(STEP, [1.2, 0.05])
+    a = page.evaluate("() => { const t = window.__t; return window.__gg.G.arrows.filter(a => a.anchor).map(a => [a.lane === t.lane, a.dmg, a.sp]); }")
+    ok(a == [[True, 3, 0.35]], f'at 6 s it throws one anchor down its lane for 3 (1.5 x a Diver bolt) {a}')
+    w0 = page.evaluate("() => window.__gg.walls[window.__t.lane].hp"); page.evaluate(STEP, [3, 0.05])
+    ok(w0 - page.evaluate("() => window.__gg.walls[window.__t.lane].hp") == 3, 'and the anchor takes 3 off its fence')
+    page.evaluate("() => { const t = window.__t, g = window.__gg; g.walls[t.lane].hp = 0; g.G.arrows.length = 0; t.anchT = 0.1; }"); page.evaluate(STEP, [3, 0.05])
+    ok(page.evaluate("() => window.__gg.G.arrows.filter(a => a.anchor).length") == 0, 'its fence down, the anchor is held')
+    page.evaluate("() => { const g = window.__gg; g.walls[window.__t.lane].hp = 100; }"); page.evaluate(STEP, [1.5, 0.05])
+    ok(page.evaluate("() => window.__gg.G.arrows.filter(a => a.anchor).length") >= 1, 'and it flies once the fence is back')
+    # tentacles: never frozen into a walker, never knocked back, never whirled
+    ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.type === 'tentacle').every(t => t.sp === 0 && t.noKnockback)"), 'tentacles never walk and are not knocked back')
+    # death: one normal chest, the tentacles and anchors go
+    c0 = page.evaluate("() => window.__gg.save.chests.length")
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.hidden = false; b.lastHit = 0; g.damage(b, 99999, '#fff'); }"); time.sleep(0.2)
+    ch = page.evaluate("() => window.__gg.save.chests.slice(%d).map(c => c.kind)" % c0)
+    ok(ch == ['normal'] and page.evaluate("() => window.__gg.G.bossDead"), f'it gives one normal chest {ch}')
+    ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.type === 'tentacle' && !m.dead).length") == 0 and page.evaluate("() => window.__gg.G.arrows.filter(a => a.anchor).length") == 0, 'its tentacles and anchors go with it')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_kraken_level(browser, url):
+    if not R9: return
+    page, errors = open_page(browser, url)
+    d = page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[4][3]; return [L.boss, L.bossChest, L.unlockGourds, L.intro]; }")
+    ok(d[:3] == ['kraken', 'normal', ['swan']] and 'tentacle' in (d[3] or []), f'N5-4 is the Kraken night: one normal chest, unlocks the Swan, tentacle intro {d}')
+    ok(page.evaluate("() => !!window.__gg.MINTRO.tentacle"), 'the tentacle has an intro card')
+    ok(page.evaluate("() => !!window.__gg.BESTIARY.kraken && !!window.__gg.BESTIARY.tentacle"), 'the Kraken and its tentacle are in the bestiary')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_kraken_form2(browser, url):
+    if not R9: return
+    page, errors, r = kraken_page(browser, url, 2)
+    ok(r == ['kraken', 32, 32, 2, True], f'in form 2 the head has 32 health {r}')
+    page.evaluate(STEP, [0.2, 0.05])
+    ok(page.evaluate(KR_ST)['n'] == 5, 'and five tentacles rise')
+    page.evaluate(KR_KILL, [9]); page.evaluate(STEP, [0.2, 0.05]); page.evaluate(STEP, [8.3, 0.05])
+    ok(page.evaluate(KR_ST)['n'] == 5, 'a fresh five rise after each dive')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_kraken_continue(browser, url):
+    """A continued night: the head's health and phase survive; tentacles come back fresh."""
+    if not R9: return
+    for up in (False, True):
+        page, errors = open_page(browser, url)
+        nm5_start(page, 4); time.sleep(0.3)   # the real Kraken night, so a continued night finds its boss in the level
+        page.evaluate("() => { const g = window.__gg, G = g.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.projs.length = 0; G.drops.length = 0; G.idle = -1e9; G.hint = null; g.setState('pause'); g.grid.forEach(r => r.fill(null)); }")
+        page.evaluate(KR_UP, [1])
+        page.evaluate(STEP, [0.2, 0.05])
+        if up:
+            page.evaluate(KR_KILL, [9]); page.evaluate(STEP, [0.2, 0.05])
+            page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 7, '#fff'); }"); page.evaluate(STEP, [2.5, 0.05])
+        else:
+            page.evaluate("() => { const b = window.__b; b.hp = 11; }"); page.evaluate(KR_KILL, [1])
+        before = page.evaluate("() => { const b = window.__b; return [b.hidden, b.hp, Math.round(b.upT * 10) / 10, b.lane, b.p]; }")
+        page.evaluate("() => { const g = window.__gg; g.setState('play'); const c = g.continueState(); g.continueNight(c); g.setState('pause'); }")
+        page.evaluate(STEP, [0.3, 0.05])
+        after = page.evaluate("() => { const g = window.__gg, b = g.G.monsters.find(m => m.type === 'boss' && !m.dead); const ts = g.G.monsters.filter(m => m.type === 'tentacle' && !m.dead); return b ? [b.kind, b.hidden, b.hp, Math.round(b.upT * 10) / 10, b.lane, b.p, ts.length, ts.every(t => t.hp === t.maxHp)] : null; }")
+        ok(after is not None and after[0] == 'kraken' and after[1] == before[0] and after[2] == before[1], f'(up={up}) the head returns with its health and phase {before} -> {after}')
+        if up: ok(after is not None and after[6] == 0 and abs(after[3] - (before[2] - 0.3)) < 0.25 and after[4:6] == before[3:5], f'(up) it is up at the same spot with its time left, no tentacles {after}')
+        else: ok(after is not None and after[6] == 3 and after[7], f'(down) three fresh tentacles {after}')
+        ok(not errors, f'no page errors {errors[:2]}')
+        page.close()
+
+
+def check_kraken_baked(browser, url):
+    """The Kraken, its tentacle and the anchor are baked when N5-4 starts, with the Kraken capped under 12 MB at bake scale 2.5."""
+    if not R9: return
+    page, errors = open_page(browser, url)
+    C = page.evaluate("() => { const C = window.__gg.CHARS; return C.kraken && C.tentacle && C.anchor ? [Object.keys(C.kraken.clips).sort(), Object.keys(C.tentacle.clips).sort(), Object.keys(C.anchor.clips).sort(), C.kraken.maxK] : null; }")
+    ok(C is not None and C[0] == ['dive', 'idle', 'surface'] and C[1] == ['rise', 'sway', 'throw'] and C[2] == ['spin'] and C[3], f'the Kraken bakes surface, idle, dive; the tentacle rise, sway, throw; the anchor spin; maxK capped {C}')
+    page.evaluate("() => window.__gg.setBakeScale(2.5)")
+    t0 = time.time(); nm5_start(page, 4); dt = time.time() - t0
+    ok(page.evaluate("() => ['kraken', 'tentacle', 'anchor'].every(k => window.__gg.isBaked(k))"), 'starting N5-4 bakes the Kraken, the tentacle and the anchor')
+    mb = page.evaluate("() => (window.__gg.atlasBytes('kraken') + window.__gg.atlasBytes('tentacle') + window.__gg.atlasBytes('anchor')) / 1e6")
+    ok(mb < 12, f"the Kraken's frames take {mb:.1f} MB at bake scale 2.5 (limit 12)")
+    ok(dt < 3, f'the night opens in {dt:.1f} s')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_kraken_art(browser, url):
+    """A strip of the Kraken, tentacle and anchor saved for the owner, and an in-game frame (head down, tentacles up, an anchor flying)."""
+    if not R9: return
+    import base64
+    os.makedirs(SWSHOTS, exist_ok=True)
+    page, errors = open_page(browser, url)
+    strip = page.evaluate("""() => { const g = window.__gg; const rows = [['kraken', 'surface'], ['kraken', 'idle'], ['kraken', 'dive'], ['tentacle', 'rise'], ['tentacle', 'sway'], ['tentacle', 'throw'], ['anchor', 'spin']];
+      const A = rows.map(([k, c]) => g.atlas(k).clips[c]), W = Math.max(...A.map(a => a.c.width)), H = A.reduce((s, a) => s + a.fh + 4, 0), c = document.createElement('canvas'); c.width = W; c.height = H;
+      const x = c.getContext('2d'); x.fillStyle = '#3a1020'; x.fillRect(0, 0, W, H); let y = 0; for (const a of A){ x.drawImage(a.c, 0, y); y += a.fh + 4; } return c.toDataURL(); }""")
+    with open(os.path.join(SWSHOTS, 'kraken.png'), 'wb') as f: f.write(base64.b64decode(strip.split(',')[1]))
+    page.close()
+    page, errors, r = kraken_page(browser, url)
+    page.evaluate(STEP, [0.3, 0.05])
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.filter(m => m.type === 'tentacle' && !m.dead).forEach((t, i) => { t.age = 3; t.anchT = i ? 99 : 0.05; }); }")
+    page.evaluate(STEP, [0.5, 0.05])
+    page.evaluate("() => { const g = window.__gg; g.setState('pause'); }"); time.sleep(0.4)
+    page.evaluate("() => document.querySelectorAll('.overlay, [id^=ov]').forEach(e => { e.style.display = 'none'; })")
+    page.screenshot(path=os.path.join(SWSHOTS, 'krakennight.png'))
+    ok(page.evaluate("() => window.__gg.G.arrows.some(a => a.anchor)"), 'an anchor is flying in the frame')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_kraken_budget(browser, url):
+    """The head up, five tentacles and anchors in flight add no fill/stroke over 20 frames beside Divers and water balls (all baked and blitted)."""
+    if not R9: return
+    page, errors = slime_page(browser, url)
+    probe = """() => new Promise(res => { const g = window.__gg, c = g.ctx, f = c.fill, s = c.stroke, n = { fill:0, stroke:0 }; let fr = 0;
+      c.fill = function(...a){ n.fill++; return f.apply(this, a); }; c.stroke = function(...a){ n.stroke++; return s.apply(this, a); };
+      const tick = () => { if (++fr < 20) requestAnimationFrame(tick); else { delete c.fill; delete c.stroke; res(n); } }; requestAnimationFrame(tick); })"""
+    page.evaluate("() => { window.__gg.setState('play'); window.__gg.G.spawnTimer = 999; window.__gg.G.sproutT = -999; }")
+    page.evaluate("""() => { const g = window.__gg; for (let i = 0; i < 6; i++){ const e = g.spawnMonster('diver', i, true, 0.1); e.age = 5; e.hidden = false; e.upT = 99; e.sp = 0; }
+      for (let i = 0; i < 4; i++) g.G.arrows.push({ lane:i, p:0.5, sp:0, dmg:2, dead:false, water:true }); }""")
+    page.evaluate("() => new Promise(r => setTimeout(r, 400))")
+    page.evaluate(probe); base = page.evaluate(probe)
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; g.G.arrows.length = 0; }")
+    page.evaluate(KR_UP, [2])
+    page.evaluate("""() => { const g = window.__gg, G = g.G, b = window.__b; for (let i = 0; i < 5; i++){ const t = g.spawnMonster('tentacle', i, true, 0.1); t.age = 5; t.anchT = 999; }
+      b.needSet = false; b.hidden = false; b.lane = 5; b.p = 0.1; b.x = b.tx = g.LANE ? g.LANE(5) : b.x; b.upT = 999; b.age = 5;
+      for (let i = 0; i < 4; i++) G.arrows.push({ lane:i, p:0.5, sp:0, dmg:3, dead:false, anchor:true }); }""")
+    page.evaluate("() => new Promise(r => setTimeout(r, 400))")
+    page.evaluate(probe); n = page.evaluate(probe)
+    ok(n['fill'] <= base['fill'] + 20 and n['stroke'] <= base['stroke'] + 20, f'the head, five tentacles and four anchors add no fill/stroke over 20 frames beside Divers and water balls (old {base}, new {n})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_kraken': check_kraken, 'check_kraken_level': check_kraken_level, 'check_kraken_form2': check_kraken_form2, 'check_kraken_continue': check_kraken_continue,
+               'check_kraken_baked': check_kraken_baked, 'check_kraken_art': check_kraken_art, 'check_kraken_budget': check_kraken_budget})
 
 
 def main():

@@ -8,7 +8,7 @@ import { glueStep } from './glue.js';
 import { magnetSlide } from './magnet.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
 import { updateHollowMonster, reapLanes, initHollowMonster, initLamplighter, updateLamplighter, initFallenPolt, updateFallenPolt } from './hollow.js';
-import { initMarshMonster, updateMarshMonster, marshStop, growBlob } from './marsh.js';
+import { initMarshMonster, updateMarshMonster, marshStop, growBlob, updateKraken } from './marsh.js';
 import { newCastle, initKeepMonster, updateKeepMonster, keepStop, keepParked, keepSpeed, lancerHit, keepTick, updateSiege, updateFallenCount } from './keep.js';
 import { initWitchwoodMonster, updateWitchwoodMonster, toadStop, tongueFree, initTreant, updateTreant, initFallenHex, updateFallenHex } from './witchwood.js';
 import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike, initFallenGK, updateFallenGK } from './nightmare.js';
@@ -138,6 +138,7 @@ export function spawnMonster(key, lane, minion, p, formArg){
 
 /** Monsters that deliberately stay put for good: others walk past them instead of queueing behind. */
 function standsStill(o){
+  if (__RELEASE__ >= 9 && (o.kind === 'kraken' || o.type === 'tentacle')) return true;   // the Kraken's head and tentacles never walk (engine/marsh.js)
   if (o.type === 'boss') return o.p >= (o.hold || 1) - 0.001;
   if (o.type === 'archer') return o.p >= TYPES.archer.hold;
   if (o.type === 'diver') return !o.walker;
@@ -384,6 +385,7 @@ export function updateMonster(m, dt){
         if (__RELEASE__ >= 3 && m.kind === 'hollowking'){ updateHollowKing(m, dt); if (m.p >= m.hold) sp = 0; break; }
         if (__RELEASE__ >= 4 && m.kind === 'strawlord'){ updateStrawlord(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // stops exactly at hold, never past it
         if (__RELEASE__ >= 8 && m.kind === 'fallencount'){ sp = updateFallenCount(m, dt) || m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the Fallen Count (engine/keep.js): walks like the story Count, still in his trance and stun; stops exactly at hold
+        if (__RELEASE__ >= 9 && m.kind === 'kraken'){ updateKraken(m, dt); sp = 0; break; }   // the Kraken (engine/marsh.js): its head dives and rises, its tentacles throw anchors; it never walks
         if (__RELEASE__ >= 8 && m.kind === 'siegetower'){ updateSiege(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the Siege Tower (engine/keep.js); stops exactly at hold
         if (__RELEASE__ >= 5 && m.kind === 'lamplighter'){ updateLamplighter(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the Lamplighter's moods (engine/hollow.js); stops exactly at hold
         if (__RELEASE__ >= 7 && m.kind === 'treant'){ updateTreant(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // its roots (engine/witchwood.js); stops exactly at hold and never moves on

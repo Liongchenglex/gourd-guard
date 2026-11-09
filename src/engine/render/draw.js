@@ -487,6 +487,7 @@ export function drawArrows(t){
     if (__RELEASE__ >= 4 && a.fork){ drawFlyingFork(ctx, x, y, (a.spin || 0) + t * 14); continue; }   // a Hayrick's fork thrown at the fence
     if (a.mirror){ const sz = CS * 0.5; ctx.drawImage(sprites[a.vis][0], x - sz / 2, y - sz / 2, sz, sz); continue; }   // a reflected pumpkin
     if (__RELEASE__ >= 9 && a.zap){ ctx.save(); ctx.translate(x, y); ctx.scale(1.4, 1.4); drawChar(ctx, {}, 'stormbolt', null, ['fly', Math.floor(t * 14) % 6]); ctx.restore(); continue; }   // a Storm Eel's bolt: a baked frame (render/chars/marsh.js)
+    if (__RELEASE__ >= 9 && a.anchor){ ctx.save(); ctx.translate(x, y); ctx.scale(1.1, 1.1); drawChar(ctx, {}, 'anchor', null, ['spin', Math.floor(t * 12) % 8]); ctx.restore(); continue; }   // a Kraken tentacle's anchor: a baked spinning frame (render/chars/marsh.js)
     if (a.water){   // divers and Twin Tides hurl water balls: a wobbling blue blob with a highlight and a spray of droplets behind it
       const r = 11 + Math.sin(t * 18 + a.lane) * 1.5, ry = 11 - Math.sin(t * 18 + a.lane) * 1.5;
       for (let i = 1; i <= 3; i++){ ctx.fillStyle = `rgba(120,190,235,${0.5 - i * 0.12})`; ctx.beginPath(); ctx.arc(x + Math.sin(t * 25 + i * 2.1) * 5, y - 12 - i * 8, 4 - i * 0.7, 0, Math.PI * 2); ctx.fill(); }

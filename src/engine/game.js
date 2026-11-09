@@ -33,7 +33,7 @@ import { prebakePotions } from './render/potion.js';
 import { prebakeWeather } from './render/weather.js';
 import { prebakeCastlePieces } from './render/castlepieces.js';
 import { updateNets, netSnapshot, restoreNets } from './nets.js';
-import { initHidden, updateHidden, hiddenSnapshot, restoreHidden } from './marsh.js';
+import { initHidden, updateHidden, hiddenSnapshot, restoreHidden, krakenSnapshot } from './marsh.js';
 import { initTide, updateTide, tideSnapshot, restoreTide, initWhirls, whirlSnapshot, restoreWhirls } from './tide.js';
 import { prebakeTide } from './render/tide.js';
 import { lancerHit, shieldSnapshot, restoreShields, carryCheck, newCastle, updateCastlePieces, siegeSnapshot, countSnapshot } from './keep.js';
@@ -641,7 +641,7 @@ export function continueState(){
     hk:__RELEASE__ >= 3 ? hkState() : null,   // the Hollow King's phase and his standing form (Release 3)
     jukebox:{ next:g.jbNext || 0, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null },   // next: drop points already used (one per jukebox dropped)   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
     ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0, bossPhase2:living.map(m => !!m.phase2), gourd:g.def.gourd ? gourdSnapshot() : null } : {}),
-    ...(__RELEASE__ >= 5 ? { bossMood:living.map(m => bossSnapshot(m) || (__RELEASE__ >= 7 ? treantSnapshot(m) || fallenHexSnapshot(m) : null) || (__RELEASE__ >= 8 ? siegeSnapshot(m) || countSnapshot(m) : null)), rot:rotSnapshot(), poison:poisonClock() } : {}),   // a Treant's root clock, the Fallen Hexwitch's marks and standing altar too (Release 7)   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
+    ...(__RELEASE__ >= 5 ? { bossMood:living.map(m => bossSnapshot(m) || (__RELEASE__ >= 7 ? treantSnapshot(m) || fallenHexSnapshot(m) : null) || (__RELEASE__ >= 8 ? siegeSnapshot(m) || countSnapshot(m) : null) || (__RELEASE__ >= 9 ? krakenSnapshot(m) : null)), rot:rotSnapshot(), poison:poisonClock() } : {}),   // a Treant's root clock, the Fallen Hexwitch's marks and standing altar too (Release 7)   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
     ...(__RELEASE__ >= 7 ? { potions:potionSnapshot(), roots:rootSnapshot() } : {}),   // the Treant's roots as they stand; the potions on the field, their clock and what the drinkers on the field had drunk (Release 7)
     ...(__RELEASE__ >= 8 ? { nets:netSnapshot(), shields:shieldSnapshot() } : {}),   // the nets on the patch and in flight (Release 8)
     ...(__RELEASE__ >= 9 ? { tide:tideSnapshot(), whirls:whirlSnapshot(), hidden:hiddenSnapshot() } : {}) };   // the blood tide's marks passed and the shore reached, the rows hidden and their time left (Release 9)

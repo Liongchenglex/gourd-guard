@@ -11,12 +11,12 @@ const ALL5 = () => [...ALL4(), 'swan'];   // ... and the Swan, won on N5-4
 export default __RELEASE__ >= 9 ? [
   L({ level: 1, name:'The Red Tide', pattern:0, total:16, interval:3.3, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL4(), puddles:2, shoreFrac:0.2, tideMarks:[{ at:0.5, to:0.3 }],
     pool:[['drownedGhoul', 10], ['tideImp', 5]], quests:[['noTools'], ['wallMin', 55]] }),
-  // PLACEHOLDERS (Task 7): N5-2 to N5-4 stand in so the Swan's night numbers exist; Task 10 replaces them with the real nights. N5-4 gives the Swan.
+  // PLACEHOLDERS (Task 7): N5-2 to N5-4 stand in so the Swan's night numbers exist; Task 10 replaces them with the real nights. N5-4 gives the Swan and (Task 8) is the Kraken night, one normal chest; N5-13, its form 2, is not built yet (Task 10).
   L({ level: 2, name:'The Red Tide II', pattern:0, total:16, interval:3.3, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL4(), puddles:2, shoreFrac:0.2, tideMarks:[{ at:0.5, to:0.3 }],
     pool:[['drownedGhoul', 10], ['tideImp', 5]], quests:[['noTools'], ['wallMin', 55]] }),
   L({ level: 3, name:'The Red Tide III', pattern:0, total:16, interval:3.3, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL4(), puddles:2, shoreFrac:0.2, tideMarks:[{ at:0.5, to:0.3 }],
     pool:[['drownedGhoul', 10], ['tideImp', 5]], quests:[['noTools'], ['wallMin', 55]] }),
-  L({ level: 4, name:'The Red Tide IV', pattern:0, total:16, interval:3.3, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL4(), puddles:2, shoreFrac:0.2, tideMarks:[{ at:0.5, to:0.3 }], unlockGourds:['swan'],
+  L({ level: 4, name:'The Kraken', pattern:0, total:16, interval:3.3, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL4(), puddles:2, shoreFrac:0.2, tideMarks:[{ at:0.5, to:0.3 }], unlockGourds:['swan'], boss:'kraken', bossChest:'normal', intro:['tentacle'],
     pool:[['drownedGhoul', 10], ['tideImp', 5]], quests:[['noTools'], ['wallMin', 55]] }),
   // N5-5: the Swan Gourd's night (owner: given and taught here; locked in slot 1 as the Crookneck is on N4-3). Its monsters and pacing are a stand-in too.
   L({ level: 5, name:'The Black Swan', pattern:0, total:16, interval:3.3, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL5(), gourdLock:'swan', coach:'swan', puddles:2, shoreFrac:0.2, tideMarks:[{ at:0.5, to:0.3 }],

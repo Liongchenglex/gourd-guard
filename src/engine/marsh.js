@@ -22,6 +22,13 @@
 //    (HIDE_WARN s, a red wash on the row), G.hideDur[r] the time the warning will give it. A hide on a row already hidden resets it to its time at once. The
 //    drawing only changes (render/draw.js: baked red spheres); bunches, lights and launches use the pumpkins' true colours, and the hint never points into a
 //    hidden row (board.js). The Fallen blood twin calls hideRow too. A continued night keeps each row's time left (hiddenSnapshot / restoreHidden).
+//  - The Kraken (`boss` kind `kraken`, the N5-4 and N5-13 mini boss) and its Tentacles (`tentacle`): the head starts down (m.hidden: untargetable, undrawn, damage() refuses it,
+//    krakenGuard) and a set of `tentacles` Tentacles (5 in form 2) rise at distinct random spots in the tide, as minions. m.slots holds one {mon, t} per tentacle: while the head
+//    is down a fallen one's clock `t` runs `regrow` s and then it rises again; the moment every slot is down at once the head rises at a random spot in the tide (`upFor` s, m.upT),
+//    then dives and a fresh full set rises (m.needSet). Its health carries. It never walks, is never frozen or knocked back, whirlpools never take it. A Tentacle's clock `anchT`
+//    runs every `anchorEvery` s: the throw clip plays and 0.55 of the way through an anchor (a G.arrows entry with `anchor`, `anchorDmg` = 1.5 x a Diver bolt) leaves down its
+//    lane; while its fence is down the anchor is held (as the Diver's bolt). The head's fall takes every tentacle and anchor with it (krakenFalls). A continued night keeps the
+//    head's health, whether it is up, where and for how long (krakenSnapshot / restoreKraken); the tentacles come back fresh.
 
 import { TYPES, SLIME_CAP } from '../data/monsters.js';
 import { PTYPES } from '../data/pumpkins.js';
@@ -33,7 +40,7 @@ import { ROTTEN, rotCell } from './rot.js';
 import { liveShore, inWater } from './tide.js';
 import { mS, mY, spawnMonster } from './monsters.js';
 import { COLS, CS, FENCE_Y, G, GY, LANE, ROWS, gest, grid, walls } from './state.js';
-import { rnd } from './util.js';
+import { rnd, shuffle } from './util.js';
 
 export const HIDE_WARN = 1.5, HIDE_DUR = 6;   // a row is warned this long, then hidden this long (spec)
 const SING_CLIP = 1.5, NOTE_DRIFT = 2.2;   // the sing clip's length, and how long the note takes down her lane
@@ -58,6 +65,8 @@ export function initMarshMonster(m){
   }
   if (m.type === 'turtlerider'){ m.rotT = TYPES.turtlerider.rotEvery; m.winding = false; }
   if (m.type === 'siren'){ m.singT = TYPES.siren.singEvery; m.sing = 0; m.noKnockback = true; m.p = Math.max(0.02, liveShore() - 0.03); }   // she sits at the water's edge
+  if (m.type === 'boss' && m.kind === 'kraken') initKraken(m);
+  if (m.type === 'tentacle'){ m.anchT = TYPES.tentacle.anchorEvery; m.throwing = false; m.noKnockback = true; }
   if (m.type === 'eel'){   // lurks in the water from the start, as a Diver in its pool
     m.hidden = true; m.upT = TYPES.eel.down; m.fired = false; m.charged = false;
     if (!m.puddle) m.puddle = { lane:m.lane, p:Math.max(0, m.p) };
@@ -197,6 +206,93 @@ export function marshStop(m){
   return m.stops && m.stops.length ? Math.max(m.p, m.stops[0]) : Infinity;
 }
 
+// ---------- the Kraken (mini boss) and its Tentacles ----------
+const TENT_THROW = 8 / 12, TENT_LEAD = TENT_THROW * 0.55;   // the throw clip (8 frames at 12 fps); the anchor leaves the tip 0.55 of the way through (render/chars/marsh.js)
+const KR_SURFACE = 8 / 9, KR_DIVE = 8 / 9;   // the head's surface and dive clips (8 frames at 9 fps)
+export const isKraken = m => m.type === 'boss' && m.kind === 'kraken';
+
+/** A freshly spawned Kraken: the head is down (m.hidden), and its first set of tentacles rises on its first frame (needSet; a continued night replaces this, restoreKraken). */
+export function initKraken(m){
+  m.hidden = true; m.needSet = true; m.slots = []; m.upT = 0; m.noKnockback = true; m.sp = 0;
+}
+/** Where something may rise: a random spot at or above the live shore (or, on a night with no tide, in the top few percent of the field). */
+function tideP(){ const sh = liveShore(); return rnd(0.03, Math.max(0.045, sh > 0.075 ? sh - 0.03 : 0.07)); }
+const tentacleCount = m => m.form === 2 ? TYPES.kraken.form2.tentacles : TYPES.kraken.tentacles;
+/** Raise one tentacle in `lane` (or a free lane: not one that another living tentacle of this Kraken holds). */
+function raiseTentacle(m, lane){
+  const t = spawnMonster('tentacle', lane, true, tideP()); t.age = 0; t.flash = 0.2;
+  for (let i = 0; i < 8; i++) spark(t.x, mY(t) + 6, '#e8707a', 100);
+  SFX.monsterAct('tentacle', 'rise');
+  return t;
+}
+function freeLanes(m){
+  const used = new Set(m.slots.filter(sl => sl.mon && !sl.mon.dead).map(sl => sl.mon.lane));
+  return shuffle([...Array(COLS).keys()].filter(l => !used.has(l)));
+}
+/** The head is down: a fresh full set rises, in distinct lanes. */
+function raiseSet(m){
+  m.slots = [];
+  const lanes = shuffle([...Array(COLS).keys()]);
+  for (let i = 0; i < tentacleCount(m); i++) m.slots.push({ mon:raiseTentacle(m, lanes[i % COLS]), t:0 });
+  m.needSet = false;
+}
+function riseHead(m){
+  const T = TYPES.kraken, lanes = [...Array(COLS).keys()].filter(l => l !== m.lane);
+  m.lane = lanes[Math.floor(Math.random() * lanes.length)]; m.x = m.tx = LANE(m.lane); m.p = tideP();
+  m.hidden = false; m.upT = T.upFor; m.age = 0; m.flash = 0.15; m.slots = [];
+  for (let i = 0; i < 18; i++) spark(m.x, mY(m), '#e03848', 150); ring(m.x, mY(m) + 10, 46, 'rgba(255,160,150,.85)');
+  addFloat('The Kraken rises!', m.x, mY(m) - m.r - 30, '#ff8a8a', 18, 1.2);
+  SFX.bossSfx('kraken', 'rise');
+}
+function diveHead(m){
+  m.hidden = true; m.needSet = true;
+  for (let i = 0; i < 14; i++) spark(m.x, mY(m), '#e03848', 130); ring(m.x, mY(m) + 10, 46, 'rgba(255,160,150,.7)');
+  SFX.bossSfx('kraken', 'dive');
+}
+/** One frame of the Kraken (monsters.js, the boss branch): the tentacle slots while the head is down, the head's time while it is up. */
+export function updateKraken(m, dt){
+  const T = TYPES.kraken;
+  m.x = m.tx; m.sp = 0;
+  if (m.hidden){
+    if (m.needSet) raiseSet(m);
+    let down = 0;
+    m.slots.forEach((sl, i) => {
+      if (sl.mon && (sl.mon.dead || !G.monsters.includes(sl.mon))){ sl.mon = null; sl.t = T.regrow; }   // it fell: its own clock starts
+      if (!sl.mon){
+        sl.t -= dt;
+        if (sl.t <= 0){ const f = freeLanes(m); sl.mon = raiseTentacle(m, f[0] != null ? f[0] : Math.floor(Math.random() * COLS)); sl.t = 0; }
+        else down++;
+      }
+    });
+    if (m.slots.length && down === m.slots.length) riseHead(m);
+  } else {
+    m.upT -= dt;
+    if (m.upT <= 0) diveHead(m);
+  }
+}
+/** damage() (combat.js): the head under the water takes nothing. True when refused. */
+export const krakenGuard = m => isKraken(m) && m.hidden;
+/** kill() (combat.js): the head is down for good, so its tentacles and the anchors in the air go with it. */
+export function krakenFalls(m){
+  if (!isKraken(m)) return;
+  for (const o of G.monsters) if (o.type === 'tentacle' && !o.dead){ o.dead = true; for (let i = 0; i < 8; i++) chunk(o.x, mY(o), '#8a3a7a', 160); }
+  G.arrows = G.arrows.filter(a => !a.anchor);
+}
+/** What a continued night keeps of the head: whether it is up, where, and the time it has left (its health comes with every boss). */
+export const krakenSnapshot = m => isKraken(m) ? { up:!m.hidden, upT:m.upT, lane:m.lane, p:m.p } : null;
+export function restoreKraken(m, s){
+  if (!s || !isKraken(m)) return;
+  if (s.up){
+    m.hidden = false; m.needSet = false; m.slots = []; m.upT = Math.max(0.5, s.upT); m.lane = s.lane; m.x = m.tx = LANE(s.lane); m.p = s.p; m.age = 5;
+  } else { m.hidden = true; m.needSet = true; m.slots = []; }   // a fresh full set rises
+}
+function tentacleAnchor(m){
+  const T = TYPES.tentacle;
+  G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:T.anchorSp, dmg:T.anchorDmg, dead:false, anchor:true });
+  SFX.monsterAct('tentacle', 'throw');
+}
+
+
 /** The type switch of updateMonster's default branch (a monster that is walking: not frozen, chewing, knocked back or down). True when handled. */
 export function updateMarshMonster(m, dt){
   switch (m.type){
@@ -217,6 +313,14 @@ export function updateMarshMonster(m, dt){
       m.x = m.tx; m.singT -= dt; if (m.sing > 0) m.sing -= dt;
       if (m.singT <= 0){ m.singT += TYPES.siren.singEvery; sing(m); }
       return true;
+    case 'tentacle': {
+      const T = TYPES.tentacle, up = walls[m.lane] && walls[m.lane].hp > 0;
+      m.x = m.tx; m.anchT -= dt;
+      if (!up && m.anchT < TENT_LEAD){ m.anchT = TENT_LEAD; m.throwing = false; }   // its fence is down: the anchor is held (as the Diver's bolt)
+      if (up && m.anchT <= TENT_LEAD && !m.throwing){ m.throwing = true; m.anim = { clip:'throw', t:0, dur:TENT_THROW }; }
+      if (m.anchT <= 0 && up){ tentacleAnchor(m); m.anchT = T.anchorEvery; m.throwing = false; }
+      return true;
+    }
     case 'eel': {
       const T = TYPES.eel;
       m.x = m.tx; m.upT -= dt;

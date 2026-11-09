@@ -4,7 +4,7 @@
 // eases from where it is to min(to, TIDE_STOP) over SURGE_TIME; pools the shore reaches are swallowed. A night without tideMarks has
 // G.tide = null, so every story night reads shoreP() exactly as before. Every caller gates on `__RELEASE__ >= 9`.
 
-import { shoreP } from './game.js';
+import { shoreP, placePuddles } from './game.js';
 import { SFX } from './audio.js';
 import { spark, addFloat } from './combat.js';
 import { TILE_P } from './monsters.js';
@@ -19,6 +19,7 @@ const ease = u => u * u * (3 - 2 * u);
 /** Start of a night (after setG, before the pools are placed): a tide only on a night with tideMarks. */
 export function initTide(def){
   const marks = def && def.tideMarks && def.tideMarks.length ? def.tideMarks : null;
+  G.tide = null;   // read the level's own shore, not a previous tide's
   G.tide = marks ? { shore:shoreP(), from:0, target:0, t:-1, marksDone:0, tT:-99 } : null;
 }
 
@@ -39,7 +40,8 @@ export function swallowPools(){
   const s = liveShore(), gone = G.puddles.filter(pd => pd.p <= s);
   if (!gone.length) return;
   G.puddles = G.puddles.filter(pd => pd.p > s);
-  for (const m of G.monsters) if (m.puddle && gone.includes(m.puddle)){ m.puddle = { lane:m.lane, p:Math.min(m.p, s) }; if (m.p > s) m.p = s; }   // a lurker keeps its lane and now lurks in the tide
+  for (const m of G.monsters) if (m.puddle && m.hidden && gone.includes(m.puddle)){   // only a lurker still hidden in the pool moves; a Crawler or Turtle that rose from it and walks keeps its p
+    m.puddle = { lane:m.lane, p:Math.min(m.p, s) }; if (m.p > s) m.p = s; }   // a lurker keeps its lane and now lurks in the tide
   for (const pd of gone) for (let i = 0; i < 8; i++) spark(LANE(pd.lane), FIELD_TOP + pd.p * (FIELD_BOT - FIELD_TOP), '#ff8a80', 110);
 }
 
@@ -48,7 +50,7 @@ export function updateTide(dt){
   const T = G.tide, d = G.def;
   if (!T || !d || !d.tideMarks) return;
   const mk = d.tideMarks[T.marksDone];
-  if (mk && T.t < 0 && G.spawned >= Math.floor(d.total * mk.at)){
+  if (mk && T.t < 0 && G.spawned >= Math.floor((G.total || d.total) * mk.at)){
     T.marksDone++; T.tT = G.t; T.from = T.shore; T.target = Math.max(T.shore, Math.min(mk.to, TIDE_STOP())); T.t = 0;
     banner('The tide rises!', 'The blood sea creeps toward the fence.', 2.2); SFX.bossAlert();
     addFloat('The tide rises!', 195, FIELD_TOP + 40, '#ff8a80', 18, 1.2);
@@ -67,5 +69,7 @@ export const tideSnapshot = () => G.tide ? { shore:G.tide.target > G.tide.shore 
 export function restoreTide(s){
   if (!s || !G.tide) return;
   G.tide.marksDone = s.marks || 0; G.tide.shore = s.shore; G.tide.t = -1; G.tide.from = G.tide.target = s.shore;
-  swallowPools();
+  const d = G.def;   // startGame placed the pools at the start shore: lay them again below the restored one (same count), without swallow sparks
+  if (d.puddlesLayout) G.puddles = G.puddles.filter(pd => pd.p > s.shore);
+  else if (d.puddles){ G.puddles = []; placePuddles(d.puddles); }
 }

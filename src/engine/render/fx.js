@@ -711,3 +711,22 @@ export function countSpearSprite(k){ k = bakeK(k); return bake(`fcspear:${k}`, F
   S.ln(g, [[0, 66], [0, 100]], { deep:'#ffb0b0' }, .9, .55);
 }); }
 export function prebakeCountFx(k){ countWarnSprite(k); countBoltSprite(k); countSpearSprite(k); }
+
+// ---------- Whirlpools (Release 9): one baked spiral per colour and canvas scale, spun and pulsed when blitted ----------
+const WHIRL_R = CS * 0.46;
+/** A whirlpool disc in `col`: a dark core, three curling arms and a bright rim. Baked once per colour and scale; never drawn live. */
+export function whirlSprite(col, k){
+  const R = WHIRL_R, pad = 4;
+  return bake('whirl:' + col + ':' + bakeK(k).toFixed(2), R * 2 + pad * 2, R * 2 + pad * 2, R + pad, R + pad, bakeK(k), g => {
+    const core = g.createRadialGradient(0, 0, 0, 0, 0, R); core.addColorStop(0, 'rgba(10,0,10,.85)'); core.addColorStop(.55, rgba(col, .38)); core.addColorStop(1, rgba(col, 0));
+    g.fillStyle = core; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.fill();
+    g.lineCap = 'round';
+    for (let a = 0; a < 3; a++){
+      g.strokeStyle = rgba(col, .9); g.lineWidth = 3.2; g.beginPath();
+      for (let i = 0; i <= 18; i++){ const u = i / 18, r = R * (.16 + .78 * u), ang = a * TAU / 3 + u * 3.4; const x = Math.cos(ang) * r, y = Math.sin(ang) * r; i ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.2; g.stroke();
+    }
+    g.strokeStyle = rgba(col, .8); g.lineWidth = 2; g.beginPath(); g.arc(0, 0, R * .96, 0, TAU); g.stroke();
+  });
+}

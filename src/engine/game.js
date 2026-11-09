@@ -33,7 +33,7 @@ import { prebakePotions } from './render/potion.js';
 import { prebakeWeather } from './render/weather.js';
 import { prebakeCastlePieces } from './render/castlepieces.js';
 import { updateNets, netSnapshot, restoreNets } from './nets.js';
-import { initTide, updateTide, tideSnapshot, restoreTide } from './tide.js';
+import { initTide, updateTide, tideSnapshot, restoreTide, initWhirls, whirlSnapshot, restoreWhirls } from './tide.js';
 import { prebakeTide } from './render/tide.js';
 import { lancerHit, shieldSnapshot, restoreShields, carryCheck, newCastle, updateCastlePieces, siegeSnapshot, countSnapshot } from './keep.js';
 import { prebakeNets } from './render/nets.js';
@@ -184,6 +184,7 @@ export function startGame(mode, n, loadout, gourds){
   if (def && def.castlesLayout) for (const [lane, p, kind] of def.castlesLayout) G.castles.push(castleEntry(lane, p, kind, def.castles ? def.castles.hp : 12));
   else if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def && def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def && def.puddles) placePuddles(def.puddles);
+  if (__RELEASE__ >= 9 && def) initWhirls(def);   // whirlpool pairs, now the pools stand (Release 9)
   if (__RELEASE__ >= 4 && def){ startFires(def); if (def.nightmare) prebakeFire(); }   // after the castles, so random fires skip them; the flame strip is baked now, not on first sight
   if (__RELEASE__ >= 5 && def && def.poison) prebakePoison();   // the fog and its warning strips, baked now
   if (__RELEASE__ >= 7 && def && bakeKeys(def).some(k => k.split('|')[0] === 'triptych')) prebakeBarrier();   // the Triptych's barrier frames (Release 7, ~4-6 MB), only on a night that can spawn one
@@ -627,7 +628,7 @@ export function continueState(){
     ...(__RELEASE__ >= 5 ? { bossMood:living.map(m => bossSnapshot(m) || (__RELEASE__ >= 7 ? treantSnapshot(m) || fallenHexSnapshot(m) : null) || (__RELEASE__ >= 8 ? siegeSnapshot(m) || countSnapshot(m) : null)), rot:rotSnapshot(), poison:poisonClock() } : {}),   // a Treant's root clock, the Fallen Hexwitch's marks and standing altar too (Release 7)   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
     ...(__RELEASE__ >= 7 ? { potions:potionSnapshot(), roots:rootSnapshot() } : {}),   // the Treant's roots as they stand; the potions on the field, their clock and what the drinkers on the field had drunk (Release 7)
     ...(__RELEASE__ >= 8 ? { nets:netSnapshot(), shields:shieldSnapshot() } : {}),   // the nets on the patch and in flight (Release 8)
-    ...(__RELEASE__ >= 9 ? { tide:tideSnapshot() } : {}) };   // the blood tide's marks passed and the shore reached (Release 9)
+    ...(__RELEASE__ >= 9 ? { tide:tideSnapshot(), whirls:whirlSnapshot() } : {}) };   // the blood tide's marks passed and the shore reached (Release 9)
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
 export function continueNight(c){
@@ -642,6 +643,7 @@ export function continueNight(c){
   if (__RELEASE__ >= 8 && c.nets) restoreNets(c.nets);   // the same nets, on the same pumpkins where they still stand (Release 8)
   if (__RELEASE__ >= 8 && c.nets) restoreShields(c.shields);   // red nets wait for their owner's type to come back, a Bride's veil for the next Bride (engine/keep.js)
   if (__RELEASE__ >= 7 && c.potions) restorePotions(c.potions);   // the same potions stand, the clock carries on, and the drinkers come back with what they drank (Release 7)
+  if (__RELEASE__ >= 9 && c.whirls) restoreWhirls(c.whirls);   // the same whirlpool pairs (Release 9)
   if (__RELEASE__ >= 9 && c.tide) restoreTide(c.tide);   // the same shore and marks; no surge replays (Release 9)
   if (__RELEASE__ >= 7 && c.roots) restoreRoots(c.roots);   // the Treant's roots stand where they stood, with their hits left and their age (Release 7)
   if (__RELEASE__ >= 4 && c.bossSpawned && c.bossPhase2) G.bossPhase2 = c.bossPhase2.slice();   // spawner.js puts each returning boss back in its phase

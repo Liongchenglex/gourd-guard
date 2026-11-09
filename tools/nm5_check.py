@@ -33,7 +33,7 @@ def marsh_page(browser, url):
 # ---------- Task 1: the track, the book page, the blood sea ----------
 # Names no lower build may hold. Not listed, because older builds already hold them for story reasons: 'Kraken' and 'Turtle Rider'
 # (comments in ported art, absent from a minified bundle but not from the source) and 'e4d9bd' (the Protector Gourd's shell colour).
-R9_NAMES = ['Blood Slime', 'Storm Eel', 'Siren', 'Swan Gourd', 'Fallen Twin Tides', 'Whirlpool', 'Beat Nightmare 4-4', 'marshN-blood', 'The tide rises!']
+R9_NAMES = ['Blood Slime', 'Storm Eel', 'Siren', 'Swan Gourd', 'Fallen Twin Tides', 'Whirlpool', 'Beat Nightmare 4-4', 'marshN-blood', 'The tide rises!', '#4affd0']
 
 
 def check_r9_absent(browser, url):
@@ -285,9 +285,124 @@ def check_story_shore_unchanged(browser, url):
     page.close()
 
 
+# ---------- Task 3: whirlpools ----------
+def whirl_page(browser, url, pairs=()):
+    """A paused N5 night, no whirlpools, then `pairs` added by hand. Returns (page, errors)."""
+    page, errors = marsh_page(browser, url)
+    page.evaluate("""(pairs) => { const g = window.__gg, G = g.G; G.def.whirlpools = null; G.whirls = []; window.__added = pairs.map(pr => g.addWhirlPair({ lane:pr[0][0], p:pr[0][1] }, { lane:pr[1][0], p:pr[1][1] })); }""", list(pairs))
+    return page, errors
+
+
+def check_whirl_move(browser, url):
+    if not R9: return
+    page, errors = whirl_page(browser, url, [[(1, 0.1), (3, 0.18)]])
+    ok(page.evaluate("() => window.__added") == [True], 'a pair in the sea is placed')
+    page.evaluate("""() => { const g = window.__gg, m = g.spawnMonster('drownedGhoul', 1, false, 0.099); m.sp = 0.5; m.hp = 2.5; m.burnLeft = 2; m.burnAmt = 1; m.burnTick = 9; m.slowT = 5; window.__m = m; }""")
+    page.evaluate("() => window.__gg.update(0.05)")
+    r = page.evaluate("() => { const m = window.__m, g = window.__gg; return [m.lane, m.p, m.x, m.tx, g.LANE(3), m.hp, m.burnLeft, m.slowT, m.whirlCool]; }")
+    ok(r[0] == 3 and abs(r[1] - 0.18) < 0.03 and r[2] == r[4] and r[3] == r[4], f'a ghoul walking into end A comes out at end B (lane, p, x, tx) {r[:5]}')
+    ok(r[5] == 2.5 and r[6] == 2 and r[7] > 4.5, f'with its health, burn and slow unchanged {r[5:8]}')
+    ok(r[8] > 1.5, f'and a cool-down set {r[8]}')
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; window.__gg.G.whirls = []; window.__gg.addWhirlPair({ lane:2, p:0.1 }, { lane:2, p:0.17 }); const m = window.__gg.spawnMonster('drownedGhoul', 2, false, 0.099); m.sp = 0.5; window.__m = m; window.__gg.update(0.05); }")
+    r = page.evaluate("() => [window.__m.lane, window.__m.p]")
+    ok(r[0] == 2 and abs(r[1] - 0.17) < 0.03, f'a pair in the same lane works {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_whirl_never(browser, url):
+    if not R9: return
+    page, errors = whirl_page(browser, url, [[(1, 0.1), (3, 0.18)]])
+    r = page.evaluate("""() => { const g = window.__gg, out = {};
+      const tryTake = (m) => { m.p = 0.11; g.whirlStep(m, 0.09); return [m.lane, m.p]; };
+      out.boss = tryTake(g.spawnMonster('boss:poltergeist', 1, false, 0.09));
+      out.diver = tryTake(g.spawnMonster('diver', 1, false, 0.09));
+      const f = g.spawnMonster('drownedGhoul', 1, false, 0.09); f.frozenT = 3; out.frozen = tryTake(f);
+      const e = g.spawnMonster('drownedGhoul', 1, false, 0.09); e.eating = true; out.eating = tryTake(e);
+      const c = g.spawnMonster('drownedGhoul', 1, false, 0.09); c.rise = 2; out.rising = tryTake(c);
+      const h = g.spawnMonster('drownedGhoul', 1, false, 0.09); h.hidden = true; out.hidden = tryTake(h);
+      const ok_ = g.spawnMonster('drownedGhoul', 1, false, 0.09); out.control = tryTake(ok_);
+      return out; }""")
+    for k in ('boss', 'diver', 'frozen', 'eating', 'rising', 'hidden'):
+        ok(r[k][0] == 1 and abs(r[k][1] - 0.11) < 1e-9, f'{k} on an end is not taken {r[k]}')
+    ok(r['control'][0] == 3, f'the same step takes an ordinary ghoul {r["control"]}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_whirl_edges(browser, url):
+    if not R9: return
+    page, errors = tide_page(browser, url, [{'at': 0.3, 'to': 0.5}], puddles=[[2, 0.45]], shore=0.3)
+    page.evaluate("() => { const g = window.__gg; g.G.whirls = []; window.__added = [g.addWhirlPair({ lane:2, p:0.45 }, { lane:0, p:0.1 })]; }")
+    ok(page.evaluate("() => window.__added") == [True], 'an end may sit in a pool')
+    # knocked back over an end
+    r = page.evaluate("""() => { const g = window.__gg, m = g.spawnMonster('drownedGhoul', 0, false, 0.12); m.sp = 0; m.kb = 0.05; window.__k = m;
+      for (let i = 0; i < 3; i++) g.update(0.05); return [m.lane, m.p]; }""")
+    ok(r[0] == 0 and r[1] < 0.12, f'a monster knocked back over an end is not taken {r}')
+    r = page.evaluate("() => { const g = window.__gg, m = g.spawnMonster('drownedGhoul', 0, false, 0.12); g.whirlStep(m, 0.14); return [m.lane, m.p]; }")
+    ok(r[0] == 0 and abs(r[1] - 0.12) < 1e-9, f'(a backward step across an end is never a crossing) {r}')
+    # the cool-down
+    page.evaluate("""() => { const g = window.__gg, G = g.G; G.monsters.length = 0; window.__m = g.spawnMonster('drownedGhoul', 0, false, 0.099); window.__m.sp = 0.5; g.update(0.05); }""")
+    r = page.evaluate("() => [window.__m.lane, window.__m.p]")
+    ok(r[0] == 2, f'taken at end 0.1 of lane 0 (out at the pool end) {r}')
+    page.evaluate("() => { const m = window.__m; m.sp = 0; m.p = 0.46; window.__gg.whirlStep(m, 0.44); }")
+    r = page.evaluate("() => [window.__m.lane, window.__m.p]")
+    ok(r[0] == 2 and abs(r[1] - 0.46) < 1e-9, f'just out, it cannot go back for 2 s {r}')
+    page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 43; i++) g.update(0.05); window.__m.p = 0.44; }")
+    page.evaluate("() => { const m = window.__m; m.p = 0.46; window.__gg.whirlStep(m, 0.44); }")
+    ok(page.evaluate("() => window.__m.lane") == 0, 'after the 2 s it can be taken again (the pool end sends it back to lane 0)')
+    # the tide swallows the pool: the end keeps working
+    page.evaluate("() => { const g = window.__gg, G = g.G; G.monsters.length = 0; G.spawned = 6; }"); step(page, 1.2)
+    ok(page.evaluate("() => window.__gg.G.puddles.length") == 0 and page.evaluate("() => window.__gg.liveShore()") >= 0.5 - 1e-6, 'the pool is swallowed')
+    ok(page.evaluate("() => window.__gg.whirlSnapshot().length") == 1, 'its pair is still standing')
+    r = page.evaluate("() => { const g = window.__gg, m = g.spawnMonster('drownedGhoul', 2, false, 0.46); m.p = 0.46; g.whirlStep(m, 0.44); return [m.lane, m.p]; }")
+    ok(r[0] == 0 and abs(r[1] - 0.1) < 1e-9, f'an end in a pool the tide swallowed still works (now in the tide) {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_whirl_place(browser, url):
+    if not R9: return
+    page, errors = whirl_page(browser, url)
+    r = page.evaluate("""() => { const g = window.__gg; return [g.addWhirlPair({ lane:1, p:0.9 }, { lane:2, p:0.1 }), g.addWhirlPair({ lane:1, p:0.1 }, { lane:2, p:0.9 }), g.G.whirls.length]; }""")
+    ok(r == [False, False, 0], f'a dry end is refused, either end {r}')
+    r = page.evaluate("""() => { const g = window.__gg, a = []; for (let i = 0; i < 5; i++) a.push(g.addWhirlPair({ lane:i, p:0.05 }, { lane:i, p:0.15 })); return [a, g.G.whirls.length, g.WHIRL_MAX]; }""")
+    ok(r == [[True, True, True, True, False], 4, 4], f'a 5th pair is refused {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_whirl_continue(browser, url):
+    if not R9: return
+    page, errors = whirl_page(browser, url, [[(1, 0.1), (3, 0.18)], [(0, 0.05), (4, 0.15)]])
+    before = page.evaluate("() => window.__gg.whirlSnapshot()")
+    r = page.evaluate("""() => { const g = window.__gg, c = g.continueState(); c.remaining = 8; g.continueNight(c); return g.whirlSnapshot(); }""")
+    ok(r == before and len(r) == 2, f'the pairs survive a continue {before} -> {r}')
+    ok(page.evaluate("() => window.__gg.G.whirls.map(w => w.col)") == page.evaluate("() => window.__gg.WHIRL_COLOURS.slice(0, 2)"), 'each pair keeps its colour')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_whirl_budget(browser, url):
+    if not R9: return
+    page, errors = whirl_page(browser, url, [[(0, 0.05), (4, 0.15)], [(1, 0.08), (3, 0.12)], [(2, 0.05), (2, 0.15)], [(0, 0.12), (4, 0.06)]])
+    ok(page.evaluate("() => window.__gg.G.whirls.length") == 4, 'four pairs stand')
+    probe = """() => { const g = window.__gg, c = g.ctx, d = c.drawImage, f = c.fill, s = c.stroke, n = { img:0, fill:0, stroke:0 };
+      c.drawImage = function(...a){ n.img++; return d.apply(this, a); }; c.fill = function(...a){ n.fill++; return f.apply(this, a); }; c.stroke = function(...a){ n.stroke++; return s.apply(this, a); };
+      try { g.drawWhirls(1.3); } finally { delete c.drawImage; delete c.fill; delete c.stroke; } return n; }"""
+    page.evaluate(probe)   # the first call bakes
+    n = page.evaluate(probe)
+    ok(0 < n['img'] <= 8 and n['fill'] == 0 and n['stroke'] == 0, f'4 pairs add at most 8 drawImage and no fill/stroke {n}')
+    shot = os.environ.get('GG_WHIRL_SHOT')
+    if shot:
+        page.evaluate("() => document.querySelectorAll('.overlay, [id^=ov]').forEach(e => { e.style.display = 'none'; })"); time.sleep(0.4); page.screenshot(path=shot)
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 CHECKS = {'check_r9_absent': check_r9_absent, 'check_n5_track': check_n5_track, 'check_n5_blood_sea': check_n5_blood_sea, 'check_n5_book': check_n5_book,
           'check_tide_marks': check_tide_marks, 'check_tide_live_shore': check_tide_live_shore, 'check_tide_limits': check_tide_limits, 'check_tide_swallow_diver': check_tide_swallow_diver,
-          'check_tide_swallow_walker': check_tide_swallow_walker, 'check_tide_boss_total': check_tide_boss_total, 'check_tide_continue': check_tide_continue, 'check_tide_budget': check_tide_budget, 'check_story_shore_unchanged': check_story_shore_unchanged}
+          'check_tide_swallow_walker': check_tide_swallow_walker, 'check_tide_boss_total': check_tide_boss_total, 'check_tide_continue': check_tide_continue, 'check_tide_budget': check_tide_budget, 'check_story_shore_unchanged': check_story_shore_unchanged, 'check_whirl_move': check_whirl_move, 'check_whirl_never': check_whirl_never, 'check_whirl_edges': check_whirl_edges, 'check_whirl_place': check_whirl_place, 'check_whirl_continue': check_whirl_continue, 'check_whirl_budget': check_whirl_budget}
 
 
 def main():

@@ -13,6 +13,7 @@ import { initWitchwoodMonster, updateWitchwoodMonster, toadStop, tongueFree, ini
 import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike, initFallenGK, updateFallenGK } from './nightmare.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
+import { whirlStep } from './tide.js';
 import { PTYPES } from '../data/pumpkins.js';
 import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, LANE, grid, ROWS, GY, W, walls } from './state.js';
 import { clamp, rnd, shuffle } from './util.js';
@@ -209,6 +210,7 @@ export function updateMonster(m, dt){
   m.age += dt; m.ph += dt;
   if (__RELEASE__ >= 4 && m.rush > 0) m.rush -= dt;   // a Cinder Rooster's crow: faster while it lasts (engine/nightmare.js)
   if (m.flash > 0) m.flash -= dt;
+  if (__RELEASE__ >= 9 && m.whirlCool > 0) m.whirlCool -= dt;   // just out of a whirlpool: not taken again yet (engine/tide.js)
   if (m.anim){ m.anim.t += dt; if (m.anim.t >= m.anim.dur) m.anim = null; }   // a skill animation playing over the top (render/anim.js)
   if (m.rise > 0){   // collapsed mummy: lies still, untargetable, then stands back up at full health
     m.rise -= dt;
@@ -446,7 +448,9 @@ export function updateMonster(m, dt){
   if (__RELEASE__ >= 8) np = Math.min(np, keepStop(m));   // a Lobber Cart parks at its spot and never goes on to chew (engine/keep.js)
   if (__RELEASE__ >= 7 && m.type === 'toad') np = Math.min(np, toadStop(m));   // the Cauldron Toad stops at its tongue hold while its fence stands (engine/witchwood.js)
   if (m.chewing && !m.chewing.dead) np = Math.min(np, m.chewing.p);   // held at a scarecrow
+  const pPrev = m.p;
   if (np > m.p) m.p = np;
+  if (__RELEASE__ >= 9 && m.p > pPrev && whirlStep(m, pPrev)) return;   // a whirlpool end crossed: out of the other end (engine/tide.js)
   if (__RELEASE__ >= 8 && m.p >= 1 && m.type === 'lancer' && lancerHit(m)) return;   // the charge lands: half the fence, never its last 1; then it stays and chews (engine/keep.js)
   if (__RELEASE__ >= 4 && m.p >= 1 && m.type === 'crow' && crowStrike(m)) return;   // over the fence and into the patch (engine/nightmare.js)
   if (m.p >= 1){ m.p = 1; m.eating = true; if (G.q){ G.q.touched[m.type] = true; if (__RELEASE__ >= 5 && TYPES[m.type] && TYPES[m.type].questAs) G.q.touched[TYPES[m.type].questAs] = true; } }   // quests: "do not let a ghoul reach the fence" (a Fogwalker 2 counts as a fogwalker: questAs, Release 5)

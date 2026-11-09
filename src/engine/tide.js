@@ -8,7 +8,7 @@ import { shoreP, placePuddles } from './game.js';
 import { SFX } from './audio.js';
 import { spark, addFloat } from './combat.js';
 import { TILE_P } from './monsters.js';
-import { FIELD_BOT, FIELD_TOP, G, LANE } from './state.js';
+import { COLS, FIELD_BOT, FIELD_TOP, G, LANE } from './state.js';
 import { banner } from '../ui/hud.js';
 
 export const SURGE_TIME = 0.8;   // seconds for the wave to sweep (spec)
@@ -72,4 +72,42 @@ export function restoreTide(s){
   const d = G.def;   // startGame placed the pools at the start shore: lay them again below the restored one (same count), without swallow sparks
   if (d.puddlesLayout) G.puddles = G.puddles.filter(pd => pd.p > s.shore);
   else if (d.puddles){ G.puddles = []; placePuddles(d.puddles); }
+}
+
+// ---------- Whirlpools (Release 9; spec Part 2): pairs of ends in water that carry a walking monster from one end to the other ----------
+export const WHIRL_MAX = 4;     // pairs on a night (owner)
+export const WHIRL_COOL = 2;    // seconds a monster that just came out cannot be taken again (our number)
+export const WHIRL_COLOURS = ['#ff4a4a', '#ffb04a', '#c04aff', '#4affd0'];   // one per pair, so linked ends read at a glance
+/** Never taken: the water dwellers surface rather than walk (the Kraken's tentacles, Divers, Storm Eels, the Siren); sacks and jukeboxes span two lanes. Bosses are checked by type. */
+const WHIRL_NEVER = new Set(['diver', 'eel', 'siren', 'tentacle', 'kraken', 'sack', 'jukebox']);
+
+/** Start of a night, after the pools are placed: the level's own pairs (an end the level puts on dry land is refused). */
+export function initWhirls(def){
+  G.whirls = [];
+  if (def && def.whirlpools) for (const [a, b] of def.whirlpools) addWhirlPair(a, b);
+}
+/** Stand a pair: false when 4 pairs already stand or when either end is not in water now. Each end is its own {lane, p}, so it stays when a pool under it is swallowed. */
+export function addWhirlPair(a, b){
+  if (!G.whirls) G.whirls = [];
+  if (G.whirls.length >= WHIRL_MAX || !a || !b || !inWater(a.lane, a.p) || !inWater(b.lane, b.p)) return false;
+  G.whirls.push({ a:{ lane:a.lane, p:a.p }, b:{ lane:b.lane, p:b.p }, col:WHIRL_COLOURS[G.whirls.length] });
+  return true;
+}
+/** After a walk step (monsters.js): a monster that crossed an end's p going down the field, in that end's lane, comes out of the other end. */
+export function whirlStep(m, pPrev){
+  if (!G.whirls || !G.whirls.length) return false;
+  if (m.dead || m.type === 'boss' || m.boss || WHIRL_NEVER.has(m.type) || m.whirlCool > 0 || m.frozenT > 0 || m.eating || m.rise > 0 || m.hidden || m.kb > 0 || m.p <= pPrev) return false;
+  for (const w of G.whirls) for (const [from, to] of [[w.a, w.b], [w.b, w.a]]){
+    if (from.lane !== m.lane || !(pPrev < from.p && m.p >= from.p)) continue;
+    m.lane = to.lane; m.x = m.tx = LANE(to.lane); m.p = to.p; m.whirlCool = WHIRL_COOL; m.chewing = null;
+    for (let i = 0; i < 6; i++) spark(m.x, FIELD_TOP + m.p * (FIELD_BOT - FIELD_TOP), w.col, 90);
+    return true;
+  }
+  return false;
+}
+export const whirlSnapshot = () => (G.whirls || []).map(w => [[w.a.lane, w.a.p], [w.b.lane, w.b.p]]);
+/** A continued night: the same pairs, in their colours, wherever they stood (the water under them is as it was). */
+export function restoreWhirls(s){
+  G.whirls = [];
+  for (const [a, b] of s || []) if (G.whirls.length < WHIRL_MAX && a[0] >= 0 && a[0] < COLS && b[0] >= 0 && b[0] < COLS) G.whirls.push({ a:{ lane:a[0], p:a[1] }, b:{ lane:b[0], p:b[1] }, col:WHIRL_COLOURS[G.whirls.length] });
 }

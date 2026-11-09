@@ -26,6 +26,7 @@
  *   every `every` s, `count` [min, max] potions land on random free field tiles (the fire band, spread across lanes), of `kinds` (all three
  *   when left out), never more than `cap` (6 when left out) on the field
  * @property {{at:number, to:number}[]} [tideMarks]  the rising blood tide (Release 9, src/engine/tide.js): at each `at` (a fraction of `total`, arrivals) the shore surges to `to` (a field fraction, held at one tile row before the fence); sorted by `at`
+ * @property {Array<[{lane:number, p:number}, {lane:number, p:number}]>} [whirlpools]  whirlpool pairs (Release 9, engine/tide.js), up to 4: a walking monster that crosses one end comes out of the other; every end in water (a pool or the sea)
  * @property {number[]} [brewMarks]  brew marks on the spawn bar (Release 7): fractions of `total`; at each, a swoop of crows and the potion clock cut by a quarter; the bar counts arrivals
  * @property {Array<[number, number]>} [gravesLayout]  explicit grave cells [row, col] on the 5×7 patch (overrides `graves`)
  * @property {number[]} [laneWeights]   relative spawn weight per lane (7 numbers); lanes at 0 never spawn
@@ -94,6 +95,6 @@ export function expandLevel(def, n){
     ...(__RELEASE__ >= 5 ? { poison:def.poison || null, gourds:def.gourds || null } : {}),
     ...(__RELEASE__ >= 7 ? { potions:def.potions || null, brewMarks:def.brewMarks || null } : {}),
     ...(__RELEASE__ >= 8 ? { gourdLock:def.gourdLock || null } : {}),
-    ...(__RELEASE__ >= 9 ? { tideMarks:def.tideMarks || null } : {}),
+    ...(__RELEASE__ >= 9 ? { tideMarks:def.tideMarks || null, whirlpools:def.whirlpools || null } : {}),
     nightmare:!!def.nightmare, label:def.nightmare ? `N${def.world}-${def.level}` : `${def.world}-${def.level}` };
 }

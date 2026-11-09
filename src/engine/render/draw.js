@@ -13,7 +13,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite, magSparkSprite } from './tools.js';
-import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR } from './fx.js';
+import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, whirlSprite, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -62,6 +62,7 @@ export function render(){
   drawPreview(t);
   if ((g.def && g.def.sea) || g.sea) drawSea(t);
   drawPuddles(t);
+  if (__RELEASE__ >= 9 && g.whirls && g.whirls.length) drawWhirls(t);   // whirlpool pairs (Release 9): under the monsters
   if (__RELEASE__ >= 3) drawGlue();
   if (__RELEASE__ >= 4 && g.fires && g.fires.length) drawFires(g.fires, t);   // fire tiles (Release 4): one baked frame each, under the monsters
   if (__RELEASE__ >= 7 && g.roots && g.roots.length) drawRoots(ctx, g.roots, false);   // the Treant's mid-field roots (Release 7): one baked frame each, under the monsters
@@ -294,6 +295,21 @@ export function drawPuddles(t){
       ctx.beginPath(); ctx.ellipse(x + (j ? 4 : -4), y + (j ? 1.5 : -1.5), rx * s, ry * s, 0, 0, TAU); ctx.stroke();
     }
   }
+  ctx.globalAlpha = 1;
+}
+/** Whirlpool pairs (Release 9): each end is one baked spiral blitted spinning, with a pulsing alpha. Two drawImage a pair, no paths (perf rule). */
+export function drawWhirls(t){
+  if (!G.whirls) return;
+  const h = FIELD_BOT - FIELD_TOP;
+  G.whirls.forEach((w, i) => {
+    const sp = whirlSprite(w.col, K);
+    for (const [e, ph] of [[w.a, 0], [w.b, 1.6]]){
+      ctx.save(); ctx.translate(LANE(e.lane), FIELD_TOP + e.p * h); ctx.scale(1, 0.62); ctx.rotate((t * 1.6 + i + ph) * (ph ? -1 : 1));
+      ctx.globalAlpha = 0.7 + 0.25 * Math.sin(t * 3 + i * 1.3 + ph);
+      ctx.drawImage(sp.c, -sp.ox, -sp.oy, sp.w, sp.h);
+      ctx.restore();
+    }
+  });
   ctx.globalAlpha = 1;
 }
 /** Is this night on the Marsh nightmare's blood sea (Release 9: WORLDS entry with scene 'marshN')? */

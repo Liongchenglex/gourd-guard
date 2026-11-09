@@ -81,6 +81,7 @@ export function restoreTide(s){
   const d = G.def;   // startGame placed the pools at the start shore: lay them again below the restored one (same count), without swallow sparks
   if (d.puddlesLayout) G.puddles = G.puddles.filter(pd => pd.p > s.shore);
   else if (d.puddles){ G.puddles = []; placePuddles(d.puddles); }
+  if (G.whirls) for (const w of G.whirls) for (const e of [w.a, w.b]) if (e.wet) e.p = liveShore() - WHIRL_EDGE;   // a snapshot taken mid-surge holds the target shore: wet ends follow it, as carryWhirlEnds does
 }
 
 // ---------- Whirlpools (Release 9; spec Part 2): pairs of ends in water that carry a walking monster from one end to the other ----------

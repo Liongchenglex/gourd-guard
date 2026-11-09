@@ -226,6 +226,18 @@ def check_tide_swallow_walker(browser, url):
     page.close()
 
 
+def check_tide_marks_boss(browser, url):
+    """A boss night's bar tracks the boss's health: no tide marks there; a normal tide night keeps them."""
+    if not R9: return
+    page, errors = tide_page(browser, url, [{'at': 0.3, 'to': 0.4}, {'at': 0.6, 'to': 0.6}])
+    page.evaluate("() => { window.__gg.updateHud(true); }")
+    ok(page.evaluate("() => document.querySelectorAll('.tdMark').length") == 2, 'a normal tide night shows its marks')
+    page.evaluate("() => { const g = window.__gg; g.G.def.boss = 'kraken'; g.updateHud(true); }")
+    ok(page.evaluate("() => document.querySelectorAll('.tdMark').length") == 0, 'a boss night with tideMarks shows none')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 def check_tide_boss_total(browser, url):
     if not R9: return
     page, errors = tide_page(browser, url, [{'at': 0.5, 'to': 0.5}], total=39, shore=0.3)
@@ -428,6 +440,21 @@ def check_whirl_swallowed_continue(browser, url):
 
 
 
+def check_whirl_surge_continue(browser, url):
+    """A continue taken mid-surge: the wet whirl ends follow the restored (target) shore, not the shore they had at the snapshot."""
+    if not R9: return
+    page, errors = tide_page(browser, url, [{'at': 0.3, 'to': 0.5}], puddles=[])
+    page.evaluate("() => { const g = window.__gg; g.G.whirls = []; window.__ok = g.addWhirlPair({ lane:1, p:0.1 }, { lane:3, p:0.12 }); g.G.spawned = 6; }")
+    step(page, 0.3)
+    mid = page.evaluate("() => [window.__gg.shoreP(), window.__gg.G.tide.t]")
+    ok(0.2 < mid[0] < 0.5 and mid[1] >= 0, f'mid-surge {mid}')
+    page.evaluate("() => { const g = window.__gg, c = g.continueState(); c.remaining = 8; g.continueNight(c); }")
+    r = page.evaluate("() => [window.__gg.shoreP(), window.__gg.whirlSnapshot()]")
+    ok(abs(r[0] - 0.5) < 1e-6 and all(e[1] >= r[0] - 0.0101 for w in r[1] for e in w if len(e) > 2), f'wet ends sit at the restored shore edge, not in the sea behind it {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 def check_whirl_sea_end(browser, url):
     """An end placed out in the sea sits at the water's edge from the start (the blue Fallen twin's pairs too) and throws a ghoul spawned in its lane."""
     if not R9: return
@@ -468,7 +495,7 @@ def check_whirl_budget(browser, url):
 
 CHECKS = {'check_r9_absent': check_r9_absent, 'check_n5_track': check_n5_track, 'check_n5_blood_sea': check_n5_blood_sea, 'check_n5_book': check_n5_book,
           'check_tide_marks': check_tide_marks, 'check_tide_live_shore': check_tide_live_shore, 'check_tide_limits': check_tide_limits, 'check_tide_swallow_diver': check_tide_swallow_diver,
-          'check_tide_swallow_walker': check_tide_swallow_walker, 'check_tide_boss_total': check_tide_boss_total, 'check_tide_continue': check_tide_continue, 'check_tide_budget': check_tide_budget, 'check_story_shore_unchanged': check_story_shore_unchanged, 'check_whirl_move': check_whirl_move, 'check_whirl_never': check_whirl_never, 'check_whirl_edges': check_whirl_edges, 'check_whirl_place': check_whirl_place, 'check_whirl_continue': check_whirl_continue, 'check_whirl_budget': check_whirl_budget, 'check_whirl_swallowed': check_whirl_swallowed, 'check_whirl_sea_end': check_whirl_sea_end, 'check_whirl_swallowed_continue': check_whirl_swallowed_continue}
+          'check_tide_swallow_walker': check_tide_swallow_walker, 'check_tide_boss_total': check_tide_boss_total, 'check_tide_marks_boss': check_tide_marks_boss, 'check_whirl_surge_continue': check_whirl_surge_continue, 'check_tide_continue': check_tide_continue, 'check_tide_budget': check_tide_budget, 'check_story_shore_unchanged': check_story_shore_unchanged, 'check_whirl_move': check_whirl_move, 'check_whirl_never': check_whirl_never, 'check_whirl_edges': check_whirl_edges, 'check_whirl_place': check_whirl_place, 'check_whirl_continue': check_whirl_continue, 'check_whirl_budget': check_whirl_budget, 'check_whirl_swallowed': check_whirl_swallowed, 'check_whirl_sea_end': check_whirl_sea_end, 'check_whirl_swallowed_continue': check_whirl_swallowed_continue}
 
 
 # ---------- Task 4: the Blood Slime and the Pirate ----------
@@ -576,6 +603,17 @@ def pirate_to_stop(page):
     return page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 4000 && !window.__p.aiming; i++) g.update(0.05); return !!window.__p.aiming; }")
 
 
+def check_pirate_high_tide(browser, url):
+    """A Pirate that spawns past the fixed stop range (a high tide) still has every stop ahead of him."""
+    if not R9: return
+    page, errors = slime_page(browser, url)
+    for p0 in (0.25, 0.35, 0.55, 0.7):
+        st = page.evaluate("(p) => { const g = window.__gg; g.G.monsters.length = 0; const m = g.spawnMonster('pirate', 2, true, p); return [m.p, m.stops.slice()]; }", p0)
+        ok(st[1] and all(x > st[0] for x in st[1]), f'spawned at {p0}: every stop is ahead of him {st}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 def check_pirate(browser, url):
     if not R9: return
     page, errors = slime_page(browser, url)
@@ -645,7 +683,7 @@ def check_slime_budget(browser, url):
 
 
 CHECKS.update({'check_bloodslime': check_bloodslime, 'check_slime_cap': check_slime_cap, 'check_slime_win': check_slime_win, 'check_slime_frozen': check_slime_frozen,
-               'check_pirate': check_pirate, 'check_slime_budget': check_slime_budget})
+               'check_pirate': check_pirate, 'check_pirate_high_tide': check_pirate_high_tide, 'check_slime_budget': check_slime_budget})
 
 
 # ---------- Task 5: the Turtle Rider and the Storm Eel ----------
@@ -1204,8 +1242,10 @@ def check_swan_coach(browser, url):
     page.evaluate("() => { const g = window.__gg, p = g.gourdPos('swan'); g.destroyGourd(g.grid[p.r][p.c]); }")
     ok(page.evaluate(STEP, 0.1) == 'praise' and 'Nice' in page.evaluate(TIP), f'Nice {page.evaluate(TIP)[:50]!r}')
     ok(page.evaluate("() => window.__gg.coachHolds()") is False, 'the praise step lets the night carry on')
+    page.evaluate("() => { window.__cg = window.__gg.G.coach.ghouls.slice(); }")
     page.evaluate(STEP, 4)
     ok(page.evaluate("() => [window.__gg.G.coach, window.__gg.save.seenSwanCoach]") == [None, True], 'the script ends and seenSwanCoach is set')
+    ok(page.evaluate("() => window.__cg.length === 2 && window.__cg.every(m => m.dead)"), f'no lesson ghoul survives past the praise step {page.evaluate("() => window.__cg.map(m => [m.dead, m.hp])")}')
     page.evaluate("(lo) => window.__gg.startGame('story', 1405, lo, ['grave', 'swan'])", [0, 1, 2, 3, 4]); time.sleep(0.2)
     ok(page.evaluate("() => [window.__gg.G.coach, window.__gg.coachHolds()]") == [None, False], 'a player who has seen it gets a plain N5-5')
     page.evaluate("() => { window.__gg.save.seenSwanCoach = false; }")

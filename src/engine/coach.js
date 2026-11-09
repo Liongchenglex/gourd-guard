@@ -386,7 +386,8 @@ function setupSwanLaunch(sp){
   c.bunch = [];
   if (pick) for (const [a, b] of pick){ const cell = newCell(col); grid[a][b] = cell; c.bunch.push(cell); }
   resolveMatches();
-  if (cc != null) for (const lane of [cc, cc > 0 ? cc - 1 : cc + 1]){ const m = spawnMonster('ghoul', lane, true, 0.08); if (m){ m.hp = m.maxHp = 20; m.sp *= 0.6; } }   // tough enough to show three hits and three ring hits
+  c.ghouls = [];
+  if (cc != null) for (const lane of [cc, cc > 0 ? cc - 1 : cc + 1]){ const m = spawnMonster('ghoul', lane, true, 0.08); if (m){ m.hp = m.maxHp = 20; m.sp *= 0.6; c.ghouls.push(m); } }   // tough enough to show three hits and three ring hits
   c.ref = c.bunch[0] || null;
 }
 function swanCoachUpdate(c){
@@ -408,6 +409,7 @@ function swanCoachUpdate(c){
     else if (c.stepT > 1.2 && !c.sprouted){ c.sprouted = true; spawnSprouts(); }   // the next sprout tick brings it back
     else if (c.sprouted && c.stepT > 2.4){ c.sprouted = false; c.stepT = 1.21; }   // no room on the patch: try the tick again
   } else if (c.step === 'praise' && c.stepT > 3.5){
+    for (const m of c.ghouls || []) m.dead = true;   // the two lesson ghouls go with the lesson (no reward: the night is not theirs to lose)
     tip(null); G.coach = null; save.seenSwanCoach = true; persist(); resolveMatches();
   }
 }

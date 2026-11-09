@@ -144,7 +144,7 @@ export function nmGateText(w){
     if (!save.stars[firstNightOf(4) + WORLD_LEVELS[3].length - 1]) return 'Beat 4-20';
     if (!save.stars[nmNight(3, 4)]) return 'Beat Nightmare 3-4';
   }
-  if (__RELEASE__ >= 9 && w === 5){   // Release 9: the marsh needs the Crookneck Gourd, which N4-4 frees
+  if (__RELEASE__ >= 9 && w === 5){   // Release 9: the marsh needs the Crookneck Gourd, which N4-3 gives and N4-4 unlocks for the pick
     if (!save.stars[firstNightOf(5) + WORLD_LEVELS[4].length - 1]) return 'Beat 5-20';
     if (!save.stars[nmNight(4, 4)]) return 'Beat Nightmare 4-4';
   }

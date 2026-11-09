@@ -68,8 +68,8 @@ function brewMarks(){
 /** Tide marks (Release 9): a wave mark on the spawn bar at each `tideMarks` point; it pulses when the tide surges, then shows ticked. */
 let tdFor = null;
 function tideMarks(){
-  const bar = $('#prog').parentNode, d = G.mode === 'story' && G.def, tm = d && d.tideMarks && d.tideMarks.length ? d.tideMarks : null;
-  if (tdFor !== G || (tm && bar.querySelectorAll('.tdMark').length !== tm.length)){ tdFor = G; for (const e of bar.querySelectorAll('.tdMark')) e.remove(); if (tm) tm.forEach(m => { const e = document.createElement('b'); e.className = 'tdMark'; e.style.left = m.at * 100 + '%'; e.setAttribute('aria-hidden', 'true'); bar.appendChild(e); }); }
+  const bar = $('#prog').parentNode, d = G.mode === 'story' && G.def, tm = d && !d.boss && d.tideMarks && d.tideMarks.length ? d.tideMarks : null;   // a boss night's bar tracks the boss's health, so no marks (the banner still warns)
+  if (tdFor !== G || bar.querySelectorAll('.tdMark').length !== (tm ? tm.length : 0)){ tdFor = G; for (const e of bar.querySelectorAll('.tdMark')) e.remove(); if (tm) tm.forEach(m => { const e = document.createElement('b'); e.className = 'tdMark'; e.style.left = m.at * 100 + '%'; e.setAttribute('aria-hidden', 'true'); bar.appendChild(e); }); }
   if (!tm || !G.tide) return;
   const used = G.tide.marksDone || 0, fresh = G.t - G.tide.tT < 1.5;
   bar.querySelectorAll('.tdMark').forEach((e, i) => { const live = fresh && i === used - 1; e.classList.toggle('live', live); e.classList.toggle('done', i < used && !live); });

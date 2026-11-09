@@ -69,9 +69,10 @@ export const slimesAlive = () => G.monsters.reduce((n, m) => n + (!m.dead && isS
 export function initMarshMonster(m){
   if (m.type === 'bloodblob'){ m.growT = 0; m.swell = 1; }
   if (m.type === 'pirate'){
-    const T = TYPES.pirate, n = T.shots[0] + Math.floor(Math.random() * (T.shots[1] - T.shots[0] + 1)), [a, b] = T.stopAt, w = (b - a) / n;
+    const T = TYPES.pirate, n = T.shots[0] + Math.floor(Math.random() * (T.shots[1] - T.shots[0] + 1)), [a0, b] = T.stopAt, a = Math.max(a0, m.p + 0.05), w = (b - a) / n;   // a high tide spawns him past the fixed stops: every stop lies ahead of him
     m.stops = [];
-    for (let i = 0; i < n; i++) m.stops.push(a + w * i + Math.random() * w);   // one in each slice, in walking order
+    if (a >= b) m.stops.push(Math.min(0.95, a));   // spawned past the whole range: one stop just ahead of him
+    else for (let i = 0; i < n; i++) m.stops.push(a + w * i + Math.random() * w);   // one in each slice, in walking order
     m.aiming = false; m.aimT = 0; m.aimRow = -1;
   }
   if (m.type === 'turtlerider'){ m.rotT = TYPES.turtlerider.rotEvery; m.winding = false; }

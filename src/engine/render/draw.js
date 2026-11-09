@@ -1,6 +1,7 @@
 import { TYPES } from '../../data/monsters.js';
 import { sproutEvery, shoreP, MINE_ARM } from '../game.js';
 import { perkOn } from '../../data/perks.js';
+import { WORLDS } from '../../data/worlds/index.js';
 import { GEAR } from '../../data/shop.js';
 import { PTYPES, RAINBOW, BROWN, PAINT } from '../../data/pumpkins.js';
 import { emptyCells, findCell, groupCells, heldGid, heldLaunch, brownSize, paintPull, paintInherit } from '../board.js';
@@ -293,11 +294,15 @@ export function drawPuddles(t){
   }
   ctx.globalAlpha = 1;
 }
-/** Sea (world 5): a baked water base, scrolling wave tiles and a foam lace at the shoreline so the spawn line stays obvious. */
+/** Is this night on the Marsh nightmare's blood sea (Release 9: WORLDS entry with scene 'marshN')? */
+function bloodSeaOn(){ const w = G.def && G.def.nightmare ? WORLDS[G.world] : null; return !!(w && w.scene === 'marshN'); }
+/** Sea (world 5): a baked water base, scrolling wave tiles and a foam lace at the shoreline so the spawn line stays obvious.
+ *  On the Marsh's nightmare nights (Release 9) the same three tiles come in the blood palette. */
 export function drawSea(t){
   const y0 = FIELD_TOP - 6, h = Math.max(0.1, shoreP()) * (FIELD_BOT - FIELD_TOP) + 6, y1 = y0 + h;
-  const sea = seaSprite(K, h); ctx.drawImage(sea.c, 0, y0, W, h);
-  const wt = waveTile(K), rows = Math.max(1, Math.floor(h / 34)), n = Math.ceil(W / 240) + 1;
+  const blood = __RELEASE__ >= 9 && bloodSeaOn();
+  const sea = seaSprite(K, h, blood); ctx.drawImage(sea.c, 0, y0, W, h);
+  const wt = waveTile(K, blood), rows = Math.max(1, Math.floor(h / 34)), n = Math.ceil(W / 240) + 1;
   ctx.save(); ctx.beginPath(); ctx.rect(0, y0, W, h); ctx.clip();
   for (let i = 0; i < rows; i++){
     const yy = y0 + 2 + (i + 0.5) * (h - 16) / rows - 8, spd = (14 + i * 5) * (i % 2 ? -1 : 1), off = ((t * spd + i * 80) % 240 + 240) % 240 - 240, bob = Math.sin(t * 1.3 + i * 1.7) * 1.5;
@@ -308,11 +313,11 @@ export function drawSea(t){
   ctx.globalAlpha = 1;
   for (let i = 0; i < 6; i++){   // bubbles rising through the water
     const f = (t * (0.1 + i * 0.02) + i * 0.17) % 1, bx = (i * 97 + 30) % W + Math.sin(t * 2 + i) * 3, by = y1 - 8 - f * (h - 18);
-    ctx.globalAlpha = Math.sin(f * Math.PI) * 0.5; ctx.strokeStyle = '#dff6fb'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(bx, by, 2 + (i % 3), 0, TAU); ctx.stroke();
+    ctx.globalAlpha = Math.sin(f * Math.PI) * 0.5; ctx.strokeStyle = blood ? '#ff8a80' : '#dff6fb'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(bx, by, 2 + (i % 3), 0, TAU); ctx.stroke();
   }
   ctx.globalAlpha = 1;
-  ctx.fillStyle = 'rgba(12,44,62,.28)'; ctx.fillRect(0, y1 + 4, W, 8);   // wet sand under the foam
-  const ft = foamTile(K), off = ((t * 22) % 240 + 240) % 240 - 240, bob = Math.sin(t * 1.6) * 2;
+  ctx.fillStyle = blood ? 'rgba(60,6,8,.34)' : 'rgba(12,44,62,.28)'; ctx.fillRect(0, y1 + 4, W, 8);   // wet sand under the foam
+  const ft = foamTile(K, blood), off = ((t * 22) % 240 + 240) % 240 - 240, bob = Math.sin(t * 1.6) * 2;
   for (let j = 0; j <= n; j++) ctx.drawImage(ft.c, off + j * 240, y1 - 14 + bob, 240, 30);
 }
 /** Twin Tides: a serpent tail curling out of the water where a bolt is thrown from. */

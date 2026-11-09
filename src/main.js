@@ -10,7 +10,7 @@ import { measureCoin, resize, ctx } from './engine/render/canvas.js';
 import { netCount, canNet, pickNetCell, throwNet, isNetted, clearNets, redNetsOf, updateNets, netSnapshot, restoreNets } from './engine/nets.js';
 import { drawWeather, weatherState, weatherReset, weatherForce, weatherBaked } from './engine/render/weather.js';
 import { isBaked, atlasBytes, setBakeScale, prebake } from './engine/render/anim.js';
-import { render, LIT_HALO } from './engine/render/draw.js';
+import { render, LIT_HALO, drawSea } from './engine/render/draw.js';
 import { CHARS } from './engine/render/chars.js';
 import { G, LANE, bannerTimer, graves, grid, setBannerTimer, state, walls } from './engine/state.js';
 import { $ } from './engine/util.js';
@@ -103,5 +103,7 @@ if (new URLSearchParams(location.search).has('test')){
     ...(__RELEASE__ >= 5 ? { gourdsOn, gourdKind, isProtected, placeGourdsAtStart, gourdSnapshot, restoreGourd, GOURDS, setAllowSameGourd, inGraveSquare, gourdIcon, ROTTEN, isRotten, rotCell, hitRule, rotSnapshot, rotSprite, rotIcon, poisonNow, fogged, MNAME, MINTRO, useLantern, BOSS_INTRO, fpSwap, fpShuffle, FALLEN, BESTIARY, VARIANTS } : {}),
     ...(__RELEASE__ >= 7 ? { WORLDS, POTION_KINDS, potionAt, placePotion, placeRandomPotions, canDrink, drink, updatePotions, potionEveryNow, potionSnapshot, restorePotions, dropBrewMark, potionSprite, potionIcon, FIRE_P_RANGE, applyBulwarks, inWartSquare, barrierBaked, raiseRoot, inHexZone, layGlue, useFirework, dropBomb, fhBaked:fallenHexBaked, hexZoneBaked, tongueBaked, atlas } : {}),   // Nightmare Witchwood (Release 7): each task adds its test hooks here   // Nightmare Foggy Hollow (Release 5): each task adds its test hooks here
     ...(__RELEASE__ >= 8 ? { inCrookSquare, CROOK, launchGids, offeredGourds, defaultGourds, drawGourdGlow } : {}),   // the Crookneck Gourd (Release 8, Task 7)
-    ...(__RELEASE__ >= 8 ? { ctx, drawWeather, weatherState, weatherReset, weatherForce, weatherBaked, netCount, canNet, pickNetCell, throwNet, isNetted, clearNets, redNetsOf, updateNets, netSnapshot, restoreNets, smash, planMove, gust, setState, shieldedNow, veiledNow, keepFalls, useFirework, dropBomb, damageCastle, castleY, newCastle, PIECES, pieceBakeStats, prebakeCastlePieces, resetPieces, kill, pumpkinPower, ALSO_BAKE } : {}) };   // Release 8
+    ...(__RELEASE__ >= 8 ? { ctx, drawWeather, weatherState, weatherReset, weatherForce, weatherBaked, netCount, canNet, pickNetCell, throwNet, isNetted, clearNets, redNetsOf, updateNets, netSnapshot, restoreNets, smash, planMove, gust, setState, shieldedNow, veiledNow, keepFalls, useFirework, dropBomb, damageCastle, castleY, newCastle, PIECES, pieceBakeStats, prebakeCastlePieces, resetPieces, kill, pumpkinPower, ALSO_BAKE } : {}),   // Release 8
+    ...(__RELEASE__ >= 9 ? { drawSea } : {}),   // Release 9: the blood sea probe (tools/nm5_check.py)
+  };
 }

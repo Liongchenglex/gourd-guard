@@ -499,39 +499,41 @@ export function puddleSprite(k, seed){
 }
 
 // ---------- sea: a baked base per height, a scrolling wave tile and a foam tile for the shoreline ----------
-export function seaSprite(k, h){
-  k = bakeK(k); h = Math.round(h);
-  return bake(`sea:${k}:${h}`, W, h, 0, 0, k, g => {
+// Release 9: `blood` bakes the Nightmare Drowned Marsh's crimson sea beside the story sea (sea #5a0a0c to #a01818, wave crests and foam #ff8a80);
+// the three tiles are cached under their own keys, so a night draws the same few sprites as a story sea.
+export function seaSprite(k, h, blood){
+  k = bakeK(k); h = Math.round(h); const B = __RELEASE__ >= 9 && !!blood;
+  return bake(`sea:${B ? 'marshN-blood:' : ''}${k}:${h}`, W, h, 0, 0, k, g => {
     const R = rng(77);
-    let gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#0c2f45'); gr.addColorStop(.45, '#174c66'); gr.addColorStop(.85, '#1f6a83'); gr.addColorStop(1, '#2b8199'); g.fillStyle = gr; g.fillRect(0, 0, W, h);
-    for (let i = 0; i < 5; i++){ const x = R() * W, y = h * (.1 + R() * .35), r = 40 + R() * 60; gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(4,18,30,.35)'); gr.addColorStop(1, 'rgba(4,18,30,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
-    g.save(); g.translate(W * .62, h * .5); g.scale(1, Math.max(1, h / 90)); gr = g.createRadialGradient(0, 0, 0, 0, 0, 70); gr.addColorStop(0, 'rgba(225,245,250,.22)'); gr.addColorStop(.5, 'rgba(225,245,250,.08)'); gr.addColorStop(1, 'rgba(225,245,250,0)'); g.fillStyle = gr; g.fillRect(-70, -70, 140, 140); g.restore();
+    let gr = g.createLinearGradient(0, 0, 0, h); if (B){ gr.addColorStop(0, '#5a0a0c'); gr.addColorStop(.45, '#78100f'); gr.addColorStop(.85, '#921616'); gr.addColorStop(1, '#a01818'); } else { gr.addColorStop(0, '#0c2f45'); gr.addColorStop(.45, '#174c66'); gr.addColorStop(.85, '#1f6a83'); gr.addColorStop(1, '#2b8199'); } g.fillStyle = gr; g.fillRect(0, 0, W, h);
+    for (let i = 0; i < 5; i++){ const x = R() * W, y = h * (.1 + R() * .35), r = 40 + R() * 60; gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, B ? 'rgba(30,2,4,.4)' : 'rgba(4,18,30,.35)'); gr.addColorStop(1, B ? 'rgba(30,2,4,0)' : 'rgba(4,18,30,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+    g.save(); g.translate(W * .62, h * .5); g.scale(1, Math.max(1, h / 90)); gr = g.createRadialGradient(0, 0, 0, 0, 0, 70); const gl = B ? '255,138,128' : '225,245,250'; gr.addColorStop(0, `rgba(${gl},.22)`); gr.addColorStop(.5, `rgba(${gl},.08)`); gr.addColorStop(1, `rgba(${gl},0)`); g.fillStyle = gr; g.fillRect(-70, -70, 140, 140); g.restore();
     g.lineCap = 'round'; g.lineWidth = 1.2;
     const n = Math.round(W * h / 900);
-    for (let i = 0; i < n; i++){ const y = h * (.3 + Math.sqrt(R()) * .68), x = R() * W, L = 20 + R() * 40; g.strokeStyle = `rgba(150,225,240,${.08 + (y / h) * .14})`; g.beginPath(); g.moveTo(x, y); for (let d = 8; d <= L; d += 8) g.lineTo(x + d, y + Math.sin(d * .4 + i) * 2.5); g.stroke(); }
-    for (let i = 0; i < n / 3; i++){ const x = R() * W, y = h * (.2 + R() * .75); g.fillStyle = `rgba(235,250,255,${.15 + R() * .25})`; ell(g, x, y, 1.6 + R(), .9); g.fill(); }
+    for (let i = 0; i < n; i++){ const y = h * (.3 + Math.sqrt(R()) * .68), x = R() * W, L = 20 + R() * 40; g.strokeStyle = `rgba(${B ? '255,110,100' : '150,225,240'},${.08 + (y / h) * .14})`; g.beginPath(); g.moveTo(x, y); for (let d = 8; d <= L; d += 8) g.lineTo(x + d, y + Math.sin(d * .4 + i) * 2.5); g.stroke(); }
+    for (let i = 0; i < n / 3; i++){ const x = R() * W, y = h * (.2 + R() * .75); g.fillStyle = `rgba(${B ? '255,170,160' : '235,250,255'},${.15 + R() * .25})`; ell(g, x, y, 1.6 + R(), .9); g.fill(); }
   });
 }
-export function waveTile(k){
-  k = bakeK(k);
-  return bake(`wave:${k}`, 240, 30, 0, 0, k, g => {
+export function waveTile(k, blood){
+  k = bakeK(k); const B = __RELEASE__ >= 9 && !!blood;
+  return bake(`wave:${B ? 'marshN-blood:' : ''}${k}`, 240, 30, 0, 0, k, g => {
     const top = x => 11 + Math.sin(x / 240 * TAU * 2) * 3.5 + Math.sin(x / 240 * TAU * 4 + 1) * 1.5;
     g.beginPath(); g.moveTo(0, top(0)); for (let x = 4; x <= 240; x += 4) g.lineTo(x, top(x)); g.lineTo(240, 30); g.lineTo(0, 30); g.closePath();
-    const gr = g.createLinearGradient(0, 8, 0, 30); gr.addColorStop(0, 'rgba(170,225,240,.34)'); gr.addColorStop(1, 'rgba(170,225,240,0)'); g.fillStyle = gr; g.fill();
+    const gr = g.createLinearGradient(0, 8, 0, 30); const wc = B ? '255,120,110' : '170,225,240'; gr.addColorStop(0, `rgba(${wc},.34)`); gr.addColorStop(1, `rgba(${wc},0)`); g.fillStyle = gr; g.fill();
     g.lineCap = 'round';
-    g.beginPath(); g.moveTo(0, top(0) - 1.6); for (let x = 4; x <= 240; x += 4) g.lineTo(x, top(x) - 1.6); g.strokeStyle = 'rgba(30,90,120,.35)'; g.lineWidth = 1.2; g.stroke();
-    g.beginPath(); g.moveTo(0, top(0)); for (let x = 4; x <= 240; x += 4) g.lineTo(x, top(x)); g.strokeStyle = 'rgba(225,248,252,.6)'; g.lineWidth = 2; g.stroke();
-    for (const x of [60, 180]){ g.fillStyle = 'rgba(255,255,255,.55)'; ell(g, x, top(x) - 1, 5, 2); g.fill(); ell(g, x + 9, top(x + 9) - .5, 2.5, 1.4); g.fill(); }
+    g.beginPath(); g.moveTo(0, top(0) - 1.6); for (let x = 4; x <= 240; x += 4) g.lineTo(x, top(x) - 1.6); g.strokeStyle = B ? 'rgba(60,4,6,.4)' : 'rgba(30,90,120,.35)'; g.lineWidth = 1.2; g.stroke();
+    g.beginPath(); g.moveTo(0, top(0)); for (let x = 4; x <= 240; x += 4) g.lineTo(x, top(x)); g.strokeStyle = B ? 'rgba(255,138,128,.6)' : 'rgba(225,248,252,.6)'; g.lineWidth = 2; g.stroke();
+    for (const x of [60, 180]){ g.fillStyle = B ? 'rgba(255,190,180,.55)' : 'rgba(255,255,255,.55)'; ell(g, x, top(x) - 1, 5, 2); g.fill(); ell(g, x + 9, top(x + 9) - .5, 2.5, 1.4); g.fill(); }
   });
 }
-export function foamTile(k){
-  k = bakeK(k);
-  return bake(`foam:${k}`, 240, 30, 0, 0, k, g => {
+export function foamTile(k, blood){
+  k = bakeK(k); const B = __RELEASE__ >= 9 && !!blood;
+  return bake(`foam:${B ? 'marshN-blood:' : ''}${k}`, 240, 30, 0, 0, k, g => {
     const R = rng(5);
-    g.strokeStyle = 'rgba(8,36,54,.4)'; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(0, 17); for (let x = 8; x <= 240; x += 8) g.lineTo(x, 17 + Math.sin(x / 240 * TAU * 3) * 1.5); g.stroke();
+    g.strokeStyle = B ? 'rgba(40,2,4,.45)' : 'rgba(8,36,54,.4)'; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(0, 17); for (let x = 8; x <= 240; x += 8) g.lineTo(x, 17 + Math.sin(x / 240 * TAU * 3) * 1.5); g.stroke();
     for (let i = 0; i < 18; i++){ const x = i * 13.3 + R() * 6, y = 12 + (R() - .5) * 5, r = 4.5 + R() * 4.5;
-      for (const xx of [x - 240, x, x + 240]){ const gr = g.createRadialGradient(xx, y, 0, xx, y, r); gr.addColorStop(0, 'rgba(255,255,255,.95)'); gr.addColorStop(.55, 'rgba(240,250,255,.8)'); gr.addColorStop(1, 'rgba(240,250,255,0)'); g.fillStyle = gr; ell(g, xx, y, r, r * .7); g.fill(); } }
-    for (let i = 0; i < 14; i++){ const x = R() * 240, y = 6 + R() * 12; g.fillStyle = 'rgba(255,255,255,.75)'; ell(g, x, y, 1.2 + R(), 1 + R() * .6); g.fill(); }
+      for (const xx of [x - 240, x, x + 240]){ const gr = g.createRadialGradient(xx, y, 0, xx, y, r); gr.addColorStop(0, B ? 'rgba(255,200,192,.95)' : 'rgba(255,255,255,.95)'); gr.addColorStop(.55, B ? 'rgba(255,138,128,.8)' : 'rgba(240,250,255,.8)'); gr.addColorStop(1, B ? 'rgba(255,138,128,0)' : 'rgba(240,250,255,0)'); g.fillStyle = gr; ell(g, xx, y, r, r * .7); g.fill(); } }
+    for (let i = 0; i < 14; i++){ const x = R() * 240, y = 6 + R() * 12; g.fillStyle = B ? 'rgba(255,170,160,.75)' : 'rgba(255,255,255,.75)'; ell(g, x, y, 1.2 + R(), 1 + R() * .6); g.fill(); }
   });
 }
 

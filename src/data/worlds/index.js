@@ -13,6 +13,7 @@ import nightmare1 from './nightmare1.js';
 import nightmare2 from './nightmare2.js';
 import nightmare3 from './nightmare3.js';
 import nightmare4 from './nightmare4.js';
+import nightmare5 from './nightmare5.js';
 
 // Background themes (index = LevelDef.theme). Drawn by buildBg() in src/engine/render/sprites.js.
 //   sky: [top, middle, horizon] gradient    ground: [field top, field bottom]    grass: tuft / reed colour
@@ -48,6 +49,10 @@ export const WORLDS = [
   // `base` is the story theme whose field texture it borrows (Crumbling Keep is theme 2 in this list; the THEMES row's base:2 says the same).
   ...(__RELEASE__ >= 8 ? [{ name:'Crumbling Keep: Nightmare', sky:['#03050c','#141c33','#3a4a6a'], ground:['#2a2c36','#12131a'], grass:'#2a2c36',
     moon:'#c8d4ff', halo:'#6a80c8', sil:['#10131e','#05060b'], rim:'#b8c8ff', soil:['#4a4c58','#2c2e38','#15161c'], mist:null, custom:'nightmare', scene:'keepN', base:2 }] : []),
+  // Drowned Marsh: Nightmare (Release 9): the nightmare book's blood moon over a crimson sea (scene 'marshN'; the sea itself is the baked blood variant in render/fx.js);
+  // palette = that THEMES row (glow #ff1a1a, mist #c04040). `base` is the story theme whose field texture it borrows (Drowned Marsh is theme 3).
+  ...(__RELEASE__ >= 9 ? [{ name:'Drowned Marsh: Nightmare', sky:['#0c0206','#3e0610','#a8141c'], ground:['#3a1c1a','#170a0a'], grass:'#3a1c1a',
+    moon:'#ff3a26', halo:'#c01010', sil:['#2a0508','#100203'], rim:'#ff7a60', soil:['#6a3a2c','#43221a','#21100c'], mist:'#c04040', custom:'nightmare', scene:'marshN', base:3 }] : []),
 ];
 
 /** Display names for the six worlds (docs/WORLDS.md §3). Worlds without levels yet show as "coming soon". */
@@ -71,7 +76,7 @@ export const LEVELS = ALL_LEVELS.length;
  *  quests live in save.stars / save.quests under that number. NIGHTMARE_LEVELS[w - 1] is world w's nightmare table. */
 export const NM_BASE = 1000;
 export const NM_BOOK_LEVELS = 16;   // stamps on a nightmare book page; levels not built yet show as "Coming soon"
-export const NIGHTMARE_LEVELS = __RELEASE__ >= 8 ? [nightmare1, nightmare2, nightmare3, nightmare4] : __RELEASE__ >= 7 ? [nightmare1, nightmare2, nightmare3] : __RELEASE__ >= 5 ? [nightmare1, nightmare2] : __RELEASE__ >= 4 ? [nightmare1] : [];
+export const NIGHTMARE_LEVELS = __RELEASE__ >= 9 ? [nightmare1, nightmare2, nightmare3, nightmare4, nightmare5] : __RELEASE__ >= 8 ? [nightmare1, nightmare2, nightmare3, nightmare4] : __RELEASE__ >= 7 ? [nightmare1, nightmare2, nightmare3] : __RELEASE__ >= 5 ? [nightmare1, nightmare2] : __RELEASE__ >= 4 ? [nightmare1] : [];
 export const nmNight = (w, k) => NM_BASE + 100 * (w - 1) + k;
 export const isNightmare = n => n > NM_BASE;
 const nmWorld = n => Math.floor((n - NM_BASE - 1) / 100) + 1, nmLevel = n => (n - NM_BASE - 1) % 100 + 1;
@@ -128,6 +133,10 @@ export function nmGateText(w){
   if (__RELEASE__ >= 8 && w === 4){   // Release 8: the keep needs the Wartling Gourd, which N3-4 unlocks
     if (!save.stars[firstNightOf(4) + WORLD_LEVELS[3].length - 1]) return 'Beat 4-20';
     if (!save.stars[nmNight(3, 4)]) return 'Beat Nightmare 3-4';
+  }
+  if (__RELEASE__ >= 9 && w === 5){   // Release 9: the marsh needs the Crookneck Gourd, which N4-4 frees
+    if (!save.stars[firstNightOf(5) + WORLD_LEVELS[4].length - 1]) return 'Beat 5-20';
+    if (!save.stars[nmNight(4, 4)]) return 'Beat Nightmare 4-4';
   }
   return '';
 }

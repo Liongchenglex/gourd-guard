@@ -1044,7 +1044,7 @@ PARK = "() => { const b = window.__b; b.volleyT = b.netT = b.rampT = 999; }"
 def check_siege(browser, url):
     if not R8:
         page, errors = open_page(browser, url)
-        ok(page.evaluate("() => !window.__gg.TYPES.siegetower && !window.__gg.BOSS_NAMES.siegetower"), 'no Siege Tower below Release 8')
+        ok(page.evaluate("() => !(window.__gg.TYPES && window.__gg.TYPES.siegetower) && !(window.__gg.BOSS_NAMES && window.__gg.BOSS_NAMES.siegetower)"), 'no Siege Tower below Release 8')   # store builds expose no TYPES
         page.close(); return
     page, errors = piece_night(browser, url)
     d = page.evaluate("() => { const T = window.__gg.TYPES.siegetower; return T ? [T.boss, T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.hold, T.archers, T.volleyEvery, T.volleyDmg, T.netEvery, T.rampEvery, T.noItems, T.form2.hp] : null; }")
@@ -1200,7 +1200,7 @@ def fc_up(page, park=True, clear=True):
 def check_fallen_count(browser, url):
     if not R8:
         page, errors = open_page(browser, url)
-        ok(page.evaluate("() => !window.__gg.TYPES.fallencount && !window.__gg.BOSS_NAMES.fallencount"), 'no Fallen Count below Release 8')
+        ok(page.evaluate("() => !(window.__gg.TYPES && window.__gg.TYPES.fallencount) && !(window.__gg.BOSS_NAMES && window.__gg.BOSS_NAMES.fallencount)"), 'no Fallen Count below Release 8')   # store builds expose no TYPES
         page.close(); return
     page, errors = fc_night(browser, url)
     d = page.evaluate("() => { const T = window.__gg.TYPES.fallencount; return T ? [T.boss, T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.hold, T.netAt, T.netN, T.tranceEvery, T.tranceHeal, T.tranceTick, T.tranceHits, T.spearEvery, +T.spearHit.toFixed(6), T.boltEvery, T.boltWarn, T.summonEvery, T.raiseEvery, T.gatePool, T.noItems] : null; }")

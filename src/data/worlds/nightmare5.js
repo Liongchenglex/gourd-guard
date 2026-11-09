@@ -74,7 +74,7 @@ export default __RELEASE__ >= 9 ? [
   L({ level:13, name:'The Kraken 2', pattern:2, total:20, interval:3.1, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL5(), shoreFrac:0.25, tideMarks:[{ at:0.5, to:0.4 }, { at:0.8, to:0.5 }],
     pools:[[1, 0.55], [3, 0.6], [5, 0.55]], boss:'kraken', bossForm:2, bossChest:'normal',
     pool:[['drownedGhoul', 7], ['bloodslime', 3], ['pirate', 3], ['siren', 2], ['turtlerider', 2], ['tideImp', 3]], quests:[['wallMin', 40], ['bunch5', 2]] }),
-  // N5-14 Maelstrom: all four whirlpool pairs and a high tide; the deeper ends outlast the surges.
+  // N5-14 Maelstrom: all four whirlpool pairs and a high tide; the surges carry each end it passes to the water\u2019s edge, where the pair keeps working.
   L({ level:14, name:'Maelstrom', pattern:3, total:24, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL5(), shoreFrac:0.3, tideMarks:[{ at:0.2, to:0.45 }, { at:0.45, to:0.55 }, { at:0.7, to:0.65 }, { at:0.9, to:0.7 }],
     whirls:[[[0, 0.4], [6, 0.55]], [[1, 0.62], [5, 0.45]], [[2, 0.5], [4, 0.7]], [[3, 0.42], [0, 0.7]]],
     pool:[['drownedGhoul', 6], ['tideImp', 5], ['crawler', 3], ['bloodslime', 3], ['turtlerider', 3], ['pirate', 2], ['sailor', 2], ['turtle', 2]], quests:[['oneLaunch', 4], ['wallMin', 40]] }),

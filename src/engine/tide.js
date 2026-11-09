@@ -45,6 +45,15 @@ export function swallowPools(){
   for (const pd of gone) for (let i = 0; i < 8; i++) spark(LANE(pd.lane), FIELD_TOP + pd.p * (FIELD_BOT - FIELD_TOP), '#ff8a80', 110);
 }
 
+/** A whirlpool end the shore passes goes with the tide (spec Part 6): it moves to the water's edge, a hair inside the shore, so it still lies in the path of a walker that
+ *  spawns at the live shore (shore - 0.02) and keeps working; once wet it follows the shore through every later surge. Ends already in the sea at the start are left alone. */
+export const WHIRL_EDGE = 0.01;
+function carryWhirlEnds(from){
+  if (!G.whirls) return;
+  const s = liveShore();
+  for (const w of G.whirls) for (const e of [w.a, w.b]) if (e.wet || (e.p > from && e.p <= s)){ e.wet = true; e.p = s - WHIRL_EDGE; }
+}
+
 /** Per-frame: fire the next tide mark when the bar reaches it, then ease the shore through a surge. */
 export function updateTide(dt){
   const T = G.tide, d = G.def;
@@ -59,7 +68,7 @@ export function updateTide(dt){
     T.t += dt;
     const u = Math.min(1, T.t / SURGE_TIME);
     T.shore = T.from + (T.target - T.from) * ease(u);
-    swallowPools();
+    swallowPools(); carryWhirlEnds(T.from);
     if (u >= 1){ T.shore = T.target; T.t = -1; }
   }
 }
@@ -105,9 +114,9 @@ export function whirlStep(m, pPrev){
   }
   return false;
 }
-export const whirlSnapshot = () => (G.whirls || []).map(w => [[w.a.lane, w.a.p], [w.b.lane, w.b.p]]);
+export const whirlSnapshot = () => (G.whirls || []).map(w => [[w.a.lane, w.a.p, ...(w.a.wet ? [1] : [])], [w.b.lane, w.b.p, ...(w.b.wet ? [1] : [])]]);   // a third entry marks an end the tide carried
 /** A continued night: the same pairs, in their colours, wherever they stood (the water under them is as it was). */
 export function restoreWhirls(s){
   G.whirls = [];
-  for (const [a, b] of s || []) if (G.whirls.length < WHIRL_MAX && a[0] >= 0 && a[0] < COLS && b[0] >= 0 && b[0] < COLS) G.whirls.push({ a:{ lane:a[0], p:a[1] }, b:{ lane:b[0], p:b[1] }, col:WHIRL_COLOURS[G.whirls.length] });
+  for (const [a, b] of s || []) if (G.whirls.length < WHIRL_MAX && a[0] >= 0 && a[0] < COLS && b[0] >= 0 && b[0] < COLS) G.whirls.push({ a:{ lane:a[0], p:a[1], wet:!!a[2] }, b:{ lane:b[0], p:b[1], wet:!!b[2] }, col:WHIRL_COLOURS[G.whirls.length] });
 }

@@ -355,8 +355,8 @@ def check_whirl_edges(browser, url):
     page.evaluate("() => { const g = window.__gg, G = g.G; G.monsters.length = 0; G.spawned = 6; }"); step(page, 1.2)
     ok(page.evaluate("() => window.__gg.G.puddles.length") == 0 and page.evaluate("() => window.__gg.liveShore()") >= 0.5 - 1e-6, 'the pool is swallowed')
     ok(page.evaluate("() => window.__gg.whirlSnapshot().length") == 1, 'its pair is still standing')
-    r = page.evaluate("() => { const g = window.__gg, m = g.spawnMonster('drownedGhoul', 2, false, 0.46); m.p = 0.46; g.whirlStep(m, 0.44); return [m.lane, m.p]; }")
-    ok(r[0] == 0 and abs(r[1] - 0.1) < 1e-9, f'an end in a pool the tide swallowed still works (now in the tide) {r}')
+    r = page.evaluate("() => { const g = window.__gg, m = g.spawnMonster('drownedGhoul', 2, false, 0.495); m.p = 0.495; g.whirlStep(m, 0.485); return [m.lane, m.p]; }")   # the end moved to the water's edge, 0.49
+    ok(r[0] == 0 and abs(r[1] - 0.1) < 1e-9, f'an end in a pool the tide swallowed still works (now at the water\'s edge) {r}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
@@ -383,6 +383,51 @@ def check_whirl_continue(browser, url):
     page.close()
 
 
+def swallowed_page(browser, url):
+    """A paused night with the tide forced past the near end of a pair: A in lane 1 (p 0.3), B in lane 3 (p 0.5); the shore goes 0.2 -> 0.45."""
+    page, errors = tide_page(browser, url, [{'at': 0.3, 'to': 0.45}], puddles=[[1, 0.3], [3, 0.5]])
+    page.evaluate("() => { const g = window.__gg; g.G.whirls = []; window.__ok = g.addWhirlPair({ lane:1, p:0.3 }, { lane:3, p:0.5 }); g.G.spawned = 6; }")
+    step(page, 1.2)
+    return page, errors
+
+
+def check_whirl_swallowed(browser, url):
+    """An end the tide swallows moves to the water's edge and keeps working: a walker spawned at the shore in its lane is thrown to the other end, and a walker
+    that crosses the other end lands at the swallowed one, in the tide, and walks on."""
+    if not R9: return
+    page, errors = swallowed_page(browser, url)
+    sh = page.evaluate("() => window.__gg.shoreP()")
+    ends = page.evaluate("() => window.__gg.G.whirls[0] && [window.__gg.G.whirls[0].a.p, window.__gg.G.whirls[0].b.p]")
+    ok(abs(sh - 0.45) < 1e-6 and ends and abs(ends[0] - (sh - 0.01)) < 1e-6 and ends[1] == 0.5, f'the swallowed end is at the water\'s edge, the other stays {sh} {ends}')
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; const m = g.spawnMonster('drownedGhoul', 1); m.sp = 0.5; window.__m = m; g.update(0.1); }")
+    r = page.evaluate("() => [window.__m.lane, window.__m.p]")
+    ok(r[0] == 3 and abs(r[1] - 0.5) < 1e-6, f'a ghoul spawned at the shore in the swallowed end\'s lane is thrown to the other end {r}')
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; const m = g.spawnMonster('drownedGhoul', 3, false, 0.49); m.sp = 0.5; window.__m = m; g.update(0.1); }")
+    r = page.evaluate("() => [window.__m.lane, window.__m.p, window.__gg.G.whirls[0].a.p]")
+    ok(r[0] == 1 and abs(r[1] - r[2]) < 1e-6 and r[1] < page.evaluate("() => window.__gg.shoreP()"), f'a ghoul crossing the other end lands at the swallowed end, in the tide {r}')
+    page.evaluate("() => { window.__m.whirlCool = 0; const p0 = window.__m.p; window.__p0 = p0; for (let i = 0; i < 10; i++) window.__gg.update(0.1); }")
+    r = page.evaluate("() => [window.__m.lane, window.__m.p > window.__p0, window.__m.dead]")
+    ok(r[0] == 1 and r[1], f'it walks on from there {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_whirl_swallowed_continue(browser, url):
+    """The moved ends survive a continue, and still work."""
+    if not R9: return
+    page, errors = swallowed_page(browser, url)
+    before = page.evaluate("() => window.__gg.whirlSnapshot()")
+    page.evaluate("() => { const g = window.__gg, c = g.continueState(); c.remaining = 8; g.continueNight(c); }")
+    after = page.evaluate("() => window.__gg.whirlSnapshot()")
+    ok(before == after and abs(after[0][0][1] - 0.44) < 1e-6, f'the moved end keeps its place on a continued night {before} {after}')
+    page.evaluate("() => { const g = window.__gg; g.setState('pause'); g.G.spawnTimer = 999; g.G.monsters.length = 0; const m = g.spawnMonster('drownedGhoul', 1); m.sp = 0.5; window.__m = m; g.update(0.1); }")
+    r = page.evaluate("() => [window.__m.lane, window.__m.p]")
+    ok(r[0] == 3 and abs(r[1] - 0.5) < 1e-6, f'and it still throws a walker {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+
 def check_whirl_budget(browser, url):
     if not R9: return
     page, errors = whirl_page(browser, url, [[(0, 0.05), (4, 0.15)], [(1, 0.08), (3, 0.12)], [(2, 0.05), (2, 0.15)], [(0, 0.12), (4, 0.06)]])
@@ -402,7 +447,7 @@ def check_whirl_budget(browser, url):
 
 CHECKS = {'check_r9_absent': check_r9_absent, 'check_n5_track': check_n5_track, 'check_n5_blood_sea': check_n5_blood_sea, 'check_n5_book': check_n5_book,
           'check_tide_marks': check_tide_marks, 'check_tide_live_shore': check_tide_live_shore, 'check_tide_limits': check_tide_limits, 'check_tide_swallow_diver': check_tide_swallow_diver,
-          'check_tide_swallow_walker': check_tide_swallow_walker, 'check_tide_boss_total': check_tide_boss_total, 'check_tide_continue': check_tide_continue, 'check_tide_budget': check_tide_budget, 'check_story_shore_unchanged': check_story_shore_unchanged, 'check_whirl_move': check_whirl_move, 'check_whirl_never': check_whirl_never, 'check_whirl_edges': check_whirl_edges, 'check_whirl_place': check_whirl_place, 'check_whirl_continue': check_whirl_continue, 'check_whirl_budget': check_whirl_budget}
+          'check_tide_swallow_walker': check_tide_swallow_walker, 'check_tide_boss_total': check_tide_boss_total, 'check_tide_continue': check_tide_continue, 'check_tide_budget': check_tide_budget, 'check_story_shore_unchanged': check_story_shore_unchanged, 'check_whirl_move': check_whirl_move, 'check_whirl_never': check_whirl_never, 'check_whirl_edges': check_whirl_edges, 'check_whirl_place': check_whirl_place, 'check_whirl_continue': check_whirl_continue, 'check_whirl_budget': check_whirl_budget, 'check_whirl_swallowed': check_whirl_swallowed, 'check_whirl_swallowed_continue': check_whirl_swallowed_continue}
 
 
 # ---------- Task 4: the Blood Slime and the Pirate ----------
@@ -1874,6 +1919,13 @@ def check_n5_levels(browser, url):
     ok(all(d['questsOk'] and len(d['quests']) == 3 for d in L), 'every level has three quests of existing types')
     ok(len({(d['total'], d['interval'], tuple(d['pool'])) for d in L}) == 16, 'no two levels share pool and pacing')
     n5_open_all(page)
+    for k in (12, 14):   # after the last tide mark every pair still has both ends where a walker crosses them (end p >= the spawn p of its lane)
+        start(page, 1400 + k); time.sleep(0.3)
+        r = page.evaluate("""() => { const g = window.__gg, G = g.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.spawned = 1e6; g.setState('pause');
+          for (let i = 0; i < 400; i++) g.updateTide(0.05);
+          const spawnP = g.shoreP() - 0.02; return [g.G.tide.marksDone, G.def.tideMarks.length, spawnP, G.whirls.map(w => [w.a.p, w.b.p])]; }""")
+        ok(r[0] == r[1] and all(p >= r[2] - 1e-9 for pr in r[3] for p in pr), f'N5-{k}: after the last mark every whirlpool end is still crossable (spawn p {r[2]:.3f}) {r[3]}')
+        n5_end_night(page)
     info = {}
     for k in range(1, 17):
         page.evaluate(f"() => {{ document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); window.__gg.openPreview({1400 + k}); }}"); time.sleep(0.25)
@@ -1886,6 +1938,12 @@ def check_n5_levels(browser, url):
     page.close()
 
 
+def n5_end_night(page):
+    """Leave the night in play the way the Quit button does (clears its music and state) and hide any overlay, so the next night starts clean."""
+    page.evaluate("() => { document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); const q = document.querySelector('#bQuit'); if (q) q.click(); document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); }")
+    time.sleep(0.2)
+
+
 def n5_intro_titles(page, n):
     """Play night n from its preview card and read the intro cards it shows, in order."""
     page.evaluate(f"() => {{ document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); window.__gg.openPreview({n}); }}"); time.sleep(0.4)
@@ -1895,6 +1953,7 @@ def n5_intro_titles(page, n):
         if page.evaluate("() => window.__gg.state") != 'intro': break
         out.append([page.evaluate("() => document.querySelector('#inTitle').textContent"), page.evaluate("() => document.querySelector('#inText').textContent")])
         page.click('#bIntroOk'); time.sleep(0.3)
+    n5_end_night(page)
     return out
 
 
@@ -1904,7 +1963,7 @@ def check_n5_intros(browser, url):
     page, errors = open_page(browser, url)
     n5_open_all(page)
     page.evaluate("() => { window.__gg.save.seenIntro = { quests:true, gourd:true, 'gourd:protector':true, 'gourd:wartling':true, 'gourd:crookneck':true, puddles:true, sea:true }; }")
-    t = {k: n5_intro_titles(page, 1400 + k) for k in (1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16)}
+    t = {k: n5_intro_titles(page, 1400 + k) for k in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 16)}
     T = {k: [x[0] for x in v] for k, v in t.items()}
     ok(T[1][:2] == ['The blood tide', 'Whirlpools'], f'N5-1 opens with the blood tide and Whirlpools cards {T[1]}')
     tx = {x[0]: x[1] for x in t[1]}
@@ -1916,6 +1975,8 @@ def check_n5_intros(browser, url):
     ok(any('Kraken' in x and 'full form' not in x for x in T[4]) and any('tentacles' in x[1] for x in t[4]), f'N5-4 introduces the Kraken and its tentacles {T[4]}')
     ok(T[5] == ['The Swan Gourd'], f'N5-5 explains the Swan Gourd, once {T[5]}')
     ok(not T[9], f'N5-9 brings nothing new {T[9]}')
+    ok(not T[10], f'N5-10 brings no card: the Chameleons are story monsters met in world 3, as nightmare books 1 to 4 treat their story monsters {T[10]}')
+    ok(not T[5][1:] and not any(x.endswith('Mummy') for x in T[5]), f'N5-5 shows no card for the story Mummies {T[5]}')
     ok(any('Kraken' in x and 'full form' in x for x in T[13]), f"N5-13 shows the Kraken's form-2 card {T[13]}")
     ok(any('Fallen Twin Tides' in x for x in T[16]), f'N5-16 introduces the Fallen Twin Tides {T[16]}')
     ok(not errors, f'no page errors {errors[:2]}')

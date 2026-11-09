@@ -297,15 +297,15 @@ def check_whirl_move(browser, url):
     if not R9: return
     page, errors = whirl_page(browser, url, [[(1, 0.1), (3, 0.18)]])
     ok(page.evaluate("() => window.__added") == [True], 'a pair in the sea is placed')
-    page.evaluate("""() => { const g = window.__gg, m = g.spawnMonster('drownedGhoul', 1, false, 0.099); m.sp = 0.5; m.hp = 2.5; m.burnLeft = 2; m.burnAmt = 1; m.burnTick = 9; m.slowT = 5; window.__m = m; }""")
+    page.evaluate("""() => { const g = window.__gg, m = g.spawnMonster('drownedGhoul', 1, false, 0.185); m.sp = 0.5; m.hp = 2.5; m.burnLeft = 2; m.burnAmt = 1; m.burnTick = 9; m.slowT = 5; window.__m = m; }""")
     page.evaluate("() => window.__gg.update(0.05)")
     r = page.evaluate("() => { const m = window.__m, g = window.__gg; return [m.lane, m.p, m.x, m.tx, g.LANE(3), m.hp, m.burnLeft, m.slowT, m.whirlCool]; }")
-    ok(r[0] == 3 and abs(r[1] - 0.18) < 0.03 and r[2] == r[4] and r[3] == r[4], f'a ghoul walking into end A comes out at end B (lane, p, x, tx) {r[:5]}')
+    ok(r[0] == 3 and abs(r[1] - 0.19) < 0.03 and r[2] == r[4] and r[3] == r[4], f'a ghoul walking into end A comes out at end B (lane, p, x, tx) {r[:5]}')
     ok(r[5] == 2.5 and r[6] == 2 and r[7] > 4.5, f'with its health, burn and slow unchanged {r[5:8]}')
     ok(r[8] > 1.5, f'and a cool-down set {r[8]}')
-    page.evaluate("() => { window.__gg.G.monsters.length = 0; window.__gg.G.whirls = []; window.__gg.addWhirlPair({ lane:2, p:0.1 }, { lane:2, p:0.17 }); const m = window.__gg.spawnMonster('drownedGhoul', 2, false, 0.099); m.sp = 0.5; window.__m = m; window.__gg.update(0.05); }")
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; window.__gg.G.whirls = []; window.__gg.addWhirlPair({ lane:2, p:0.1 }, { lane:2, p:0.17 }); const m = window.__gg.spawnMonster('drownedGhoul', 2, false, 0.185); m.sp = 0.5; window.__m = m; window.__gg.update(0.05); }")
     r = page.evaluate("() => [window.__m.lane, window.__m.p]")
-    ok(r[0] == 2 and abs(r[1] - 0.17) < 0.03, f'a pair in the same lane works {r}')
+    ok(r[0] == 2 and abs(r[1] - 0.19) < 0.03 and page.evaluate('() => window.__m.whirlCool') > 1.5, f'a pair in the same lane works (both sea ends at the edge, 0.19) {r}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
@@ -314,7 +314,7 @@ def check_whirl_never(browser, url):
     if not R9: return
     page, errors = whirl_page(browser, url, [[(1, 0.1), (3, 0.18)]])
     r = page.evaluate("""() => { const g = window.__gg, out = {};
-      const tryTake = (m) => { m.p = 0.11; g.whirlStep(m, 0.09); return [m.lane, m.p]; };
+      const tryTake = (m) => { m.p = 0.195; g.whirlStep(m, 0.185); return [m.lane, m.p]; };
       out.boss = tryTake(g.spawnMonster('boss:poltergeist', 1, false, 0.09));
       out.diver = tryTake(g.spawnMonster('diver', 1, false, 0.09));
       const f = g.spawnMonster('drownedGhoul', 1, false, 0.09); f.frozenT = 3; out.frozen = tryTake(f);
@@ -324,7 +324,7 @@ def check_whirl_never(browser, url):
       const ok_ = g.spawnMonster('drownedGhoul', 1, false, 0.09); out.control = tryTake(ok_);
       return out; }""")
     for k in ('boss', 'diver', 'frozen', 'eating', 'rising', 'hidden'):
-        ok(r[k][0] == 1 and abs(r[k][1] - 0.11) < 1e-9, f'{k} on an end is not taken {r[k]}')
+        ok(r[k][0] == 1 and abs(r[k][1] - 0.195) < 1e-9, f'{k} on an end is not taken {r[k]}')
     ok(r['control'][0] == 3, f'the same step takes an ordinary ghoul {r["control"]}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
@@ -342,9 +342,9 @@ def check_whirl_edges(browser, url):
     r = page.evaluate("() => { const g = window.__gg, m = g.spawnMonster('drownedGhoul', 0, false, 0.12); g.whirlStep(m, 0.14); return [m.lane, m.p]; }")
     ok(r[0] == 0 and abs(r[1] - 0.12) < 1e-9, f'(a backward step across an end is never a crossing) {r}')
     # the cool-down
-    page.evaluate("""() => { const g = window.__gg, G = g.G; G.monsters.length = 0; window.__m = g.spawnMonster('drownedGhoul', 0, false, 0.099); window.__m.sp = 0.5; g.update(0.05); }""")
+    page.evaluate("""() => { const g = window.__gg, G = g.G; G.monsters.length = 0; window.__m = g.spawnMonster('drownedGhoul', 0, false, 0.285); window.__m.sp = 0.5; g.update(0.05); }""")
     r = page.evaluate("() => [window.__m.lane, window.__m.p]")
-    ok(r[0] == 2, f'taken at end 0.1 of lane 0 (out at the pool end) {r}')
+    ok(r[0] == 2, f'taken at the sea end of lane 0, at the edge 0.29 (out at the pool end) {r}')
     page.evaluate("() => { const m = window.__m; m.sp = 0; m.p = 0.46; window.__gg.whirlStep(m, 0.44); }")
     r = page.evaluate("() => [window.__m.lane, window.__m.p]")
     ok(r[0] == 2 and abs(r[1] - 0.46) < 1e-9, f'just out, it cannot go back for 2 s {r}')
@@ -356,7 +356,7 @@ def check_whirl_edges(browser, url):
     ok(page.evaluate("() => window.__gg.G.puddles.length") == 0 and page.evaluate("() => window.__gg.liveShore()") >= 0.5 - 1e-6, 'the pool is swallowed')
     ok(page.evaluate("() => window.__gg.whirlSnapshot().length") == 1, 'its pair is still standing')
     r = page.evaluate("() => { const g = window.__gg, m = g.spawnMonster('drownedGhoul', 2, false, 0.495); m.p = 0.495; g.whirlStep(m, 0.485); return [m.lane, m.p]; }")   # the end moved to the water's edge, 0.49
-    ok(r[0] == 0 and abs(r[1] - 0.1) < 1e-9, f'an end in a pool the tide swallowed still works (now at the water\'s edge) {r}')
+    ok(r[0] == 0 and abs(r[1] - 0.49) < 1e-9, f'(the sea end followed the tide to 0.49) an end in a pool the tide swallowed still works (now at the water\'s edge) {r}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
@@ -428,6 +428,27 @@ def check_whirl_swallowed_continue(browser, url):
 
 
 
+def check_whirl_sea_end(browser, url):
+    """An end placed out in the sea sits at the water's edge from the start (the blue Fallen twin's pairs too) and throws a ghoul spawned in its lane."""
+    if not R9: return
+    page, errors = tide_page(browser, url, [{'at': 0.3, 'to': 0.45}], puddles=[[3, 0.5]])
+    r = page.evaluate("""() => { const g = window.__gg; g.G.whirls = []; const ok_ = g.addWhirlPair({ lane:1, p:0.05 }, { lane:3, p:0.5 }); const w = g.G.whirls[0]; return [ok_, w.a.p, w.a.wet, w.b.p, !!w.b.wet, g.shoreP()]; }""")
+    ok(r[0] and abs(r[1] - (r[5] - 0.01)) < 1e-9 and r[2] and r[3] == 0.5 and not r[4], f'a sea end is placed at shore - 0.01 and marked carried; a pool end is unchanged {r}')
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; const m = g.spawnMonster('drownedGhoul', 1); m.sp = 0.5; window.__m = m; g.update(0.1); }")
+    r = page.evaluate("() => [window.__m.lane, window.__m.p]")
+    ok(r[0] == 3 and abs(r[1] - 0.5) < 1e-6, f'a ghoul spawned at the shore in the sea end\'s lane is thrown to the other end {r}')
+    page.evaluate("() => { window.__gg.G.spawned = 6; }"); step(page, 1.2)
+    e = page.evaluate("() => [window.__gg.G.whirls[0].a.p, window.__gg.shoreP()]")
+    ok(abs(e[0] - (e[1] - 0.01)) < 1e-9, f'and it follows the next surge {e}')
+    # the blue twin opens a pair at random water spots: every sea end sits at the edge
+    page2, errors2 = marsh_page(browser, url)
+    page2.evaluate("() => { const g = window.__gg; g.G.whirls = []; for (let i = 0; i < 40; i++){ g.G.whirls = []; g.addWhirlPair({ lane:0, p:0.02 + i * 0.001 }, { lane:4, p:0.03 }); } }")
+    w = page2.evaluate("() => { const g = window.__gg, w = g.G.whirls[0]; return [w.a.p, w.b.p, g.shoreP()]; }")
+    ok(all(abs(x - (w[2] - 0.01)) < 1e-9 for x in w[:2]), f'two sea ends both sit at the edge {w}')
+    ok(not errors and not errors2, f'no page errors {(errors + errors2)[:2]}')
+    page.close(); page2.close()
+
+
 def check_whirl_budget(browser, url):
     if not R9: return
     page, errors = whirl_page(browser, url, [[(0, 0.05), (4, 0.15)], [(1, 0.08), (3, 0.12)], [(2, 0.05), (2, 0.15)], [(0, 0.12), (4, 0.06)]])
@@ -447,7 +468,7 @@ def check_whirl_budget(browser, url):
 
 CHECKS = {'check_r9_absent': check_r9_absent, 'check_n5_track': check_n5_track, 'check_n5_blood_sea': check_n5_blood_sea, 'check_n5_book': check_n5_book,
           'check_tide_marks': check_tide_marks, 'check_tide_live_shore': check_tide_live_shore, 'check_tide_limits': check_tide_limits, 'check_tide_swallow_diver': check_tide_swallow_diver,
-          'check_tide_swallow_walker': check_tide_swallow_walker, 'check_tide_boss_total': check_tide_boss_total, 'check_tide_continue': check_tide_continue, 'check_tide_budget': check_tide_budget, 'check_story_shore_unchanged': check_story_shore_unchanged, 'check_whirl_move': check_whirl_move, 'check_whirl_never': check_whirl_never, 'check_whirl_edges': check_whirl_edges, 'check_whirl_place': check_whirl_place, 'check_whirl_continue': check_whirl_continue, 'check_whirl_budget': check_whirl_budget, 'check_whirl_swallowed': check_whirl_swallowed, 'check_whirl_swallowed_continue': check_whirl_swallowed_continue}
+          'check_tide_swallow_walker': check_tide_swallow_walker, 'check_tide_boss_total': check_tide_boss_total, 'check_tide_continue': check_tide_continue, 'check_tide_budget': check_tide_budget, 'check_story_shore_unchanged': check_story_shore_unchanged, 'check_whirl_move': check_whirl_move, 'check_whirl_never': check_whirl_never, 'check_whirl_edges': check_whirl_edges, 'check_whirl_place': check_whirl_place, 'check_whirl_continue': check_whirl_continue, 'check_whirl_budget': check_whirl_budget, 'check_whirl_swallowed': check_whirl_swallowed, 'check_whirl_sea_end': check_whirl_sea_end, 'check_whirl_swallowed_continue': check_whirl_swallowed_continue}
 
 
 # ---------- Task 4: the Blood Slime and the Pirate ----------
@@ -1660,7 +1681,7 @@ def check_ft_aura(browser, url):
     ok(page.evaluate("() => window.__a.hp") == 28, 'but stepping into the aura heals it 1')
     # a whirlpool arrival counts
     page.evaluate("""() => { const g = window.__gg, a = window.__a; g.G.whirls = []; g.addWhirlPair({ lane:6, p:0.06 }, { lane:3, p:a.p });
-      const o = g.spawnMonster('ghoul', 6, true, 0.03); o.sp = 0.05; o.age = 5; window.__w = o; }""")
+      const o = g.spawnMonster('ghoul', 6, true, g.shoreP() - 0.02); o.sp = 0.05; o.age = 5; window.__w = o; }""")
     page.evaluate(STEP, [1.5, 0.05])
     d = page.evaluate("() => [window.__w.lane, window.__a.hp]")
     ok(d == [3, 29], f'a ghoul thrown out of a whirlpool into the aura heals it 1 {d}')

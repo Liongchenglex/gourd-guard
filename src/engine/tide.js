@@ -99,7 +99,8 @@ export function initWhirls(def){
 export function addWhirlPair(a, b){
   if (!G.whirls) G.whirls = [];
   if (G.whirls.length >= WHIRL_MAX || !a || !b || !inWater(a.lane, a.p) || !inWater(b.lane, b.p)) return false;
-  G.whirls.push({ a:{ lane:a.lane, p:a.p }, b:{ lane:b.lane, p:b.p }, col:WHIRL_COLOURS[G.whirls.length] });
+  const s = liveShore(), edge = e => e.p < s - WHIRL_EDGE ? { lane:e.lane, p:s - WHIRL_EDGE, wet:true } : { lane:e.lane, p:e.p };   // an end out in the sea sits at the water's edge, where a walker can cross it, and follows later surges
+  G.whirls.push({ a:edge(a), b:edge(b), col:WHIRL_COLOURS[G.whirls.length] });
   return true;
 }
 /** After a walk step (monsters.js): a monster that crossed an end's p going down the field, in that end's lane, comes out of the other end. */

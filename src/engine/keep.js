@@ -98,7 +98,7 @@ function anyRally(){
 /** A Lancer that has reached the fence (monsters.js): true when it struck and is gone. A fallen fence: false, and it walks through like any monster. */
 export function lancerHit(m, sc){
   if (m.spent) return false;   // its charge ended on a scarecrow: an ordinary walker now, chewing the fence like any monster
-  const w = walls[m.lane]; if (!w || w.hp <= 0) return false;
+  const w = walls[m.lane]; if (!w || (!sc && w.hp <= 0)) return false;   // a scarecrow ends the charge even when the fence is down
   const full = w.max * TYPES.lancer.fenceHit;   // the strike's size: half the fence's full health
   const y = sc ? sc.y : FENCE_Y - 14;
   if (sc){   // a scarecrow in its path takes the strike instead of the fence (owner ruling, final fix): the same damage, no last-1 floor (the usual break runs in game.js)

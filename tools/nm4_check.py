@@ -502,6 +502,12 @@ def check_lancer_edges(browser, url):
     ok(page.evaluate("() => window.__gg.G.scarecrows.length") == 0 and abs((p2 - p1) - 0.006) < 1e-6, f'the scarecrow broken, it walks on at normal speed, no charge ({p2 - p1:.4f})')
     page.evaluate(STEP, [200, 0.1])
     ok(not page.evaluate("() => window.__S.dead") and page.evaluate("() => window.__S.eating") and page.evaluate("() => window.__gg.walls[2].hp") > 0 and page.evaluate("() => window.__gg.walls[2].hp") < 20, 'at the fence it chews it like any monster: no second big strike, and it is not removed')
+    # fence fallen, scarecrow standing: the scarecrow still takes the strike and the charge ends
+    page.evaluate("() => { const g = window.__gg; g.walls[1].max = 20; g.walls[1].hp = 0; g.G.scarecrows.push({ lane:1, p:0.5, x:g.LANE(1), y:300, hp:25, maxHp:25, dead:false, age:0 }); }")
+    spawn_at(page, 'lancer', 1, 0.1); page.evaluate("() => { window.__S2 = window.__last; }")
+    page.evaluate(STEP, [40, 0.1])
+    st2 = page.evaluate("() => [window.__S2.spent, window.__S2.dead, window.__S2.p, window.__gg.G.scarecrows.find(s => s.lane === 1).hp]")
+    ok(st2[0] is True and st2[1] is False and st2[2] < 0.6 and st2[3] <= 15, f'a fallen fence does not let it ride through a scarecrow: struck and spent {st2}')
     # a broken fence lets it through
     page.evaluate("() => { window.__gg.walls[4].hp = 0; }")
     spawn_at(page, 'lancer', 4, 0.9); page.evaluate("() => { window.__L = window.__last; }")
@@ -1856,16 +1862,20 @@ def check_siege_nets_continue(browser, url):
 
 
 def check_crook_turq_bunch(browser, url):
-    """Final fix 3 and 4: a Turquoise from the Crookneck square hits at full power; the mixed square is no 5+ bunch (no knockback, no float, no quest count)."""
+    """Final fix 3 and 4: a Turquoise from a Crookneck square of only two pumpkins hits at full power (a crook set is never small); the mixed square is no 5+ bunch."""
     if not R8: return
     page, errors = open_page(browser, url)
     crook_night(page, ['crookneck'])
     K = page.evaluate("() => { const P = window.__gg.PTYPES, f = k => P.findIndex(p => p.key === k); return { green:f('green'), ice:f('ice'), fire:f('fire'), turq:f('turquoise'), yellow:f('yellow') }; }")
     page.evaluate(CQ)
+    page.evaluate("(K) => { const p = window.__put; p(1, 2, K.turq); p(1, 3, K.ice); window.__gg.resolveMatches(); window.__gg.launchGroup(window.__gg.grid[1][3]); }", K)
+    r = page.evaluate("(K) => { const g = window.__gg, ps = g.G.projs, t = ps.find(p => p.type === K.turq); return t ? [ps.length, !!t.grp.small, g.pumpkinPower(t), g.pumpkinPower({ type:t.type, lv:t.lv, size:1, grp:null })] : null; }", K)
+    ok(r is not None and r[0] == 2 and r[2] == r[3] and r[2] > 0, f'a two-pumpkin square: the launched Turquoise hits at full power, not the pair half {r}')
+    # the mixed square is no 5+ bunch
+    page.evaluate(CQ)
     page.evaluate("(K) => { const p = window.__put; p(1, 2, K.turq); p(1, 3, K.ice); p(1, 4, K.fire); p(2, 2, K.green); p(2, 4, K.yellow); p(3, 2, K.ice); p(3, 3, K.green); window.__gg.resolveMatches(); window.__gg.G.q.big = 0; window.__gg.launchGroup(window.__gg.grid[1][3]); }", K)
-    r = page.evaluate("(K) => { const g = window.__gg, ps = g.G.projs; const t = ps.find(p => p.type === K.turq); return [ps.length, ps.some(p => p.guar), g.G.q.big, t ? g.pumpkinPower(t) / g.pumpkinPower({ ...t, grp:{ small:false } }) : -1]; }", K)
+    r = page.evaluate("() => { const g = window.__gg, ps = g.G.projs; return [ps.length, ps.some(p => p.guar), g.G.q.big]; }")
     ok(r[0] == 7 and not r[1] and r[2] == 0, f'seven mixed pumpkins from the square: no knockback, no 5+ quest count {r}')
-    ok(r[3] == 1, f'and the Turquoise in it hits at full power ({r[3]})')
     # a real same-colour 5 outside the square still counts
     page.evaluate(CQ)
     page.evaluate("(K) => { const p = window.__put; for (const [r, c] of [[4, 0], [4, 1], [4, 2], [3, 0], [3, 1]]) p(r, c, K.yellow); p(1, 3, K.ice); p(1, 4, K.fire); p(2, 2, K.green); window.__gg.resolveMatches(); window.__gg.G.q.big = 0; window.__gg.launchGroup(window.__gg.grid[4][0]); }", K)

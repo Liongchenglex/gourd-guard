@@ -50,15 +50,21 @@ export function launchGroup(ref){
   const nOwn = sets.reduce((a, st) => a + st.own.length, 0), nPulled = sets.reduce((a, st) => a + st.pulled.length, 0);
   if (!nOwn) return;
   const bunch = { spawned:false, small:nOwn < 3, kills:0 };   // shared by every projectile of this launch (Purple's one-per-bunch spawn; Turquoise pairs are half power)
-  const guar = nOwn + nPulled >= 5;   // pulled pumpkins count toward the 5+ knockback (owner)
+  let guar = nOwn + nPulled >= 5;   // pulled pumpkins count toward the 5+ knockback (owner)
+  // Release 8: the Crookneck's mixed square is no bunch. Only same-colour sets count toward 5+ (the square's members add nothing), and a crook
+  // set is never "small" (a Turquoise flying from the square hits at full power); the small test counts the same-colour pumpkins only.
+  const nSame = sets.reduce((a, st) => a + (st.grp.crook ? 0 : st.own.length + st.pulled.length), 0), sameOwn = sets.reduce((a, st) => a + (st.grp.crook ? 0 : st.own.length), 0);
+  if (__RELEASE__ >= 8) guar = nSame >= 5;
+  let setSmall = bunch.small;
   const fly = (r, c, cell, type, lv) => {
     const x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;
     const ward = __RELEASE__ >= 5 && wardLaunch(r, c);   // from a Protector Gourd's square (Release 5)
     const wart = __RELEASE__ >= 7 && inWartSquare(r, c);   // from a Wartling Gourd's square (Release 7): double damage
-    G.projs.push({ x, y, vy:-900, type, vis:cell.c, lv, guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}), ...(wart ? { wart:true } : {}) });
+    G.projs.push({ x, y, vy:-900, type, vis:cell.c, lv, guar, ...(__RELEASE__ >= 8 ? { small:setSmall } : {}), lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}), ...(wart ? { wart:true } : {}) });
     grid[r][c] = null;
   };
   for (const { grp:gp, own, pulled } of sets){
+    if (__RELEASE__ >= 8) setSmall = gp.crook ? false : sameOwn < 3;
     if (__RELEASE__ >= 8 && gp.crook){   // a Crookneck group (Release 8): each pumpkin as itself at its own level; a Rainbow as Green
       for (const { r, c, cell } of own){ const t = cell.c === RAINBOW ? 0 : cell.c; fly(r, c, cell, t, lvOf(t)); }
       continue;
@@ -72,7 +78,7 @@ export function launchGroup(ref){
   SFX.launch(n);
   const skin = save.wardrobe && save.wardrobe.skins[grp.color]; if (skin) SFX.skinLaunch(skin);   // a skin's launch accent, once per flick (owner, 2026-09-27)
   G.throws += n;
-  if (n >= 5) G.q.big++;   // quests: bunches of 5
+  if (__RELEASE__ >= 8 ? nSame >= 5 : n >= 5) G.q.big++;   // quests: bunches of 5 (Release 8: a same-colour bunch only, never the Crookneck's mixed square)
   G.idle = 0; G.hint = null;
   resolveMatches();
 }
@@ -284,7 +290,7 @@ export function knockback(m){
 }
 
 /** A launched pumpkin's hit power: Turquoise pairs half, Brown by size (small ×0.5, medium ×1, big ×2). Used for monsters and castle walls. */
-export function pumpkinPower(pr){ return POWER[pr.lv - 1] * (pr.type === TURQUOISE && pr.grp && pr.grp.small ? TURQ_FRAC : pr.type === BROWN ? BROWN_SIZE_MULT[pr.size == null ? 1 : pr.size] : 1); }
+export function pumpkinPower(pr){ return POWER[pr.lv - 1] * (pr.type === TURQUOISE && (__RELEASE__ >= 8 && pr.small != null ? pr.small : pr.grp && pr.grp.small) ? TURQ_FRAC : pr.type === BROWN ? BROWN_SIZE_MULT[pr.size == null ? 1 : pr.size] : 1); }
 /** Pink (owner, 2026-09-27): repairs the wall of its column once, as it flies over the fence, whether or not it hits anything. */
 export function pinkHeal(pr){
   const i = pr.lv - 1, w = walls[pr.lane]; if (!w || w.hp >= w.max) return;

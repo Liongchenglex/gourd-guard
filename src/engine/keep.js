@@ -79,7 +79,7 @@ const inSquare = (q, o) => Math.abs(o.lane - q.lane) <= 1 && Math.abs(mY(o) - mY
 
 /** The factor on a walking monster's speed (monsters.js, after Ice): a Lancer's charge, and a rally from any Marshal whose sword is up. */
 export function keepSpeed(m){
-  let f = m.type === 'lancer' ? TYPES.lancer.charge : 1;
+  let f = m.type === 'lancer' && !m.spent ? TYPES.lancer.charge : 1;   // spent: its charge ended on a scarecrow (lancerHit)
   if (anyRally() && m.p > -0.05 && rallyable(m)) for (const q of G.monsters){
     if (q.type === 'marshal' && q.rallying && !q.dead && !q.eating && q.frozenT <= 0 && inSquare(q, m)){ f *= TYPES.marshal.rallySp; break; }
   }
@@ -96,13 +96,25 @@ function anyRally(){
 }
 
 /** A Lancer that has reached the fence (monsters.js): true when it struck and is gone. A fallen fence: false, and it walks through like any monster. */
-export function lancerHit(m){
+export function lancerHit(m, sc){
+  if (m.spent) return false;   // its charge ended on a scarecrow: an ordinary walker now, chewing the fence like any monster
   const w = walls[m.lane]; if (!w || w.hp <= 0) return false;
-  const amt = Math.min(w.max * TYPES.lancer.fenceHit, w.hp - 1);   // never the last 1; a fence at 1 or less takes nothing
-  if (amt > 0) damageWall(m.lane, amt);
+  const full = w.max * TYPES.lancer.fenceHit;   // the strike's size: half the fence's full health
+  const y = sc ? sc.y : FENCE_Y - 14;
+  if (sc){   // a scarecrow in its path takes the strike instead of the fence (owner ruling, final fix): the same damage, no last-1 floor (the usual break runs in game.js)
+    sc.hp -= full; sc.flash = 0.2;
+  } else {
+    const amt = Math.min(full, w.hp - 1);   // never the last 1; a fence at 1 or less takes nothing
+    if (amt > 0) damageWall(m.lane, amt);
+  }
   G.shake = Math.max(G.shake || 0, 0.6);
-  for (let i = 0; i < 12; i++){ chunk(m.x + rnd(-14, 14), FENCE_Y - 14, '#8a6440', 220); spark(m.x, FENCE_Y - 12, i % 2 ? '#cfe0ff' : '#ffffff', 140); }
-  ring(m.x, FENCE_Y - 10, 56, 'rgba(180,200,255,.9)');
+  for (let i = 0; i < 12; i++){ chunk(m.x + rnd(-14, 14), y, '#8a6440', 220); spark(m.x, y + 2, i % 2 ? '#cfe0ff' : '#ffffff', 140); }
+  ring(m.x, y + 4, 56, 'rgba(180,200,255,.9)');
+  if (sc){   // the charge ends here: no second strike, normal walking speed and a normal chew from now on (it stays and chews the scarecrow until it breaks)
+    m.spent = true; m.eat = TYPES.lancer.chew; m.chewing = sc;
+    if (G.q) G.q.touched.lancer = true;
+    return true;
+  }
   m.dead = true; m.eating = false; if (!m.minion) G.resolved++;   // off the field without a kill: it counts as dealt with, like a diving crow
   if (G.q) G.q.touched.lancer = true;
   return true;
@@ -223,10 +235,14 @@ export function initSiege(m){
   m.archers = T.archers; m.volleyT = T.volleyEvery; m.netT = T.netEvery; m.rampT = T.rampEvery; m.volleying = false; m.ramping = false; m.raiseT = 0; m.seenHp = m.hp; m.marshals = [];
 }
 /** What a continued night keeps of it: the archers left and the time on each clock. */
-export const siegeSnapshot = m => isSiege(m) ? { archers:m.archers, volleyT:m.volleyT, netT:m.netT, rampT:m.rampT } : null;
+export const siegeSnapshot = m => isSiege(m) ? { id:m.id, archers:m.archers, volleyT:m.volleyT, netT:m.netT, rampT:m.rampT } : null;
 export function restoreSiege(m, s){
   if (!s || !isSiege(m)) return;
   m.archers = Math.max(0, Math.min(TYPES.siegetower.archers, s.archers | 0)); m.volleyT = s.volleyT; m.netT = s.netT; m.rampT = s.rampT; m.seenHp = m.hp;   // seenHp: its restored health is no hit
+  if (s.id != null && m.id != null && s.id !== m.id){   // its nets (on the patch and in flight) now belong to the new tower, so its fall clears them (siegeFalls)
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){ const cell = grid[r][c]; if (cell && cell.netBy === s.id) cell.netBy = m.id; }
+    for (const f of G.netsFlying || []) if (f.by === s.id) f.by = m.id;
+  }
 }
 
 /** combat.js hitMonsterNow: a pumpkin's direct hit on a tower with archers up takes one off instead of hurting it. True when it did. */

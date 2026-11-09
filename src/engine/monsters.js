@@ -144,7 +144,7 @@ function standsStill(o){
 }
 export function aheadLimit(m){
   let limit = 1;
-  if (__RELEASE__ >= 8 && m.type === 'lancer') return limit;   // a Storm Lancer rides through the monsters ahead of it (engine/keep.js)
+  if (__RELEASE__ >= 8 && m.type === 'lancer' && !m.spent) return limit;   // a Storm Lancer rides through the monsters ahead of it (engine/keep.js)
   if (__RELEASE__ >= 5 && m.dashing) return limit;   // a comet streaking down its lane never stops for anyone (engine/hollow.js)
   const myLanes = lanesOf(m);
   for (const o of G.monsters){

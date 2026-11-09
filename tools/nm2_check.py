@@ -1897,7 +1897,7 @@ def main():
     global R5, MODE, BUILD
     BUILD = a.expect
     if a.expect == 'r7': a.expect = 'on'; from nm4_check import check_r8_absent; CHECKS['check_r8_absent'] = check_r8_absent   # a Release 7 build holds everything up to Release 7: these checks run as `on`, plus the Release 8 absence check
-    if a.expect in ('r6', 'r5'): a.expect = 'on'; CHECKS['check_r7_absent'] = check_r7_absent   # a Release 6 build holds everything up to Release 6: these checks run as `on`, plus the Release 7 absence check
+    if a.expect in ('r6', 'r5'): a.expect = 'on'; CHECKS['check_r7_absent'] = check_r7_absent   # a Release 5 or 6 build holds everything up to that release: these checks run as `on`, plus the Release 7 absence check
     MODE = a.expect; R5 = a.expect == 'on'
     with sync_playwright() as p:
         browser = p.chromium.launch(args=os.environ.get('GG_CHROME_ARGS', '').split())   # e.g. GG_CHROME_ARGS=--disable-gpu when the headless GPU process hangs (a sleeping Mac)

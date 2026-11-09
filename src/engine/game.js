@@ -33,7 +33,7 @@ import { prebakePotions } from './render/potion.js';
 import { prebakeWeather } from './render/weather.js';
 import { prebakeCastlePieces } from './render/castlepieces.js';
 import { updateNets, netSnapshot, restoreNets } from './nets.js';
-import { shieldSnapshot, restoreShields, carryCheck, newCastle, updateCastlePieces, siegeSnapshot, countSnapshot } from './keep.js';
+import { lancerHit, shieldSnapshot, restoreShields, carryCheck, newCastle, updateCastlePieces, siegeSnapshot, countSnapshot } from './keep.js';
 import { prebakeNets } from './render/nets.js';
 import { prebakeCountFx } from './render/fx.js';
 import { K } from './render/canvas.js';
@@ -524,7 +524,8 @@ export function update(dt){
     if (g.gustT <= 0){ gust(g.gustDir, g.gustSet); g.gustDir = null; g.gustSet = null; g.gustT = g.def.gust.every; }
   }
   for (const sc of g.scarecrows){   // monsters in the lane stop to chew the scarecrow
-    for (const m of g.monsters) if (!m.dead && m.lane === sc.lane && m.type !== 'boss' && m.rise <= 0 && m.p >= sc.p - 0.01 && m.p < 0.99){
+    if (__RELEASE__ >= 8) for (const m of g.monsters) if (!m.dead && m.type === 'lancer' && !m.spent && m.lane === sc.lane && m.rise <= 0 && m.p >= sc.p - 0.01 && sc.hp > 0 && lancerHit(m, sc)) break;   // a Storm Lancer's strike lands on a scarecrow in its path, not the fence (Release 8, engine/keep.js)
+    for (const m of g.monsters) if (!m.dead && m.lane === sc.lane && m.type !== 'boss' && m.rise <= 0 && !(__RELEASE__ >= 8 && m.type === 'lancer' && !m.spent) && m.p >= sc.p - 0.01 && m.p < 0.99){
       m.p = Math.min(m.p, sc.p); m.chewing = sc; sc.hp -= m.eat * (m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1) * (__RELEASE__ >= 7 && m.drank && m.drank.speed ? POTION_SPEED : 1) * dt;   // a speed potion chews a scarecrow faster too (Release 7)
       if (Math.random() < dt * 4) chunk(sc.x + rnd(-8, 8), sc.y, '#c8b060', 80);
     }

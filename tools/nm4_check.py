@@ -488,6 +488,20 @@ def check_lancer_edges(browser, url):
     spawn_at(page, 'lancer', 3, 0.1); page.evaluate("() => { window.__L = window.__last; }")
     page.evaluate(STEP, [100, 0.1])
     ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[3].hp") == 10 and page.evaluate("() => window.__gg.G.castles.find(c => c.kind === 'gate').hp") == 30, 'it charges through a Gatehouse to the fence, the gate untouched')
+    # a scarecrow stops it: the strike lands on the scarecrow (half the fence's full health), the charge ends, it walks at 0.03 and chews it down, then the fence with no second strike
+    page.evaluate("() => { const g = window.__gg; const w = g.walls[2]; w.max = 20; w.hp = 20; g.G.scarecrows.push({ lane:2, p:0.5, x:g.LANE(2), y:300, hp:25, maxHp:25, dead:false, age:0 }); }")
+    spawn_at(page, 'lancer', 2, 0.1); page.evaluate("() => { window.__S = window.__last; }")
+    page.evaluate(STEP, [40, 0.1])
+    st = page.evaluate("() => [window.__S.dead, window.__S.spent, window.__S.eat, window.__gg.G.scarecrows[0].hp, window.__gg.walls[2].hp]")
+    ok(st[0] is False and st[1] is True and abs(st[2] - 0.8) < 1e-9 and st[3] <= 15 and st[3] > 4 and st[4] == 20, f'the strike hits the scarecrow (25 -> 15 less chewing), not the fence; the Lancer stays, charge ended, normal chew {st}')
+    page.evaluate("() => { const g = window.__gg; g.G.scarecrows[0].hp = 1e6; g.G.scarecrows[0].maxHp = 1e6; }")
+    p0 = page.evaluate("() => window.__S.p"); page.evaluate(STEP, [5, 0.1])
+    ok(abs(page.evaluate("() => window.__S.p") - p0) < 1e-6 and page.evaluate("() => !!window.__S.chewing"), 'held at the scarecrow, chewing it, not charging on')
+    page.evaluate("() => { const g = window.__gg; g.G.scarecrows[0].hp = 0.01; }"); page.evaluate(STEP, [3, 0.1])
+    p1 = page.evaluate("() => window.__S.p"); page.evaluate(STEP, [2, 0.1]); p2 = page.evaluate("() => window.__S.p")
+    ok(page.evaluate("() => window.__gg.G.scarecrows.length") == 0 and abs((p2 - p1) - 0.006) < 1e-6, f'the scarecrow broken, it walks on at normal speed, no charge ({p2 - p1:.4f})')
+    page.evaluate(STEP, [200, 0.1])
+    ok(not page.evaluate("() => window.__S.dead") and page.evaluate("() => window.__S.eating") and page.evaluate("() => window.__gg.walls[2].hp") > 0 and page.evaluate("() => window.__gg.walls[2].hp") < 20, 'at the fence it chews it like any monster: no second big strike, and it is not removed')
     # a broken fence lets it through
     page.evaluate("() => { window.__gg.walls[4].hp = 0; }")
     spawn_at(page, 'lancer', 4, 0.9); page.evaluate("() => { window.__L = window.__last; }")
@@ -1817,7 +1831,51 @@ def check_crook_art(browser, url):
     page.close()
 
 
-CHECKS.update({'check_crook_no_net': check_crook_no_net, 'check_crook_group': check_crook_group, 'check_crook_launch_mix': check_crook_launch_mix,
+def check_siege_nets_continue(browser, url):
+    """Final fix 2: a tower's nets, on the patch and in flight, belong to the continued tower, and its fall clears them."""
+    if not R8: return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; window.__L0 = [L.boss, L.bossForm, L.bossChest]; L.boss = 'siegetower'; L.bossForm = 1; L.bossChest = 'normal'; }")
+    nm4_start(page, 1); time.sleep(0.4); hold(page)
+    page.evaluate("() => { const G = window.__gg.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.idle = -1e9; G.hint = null; }")
+    page.evaluate("() => { const g = window.__gg, G = g.G; G.bossSpawned = true; const b = g.spawnMonster('boss'); b.sp = 0; b.p = 0.2; window.__b = b; }")
+    page.evaluate("""() => { const g = window.__gg; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) g.grid[r][c] = g.newCell((r + c * 2) % 5);
+      const id = window.__b.id; g.grid[1][1].net = 'net'; g.grid[1][1].netBy = id; g.grid[3][4].net = 'net'; g.grid[3][4].netBy = id;
+      g.G.netsFlying = [{ x:120, y:80, kind:'net', by:id, r:2, c:2, t:5 }]; }""")
+    page.evaluate("() => { const g = window.__gg; g.setState('play'); const c = g.continueState(); g.continueNight(c); g.setState('pause'); }")
+    page.evaluate(STEP, [5, 0.02])
+    r = page.evaluate("""() => { const g = window.__gg, b = g.G.monsters.find(m => m.type === 'boss' && !m.dead); if (!b) return null;
+      const tags = g.grid.flat().filter(x => x && x.net).map(x => x.netBy === b.id); return [tags.length, tags.every(Boolean), (g.G.netsFlying || []).every(f => f.by === b.id)]; }""")
+    page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; [L.boss, L.bossForm, L.bossChest] = window.__L0; }")
+    ok(r is not None and r[0] >= 2 and r[1] and r[2], f'its nets, on the patch and in flight, are re-tagged to the new tower {r}')
+    page.evaluate("() => { const g = window.__gg, b = g.G.monsters.find(m => m.type === 'boss' && !m.dead); b.hp = 0; g.kill(b); }")
+    left = page.evaluate("() => [window.__gg.netCount(), (window.__gg.G.netsFlying || []).length]")
+    ok(left == [0, 0], f'its fall clears its pre-continue nets {left}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_crook_turq_bunch(browser, url):
+    """Final fix 3 and 4: a Turquoise from the Crookneck square hits at full power; the mixed square is no 5+ bunch (no knockback, no float, no quest count)."""
+    if not R8: return
+    page, errors = open_page(browser, url)
+    crook_night(page, ['crookneck'])
+    K = page.evaluate("() => { const P = window.__gg.PTYPES, f = k => P.findIndex(p => p.key === k); return { green:f('green'), ice:f('ice'), fire:f('fire'), turq:f('turquoise'), yellow:f('yellow') }; }")
+    page.evaluate(CQ)
+    page.evaluate("(K) => { const p = window.__put; p(1, 2, K.turq); p(1, 3, K.ice); p(1, 4, K.fire); p(2, 2, K.green); p(2, 4, K.yellow); p(3, 2, K.ice); p(3, 3, K.green); window.__gg.resolveMatches(); window.__gg.G.q.big = 0; window.__gg.launchGroup(window.__gg.grid[1][3]); }", K)
+    r = page.evaluate("(K) => { const g = window.__gg, ps = g.G.projs; const t = ps.find(p => p.type === K.turq); return [ps.length, ps.some(p => p.guar), g.G.q.big, t ? g.pumpkinPower(t) / g.pumpkinPower({ ...t, grp:{ small:false } }) : -1]; }", K)
+    ok(r[0] == 7 and not r[1] and r[2] == 0, f'seven mixed pumpkins from the square: no knockback, no 5+ quest count {r}')
+    ok(r[3] == 1, f'and the Turquoise in it hits at full power ({r[3]})')
+    # a real same-colour 5 outside the square still counts
+    page.evaluate(CQ)
+    page.evaluate("(K) => { const p = window.__put; for (const [r, c] of [[4, 0], [4, 1], [4, 2], [3, 0], [3, 1]]) p(r, c, K.yellow); p(1, 3, K.ice); p(1, 4, K.fire); p(2, 2, K.green); window.__gg.resolveMatches(); window.__gg.G.q.big = 0; window.__gg.launchGroup(window.__gg.grid[4][0]); }", K)
+    r2 = page.evaluate("() => [window.__gg.G.projs.filter(p => p.guar).length, window.__gg.G.q.big]")
+    ok(r2 == [5, 1], f'a same-colour bunch of 5 still knocks back and counts for the quest {r2}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_siege_nets_continue': check_siege_nets_continue, 'check_crook_turq_bunch': check_crook_turq_bunch, 'check_crook_no_net': check_crook_no_net, 'check_crook_group': check_crook_group, 'check_crook_launch_mix': check_crook_launch_mix,
                'check_crook_break': check_crook_break, 'check_picker_four_gourds': check_picker_four_gourds, 'check_crook_coach': check_crook_coach,
                'check_crook_unlock': check_crook_unlock, 'check_crook_art': check_crook_art})
 

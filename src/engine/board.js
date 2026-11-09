@@ -133,7 +133,7 @@ export function resolveMatches(){
     cell.lit = false; cell.gids = []; cell.bsize = 0;
   }
   G.groups = {};
-  let sx = 0, sy = 0, n = 0, biggest = 0, fresh = 0;
+  let sx = 0, sy = 0, n = 0, biggest = 0, fresh = 0, bigSame = 0;
   for (const g of groups){
     const gid = nextGid(), size = g.cells.length;
     G.groups[gid] = { color:g.color, size, ...(__RELEASE__ >= 8 && g.crook ? { crook:true } : {}) };
@@ -148,11 +148,11 @@ export function resolveMatches(){
         for (let i = 0; i < 5; i++) spark(x, y, __RELEASE__ >= 5 && cell.c === ROTTEN ? ROT_FX.spark : PTYPES[cell.c].spark, 150);
       }
     }
-    if (changed){ fresh++; biggest = Math.max(biggest, size); }
+    if (changed){ fresh++; biggest = Math.max(biggest, size); if (!(__RELEASE__ >= 8 && g.crook)) bigSame = Math.max(bigSame, size); }
   }
   if (fresh){
     SFX.match(biggest, fresh);
-    const txt = fresh > 1 ? `Combo ×${fresh}` : biggest >= 5 ? 'Knockback bunch!' : '';
+    const txt = fresh > 1 ? `Combo ×${fresh}` : (__RELEASE__ >= 8 ? bigSame : biggest) >= 5 ? 'Knockback bunch!' : '';
     if (txt) addFloat(txt, sx / n, sy / n - 20, '#ffd35a', 24, 1.1);
     if (G.mode === 'story' && !save.seenFlick){
       save.seenFlick = true; persist();

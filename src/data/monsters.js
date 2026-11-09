@@ -170,7 +170,7 @@ export const TYPES = {
   // The Storm Lancer charges from the moment it spawns at `charge` times its walk (Ice slows the charge); at the fence it takes `fenceHit` of the fence's
   // full health, never the last 1, and is gone without a reward. The Storm Marshal raises his sword for `rallyLast` s every `rallyEvery` s: monsters in
   // his 3x3 move `rallySp` times faster while it is up, and at the start of each rally each gets `rallyHp` times its health, once ever (engine/keep.js).
-  ...(__RELEASE__ >= 8 ? { lancer: { hp:5, sp:0.03, charge:4, r:26, coins:10, eat:0, pts:30, drop:2, fenceHit:0.5 },
+  ...(__RELEASE__ >= 8 ? { lancer: { hp:5, sp:0.03, charge:4, r:26, coins:10, eat:0, pts:30, drop:2, fenceHit:0.5, chew:0.8 },
     marshal: { hp:10, sp:0.03, r:28, coins:12, eat:0.5, pts:36, drop:3, rallyEvery:8, rallyLast:4, rallySp:2, rallyHp:2 } } : {}),
   ...(__RELEASE__ >= 8 ? { lobbercart: { hp:6, sp:0.02, r:26, coins:10, eat:0, pts:30, drop:2, park:0.15, lobEvery:[6, 8] } } : {}),
   // The Blood Glutton throws `netsAtSpawn` red nets when it spawns and, every `netEvery` s, one more while it has fewer than `netMax` of its own (on the

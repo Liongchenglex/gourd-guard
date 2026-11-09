@@ -960,9 +960,13 @@ def check_swan_gates(browser, url):
         page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 40; i++) g.update(0.05); }")
         r = page.evaluate("() => [window.__B.dead, window.__B.rise, window.__B.type]")
         ok(r[0] is True and not r[1], f'{typeB}: dies to the ring at 1 hp and stays dead {r}')
-        page.evaluate(SW_PAIR, [typeB, 1]); page.evaluate("(s) => { const B = window.__B; B.hp = 1; " + setup + " }", setup)   # the control: the same Green hit with no ring does not kill it
-        page.evaluate(SW_HIT, [0, False, 1])
-        ok(page.evaluate("() => window.__B.dead") is False, f'{typeB}: without the ring the Green hit does not kill it')
+        # the control: Black's own splash (a colour, lastHit 7, 0.5 damage) on the same monster at 1 hp must not finish it for good: the gate is SWAN_HIT's
+        ctl = setup.replace('colourImmune = 0', 'colourImmune = 7')   # a reverse chameleon immune to Black itself
+        page.evaluate(SW_PAIR, [typeB, 1]); page.evaluate("(s) => { const B = window.__B; B.hp = 0.5; " + ctl + " }", ctl)   # 0.5 is exactly Black's splash: it would kill an ordinary monster
+        page.evaluate(SW_HIT, [7, False, 1])
+        page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 10; i++) g.update(0.05); }")
+        c = page.evaluate("() => [window.__B.dead, window.__B.hp, window.__B.type]")
+        ok(c[0] is False, f'{typeB}: a plain Black splash that would kill an ordinary monster does not leave it dead (so SWAN_HIT is what opens the gate) {c}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
@@ -1150,6 +1154,21 @@ def check_swan_coach(browser, url):
     page.close()
 
 
+def check_swan_coach_edges(browser, url):
+    """The coach's demo bunch lies wholly inside the Swan's 3x3 wherever the Swan stands, corners and edges included."""
+    if not R9: return
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, swan:true }; s.seenGourdCoach = true; s.seenSwanCoach = false; s.lv.green = 1; }")
+    for r, c in [(0, 3), (4, 3), (0, 0), (4, 6), (2, 3)]:
+        page.evaluate("(lo) => window.__gg.startGame('story', 1405, lo, ['swan'])", [0, 1, 2, 3, 4]); time.sleep(0.2); page.evaluate("() => window.__gg.setState('pause')")   # paused: only the manual updates below advance the coach
+        page.evaluate("([r, c]) => { const g = window.__gg, p = g.gourdPos('swan'), x = g.grid[p.r][p.c]; g.grid[p.r][p.c] = null; g.grid[r][c] = x; }", [r, c])
+        page.evaluate("() => { const g = window.__gg; g.G.coach.step = 'sslide'; g.G.coach.from = { r:-1, c:-1 }; for (let i = 0; i < 3; i++) g.update(0.05); }")
+        d = page.evaluate("() => { const g = window.__gg, b = g.G.coach.bunch || [], out = []; for (let a = 0; a < 5; a++) for (let k = 0; k < 7; k++) if (b.includes(g.grid[a][k])) out.push([a, k]); return [g.G.coach.step, out]; }")
+        ok(d[0] == 'slaunch' and len(d[1]) == 3 and all(abs(a - r) <= 1 and abs(k - c) <= 1 and (a, k) != (r, c) for a, k in d[1]), f'Swan at ({r}, {c}): three demo pumpkins inside its square {d}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 def check_swan_art(browser, url):
     """The Swan's baked art: a picker icon, a strip saved for the owner, drawing adds no painter calls per frame; and a black-ring frame."""
     if not R9: return
@@ -1194,7 +1213,7 @@ def check_ring_budget(browser, url):
 
 CHECKS.update({'check_swan_splash': check_swan_splash, 'check_swan_gates': check_swan_gates, 'check_swan_shields': check_swan_shields, 'check_swan_black': check_swan_black,
                'check_swan_break': check_swan_break, 'check_picker_five_gourds': check_picker_five_gourds, 'check_swan_unlock': check_swan_unlock, 'check_swan_intro': check_swan_intro,
-               'check_swan_coach': check_swan_coach, 'check_swan_art': check_swan_art, 'check_ring_budget': check_ring_budget})
+               'check_swan_coach': check_swan_coach, 'check_swan_coach_edges': check_swan_coach_edges, 'check_swan_art': check_swan_art, 'check_ring_budget': check_ring_budget})
 
 
 def main():

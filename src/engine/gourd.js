@@ -195,8 +195,8 @@ export function onCrookBreak(pos){
   addFloat('Nets off!', LANE(pos.c), GY + pos.r * CS - 10, '#d6ec78', 20, 1);
 }
 
-/** Release 9: the Swan Gourd has just broken at pos: every empty cell of its 3×3 (no pumpkin, no grave; its own cell left out, where it comes
- *  back from) sprouts a Rainbow, growing in like a sprout; destroyGourd's resolveMatches then groups them with what they touch. */
+/** Release 9: the Swan Gourd has just broken at pos: every empty cell of its 3×3 (no pumpkin, no grave; the 8 cells around it, as the Grave
+ *  Gourd's squareAround, its own cell left out) sprouts a Rainbow, growing in like a sprout; destroyGourd's resolveMatches then groups them with what they touch. */
 export function onSwanBreak(pos){
   let n = 0;
   for (const [a, b] of squareAround(pos.r, pos.c)){

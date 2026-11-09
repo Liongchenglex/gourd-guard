@@ -375,11 +375,16 @@ function findSwanMove(){
  *  next one in (so one is hit by the pumpkins and the other is beside the hit). The bunch's colour is the team's first plain one. */
 function setupSwanLaunch(sp){
   const c = G.coach, col = plainColours()[0];
-  const r0 = Math.min(ROWS - 2, Math.max(1, sp.r));
-  const free = cc => cc >= 0 && cc < COLS && [r0 - 1, r0, r0 + 1].every(r => !grid[r][cc] && !graves[r][cc]);
-  const cc = [sp.c - 1, sp.c + 1].find(free);
+  // three free, orthogonally joined cells inside its 3×3 (squareAround: whatever row or column it stands on), a single column first
+  const fr = squareAround(sp.r, sp.c).filter(([a, b]) => !grid[a][b] && !graves[a][b]), adj = (p, q) => Math.abs(p[0] - q[0]) + Math.abs(p[1] - q[1]) === 1;
+  let pick = null;
+  for (const one of [true, false]) for (const x of fr) for (const y of fr) for (const z of fr){
+    if (pick || x === y || y === z || x === z || !adj(x, y) || !adj(y, z) || (one && !(x[1] === y[1] && y[1] === z[1]))) continue;
+    pick = [x, y, z];
+  }
+  const cc = pick ? pick[0][1] : null;
   c.bunch = [];
-  if (cc != null) for (const r of [r0 - 1, r0, r0 + 1]){ const cell = newCell(col); grid[r][cc] = cell; c.bunch.push(cell); }
+  if (pick) for (const [a, b] of pick){ const cell = newCell(col); grid[a][b] = cell; c.bunch.push(cell); }
   resolveMatches();
   if (cc != null) for (const lane of [cc, cc > 0 ? cc - 1 : cc + 1]){ const m = spawnMonster('ghoul', lane, true, 0.08); if (m){ m.hp = m.maxHp = 20; m.sp *= 0.6; } }   // tough enough to show three hits and three ring hits
   c.ref = c.bunch[0] || null;

@@ -15,7 +15,9 @@
 // - The Crookneck Gourd ('crookneck', Release 8): no net lands in its 3×3 (inCrookSquare, nets.js canNet); the pumpkins in its 3×3 make one
 //   group of any colour (board.js computeGroups, CROOK). Breaking it clears every net on the patch, red ones too, and those in flight
 //   (onCrookBreak). It comes back as the Protector does (gourdsBack).
-// Every caller gates on `__RELEASE__ >= 4` (the Protector's branches on `>= 5`, the Wartling's on `>= 7`, the Crookneck's on `>= 8`), so lower
+// - The Swan Gourd ('swan', Release 9): a pumpkin launched from its 3×3 (inSwanSquare) carries `swan`, and each hit bursts a black-hole ring
+//   (combat.js swanSplash). Breaking it sprouts a Rainbow in every empty cell of its 3×3 (onSwanBreak). It comes back as the Protector does.
+// Every caller gates on `__RELEASE__ >= 4` (the Protector's branches on `>= 5`, the Wartling's on `>= 7`, the Crookneck's on `>= 8`, the Swan's on `>= 9`), so lower
 // builds drop this module.
 // Art: render/gourd.js.
 
@@ -103,6 +105,16 @@ export function inCrookSquare(r, c){
   return false;
 }
 
+/** Release 9: (r, c) is inside the 3×3 (its centre included) of a Swan Gourd standing on the patch: a pumpkin launched from there carries
+ *  `swan`, and its hits burst a black-hole ring (combat.js swanSplash). No allocation. */
+export function inSwanSquare(r, c){
+  if (!(__RELEASE__ >= 9)) return false;
+  for (let a = Math.max(0, r - 1); a <= Math.min(ROWS - 1, r + 1); a++) for (let b = Math.max(0, c - 1); b <= Math.min(COLS - 1, c + 1); b++){
+    const cell = grid[a][b]; if (cell && cell.gourd === 'swan') return true;
+  }
+  return false;
+}
+
 /** The cells of the 3×3 around (r, c) that are on the patch, the centre left out: 8, 5 on an edge, 3 in a corner. */
 export function squareAround(r, c){
   const out = [];
@@ -183,6 +195,18 @@ export function onCrookBreak(pos){
   addFloat('Nets off!', LANE(pos.c), GY + pos.r * CS - 10, '#d6ec78', 20, 1);
 }
 
+/** Release 9: the Swan Gourd has just broken at pos: every empty cell of its 3×3 (no pumpkin, no grave; the 8 cells around it, as the Grave
+ *  Gourd's squareAround, its own cell left out) sprouts a Rainbow, growing in like a sprout; destroyGourd's resolveMatches then groups them with what they touch. */
+export function onSwanBreak(pos){
+  let n = 0;
+  for (const [a, b] of squareAround(pos.r, pos.c)){
+    if (grid[a][b] || graves[a][b]) continue;
+    const cell = newCell(RAINBOW); cell.grow = 0; grid[a][b] = cell; n++;
+    for (let i = 0; i < 5; i++) spark(LANE(b), GY + a * CS + CS / 2, ['#ff8a70', '#ffd98a', '#a8d4ff', '#a6e07a', '#c79cf2'][i % 5], 110);
+  }
+  if (n) addFloat(n > 1 ? `${n} Rainbows!` : 'A Rainbow!', LANE(pos.c), GY + pos.r * CS - 10, '#f4eedc', 18, 1);
+}
+
 /** Destroyed by the player's hold (board.js smash routes here), by kind. The Grave: every grave in its 3×3 is cleared (free, through
  *  bustGrave), pumpkins in the square are untouched. The Protector (Release 5): onProtectorBreak. The Wartling (Release 7):
  *  onWartlingBreak. The Crookneck (Release 8): onCrookBreak. Either way it is due back on the next sprout tick. */
@@ -200,6 +224,7 @@ export function destroyGourd(cell){
   if (__RELEASE__ >= 5 && kind === 'protector') onProtectorBreak(pos);
   if (__RELEASE__ >= 7 && kind === 'wartling') onWartlingBreak(pos);
   if (__RELEASE__ >= 8 && kind === 'crookneck') onCrookBreak(pos);
+  if (__RELEASE__ >= 9 && kind === 'swan') onSwanBreak(pos);
   SFX.smash(); G.shake = Math.max(G.shake || 0, 0.35);
   resolveMatches();
   return true;
@@ -209,6 +234,7 @@ export function destroyGourd(cell){
 const gourdFx = kind => __RELEASE__ >= 5 && kind === 'protector' ? { shell:'#e4d9bd', dark:'#5c8c48', ring:'rgba(244,238,214,.9)', spark:'#f4eedc' }
   : __RELEASE__ >= 7 && kind === 'wartling' ? { shell:'#8a5cc6', dark:'#4a2c74', ring:'rgba(214,186,255,.9)', spark:'#d9b8ff' }
   : __RELEASE__ >= 8 && kind === 'crookneck' ? { shell:'#b9cf3c', dark:'#5e7418', ring:'rgba(220,238,140,.9)', spark:'#e0f08a' }
+  : __RELEASE__ >= 9 && kind === 'swan' ? { shell:'#3b3552', dark:'#16121f', ring:'rgba(176,150,230,.9)', spark:'#b8a0f0' }
   : { shell:'#e3a43c', dark:'#8a5a1e', ring:'rgba(255,214,140,.9)', spark:'#ffd98a' };
 /** Put a due gourd (by id) back on a random empty cell. True when it came back. */
 function bringBack(id){

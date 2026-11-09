@@ -8,11 +8,13 @@ import { glueStep } from './glue.js';
 import { magnetSlide } from './magnet.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
 import { updateHollowMonster, reapLanes, initHollowMonster, initLamplighter, updateLamplighter, initFallenPolt, updateFallenPolt } from './hollow.js';
+import { initMarshMonster, updateMarshMonster, marshStop, growBlob, updateKraken, initFallenPair, updateFallenTides, tidesHold } from './marsh.js';
 import { newCastle, initKeepMonster, updateKeepMonster, keepStop, keepParked, keepSpeed, lancerHit, keepTick, updateSiege, updateFallenCount } from './keep.js';
 import { initWitchwoodMonster, updateWitchwoodMonster, toadStop, tongueFree, initTreant, updateTreant, initFallenHex, updateFallenHex } from './witchwood.js';
 import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike, initFallenGK, updateFallenGK } from './nightmare.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
+import { whirlStep } from './tide.js';
 import { PTYPES } from '../data/pumpkins.js';
 import { COLS, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, G, LANE, grid, ROWS, GY, W, walls } from './state.js';
 import { clamp, rnd, shuffle } from './util.js';
@@ -59,18 +61,19 @@ let monsterIds = 0;
 export function spawnMonster(key, lane, minion, p, formArg){
   const { type, kind, T, variant } = resolveMonster(key);
   const mod = variant ? MODS[variant.mod] : null;
-  if (type === 'boss' && kind === 'twintides' && !minion){   // the twins spawn as a pair on the sea row
+  if (type === 'boss' && (kind === 'twintides' || (__RELEASE__ >= 9 && kind === 'fallentides')) && !minion){   // the twins spawn as a pair on the sea row (the Fallen Twin Tides too: blood and blue)
     const taken = G.monsters.filter(o => o.type === 'boss' && !o.dead).map(o => o.lane);   // a second pair takes other lanes
     const lanes = shuffle([...Array(COLS).keys()].filter(l => !taken.includes(l))).slice(0, 2);
     const a = spawnMonster('boss', lanes[0], true, p), b = spawnMonster('boss', lanes[1], true, p);
     a.minion = b.minion = false; a.twin = b; b.twin = a;
+    if (__RELEASE__ >= 9 && kind === 'fallentides') initFallenPair(a, b);   // blood and blue, their looks and clocks (engine/marsh.js)
     return a;
   }
   let puddle = null;
   const seaEdge = shoreP();
-  if (type === 'diver' && seaEdge > 0.05 && p == null && (Math.random() < 0.5 || !(G.puddles && G.puddles.length))){   // divers may lurk anywhere in the sea (always, when there are no puddles: a diver never walks while there is water to hide in)
+  if ((type === 'diver' || (__RELEASE__ >= 9 && type === 'eel')) && seaEdge > 0.05 && p == null && (Math.random() < 0.5 || !(G.puddles && G.puddles.length))){   // divers may lurk anywhere in the sea (always, when there are no puddles: a diver never walks while there is water to hide in)
     puddle = { lane:lane != null ? lane : pickLane(), p:rnd(0.02, seaEdge - 0.03) }; lane = puddle.lane; p = puddle.p;
-  } else if ((type === 'crawler' || type === 'diver' || type === 'turtle') && G.puddles && G.puddles.length && p == null){   // rise from a random puddle
+  } else if ((type === 'crawler' || type === 'diver' || type === 'turtle' || (__RELEASE__ >= 9 && (type === 'eel' || type === 'turtlerider'))) && G.puddles && G.puddles.length && p == null){   // rise from a random puddle
     puddle = G.puddles[Math.floor(Math.random() * G.puddles.length)];
     lane = puddle.lane; p = puddle.p;
   }
@@ -94,7 +97,7 @@ export function spawnMonster(key, lane, minion, p, formArg){
   if (T.noKnockback) m.noKnockback = true;
   if (form === 2 && T.form2 && T.form2.hold != null) m.hold = T.form2.hold;
   if (G.def && G.def.hexAll && hexable(m)) hexMonster(m, G.def.hexAll === 'reverse', true);
-  if (type === 'turtle' && !puddle && G.puddles && G.puddles.length && p == null){ const pd = G.puddles[Math.floor(Math.random() * G.puddles.length)]; m.lane = pd.lane; m.x = m.tx = LANE(pd.lane); m.p = pd.p; }
+  if ((type === 'turtle' || (__RELEASE__ >= 9 && type === 'turtlerider')) && !puddle && G.puddles && G.puddles.length && p == null){ const pd = G.puddles[Math.floor(Math.random() * G.puddles.length)]; m.lane = pd.lane; m.x = m.tx = LANE(pd.lane); m.p = pd.p; }
   if (type === 'chameleon' || type === 'rchameleon'){   // takes one of the player's colours
     const pool = (G.loadout || [0, 1]).filter(t => t !== RAINBOW);
     const col = pool[Math.floor(Math.random() * pool.length)];
@@ -129,15 +132,18 @@ export function spawnMonster(key, lane, minion, p, formArg){
   if (__RELEASE__ >= 7 && type === 'boss' && kind === 'fallenhexwitch') initFallenHex(m);   // the witchwood nightmare's boss, N3-16 (engine/witchwood.js)
   if (__RELEASE__ >= 8) m.id = ++monsterIds;   // a stable id: the nets a monster throws and the Bride's veil are told apart by it (engine/nets.js, engine/keep.js)
   if (__RELEASE__ >= 8) initKeepMonster(m);   // Nightmare Crumbling Keep's monsters (engine/keep.js; after the id: a Glutton throws its red nets at once)
+  if (__RELEASE__ >= 9) initMarshMonster(m);   // Nightmare Drowned Marsh's monsters: a Bloodlet's regrow clock, a Pirate's stop points (engine/marsh.js)
   G.monsters.push(m);
   return m;
 }
 
 /** Monsters that deliberately stay put for good: others walk past them instead of queueing behind. */
 function standsStill(o){
+  if (__RELEASE__ >= 9 && (o.kind === 'kraken' || o.type === 'tentacle')) return true;   // the Kraken's head and tentacles never walk (engine/marsh.js)
   if (o.type === 'boss') return o.p >= (o.hold || 1) - 0.001;
   if (o.type === 'archer') return o.p >= TYPES.archer.hold;
   if (o.type === 'diver') return !o.walker;
+  if (__RELEASE__ >= 9 && (o.type === 'eel' || o.type === 'siren')) return true;   // a Storm Eel and the Siren never walk (engine/marsh.js)
   if (o.type === 'sack' || o.type === 'jukebox') return true;
   if (__RELEASE__ >= 8 && keepParked(o)) return true;   // a parked Lobber Cart never moves on (engine/keep.js)
   if (__RELEASE__ >= 4 && o.type === 'coffin') return true;   // Casket Jack's Fallen Casket lies still: others walk round it
@@ -209,6 +215,7 @@ export function updateMonster(m, dt){
   m.age += dt; m.ph += dt;
   if (__RELEASE__ >= 4 && m.rush > 0) m.rush -= dt;   // a Cinder Rooster's crow: faster while it lasts (engine/nightmare.js)
   if (m.flash > 0) m.flash -= dt;
+  if (__RELEASE__ >= 9 && m.whirlCool > 0) m.whirlCool -= dt;   // just out of a whirlpool: not taken again yet (engine/tide.js)
   if (m.anim){ m.anim.t += dt; if (m.anim.t >= m.anim.dur) m.anim = null; }   // a skill animation playing over the top (render/anim.js)
   if (m.rise > 0){   // collapsed mummy: lies still, untargetable, then stands back up at full health
     m.rise -= dt;
@@ -230,6 +237,7 @@ export function updateMonster(m, dt){
     if (m.burnTick <= 0){ m.burnLeft--; m.burnTick = BURN_EVERY; m.lastHit = 3; SFX.extra('burn'); damage(m, m.burnAmt, '#ff9a4a', true); if (m.dead) return; }
   }
   if (__RELEASE__ >= 8 && (m.type === 'glutton' || m.type === 'bride')) keepTick(m, dt);   // the Glutton's net clock and the Bride's veil, walking or chewing (engine/keep.js)
+  if (__RELEASE__ >= 9 && m.type === 'bloodblob' && m.frozenT <= 0 && (m.eating || m.kb > 0)){ growBlob(m, dt); if (m.dead) return; }   // a Bloodlet swells while it chews or is knocked back too; only Ice holds it (engine/marsh.js)
   if (m.kb > 0){
     const st = Math.min(m.kb, dt * 2.2);
     m.p = Math.max(-0.05, m.p - st); m.kb -= st;
@@ -378,6 +386,8 @@ export function updateMonster(m, dt){
         if (__RELEASE__ >= 3 && m.kind === 'hollowking'){ updateHollowKing(m, dt); if (m.p >= m.hold) sp = 0; break; }
         if (__RELEASE__ >= 4 && m.kind === 'strawlord'){ updateStrawlord(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // stops exactly at hold, never past it
         if (__RELEASE__ >= 8 && m.kind === 'fallencount'){ sp = updateFallenCount(m, dt) || m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the Fallen Count (engine/keep.js): walks like the story Count, still in his trance and stun; stops exactly at hold
+        if (__RELEASE__ >= 9 && m.kind === 'fallentides'){ const h = tidesHold(m); sp = updateFallenTides(m, dt) || m.p >= h ? 0 : dt > 0 ? Math.min(sp, (h - m.p) / dt) : 0; break; }   // a Fallen twin (engine/marsh.js): walks to its hold in the tide, stands still while it dives
+        if (__RELEASE__ >= 9 && m.kind === 'kraken'){ updateKraken(m, dt); sp = 0; break; }   // the Kraken (engine/marsh.js): its head dives and rises, its tentacles throw anchors; it never walks
         if (__RELEASE__ >= 8 && m.kind === 'siegetower'){ updateSiege(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the Siege Tower (engine/keep.js); stops exactly at hold
         if (__RELEASE__ >= 5 && m.kind === 'lamplighter'){ updateLamplighter(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the Lamplighter's moods (engine/hollow.js); stops exactly at hold
         if (__RELEASE__ >= 7 && m.kind === 'treant'){ updateTreant(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // its roots (engine/witchwood.js); stops exactly at hold and never moves on
@@ -436,7 +446,7 @@ export function updateMonster(m, dt){
         }
         break;
       }
-      default: if (!(__RELEASE__ >= 4 && updateNightmareMonster(m, dt)) && !(__RELEASE__ >= 5 && updateHollowMonster(m, dt)) && !(__RELEASE__ >= 7 && updateWitchwoodMonster(m, dt)) && !(__RELEASE__ >= 8 && updateKeepMonster(m, dt))) m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
+      default: if (!(__RELEASE__ >= 4 && updateNightmareMonster(m, dt)) && !(__RELEASE__ >= 5 && updateHollowMonster(m, dt)) && !(__RELEASE__ >= 7 && updateWitchwoodMonster(m, dt)) && !(__RELEASE__ >= 8 && updateKeepMonster(m, dt)) && !(__RELEASE__ >= 9 && updateMarshMonster(m, dt))) m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
     }
   }
   if (__RELEASE__ >= 4 && m.rush > 0) sp *= TYPES.rooster.rushMul;
@@ -444,9 +454,12 @@ export function updateMonster(m, dt){
   if (__RELEASE__ >= 8) sp *= keepSpeed(m);   // a Storm Lancer's charge and a Storm Marshal's rally, on top of Ice (engine/keep.js)
   let np = Math.min(m.p + sp * dt, aheadLimit(m));
   if (__RELEASE__ >= 8) np = Math.min(np, keepStop(m));   // a Lobber Cart parks at its spot and never goes on to chew (engine/keep.js)
+  if (__RELEASE__ >= 9) np = Math.min(np, marshStop(m));   // a Drowned Pirate stops at his next shooting point and while he aims (engine/marsh.js)
   if (__RELEASE__ >= 7 && m.type === 'toad') np = Math.min(np, toadStop(m));   // the Cauldron Toad stops at its tongue hold while its fence stands (engine/witchwood.js)
   if (m.chewing && !m.chewing.dead) np = Math.min(np, m.chewing.p);   // held at a scarecrow
+  const pPrev = m.p;
   if (np > m.p) m.p = np;
+  if (__RELEASE__ >= 9 && m.p > pPrev && whirlStep(m, pPrev)) return;   // a whirlpool end crossed: out of the other end (engine/tide.js)
   if (__RELEASE__ >= 8 && m.p >= 1 && m.type === 'lancer' && lancerHit(m)) return;   // the charge lands: half the fence, never its last 1; then it stays and chews (engine/keep.js)
   if (__RELEASE__ >= 4 && m.p >= 1 && m.type === 'crow' && crowStrike(m)) return;   // over the fence and into the patch (engine/nightmare.js)
   if (m.p >= 1){ m.p = 1; m.eating = true; if (G.q){ G.q.touched[m.type] = true; if (__RELEASE__ >= 5 && TYPES[m.type] && TYPES[m.type].questAs) G.q.touched[TYPES[m.type].questAs] = true; } }   // quests: "do not let a ghoul reach the fence" (a Fogwalker 2 counts as a fogwalker: questAs, Release 5)

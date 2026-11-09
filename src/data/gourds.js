@@ -2,7 +2,8 @@
 // take a pumpkin slot. Release 4 has the Grave Gourd; Release 5 (Nightmare Foggy Hollow, spec Part 6) adds the Protector Gourd, and a night
 // may stand up to two (engine: src/engine/gourd.js, art: src/engine/render/gourd.js). Release 7 (Nightmare Witchwood, spec Part 5) adds the
 // Wartling Gourd: with three unlocked, the player picks two of the three for the two slots. Release 8 (Nightmare Crumbling Keep, spec Part 5)
-// adds the Crookneck Gourd: four unlocked, still two slots; on N4-3 a level's `gourdLock` keeps it in slot 1.
+// adds the Crookneck Gourd: four unlocked, still two slots; on N4-3 a level's `gourdLock` keeps it in slot 1. Release 9 (Nightmare Drowned Marsh, spec
+// Part 5) adds the Swan Gourd: five unlocked, still two slots; on N5-5 its `gourdLock` keeps it in slot 1, and from then on any nightmare night offers it.
 // Wrapped in the release gates so lower builds carry none of these names.
 export const GOURDS = __RELEASE__ >= 4 ? {
   grave:{ key:'grave', name:'Grave Gourd', role:'Clears graves',
@@ -22,6 +23,11 @@ export const GOURDS = __RELEASE__ >= 4 ? {
     crookneck:{ key:'crookneck', name:'Crookneck Gourd', role:'Breaks nets',
       power:'No net can land in the 3×3 around it. Every pumpkin in its square lights up and launches together, any colour, as long as there are at least 2; each flies up its own column with its own power. Press and hold it to break it: every net on the patch comes off, red nets too. A new one sprouts on the next tick.',
       lore:'A lime gourd with a neck bent like a shepherd\'s crook. The keep\'s gardeners used it to hook the nets off their rows.' },
+  } : {}),
+  ...(__RELEASE__ >= 9 ? {   // Release 9 (Nightmare Drowned Marsh, spec Part 5): the fifth gourd, won on N5-4 and given its tutorial on N5-5; five unlocked, still two slots
+    swan:{ key:'swan', name:'Swan Gourd', role:'Black-hole splash',
+      power:'A pumpkin flicked from the 3×3 around it hits like a black hole: a ring bursts at the hit and hurts the monsters beside it for 1, whatever their colour, Ice or Fire rule. Press and hold it to break it: every empty cell around it sprouts a Rainbow. A new one sprouts on the next tick.',
+      lore:'A black swan that glided out of the marsh. Where it looks, the water folds in on itself.' },
   } : {}),
 } : {};
 /** The picker's gourd slots (Release 5, spec Part 6): a night takes up to this many gourds, each slot any unlocked gourd the night offers

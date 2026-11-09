@@ -10,7 +10,7 @@ import { TILE_P, mS, mY, spMulNow, spawnMonster, inHexZone, stripHusk } from './
 import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS, walls, FENCE_Y } from './state.js';
 import { TAU, clamp, fmt, rnd } from './util.js';
 import { lvOf, save, persist } from '../save.js';
-import { KILL_REWARD, PROTECT_HEAL, ROT_DMG, ROT_HEAL, WART_DMG } from '../data/rules.js';
+import { KILL_REWARD, PROTECT_HEAL, ROT_DMG, ROT_HEAL, SWAN_HIT, SWAN_SPLASH_DMG, WART_DMG } from '../data/rules.js';
 import { SACK, BOSS_SEED, ENDLESS_BOSS_SEED, CHEST_KILL_CHANCE } from '../data/economy.js';
 import { addChest, addSeeds, grant, toolSet } from './loot.js';
 import { GEAR } from '../data/shop.js';
@@ -21,8 +21,9 @@ import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
 import { reaperFalls, cometBreaks, fpAfterHit, fpReaperHit } from './hollow.js';
 import { witchwoodFalls, fhGate, fhAfterHit } from './witchwood.js';
+import { splitBlood, releaseImp, krakenGuard, krakenFalls, tidesGuard, tidesDown, tidesFalls } from './marsh.js';
 import { shieldedNow, shieldPuff, keepFalls, pieceFalls, knockArcher, archersGuard, siegeFalls, countGate, fcCross, countFalls } from './keep.js';
-import { inWartSquare, isProtected } from './gourd.js';
+import { inWartSquare, inSwanSquare, isProtected } from './gourd.js';
 import { ROTTEN, ROT_FX, hitRule } from './rot.js';
 
 /** Release 5: a pumpkin launched from (r, c) inside a Protector Gourd's 3×3 mends its column's fence by PROTECT_HEAL (never above full) and
@@ -61,7 +62,8 @@ export function launchGroup(ref){
     const x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;
     const ward = __RELEASE__ >= 5 && wardLaunch(r, c);   // from a Protector Gourd's square (Release 5)
     const wart = __RELEASE__ >= 7 && inWartSquare(r, c);   // from a Wartling Gourd's square (Release 7): double damage
-    G.projs.push({ x, y, vy:-900, type, vis:cell.c, lv, guar, ...(__RELEASE__ >= 8 ? { small:setSmall } : {}), lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}), ...(wart ? { wart:true } : {}) });
+    const swan = __RELEASE__ >= 9 && inSwanSquare(r, c);   // from a Swan Gourd's square (Release 9): every hit bursts a black-hole ring
+    G.projs.push({ x, y, vy:-900, type, vis:cell.c, lv, guar, ...(__RELEASE__ >= 8 ? { small:setSmall } : {}), lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}), ...(wart ? { wart:true } : {}), ...(swan ? { swan:true } : {}) });
     grid[r][c] = null;
   };
   for (const { grp:gp, own, pulled } of sets){
@@ -88,6 +90,7 @@ export function damage(m, amt, color, small, big){
   if (m.dead) return;
   if (__RELEASE__ >= 8 && shieldedNow(m)){ shieldPuff(m); return; }   // the one shield door (engine/keep.js): red nets, a Bride's veil, the Fallen Count's clamp; every damage source comes through here
   if (__RELEASE__ >= 8 && archersGuard(m)) return;   // a Siege Tower with archers up: only a pumpkin's own hit gets past them, and that knocks one off instead (knockArcher, hitMonsterNow)
+  if (__RELEASE__ >= 9 && (krakenGuard(m) || tidesGuard(m))) return;   // the Kraken's head under the water, a Fallen twin diving or down: nothing hurts them (engine/marsh.js)
   if (m.type === 'jukebox' && m.lastHit === -1){ m.flash = 0.1; addFloat('Pumpkins only', m.x, mY(m) - m.r - 14, '#ffd35a', 15, 0.7); return; }   // tools never hurt the jukebox (owner)
   if (__RELEASE__ >= 5 && m.rotOnly && !rotDmg){ blockedPuff(m); return; }   // only rot can hurt it (Release 5): every other damage (splash, lightning, burn, mines, tools) is refused
   if (m.shield){   // shield knight marching: the hit bounces off
@@ -201,19 +204,31 @@ export function kill(m){
     }
     m.trueDeath = true;
   }
+  if (__RELEASE__ >= 9 && m.type === 'boss' && m.kind === 'fallentides' && !m.trueDeath){   // the Fallen twins: killed together within `window` s, or the fallen one rises at full health
+    const other = m.twin, win = TYPES.fallentides.window;
+    if (other && !other.dead && other.rise > 0){ m.trueDeath = true; other.trueDeath = true; other.rise = 0; kill(other); kill(m); return; }
+    if (other && !other.dead){
+      tidesDown(m);
+      m.hp = 0; m.rise = win; m.eating = false; m.anim = { clip:'collapse', t:0, dur:0.5 };
+      addFloat(`Down! ${win}s to fell the other`, m.x, mY(m) - m.r - 34, m.twinKind === 'blood' ? '#ff8a8a' : '#9fe0f0', 18, 1.6);
+      for (let i = 0; i < 14; i++) chunk(m.x, mY(m), m.twinKind === 'blood' ? '#8a1020' : '#163058', 200); SFX.bossSfx('fallentides', 'down');
+      return;
+    }
+    m.trueDeath = true;
+  }
   if (m.type !== 'boss' && m.type !== 'jukebox' && !m.trueDeath && G.hexZones && G.hexZones.length && inHexZone(m)){   // inside a hex zone: it rises again
     m.hp = 0; m.rise = TYPES.hexwitch.zoneRise; m.eating = false; m.kb = 0; m.burnLeft = 0;
     addFloat('Hexed: it will rise', m.x, mY(m) - m.r - 30, '#d09bff', 16, 1);
     for (let i = 0; i < 10; i++) spark(m.x, mY(m), '#d09bff', 160); SFX.knock();
     return;
   }
-  if (ICE_ONLY.has(m.type) && m.lastHit !== 2){   // not Ice: it collapses and rises again later
+  if (ICE_ONLY.has(m.type) && m.lastHit !== 2 && !(__RELEASE__ >= 9 && m.lastHit === SWAN_HIT)){   // not Ice: it collapses and rises again later
     m.hp = 0; m.rise = TYPES[m.type].rise; m.eating = false; m.kb = 0; m.burnLeft = 0;
     addFloat('Down… still burning', m.x, mY(m) - m.r - 30, '#ff8a3a', 16, 1);
     for (let i = 0; i < 10; i++) chunk(m.x, mY(m), '#ff8a3a', 160); SFX.knock();
     return;
   }
-  if (m.type === 'mummy' && m.lastHit !== 3){   // not Fire: it collapses and rises again later
+  if (m.type === 'mummy' && m.lastHit !== 3 && !(__RELEASE__ >= 9 && m.lastHit === SWAN_HIT)){   // not Fire: it collapses and rises again later
     m.hp = 0; m.rise = TYPES.mummy.rise; m.eating = false; m.kb = 0; m.burnLeft = 0;
     addFloat('Down… not out', m.x, mY(m) - m.r - 30, '#d8cfb0', 16, 1);
     for (let i = 0; i < 10; i++) chunk(m.x, mY(m), '#d8cfb0', 160);
@@ -225,6 +240,8 @@ export function kill(m){
   if (__RELEASE__ >= 5 && m.type === 'reaper') reaperFalls(m);   // a crow bursts out where the Reaper fell (engine/hollow.js)
   if (__RELEASE__ >= 7) witchwoodFalls(m);   // the Flask Bearer's potion, the Cauldron Toad's burst (engine/witchwood.js)
   if (__RELEASE__ >= 8) countFalls(m);   // the Fallen Count's nets, bolt, spears and castle pieces go with him (engine/keep.js)
+  if (__RELEASE__ >= 9) tidesFalls(m);   // a Fallen twin's water spear goes with it (engine/marsh.js)
+  if (__RELEASE__ >= 9) krakenFalls(m);   // the Kraken's tentacles and anchors go with its head (engine/marsh.js)
   if (__RELEASE__ >= 8) siegeFalls(m);   // the Siege Tower's own nets go with it (engine/keep.js)
   if (__RELEASE__ >= 8) keepFalls(m);   // a Glutton's red nets turn ordinary, a Bride's veil comes off (engine/keep.js)
   if (__RELEASE__ >= 4 && m.type === 'casketjack') dropCoffin(m);   // Casket Jack falls into a field coffin with one last mummy in it (engine/nightmare.js)
@@ -262,6 +279,8 @@ export function kill(m){
     for (let i = 0; i < TYPES.slime.splits; i++){ const l = Math.max(0, Math.min(COLS - 1, m.lane + (i ? 1 : -1))); const bl = spawnMonster('blob', l, true, Math.max(0, m.p - 0.02)); bl.age = 0.2; }
     addFloat('Split!', m.x, y - 30, '#7fe0a0', 16, 0.9); SFX.monsterAct('slime', 'split');
   }
+  if (__RELEASE__ >= 9 && m.type === 'turtlerider') releaseImp(m);   // the rider's Imp is loose where it fell (engine/marsh.js)
+  if (__RELEASE__ >= 9 && m.type === 'bloodslime') splitBlood(m, y);   // three Bloodlets, as many as the cap leaves room for (engine/marsh.js)
   if (__RELEASE__ >= 3 && m.hkClone) onHkFormDown(m);
   if (__RELEASE__ >= 3 && m.kind === 'hollowking' && !m.hkClone) onKingDown();
   if (m.type === 'boss'){
@@ -273,13 +292,13 @@ export function kill(m){
       for (let c = 0; c < nc; c++) addChest(ck, itemOf);
       if (nc > 1) addFloat(`${nc} chests!`, m.x, mY(m) - m.r - 100, '#ffd35a', 22, 2.2);
       addFloat(ck === 'boss' ? 'Boss chest!' : 'Treasure chest!', m.x, mY(m) - m.r - 70, '#ffd35a', 22, 2); if (G.vfx) G.vfx.push({ kind:'loot', item:ck === 'boss' ? 'bossChest' : 'chest', x:m.x, y:mY(m) - 20, t:0, dur:1.8 }); }
-    const groupDown = m.kind !== 'twintides' || (m.twin && m.twin.dead);   // a whole boss is down (both of a Twin Tides pair)
+    const groupDown = !(m.kind === 'twintides' || (__RELEASE__ >= 9 && m.kind === 'fallentides')) || (m.twin && m.twin.dead);   // a whole boss is down (both of a Twin Tides pair)
     if (twinAlive && groupDown && G.def && G.def.boss2){
       G.shake = 1; SFX.bossSfx(m.kind, 'die');
       if (m.kind === 'twintides') banner('One pair falls!', 'One pair left. Monsters keep coming until it falls.', 2.4); else banner(`${BOSS_NAMES[m.kind]} falls!`, 'One boss left. Monsters keep coming until it falls.', 2.4);
       if (G.def.frenzy && G.def.frenzyAfterBoss && !G.jukebox && !G.jukeboxDone) dropJukebox();   // 6-16: the first pair down drops the jukebox
     }
-    if (!twinAlive){ G.bossDead = true; G.shake = 1.2; banner(`${BOSS_NAMES[m.kind]} ${m.kind === 'twintides' ? 'fall' : 'falls'}!`, G.mode === 'endless' ? 'The night goes on…' : 'Finish the stragglers and grab the pumpkins it dropped!', 2.4); SFX.bossSfx(m.kind, 'die'); }
+    if (!twinAlive){ G.bossDead = true; G.shake = 1.2; banner(`${BOSS_NAMES[m.kind]} ${m.kind === 'twintides' || (__RELEASE__ >= 9 && m.kind === 'fallentides') ? 'fall' : 'falls'}!`, G.mode === 'endless' ? 'The night goes on…' : 'Finish the stragglers and grab the pumpkins it dropped!', 2.4); SFX.bossSfx(m.kind, 'die'); }
   }
 }
 
@@ -352,12 +371,23 @@ function hitMonsterNow(pr, m){
     for (const o of G.monsters.slice()) if (o !== m && !o.dead && !o.hidden && o.rise <= 0 && !(__RELEASE__ >= 5 && o.rotOnly) && Math.abs(o.lane - m.lane) <= 1 && Math.abs(mY(o) - y) < reach){ o.lastHit = 7; o.lastHitLv = pr.lv; damage(o, POWER[i] * frac, '#ff9a3a', true); SFX.extra('splash'); if (i >= 4 && !o.dead) knockback(o); }
     for (const w of G.castles) if (!w.dead && Math.abs(w.lane - m.lane) <= 1 && Math.abs(castleY(w) - y) < reach) damageCastle(w, POWER[i] * frac);
   }
+  if (__RELEASE__ >= 9 && pr.swan) swanSplash(pr, m, y);   // from a Swan Gourd's square: a black-hole ring beside the hit, past every colour, Ice and Fire rule
   if (__RELEASE__ >= 3 && pr.type === BEIGE) layGlue(m.lane, m.p, pr.lv);   // Beige: every hit leaves glue where it lands (owner, 2026-11-03; was kills only)
   if (kb && !m.dead) knockback(m);
   if (m.dead && pr.type === 5 && Math.random() < SPAWN_P[i]) purpleSpawn(m, y, i);   // Purple: extra spawn per kill
   SFX.pumpkinHit(pr.type, pr.size, pr.vis === RAINBOW);   // pumpkin layer
   if (m.type === 'boss') SFX.bossSfx(m.kind, 'hit'); else SFX.monsterHit(m.type);   // monster layer
   if (pr.type === 4 && pr.hit.size > 1){ G.q.pierce++; SFX.extra('pierce'); }
+}
+
+/** The Swan Gourd's black-hole ring (Release 9): a hit from its square hurts every monster Black's blast would reach at this pumpkin's level
+ *  (the lanes either side, SPLASH_ROWS tall), except the one hit, for SWAN_SPLASH_DMG, tagged lastHit SWAN_HIT: that lifts the colour lock, the
+ *  reverse chameleon's immunity, and the Ice-only and Fire-only rules (a burning form dies for good, it burns into nothing). The shield door,
+ *  a Siege Tower's archers, `m.shield` and rot-only monsters still refuse it (damage() asks them first). One baked ring is pushed as a vfx. */
+function swanSplash(pr, m, y){
+  const i = pr.lv - 1, reach = SPLASH_ROWS[i] === 3 ? CS * 1.6 : CS * 0.7;
+  if (G.vfx) G.vfx.push({ kind:'blackring', x:pr.x, y, t:0, dur:0.5 });
+  for (const o of G.monsters.slice()) if (o !== m && !o.dead && !o.hidden && o.rise <= 0 && !o.rotOnly && Math.abs(o.lane - m.lane) <= 1 && Math.abs(mY(o) - y) < reach){ o.lastHit = SWAN_HIT; o.lastHitLv = pr.lv; o.lastHitAlt = -1; damage(o, SWAN_SPLASH_DMG, '#b8a0f0', true); }
 }
 
 // ---------- Rotten pumpkins and blocked hits (Release 5; rules in engine/rot.js) ----------

@@ -13,6 +13,8 @@
 // tough ghoul (doubled numbers), slide it to the top row, hold it until it breaks and the fences above it mend.
 // Release 8 adds a fifth on Nightmare 4-3 (`coach:'crookneck'`, CTIPS below): slide the Crookneck Gourd, launch a mixed group from its square,
 // watch a net land next to it (one aimed inside falls apart), hold it until it breaks and every net comes off.
+// Release 9 adds a sixth on Nightmare 5-5 (`coach:'swan'`, STIPS below): slide the Swan Gourd, launch a bunch from its square at two ghouls side
+// by side and watch the black-hole ring hurt the one beside the hit, hold it until it breaks and its square sprouts Rainbows.
 // The hand is one baked sprite blitted with transforms (no painter calls or shadowBlur per frame).
 import { G, grid, graves, setGrid, walls, ROWS, COLS, CS, GX, GY, LANE, FIELD_TOP, FENCE_Y } from './state.js';
 import { newCell, spawnSprouts, planMove, applyMove, revertMove, sameColorSize, findCell, bestLitGroup, resolveMatches } from './board.js';
@@ -84,9 +86,22 @@ const CTIPS = __RELEASE__ >= 8 ? {
   praise: '<b>Nice!</b> Keep your pumpkins in its square when the nets fly. It grows back on the next sprout.',
 } : {};
 
+// The Swan script (Release 9). Steps: sslide (the hand slides the Swan) -> slaunch (a bunch beside it, inside its square, and two tough ghouls in
+// neighbouring lanes; the hand swipes the bunch up, and the ring hurts the ghoul the bunch did not hit) -> shold (the hand holds it until it
+// breaks: a Rainbow in every empty cell around it) -> praise. Broken before shold it goes to sback (it grows back on the next sprout) and on to
+// slaunch. Monsters and sprouts wait (coachHolds); the script sends its own two ghouls (extras, not counted toward the night's total).
+const STIPS = __RELEASE__ >= 9 ? {
+  sslide: 'This is the <b>Swan Gourd</b>. Drag it to slide it, like a pumpkin.',
+  slaunch: 'Pumpkins flicked from the <b>3×3 around it</b> burst a <b>black-hole splash</b> that hurts the monsters beside the hit. <b>Swipe the bunch up!</b>',
+  shold: '<b>Press and hold</b> it to break it: every empty cell around it sprouts a <b>Rainbow</b>.',
+  sback: 'It <b>grows back</b> on the next sprout.',
+  praise: '<b>Nice!</b> Fly your bunches from its square to hit a crowd. It grows back on the next sprout.',
+} : {};
+
 /** Starts the coach on a fresh 1-1 (call after the board is built), or the gourd script on a Nightmare 1-5 that has not been seen, or the
  *  Protector script on a Nightmare 2-5 that has not been seen and was started with the Protector. */
 export function startCoach(){
+  if (__RELEASE__ >= 9 && G.mode === 'story' && G.def && G.def.coach === 'swan'){ if (!save.seenSwanCoach && gourdPos('swan')) startSwanCoach(); return; }
   if (__RELEASE__ >= 8 && G.mode === 'story' && G.def && G.def.coach === 'crookneck'){ if (!save.seenCrookneckCoach && gourdPos('crookneck')) startCrookCoach(); return; }
   if (__RELEASE__ >= 7 && G.mode === 'story' && G.def && G.def.coach === 'wartling'){ if (!save.seenWartlingCoach && gourdPos('wartling')) startWartlingCoach(); return; }
   if (__RELEASE__ >= 5 && G.mode === 'story' && G.def && G.def.coach === 'protector'){ if (!save.seenProtectorCoach && gourdPos('protector')) startProtectorCoach(); return; }
@@ -340,6 +355,65 @@ function crookCoachUpdate(c){
   }
 }
 
+/** Swan script start (Release 9): a clear patch with the gourds where they stand (the level's graves stay). */
+function startSwanCoach(){
+  const sp = gourdPos('swan'), all = gourdsOn();
+  setGrid(Array.from({ length:ROWS }, () => Array(COLS).fill(null)));
+  for (const o of all) grid[o.r][o.c] = o.cell;
+  G.coach = { kind:'swan', step:'sslide', t:0, stepT:0, move:null, ref:null, from:sp };
+  findSwanMove(); tip('sslide');
+}
+/** The slide the hand shows: any way the Swan can go (right first, as the gourd script). */
+function findSwanMove(){
+  const c = G.coach, sp = gourdPos('swan'); c.move = null; if (!sp) return;
+  for (const dir of ['right', 'left', 'down', 'up']){
+    const moves = planMove(sp.r, sp.c, dir), mine = moves && moves.find(m => m[0] === sp.r && m[1] === sp.c);
+    if (mine){ c.move = { ref:grid[sp.r][sp.c], dir, tr:mine[2], tc:mine[3] }; return; }
+  }
+}
+/** Step slaunch: a vertical bunch of three in a column beside the Swan, inside its square, and two tough ghouls walking down that column and the
+ *  next one in (so one is hit by the pumpkins and the other is beside the hit). The bunch's colour is the team's first plain one. */
+function setupSwanLaunch(sp){
+  const c = G.coach, col = plainColours()[0];
+  // three free, orthogonally joined cells inside its 3×3 (squareAround: whatever row or column it stands on), a single column first
+  const fr = squareAround(sp.r, sp.c).filter(([a, b]) => !grid[a][b] && !graves[a][b]), adj = (p, q) => Math.abs(p[0] - q[0]) + Math.abs(p[1] - q[1]) === 1;
+  let pick = null;
+  for (const one of [true, false]) for (const x of fr) for (const y of fr) for (const z of fr){
+    if (pick || x === y || y === z || x === z || !adj(x, y) || !adj(y, z) || (one && !(x[1] === y[1] && y[1] === z[1]))) continue;
+    pick = [x, y, z];
+  }
+  const cc = pick ? pick[0][1] : null;
+  c.bunch = [];
+  if (pick) for (const [a, b] of pick){ const cell = newCell(col); grid[a][b] = cell; c.bunch.push(cell); }
+  resolveMatches();
+  c.ghouls = [];
+  if (cc != null) for (const lane of [cc, cc > 0 ? cc - 1 : cc + 1]){ const m = spawnMonster('ghoul', lane, true, 0.08); if (m){ m.hp = m.maxHp = 20; m.sp *= 0.6; c.ghouls.push(m); } }   // tough enough to show three hits and three ring hits
+  c.ref = c.bunch[0] || null;
+}
+function swanCoachUpdate(c){
+  const sp = gourdPos('swan'), go = step => { c.step = step; c.stepT = 0; tip(step); };
+  const toLaunch = () => { setupSwanLaunch(sp); go('slaunch'); };
+  if (c.step === 'sslide'){
+    if (!sp) go('sback');   // broken before the lesson: carry on from the respawn
+    else if (sp.r !== c.from.r || sp.c !== c.from.c){ c.move = null; toLaunch(); }   // any slide of it counts
+    else if (!c.move || !findCell(c.move.ref)) findSwanMove();
+  } else if (c.step === 'slaunch'){
+    const lit = (c.bunch || []).find(x => x.lit && findCell(x));
+    if (!sp) go('sback');
+    else if (lit) c.ref = lit;   // the hand swipes the bunch up
+    else if (!G.projs.length){ c.ref = grid[sp.r][sp.c]; go('shold'); }   // launched (or broken up) and every pumpkin has landed
+  } else if (c.step === 'shold'){
+    if (!sp) go('praise'); else c.ref = grid[sp.r][sp.c];   // any way of breaking it counts (a real hold)
+  } else if (c.step === 'sback'){
+    if (sp) toLaunch();
+    else if (c.stepT > 1.2 && !c.sprouted){ c.sprouted = true; spawnSprouts(); }   // the next sprout tick brings it back
+    else if (c.sprouted && c.stepT > 2.4){ c.sprouted = false; c.stepT = 1.21; }   // no room on the patch: try the tick again
+  } else if (c.step === 'praise' && c.stepT > 3.5){
+    for (const m of c.ghouls || []) m.dead = true;   // the two lesson ghouls go with the lesson (no reward: the night is not theirs to lose)
+    tip(null); G.coach = null; save.seenSwanCoach = true; persist(); resolveMatches();
+  }
+}
+
 /** A slide that makes a bunch right now: the hand demonstrates this one. */
 function findMove(){
   const c = G.coach; c.move = null;
@@ -365,7 +439,7 @@ function spare(){
 function tip(step){
   const el = $('#coachTip'); if (!el) return;
   if (!step){ el.hidden = true; return; }
-  el.innerHTML = (__RELEASE__ >= 8 && G.coach && G.coach.kind === 'crookneck' && CTIPS[step]) || (__RELEASE__ >= 7 && G.coach && G.coach.kind === 'wartling' && WTIPS[step]) || (__RELEASE__ >= 5 && G.coach && G.coach.kind === 'protector' && PTIPS[step]) || TIPS[step] || GTIPS[step]; el.hidden = false;
+  el.innerHTML = (__RELEASE__ >= 9 && G.coach && G.coach.kind === 'swan' && STIPS[step]) || (__RELEASE__ >= 8 && G.coach && G.coach.kind === 'crookneck' && CTIPS[step]) || (__RELEASE__ >= 7 && G.coach && G.coach.kind === 'wartling' && WTIPS[step]) || (__RELEASE__ >= 5 && G.coach && G.coach.kind === 'protector' && PTIPS[step]) || TIPS[step] || GTIPS[step]; el.hidden = false;
   el.style.top = Math.round((FENCE_Y - CS * 1.25) * scale) + 'px';
 }
 
@@ -379,6 +453,7 @@ export function coachUpdate(dt){
   if (__RELEASE__ >= 5 && c.kind === 'protector'){ protectorCoachUpdate(c); return; }
   if (__RELEASE__ >= 7 && c.kind === 'wartling'){ wartlingCoachUpdate(c); return; }
   if (__RELEASE__ >= 8 && c.kind === 'crookneck'){ crookCoachUpdate(c); return; }
+  if (__RELEASE__ >= 9 && c.kind === 'swan'){ swanCoachUpdate(c); return; }
   const lit = bestLitGroup();
   if (c.step === 'slide'){
     if (lit){   // a bunch formed: send one ghoul down its column
@@ -424,7 +499,7 @@ export function drawCoach(ctx){
   const c = G && G.coach; if (!c || G.over) return;
   const h = hand();
   const blit = (x, y, s, a) => { ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y); ctx.scale(s, s); ctx.drawImage(h, -18, -6, 64, 64); ctx.restore(); };
-  if ((c.step === 'slide' || c.step === 'gslide' || c.step === 'pslide' || c.step === 'wslide' || c.step === 'wtop' || c.step === 'cslide') && c.move){
+  if ((c.step === 'slide' || c.step === 'gslide' || c.step === 'pslide' || c.step === 'wslide' || c.step === 'wtop' || c.step === 'cslide' || c.step === 'sslide') && c.move){
     const pos = findCell(c.move.ref); if (!pos) return;
     const [x0, y0] = cellXY(pos.r, pos.c), [x1, y1] = cellXY(c.move.tr, c.move.tc);
     const P = 2.0, u = (c.t % P) / P;   // press 0-.2, drag .2-.65, hold .65-.85, fade .85-1
@@ -434,7 +509,7 @@ export function drawCoach(ctx){
     ctx.strokeRect(GX + pos.c * CS + 5, GY + pos.r * CS + 5, CS - 10, CS - 10);
     ctx.setLineDash([6, 6]); ctx.strokeRect(GX + c.move.tc * CS + 5, GY + c.move.tr * CS + 5, CS - 10, CS - 10); ctx.restore();
     blit(x + 6, y + 4, press, u > .85 ? (1 - u) / .15 : 1);
-  } else if (c.step === 'smash' || c.step === 'ghold' || c.step === 'phold' || c.step === 'whold' || c.step === 'chold'){
+  } else if (c.step === 'smash' || c.step === 'ghold' || c.step === 'phold' || c.step === 'whold' || c.step === 'chold' || c.step === 'shold'){
     const pos = c.ref && findCell(c.ref); if (!pos) return;
     const [x0, y0] = cellXY(pos.r, pos.c), P = 2.2, u = (c.t % P) / P;   // press .0-.1, hold and fill .1-.7, crush flash .7-.85, rest
     const f = u < .1 ? 0 : u < .7 ? (u - .1) / .6 : 1;
@@ -444,7 +519,7 @@ export function drawCoach(ctx){
     if (u >= .7 && u < .85){ const k = (u - .7) / .15; ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#ffd35a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x0, y0, CS * (.45 + k * .35), 0, Math.PI * 2); ctx.stroke(); }
     ctx.restore();
     blit(x0 + 6, y0 + 4, u < .7 ? .88 : 1, u > .85 ? Math.max(0, (1 - u) / .15) : 1);
-  } else if (c.step === 'flick' || c.step === 'wlaunch' || c.step === 'claunch'){
+  } else if (c.step === 'flick' || c.step === 'wlaunch' || c.step === 'claunch' || c.step === 'slaunch'){
     const pos = c.ref && findCell(c.ref); if (!pos) return;
     const [x0, y0] = cellXY(pos.r, pos.c), P = 1.4, u = (c.t % P) / P;
     const d = u < .25 ? 0 : u < .6 ? ease((u - .25) / .35) : 1, y = y0 - d * CS * 1.6;

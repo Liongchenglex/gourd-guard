@@ -309,10 +309,12 @@ export const SFX = {
       case 'knight': S('clank', 0.5) || clang(); S('human', 0.3, { delay: 0.04 }); break;
       case 'gargoyle': S('metal', 0.55) || (noise(0.1, 0.22, 1200, 1), tone(300, 0.1, 'square', 0.05, 150)); break;
       case 'vampire': S('chuckle', 0.5, { rate: 1.1 }) || noise(0.2, 0.16, 5000, 1.2, 0, 3000); break;
-      case 'crawler': case 'diver': S('splash', 0.45) || noise(0.1, 0.18, 500, 0.8, 0, 250); break;
-      case 'turtle': S('metal', 0.6, { rate: 0.7 }) || (tone(260, 0.1, 'triangle', 0.08, 180), noise(0.05, 0.12, 400, 2)); break;
+      case 'crawler': case 'diver': case (__RELEASE__ >= 9 ? 'eel' : ''): case (__RELEASE__ >= 9 ? 'tentacle' : ''): S('splash', 0.45) || noise(0.1, 0.18, 500, 0.8, 0, 250); break;
+      case 'turtle': case (__RELEASE__ >= 9 ? 'turtlerider' : ''): S('metal', 0.6, { rate: 0.7 }) || (tone(260, 0.1, 'triangle', 0.08, 180), noise(0.05, 0.12, 400, 2)); break;
       case 'slime': S('slime', 0.55) || squelch(); break;
-      case 'blob': S('slime', 0.55, { rate: 0.8 }) || squelch(0.1, 500); break;
+      case 'blob': case (__RELEASE__ >= 9 ? 'bloodblob' : ''): S('slime', 0.55, { rate: 0.8 }) || squelch(0.1, 500); break;
+      case (__RELEASE__ >= 9 ? 'bloodslime' : ''): S('slime', 0.55, { rate: 0.9 }) || squelch(); break;   // Release 9: the Blood Slime
+      case (__RELEASE__ >= 9 ? 'pirate' : ''): S('human', 0.55) || (noise(0.06, 0.16, 400, 2), noise(0.07, 0.12, 380, 2, 0.1)); break;   // a Drowned Pirate grunts
       case 'chameleon': case 'rchameleon': S('chameleon', 0.45) || (tone(1500, 0.05, 'sine', 0.05, 2200), tone(1500, 0.05, 'sine', 0.04, 2200, 0.07)); break;
       case 'mirror': S('glassping', 0.5) || tone(3000, 0.08, 'sine', 0.05, 2400); break;
       case 'witch': S('witch', 0.5) || cackle(2, 640); break;
@@ -339,13 +341,13 @@ export const SFX = {
       case 'mummy': case 'firemummy': S('ghouldie', 0.55, { rate: 0.85 }) || noise(0.25, 0.2, 500, 0.6, 0, 150); S('dig', 0.35, { delay: 0.1 }); break;
       case 'wisp': case 'wraith': case 'fogwalker': case (__RELEASE__ >= 5 ? 'reaper' : ''): case (__RELEASE__ >= 5 ? 'fogwalker2' : ''): case (__RELEASE__ >= 5 ? 'minipolt' : ''): S('ghostdie', 0.35, { rate: 1.05 }) || noise(0.35, 0.12, 1200, 0.8, 0, 300); break;
       case (__RELEASE__ >= 4 ? 'graveriser' : ''): S('humandie', 0.5, { rate: 0.85 }) || noise(0.2, 0.25, 3000, 1, 0.12, 1200); S('dig', 0.35, { delay: 0.15 }); break;   // it falls onto its spade (Release 4)
-      case 'doctor': case 'sailor': case 'archer': case (__RELEASE__ >= 5 ? 'rotdoctor' : ''): S('humandie', 0.55) || (noise(0.07, 0.14, 400, 2), noise(0.2, 0.25, 3000, 1, 0.12, 1200)); break;
+      case 'doctor': case 'sailor': case 'archer': case (__RELEASE__ >= 9 ? 'pirate' : ''): case (__RELEASE__ >= 5 ? 'rotdoctor' : ''): S('humandie', 0.55) || (noise(0.07, 0.14, 400, 2), noise(0.2, 0.25, 3000, 1, 0.12, 1200)); break;
       case 'knight': S('armorbreak', 0.6) || [0, 0.08, 0.18].forEach(d => { tone(600, 0.12, 'square', 0.05, 200, d); noise(0.1, 0.18, 1800, 1.2, d); }); break;
       case 'gargoyle': S('stonebreak', 0.7) || noise(0.3, 0.3, 1000, 0.8, 0, 300); break;
       case 'vampire': S('chuckle', 0.5, { rate: 0.8 }) || (tone(800, 0.5, 'sawtooth', 0.07, 300), noise(0.5, 0.15, 800, 0.7, 0.2, 200)); S('bat', 0.4, { delay: 0.15 }); break;
-      case 'crawler': case 'diver': S('splash', 0.7) || splash(0.18); break;
-      case 'turtle': S('metal', 0.65, { rate: 0.6 }); S('splash', 0.5, { delay: 0.1 }) || (noise(0.25, 0.3, 900, 0.8, 0, 300), tone(200, 0.2, 'triangle', 0.08, 120)); break;
-      case 'slime': case 'blob': S('slimedie', 0.6) || (tone(500, 0.06, 'sine', 0.08, 800), tone(560, 0.06, 'sine', 0.08, 900, 0.09)); break;
+      case 'crawler': case 'diver': case (__RELEASE__ >= 9 ? 'eel' : ''): case (__RELEASE__ >= 9 ? 'tentacle' : ''): S('splash', 0.7) || splash(0.18); break;
+      case 'turtle': case (__RELEASE__ >= 9 ? 'turtlerider' : ''): S('metal', 0.65, { rate: 0.6 }); S('splash', 0.5, { delay: 0.1 }) || (noise(0.25, 0.3, 900, 0.8, 0, 300), tone(200, 0.2, 'triangle', 0.08, 120)); break;
+      case 'slime': case 'blob': case (__RELEASE__ >= 9 ? 'bloodslime' : ''): case (__RELEASE__ >= 9 ? 'bloodblob' : ''): S('slimedie', 0.6) || (tone(500, 0.06, 'sine', 0.08, 800), tone(560, 0.06, 'sine', 0.08, 900, 0.09)); break;
       case 'chameleon': case 'rchameleon': S('chameleon', 0.4, { rate: 1.3 }) || tone(1500, 0.04, 'sine', 0.05, 900); break;
       case 'mirror': S('glass', 0.6) || (noise(0.3, 0.25, 4000, 1, 0, 1500), [3000, 2500, 2000].forEach((f, i) => tone(f, 0.08, 'sine', 0.04, null, i * 0.05))); break;
       case 'witch': S('witchdie', 0.55) || (cackle(1, 700), noise(0.1, 0.16, 500, 1, 0.14)); break;
@@ -359,9 +361,10 @@ export const SFX = {
     switch (type + ':' + what){
       case 'archer:shoot': S('arrow', 0.5) || (tone(300, 0.08, 'triangle', 0.06, 900), noise(0.05, 0.1, 2000, 1)); break;
       case 'arrow:land': S('wood', 0.4) || (noise(0.08, 0.2, 800, 1), tone(180, 0.08, 'square', 0.05, 120)); break;
-      case 'diver:surface': case 'turtle:rise': S('splash', 0.5) || splash(0.16); break;
+      case 'diver:surface': case 'turtle:rise': case (__RELEASE__ >= 9 ? 'tentacle:rise' : ''): S('splash', 0.5) || splash(0.16); break;
       case 'crawler:rise': S('dig', 0.45) || splash(0.16); break;
       case 'diver:submerge': S('bubbles', 0.45) || (tone(300, 0.1, 'sine', 0.06, 150), noise(0.1, 0.12, 400, 1)); break;
+      case (__RELEASE__ >= 9 ? 'tentacle:throw' : ''): S('whoosh', 0.45, { rate: 0.7 }) || noise(0.25, 0.18, 900, 1.2, 0, 2200); S('metal', 0.35, { rate: 0.6, delay: 0.05 }) || tone(180, 0.15, 'triangle', 0.05, 120); break;
       case 'diver:bolt': case 'water:bolt': S('bubbles', 0.5, { rate: 1.3 }) || noise(0.15, 0.2, 1200, 1, 0, 300); S('splash', 0.55, { rate: 1.15, delay: 0.03 }); break;   // liquid (owner)
       case 'water:land': S('splash', 0.6) || splash(0.2); S('bubbles', 0.3, { rate: 1.2, delay: 0.05 }); break;
       case 'wraith:vanish': S('reverse', 0.45) || noise(0.3, 0.12, 400, 0.8, 0, 1600); break;
@@ -382,6 +385,15 @@ export const SFX = {
       case 'witch:hex': S('zap', 0.55, { rate: 0.9 }) || shimmer(); S('witch', 0.3, { delay: 0.12 }) || cackle(2, 620, 0.05, 0.04); break;
       case (__RELEASE__ >= 7 ? 'ashcrone:zone' : ''): S('zap', 0.5, { rate: 0.7 }) || shimmer(); S('ghost', 0.3, { delay: 0.1 }); break;   // the Ash Crone raises an undead zone (Release 7)
       case (__RELEASE__ >= 7 ? 'covenwitch:brew' : ''): S('bubbles', 0.5, { rate: 0.8 }) || noise(0.15, 0.2, 1200, 1, 0, 300); S('witch', 0.25, { delay: 0.12 }) || cackle(2, 660, 0.05, 0.04); break;   // the cauldron boils over (Release 7)
+      case (__RELEASE__ >= 9 ? 'bloodslime:split' : ''): case (__RELEASE__ >= 9 ? 'bloodslime:regrow' : ''): S('slime', 0.5, { rate: 1.05 }) || (tone(500, 0.06, 'sine', 0.08, 800), tone(560, 0.06, 'sine', 0.08, 900, 0.09)); break;
+      case (__RELEASE__ >= 9 ? 'pirate:aim' : ''): S('metallight', 0.35, { rate: 1.6 }) || tone(900, 0.05, 'square', 0.04, 700); break;   // the flintlock cocks
+      case (__RELEASE__ >= 9 ? 'pirate:shoot' : ''): S('arrow', 0.6, { rate: 0.7 }) || (tone(200, 0.1, 'triangle', 0.08, 90), noise(0.1, 0.25, 1800, 1)); break;
+      case (__RELEASE__ >= 9 ? 'siren:sing' : ''): S('ghost', 0.45, { rate: 1.35 }) || tone(660, 0.5, 'sine', 0.06, 880); S('sparkle', 0.3, { delay: 0.1 }); break;   // the Siren sings (Release 9)
+      case (__RELEASE__ >= 9 ? 'eel:surface' : ''): S('splash', 0.5, { rate: 1.1 }) || splash(0.16); break;   // the Storm Eel rises (Release 9)
+      case (__RELEASE__ >= 9 ? 'eel:charge' : ''): S('zap', 0.4, { rate: 1.3 }) || tone(700, 0.2, 'sawtooth', 0.04, 1500); break;   // it crackles up
+      case (__RELEASE__ >= 9 ? 'eel:bolt' : ''): S('zap', 0.6, { rate: 0.9 }) || (noise(0.12, 0.22, 2400, 1.5), tone(900, 0.1, 'square', 0.05, 200)); break;
+      case (__RELEASE__ >= 9 ? 'eel:submerge' : ''): S('bubbles', 0.45) || (tone(300, 0.1, 'sine', 0.06, 150), noise(0.1, 0.12, 400, 1)); break;
+      case (__RELEASE__ >= 9 ? 'turtlerider:throw' : ''): S('whoosh', 0.4, { rate: 0.9 }) || noise(0.2, 0.14, 700, 1, 0, 1800); break;   // the imp hurls a rotten pumpkin
       case 'slime:split': S('slime', 0.5, { rate: 1.15 }) || (tone(500, 0.06, 'sine', 0.08, 800), tone(560, 0.06, 'sine', 0.08, 900, 0.09)); break;
       case (__RELEASE__ >= 4 ? 'husker:shed' : ''): S('cloth', 0.5, { rate: 1.4 }) || cloth(); S('whoosh', 0.3, { rate: 1.3, delay: 0.04 }) || noise(0.18, 0.16, 1500, 1, 0.04, 3000); break;   // the husk rips off and flies away (Release 4)
       case (__RELEASE__ >= 4 ? 'hayrick:toss' : ''): S('whoosh', 0.5, { rate: 0.85 }) || noise(0.25, 0.22, 900, 1.2, 0, 2400); S('metallight', 0.3, { delay: 0.35 }); break;   // the pitchfork flies, then bites into the pumpkin (Release 4)
@@ -487,6 +499,29 @@ export const SFX = {
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:reaperend' : ''): S('reverse', 0.45, { rate: 0.9 }) || noise(0.2, 0.15, 900, 0.7); S('glassping', 0.3, { rate: 0.8, delay: 0.05 }); break;
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:hit' : ''): S('ghost', 0.55, { rate: 0.8 }) || tone(260, 0.2, 'triangle', 0.07, 180); S('slime', 0.25, { delay: 0.03 }); break;
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:die' : ''): S('scream', 0.6, { rate: 0.75 }) || tone(600, 1.4, 'sine', 0.1, 120); S('ghostdie', 0.6, { rate: 0.8, delay: 0.4 }); S('hiss', 0.4, { delay: 0.6 }); break;
+      // The Kraken (Release 9): a great wet groan as the head breaks the surface, a rush of water as it dives, a heavy slap when it is hit, a roar and a long splash when it falls;
+      // a tentacle's throw (monsterAct 'tentacle:throw') whips and clanks
+      case (__RELEASE__ >= 9 ? 'kraken:arrive' : ''): S('roarbig', 0.6, { rate: 0.6 }) || tone(70, 0.8, 'sawtooth', 0.07, 50); S('splash', 0.5, { rate: 0.7, delay: 0.3 }); S('bubbles', 0.4, { delay: 0.5 }); break;
+      case (__RELEASE__ >= 9 ? 'kraken:rise' : ''): S('splash', 0.65, { rate: 0.7 }) || splash(0.2); S('roar', 0.4, { rate: 0.6, delay: 0.15 }); S('bubbles', 0.4, { delay: 0.3 }); break;
+      case (__RELEASE__ >= 9 ? 'kraken:dive' : ''): S('bubbles', 0.55, { rate: 0.8 }) || noise(0.3, 0.2, 500, 0.8); S('splash', 0.55, { rate: 0.8, delay: 0.1 }); break;
+      case (__RELEASE__ >= 9 ? 'kraken:hit' : ''): S('splash', 0.5, { rate: 0.8 }) || tone(110, 0.12, 'square', 0.06, 70); S('slime', 0.3, { rate: 0.7, delay: 0.03 }); break;
+      case (__RELEASE__ >= 9 ? 'kraken:die' : ''): S('roarbig', 0.7, { rate: 0.55 }) || noise(0.6, 0.3, 300, 0.7); S('splash', 0.7, { rate: 0.7, delay: 0.3 }); S('bubbles', 0.5, { delay: 0.5 }); break;
+      // The Fallen Twin Tides (Release 9): a low wet roar and a scream as the night serpents surface, bubbling gurgles as they dive and rise, a siren's wail for the blood twin's
+      // song, a heartbeat as its aura heals, a rising whistle for the water spear's warning and a boom as it lands, a vortex rush for a whirlpool
+      case (__RELEASE__ >= 9 ? 'fallentides:arrive' : ''): S('roarbig', 0.7, { rate: 0.55 }) || tone(70, 0.9, 'sawtooth', 0.08, 45); S('scream', 0.3, { rate: 0.6, delay: 0.3 }); S('splash', 0.5, { rate: 0.7, delay: 0.5 }); break;
+      case (__RELEASE__ >= 9 ? 'fallentides:bolt' : ''): S('bubbles', 0.5, { rate: 0.9 }); S('splash', 0.55, { rate: 0.9, delay: 0.03 }) || noise(0.15, 0.2, 1200, 1, 0.1, 300); S('hiss', 0.25, { delay: 0.05 }); break;
+      case (__RELEASE__ >= 9 ? 'fallentides:down' : ''): S('splash', 0.8, { rate: 0.8 }) || splash(0.25, 0.4); S('seabark', 0.55, { rate: 0.6, delay: 0.1 }) || tone(150, 0.5, 'sine', 0.06, 80, 0.2); break;
+      case (__RELEASE__ >= 9 ? 'fallentides:revive' : ''): S('bubbles', 0.7, { rate: 0.8 }) || noise(0.6, 0.2, 300, 0.8, 0, 900); S('roar', 0.5, { rate: 0.6, delay: 0.35 }); break;
+      case (__RELEASE__ >= 9 ? 'fallentides:dive' : ''): S('bubbles', 0.6, { rate: 0.8 }); S('splash', 0.6, { rate: 0.8, delay: 0.1 }) || noise(0.3, 0.2, 500, 0.8); break;
+      case (__RELEASE__ >= 9 ? 'fallentides:rise' : ''): S('splash', 0.7, { rate: 0.7 }) || splash(0.2); S('seabark', 0.4, { rate: 0.7, delay: 0.2 }); S('bubbles', 0.4, { delay: 0.25 }); break;
+      case (__RELEASE__ >= 9 ? 'fallentides:sing' : ''): S('scream', 0.45, { rate: 0.8 }) || tone(500, 1.2, 'sine', 0.07, 900); S('ghost', 0.4, { rate: 0.7, delay: 0.1 }); break;
+      case (__RELEASE__ >= 9 ? 'fallentides:heal' : ''): S('heartbeat', 0.4, { rate: 0.85 }) || (tone(58, 0.14, 'sine', 0.05, 44), tone(54, 0.12, 'sine', 0.04, 42, 0.14)); break;
+      case (__RELEASE__ >= 9 ? 'fallentides:warn' : ''): tone(700, 0.6, 'sine', 0.04, 1500); noise(0.6, 0.05, 3000, 2, 0, 5500); break;
+      case (__RELEASE__ >= 9 ? 'fallentides:spear' : ''): noise(0.35, 0.3, 2000, 1.2, 0, 300); S('boom', 0.5, { rate: 1.1, delay: 0.03 }) || tone(60, 0.6, 'sine', 0.08, 30, 0.03); S('splash', 0.6, { delay: 0.05 }); break;
+      case (__RELEASE__ >= 9 ? 'fallentides:whirl' : ''): S('whoosh', 0.5, { rate: 0.6 }) || noise(0.7, 0.2, 400, 1.4, 0, 2000); S('bubbles', 0.5, { delay: 0.2 }); break;
+      case (__RELEASE__ >= 9 ? 'fallentides:summon' : ''): [0, 0.1, 0.2].forEach(d => S('bubbles', 0.35, { delay: d, rate: 0.9 + d }) || noise(0.05, 0.1, 2000, 1.5, d)); S('roar', 0.3, { rate: 0.7 }); break;
+      case (__RELEASE__ >= 9 ? 'fallentides:hit' : ''): S('splash', 0.5, { rate: 0.85 }) || tone(110, 0.12, 'square', 0.06, 70); S('seabark', 0.4, { rate: 0.8, delay: 0.03 }); break;
+      case (__RELEASE__ >= 9 ? 'fallentides:die' : ''): S('roarbig', 0.75, { rate: 0.5 }) || noise(0.6, 0.3, 300, 0.7); S('scream', 0.4, { rate: 0.6, delay: 0.2 }); S('splash', 0.7, { rate: 0.7, delay: 0.4 }); S('bubbles', 0.5, { delay: 0.8 }); break;
       // The Siege Tower (Release 8): timber creaks and groans, a hit thuds on wood, an archer clatters off, the ramp crashes down, the sling throws a net, and it comes apart
       case (__RELEASE__ >= 8 ? 'siegetower:arrive' : ''): S('creak', 0.65, { rate: 0.7 }) || tone(90, 0.5, 'triangle', 0.07, 70); S('roar', 0.35, { rate: 0.6, delay: 0.25 }); S('wood', 0.4, { delay: 0.5 }); break;
       case (__RELEASE__ >= 8 ? 'siegetower:knock' : ''): S('wood', 0.5, { rate: 1.1 }) || noise(0.08, 0.2, 900, 1); S('metallight', 0.3, { delay: 0.12 }); S('bone', 0.3, { delay: 0.2 }); break;
@@ -554,8 +589,8 @@ export const SFX = {
   _chew(type){
     switch (type){
       case 'knight': case 'bulwark': case 'gargoyle': S('metallight', 0.45) || (noise(0.08, 0.22, 2200, 1.5), tone(400, 0.08, 'square', 0.05, 250)); break;   // metal or stone scraping wood
-      case 'slime': case 'blob': case 'crawler': case 'diver': case (__RELEASE__ >= 7 ? 'toad' : ''): S('slime', 0.4, { rate: 0.9 }) || (noise(0.1, 0.22, 350, 2.5), tone(180, 0.08, 'sine', 0.06, 120)); break;   // wet
-      case 'turtle': S('metallight', 0.45, { rate: 0.7 }) || (tone(240, 0.1, 'triangle', 0.09, 160), noise(0.06, 0.16, 600, 1.5)); break;                                       // hollow knock
+      case 'slime': case 'blob': case (__RELEASE__ >= 9 ? 'bloodslime' : ''): case (__RELEASE__ >= 9 ? 'bloodblob' : ''): case 'crawler': case 'diver': case (__RELEASE__ >= 9 ? 'eel' : ''): case (__RELEASE__ >= 7 ? 'toad' : ''): S('slime', 0.4, { rate: 0.9 }) || (noise(0.1, 0.22, 350, 2.5), tone(180, 0.08, 'sine', 0.06, 120)); break;   // wet
+      case 'turtle': case (__RELEASE__ >= 9 ? 'turtlerider' : ''): S('metallight', 0.45, { rate: 0.7 }) || (tone(240, 0.1, 'triangle', 0.09, 160), noise(0.06, 0.16, 600, 1.5)); break;                                       // hollow knock
       case 'bat': S('crunch', 0.3, { rate: 1.4 }) || (noise(0.05, 0.18, 2500, 2), noise(0.05, 0.14, 2200, 2, 0.08)); break;                                 // quick nibbles
       default: S('crunch', 0.5) || (noise(0.09, 0.28, 700, 1.2, 0, 300), tone(150, 0.09, 'square', 0.07, 90));                                              // wood being gnawed
     }

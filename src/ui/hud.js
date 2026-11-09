@@ -65,6 +65,16 @@ function brewMarks(){
   bar.querySelectorAll('.bmMark').forEach((e, i) => { const live = fresh && i === used - 1; e.classList.toggle('live', live); e.classList.toggle('done', i < used && !live); });
 }
 
+/** Tide marks (Release 9): a wave mark on the spawn bar at each `tideMarks` point; it pulses when the tide surges, then shows ticked. */
+let tdFor = null;
+function tideMarks(){
+  const bar = $('#prog').parentNode, d = G.mode === 'story' && G.def, tm = d && !d.boss && d.tideMarks && d.tideMarks.length ? d.tideMarks : null;   // a boss night's bar tracks the boss's health, so no marks (the banner still warns)
+  if (tdFor !== G || bar.querySelectorAll('.tdMark').length !== (tm ? tm.length : 0)){ tdFor = G; for (const e of bar.querySelectorAll('.tdMark')) e.remove(); if (tm) tm.forEach(m => { const e = document.createElement('b'); e.className = 'tdMark'; e.style.left = m.at * 100 + '%'; e.setAttribute('aria-hidden', 'true'); bar.appendChild(e); }); }
+  if (!tm || !G.tide) return;
+  const used = G.tide.marksDone || 0, fresh = G.t - G.tide.tT < 1.5;
+  bar.querySelectorAll('.tdMark').forEach((e, i) => { const live = fresh && i === used - 1; e.classList.toggle('live', live); e.classList.toggle('done', i < used && !live); });
+}
+
 export function updateHud(force){
   if (!G || G.mode === 'demo') return;
   const coins = save.coins + G.coins;
@@ -73,7 +83,7 @@ export function updateHud(force){
   else if (G.def.boss){   // boss level: the bar fills a little until the boss shows, then tracks its health
     const bs = G.monsters.filter(m => m.type === 'boss' && !m.hkClone), hp = bs.reduce((a, b) => a + Math.max(0, b.hp), 0), mx = G.bossMax || bs.reduce((a, b) => a + b.maxHp, 0);   // two-boss nights: both bosses' full health, a fallen one counting 0
     prog = G.bossDead ? 1 : bs.length ? 0.1 + 0.9 * (1 - hp / mx) : 0.1 * Math.min(1, G.spawned / Math.max(1, Math.floor(G.total * 0.4)));
-  } else if ((__RELEASE__ >= 3 && Array.isArray(G.def.frenzyAt)) || (__RELEASE__ >= 4 && G.def.fireMarks && G.def.fireMarks.length) || (__RELEASE__ >= 7 && G.def.brewMarks && G.def.brewMarks.length)) prog = G.total ? Math.min(G.spawned, G.total) / G.total : 0;   // levels with jukebox marks: the bar counts monsters that arrived, so each jukebox drops on its mark (owner, 2026-11-03)
+  } else if ((__RELEASE__ >= 3 && Array.isArray(G.def.frenzyAt)) || (__RELEASE__ >= 4 && G.def.fireMarks && G.def.fireMarks.length) || (__RELEASE__ >= 7 && G.def.brewMarks && G.def.brewMarks.length) || (__RELEASE__ >= 9 && G.def.tideMarks && G.def.tideMarks.length)) prog = G.total ? Math.min(G.spawned, G.total) / G.total : 0;   // levels with jukebox marks: the bar counts monsters that arrived, so each jukebox drops on its mark (owner, 2026-11-03)
   else prog = G.total ? G.resolved / G.total : 0;
   const label = G.mode === 'story' ? G.def.nightmare ? nightmareTitle(G.def) : `Night ${G.def.label}` : `${G.frenzy ? 'Frenzy' : 'Hour'} ${(G.hour || 0) + 1} · ${G.score.toLocaleString()}`;
   const wf = Math.round(wallFrac() * 100);
@@ -88,6 +98,7 @@ export function updateHud(force){
   const sig = [questOn ? qHtml : '', wf, coins, seeds, Math.round(prog * 100), label, save.fw, save.repair, save.buster, save.lantern, save.mine, save.bomb, save.scarecrow, save.emergency, G.aim, tools.join(','), Math.round(G.fogClear || 0)].join('|');
   if (__RELEASE__ >= 3){ hkMarks(); jukeboxMarks(); }
   if (__RELEASE__ >= 7) brewMarks();
+  if (__RELEASE__ >= 9) tideMarks();
   if (__RELEASE__ >= 4) fireMarks();   // cheap: rebuilt once per night, two class toggles otherwise
   if (sig === hudSig && !force) return;
   const coinsChanged = hudSig && hudSig.split('|')[1] !== String(coins);

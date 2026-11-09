@@ -1521,7 +1521,7 @@ def check_fallen_polt(browser, url):
     L = page.evaluate("() => [13, 14, 15].map(i => { const d = window.__gg.NIGHTMARE_LEVELS[1][i]; return d && [d.level, d.name, d.boss, d.bossChest, !!d.gourd, d.gourds, !!d.poison]; })")
     ok(L[0] is not None and L[0][0] == 14 and L[1] is not None and L[1][0] == 15, f'placeholder nights N2-14 and N2-15 exist {L[:2]}')
     ok(L[2] == [16, 'The Fallen Poltergeist', 'fallenpoltergeist', 'normal', True, ['grave', 'protector'], True], f'N2-16: the Fallen Poltergeist, a normal chest, both gourds, steady poison {L[2]}')
-    want = ['fallengravekeeper', 'fallenpoltergeist'] + (['fallenhexwitch'] if BUILD in ('r7', 'on') else []) + (['fallencount'] if BUILD == 'on' else [])   # one per nightmare book: Release 7 adds the witchwood's, Release 8 the keep's
+    want = ['fallengravekeeper', 'fallenpoltergeist'] + (['fallenhexwitch'] if BUILD in ('r7', 'r8', 'on') else []) + (['fallencount'] if BUILD in ('r8', 'on') else []) + (['fallentides'] if BUILD == 'on' else [])   # one per nightmare book: Release 7 adds the witchwood's, Release 8 the keep's, Release 9 the marsh's
     got = page.evaluate("() => window.__gg.FALLEN.map(f => f.key)")
     ok(got == want, f'the world 2 nightmare bestiary ends on it (FALLEN[1]); the FALLEN list is exactly this build\'s books {got}')
     ok(bool(page.evaluate("() => (window.__gg.BESTIARY.fallenpoltergeist || {}).ability")), 'it has a bestiary entry')
@@ -1897,11 +1897,12 @@ CHECKS.update({'check_n2_levels': check_n2_levels, 'check_n2_intros': check_n2_i
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)
-    ap.add_argument('--expect', choices=['on', 'r7', 'r6', 'r5', 'r4', 'r3', 'r2', 'off'], required=True)
+    ap.add_argument('--expect', choices=['on', 'r8', 'r7', 'r6', 'r5', 'r4', 'r3', 'r2', 'off'], required=True)
     ap.add_argument('--only', default=None)
     a = ap.parse_args()
     global R5, MODE, BUILD
     BUILD = a.expect
+    if a.expect == 'r8': a.expect = 'on'; from nm5_check import check_r9_absent; CHECKS['check_r9_absent'] = check_r9_absent   # a Release 8 build holds everything up to Release 8: these checks run as `on`, plus the Release 9 absence check
     if a.expect == 'r7': a.expect = 'on'; from nm4_check import check_r8_absent; CHECKS['check_r8_absent'] = check_r8_absent   # a Release 7 build holds everything up to Release 7: these checks run as `on`, plus the Release 8 absence check
     if a.expect in ('r6', 'r5'): a.expect = 'on'; CHECKS['check_r7_absent'] = check_r7_absent   # a Release 5 or 6 build holds everything up to that release: these checks run as `on`, plus the Release 7 absence check
     MODE = a.expect; R5 = a.expect == 'on'

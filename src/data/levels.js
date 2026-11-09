@@ -25,6 +25,8 @@
  * @property {{every:number, count:[number, number], kinds?:('bulky'|'speed'|'colour')[], cap?:number}} [potions]  potions on the field (Release 7, src/engine/potion.js):
  *   every `every` s, `count` [min, max] potions land on random free field tiles (the fire band, spread across lanes), of `kinds` (all three
  *   when left out), never more than `cap` (6 when left out) on the field
+ * @property {{at:number, to:number}[]} [tideMarks]  the rising blood tide (Release 9, src/engine/tide.js): at each `at` (a fraction of `total`, arrivals) the shore surges to `to` (a field fraction, held at one tile row before the fence); sorted by `at`
+ * @property {Array<[{lane:number, p:number}, {lane:number, p:number}]>} [whirlpools]  whirlpool pairs (Release 9, engine/tide.js), up to 4: a walking monster that crosses one end comes out of the other; every end in water (a pool or the sea)
  * @property {number[]} [brewMarks]  brew marks on the spawn bar (Release 7): fractions of `total`; at each, a swoop of crows and the potion clock cut by a quarter; the bar counts arrivals
  * @property {Array<[number, number]>} [gravesLayout]  explicit grave cells [row, col] on the 5×7 patch (overrides `graves`)
  * @property {number[]} [laneWeights]   relative spawn weight per lane (7 numbers); lanes at 0 never spawn
@@ -65,7 +67,7 @@
  * @property {boolean} [gourd]         the Grave Gourd stands on the patch this night (Release 4; src/engine/gourd.js): it starts in cell (2, 3), and one
  *   slot of every sprout tick fills the empty cells of its 3×3
  * @property {string} [coach]        a tutorial script the coach plays the first time this level is played (Release 4: 'gourd' on N1-5, src/engine/coach.js;
- *   Release 5: 'protector' on N2-5; Release 7: 'wartling' on N3-5; Release 8: 'crookneck' on N4-3)
+ *   Release 5: 'protector' on N2-5; Release 7: 'wartling' on N3-5; Release 8: 'crookneck' on N4-3; Release 9: 'swan' on N5-5)
  * @property {string[]} [gourds]     the gourds a `gourd:true` night offers in the picker, in slot order (Release 5; `GOURD_SLOTS` at most below Release 7;
  *   Release 7 may offer more, and the player picks two; each only once unlocked in save.gourds; the Grave Gourd counts as unlocked on any gourd
  *   night). Without it the night offers the Grave Gourd alone
@@ -93,5 +95,6 @@ export function expandLevel(def, n){
     ...(__RELEASE__ >= 5 ? { poison:def.poison || null, gourds:def.gourds || null } : {}),
     ...(__RELEASE__ >= 7 ? { potions:def.potions || null, brewMarks:def.brewMarks || null } : {}),
     ...(__RELEASE__ >= 8 ? { gourdLock:def.gourdLock || null } : {}),
+    ...(__RELEASE__ >= 9 ? { tideMarks:def.tideMarks || null, whirlpools:def.whirlpools || null } : {}),
     nightmare:!!def.nightmare, label:def.nightmare ? `N${def.world}-${def.level}` : `${def.world}-${def.level}` };
 }

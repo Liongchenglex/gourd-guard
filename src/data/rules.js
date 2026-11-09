@@ -43,6 +43,9 @@ export const PROTECT_HEAL = 1;
 // double; its on-hit powers as usual). Broken in the top row of the patch, each fence above its 3×3 mends by WART_HEAL × its full health,
 // never above full (owner: half). Plain numbers, so a lower build that never reads them carries nothing named.
 export const WART_DMG = 2, WART_HEAL = 0.5;
+// The Swan Gourd (Release 9, Nightmare Drowned Marsh; spec Part 5): a pumpkin launched from its 3×3 hits like a Black pumpkin's blast, only for
+// SWAN_SPLASH_DMG a monster and past any colour, Ice or Fire rule: the ring tags what it hurts with lastHit SWAN_HIT (engine/combat.js swanSplash).
+export const SWAN_HIT = -5, SWAN_SPLASH_DMG = 1;
 
 // Rotten pumpkins (Release 5; spec Part 2): a rotten pumpkin heals what it hits by ROT_HEAL (owner: half a hit point, never above full health)
 // and hurts by ROT_DMG only a monster that only rot can hurt (`rotOnly`: a Plague Doctor 2's square, the Lamplighter's rot mood, the Fallen

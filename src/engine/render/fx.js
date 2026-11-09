@@ -4,7 +4,7 @@
 // Everything is deterministic per frame (seeded), so nothing flickers randomly. Owner asked for these on 2026-09-26.
 
 import { E, PL, RR, S, SM, SO, ell, mix, pal, rgba, rng } from './paint.js';
-import { CS, W } from '../state.js';
+import { COLS, CS, W } from '../state.js';
 import { TAU } from '../util.js';
 
 const ease = t => 1 - (1 - t) * (1 - t);
@@ -471,25 +471,26 @@ export function graveSprite(k, v){
 
 // ---------- puddles: glossy dark water in a muddy rim, with reeds and a lily pad ----------
 const MUD = pal('#4a3524'), REED = pal('#6a9a3c'), PAD = pal('#4e9448'), CAT = pal('#6e4b2b');
-export function puddleSprite(k, seed){
-  k = bakeK(k); const rx = CS * .44, ry = 14;
-  return bake(`puddle:${k}:${seed}`, CS + 16, 64, CS / 2 + 8, 42, k, g => {
+// Release 9: `blood` bakes the Marsh nightmare's crimson pool (water #2a0608 to #8a1a1a, glints #ff8a80) to match its blood sea, under its own key; the story pool is unchanged.
+export function puddleSprite(k, seed, blood){
+  k = bakeK(k); const rx = CS * .44, ry = 14, B = __RELEASE__ >= 9 && !!blood;
+  return bake(`puddle:${B ? 'marshN-blood:' : ''}${k}:${seed}`, CS + 16, 64, CS / 2 + 8, 42, k, g => {
     const R = rng(seed * 19 + 3), side = seed % 2 ? 1 : -1;
     S.part(g, E(0, 1.5, rx + 6, ry + 4.5), MUD, { x:0, y:0, r:rx + 6 }, { flat:true, mat:'stone', lw:1.1 });
     const wp = E(0, 0, rx, ry);
-    let gr = g.createLinearGradient(0, -ry, 0, ry); gr.addColorStop(0, '#0b2436'); gr.addColorStop(.5, '#164561'); gr.addColorStop(1, '#2c7593');
+    let gr = g.createLinearGradient(0, -ry, 0, ry); if (B){ gr.addColorStop(0, '#2a0608'); gr.addColorStop(.5, '#6a1010'); gr.addColorStop(1, '#9a1c1c'); } else { gr.addColorStop(0, '#0b2436'); gr.addColorStop(.5, '#164561'); gr.addColorStop(1, '#2c7593'); }
     wp(g); g.fillStyle = gr; g.fill();
     g.save(); wp(g); g.clip();
-    gr = g.createRadialGradient(rx * .15, ry * .7, 0, rx * .15, ry * .7, rx * .8); gr.addColorStop(0, 'rgba(120,190,215,.45)'); gr.addColorStop(1, 'rgba(120,190,215,0)'); g.fillStyle = gr; g.fillRect(-rx, -ry, rx * 2, ry * 2);
+    gr = g.createRadialGradient(rx * .15, ry * .7, 0, rx * .15, ry * .7, rx * .8); gr.addColorStop(0, B ? 'rgba(255,138,128,.4)' : 'rgba(120,190,215,.45)'); gr.addColorStop(1, B ? 'rgba(255,138,128,0)' : 'rgba(120,190,215,0)'); g.fillStyle = gr; g.fillRect(-rx, -ry, rx * 2, ry * 2);
     g.save(); g.shadowColor = 'rgba(255,255,255,.9)'; g.shadowBlur = 6; g.fillStyle = 'rgba(255,255,255,.55)'; ell(g, -rx * .3, -ry * .3, rx * .3, 2.2, -.12); g.fill(); g.fillStyle = 'rgba(255,255,255,.35)'; ell(g, rx * .1, -ry * .05, rx * .14, 1.4, -.12); g.fill(); g.restore();
-    gr = g.createLinearGradient(0, -ry, 0, -ry * .2); gr.addColorStop(0, 'rgba(4,14,22,.75)'); gr.addColorStop(1, 'rgba(4,14,22,0)'); g.fillStyle = gr; g.fillRect(-rx, -ry, rx * 2, ry);
+    gr = g.createLinearGradient(0, -ry, 0, -ry * .2); gr.addColorStop(0, B ? 'rgba(30,2,4,.75)' : 'rgba(4,14,22,.75)'); gr.addColorStop(1, B ? 'rgba(30,2,4,0)' : 'rgba(4,14,22,0)'); g.fillStyle = gr; g.fillRect(-rx, -ry, rx * 2, ry);
     g.restore();
-    g.lineWidth = 1.8; g.strokeStyle = 'rgba(160,220,240,.6)'; g.beginPath(); g.ellipse(0, 0, rx - .5, ry - .5, 0, .15 * Math.PI, .85 * Math.PI); g.stroke();
-    g.strokeStyle = 'rgba(6,18,28,.8)'; g.lineWidth = 1.4; g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 1.1 * Math.PI, 1.9 * Math.PI); g.stroke();
+    g.lineWidth = 1.8; g.strokeStyle = B ? 'rgba(255,150,140,.6)' : 'rgba(160,220,240,.6)'; g.beginPath(); g.ellipse(0, 0, rx - .5, ry - .5, 0, .15 * Math.PI, .85 * Math.PI); g.stroke();
+    g.strokeStyle = B ? 'rgba(28,4,6,.8)' : 'rgba(6,18,28,.8)'; g.lineWidth = 1.4; g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 1.1 * Math.PI, 1.9 * Math.PI); g.stroke();
     // lily pad with a notch and a tiny flower
     const lx = -side * rx * .4, ly = ry * .25;
     S.part(g, E(lx, ly, 9, 5.5), PAD, { x:lx, y:ly, r:9 }, { flat:true, mat:'skin', lw:1 });
-    g.fillStyle = '#164561'; g.beginPath(); g.moveTo(lx, ly); g.lineTo(lx + 10, ly - 5.5); g.lineTo(lx + 10, ly - 1); g.closePath(); g.fill();
+    g.fillStyle = B ? '#6a1010' : '#164561'; g.beginPath(); g.moveTo(lx, ly); g.lineTo(lx + 10, ly - 5.5); g.lineTo(lx + 10, ly - 1); g.closePath(); g.fill();
     S.dot(g, E(lx - 3, ly - 2, 2.2, 2), '#ff9ec8'); S.dot(g, E(lx - 3, ly - 2.4, .9, .9), '#ffe27a');
     // reeds on the bank with one cattail and a leaf blade
     const bx = side * rx * .72;
@@ -499,39 +500,41 @@ export function puddleSprite(k, seed){
 }
 
 // ---------- sea: a baked base per height, a scrolling wave tile and a foam tile for the shoreline ----------
-export function seaSprite(k, h){
-  k = bakeK(k); h = Math.round(h);
-  return bake(`sea:${k}:${h}`, W, h, 0, 0, k, g => {
+// Release 9: `blood` bakes the Nightmare Drowned Marsh's crimson sea beside the story sea (sea #5a0a0c to #a01818, wave crests and foam #ff8a80);
+// the three tiles are cached under their own keys, so a night draws the same few sprites as a story sea.
+export function seaSprite(k, h, blood){
+  k = bakeK(k); h = Math.round(h); const B = __RELEASE__ >= 9 && !!blood;
+  return bake(`sea:${B ? 'marshN-blood:' : ''}${k}:${h}`, W, h, 0, 0, k, g => {
     const R = rng(77);
-    let gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#0c2f45'); gr.addColorStop(.45, '#174c66'); gr.addColorStop(.85, '#1f6a83'); gr.addColorStop(1, '#2b8199'); g.fillStyle = gr; g.fillRect(0, 0, W, h);
-    for (let i = 0; i < 5; i++){ const x = R() * W, y = h * (.1 + R() * .35), r = 40 + R() * 60; gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(4,18,30,.35)'); gr.addColorStop(1, 'rgba(4,18,30,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
-    g.save(); g.translate(W * .62, h * .5); g.scale(1, Math.max(1, h / 90)); gr = g.createRadialGradient(0, 0, 0, 0, 0, 70); gr.addColorStop(0, 'rgba(225,245,250,.22)'); gr.addColorStop(.5, 'rgba(225,245,250,.08)'); gr.addColorStop(1, 'rgba(225,245,250,0)'); g.fillStyle = gr; g.fillRect(-70, -70, 140, 140); g.restore();
+    let gr = g.createLinearGradient(0, 0, 0, h); if (B){ gr.addColorStop(0, '#5a0a0c'); gr.addColorStop(.45, '#78100f'); gr.addColorStop(.85, '#921616'); gr.addColorStop(1, '#a01818'); } else { gr.addColorStop(0, '#0c2f45'); gr.addColorStop(.45, '#174c66'); gr.addColorStop(.85, '#1f6a83'); gr.addColorStop(1, '#2b8199'); } g.fillStyle = gr; g.fillRect(0, 0, W, h);
+    for (let i = 0; i < 5; i++){ const x = R() * W, y = h * (.1 + R() * .35), r = 40 + R() * 60; gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, B ? 'rgba(30,2,4,.4)' : 'rgba(4,18,30,.35)'); gr.addColorStop(1, B ? 'rgba(30,2,4,0)' : 'rgba(4,18,30,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+    g.save(); g.translate(W * .62, h * .5); g.scale(1, Math.max(1, h / 90)); gr = g.createRadialGradient(0, 0, 0, 0, 0, 70); const gl = B ? '255,138,128' : '225,245,250'; gr.addColorStop(0, `rgba(${gl},.22)`); gr.addColorStop(.5, `rgba(${gl},.08)`); gr.addColorStop(1, `rgba(${gl},0)`); g.fillStyle = gr; g.fillRect(-70, -70, 140, 140); g.restore();
     g.lineCap = 'round'; g.lineWidth = 1.2;
     const n = Math.round(W * h / 900);
-    for (let i = 0; i < n; i++){ const y = h * (.3 + Math.sqrt(R()) * .68), x = R() * W, L = 20 + R() * 40; g.strokeStyle = `rgba(150,225,240,${.08 + (y / h) * .14})`; g.beginPath(); g.moveTo(x, y); for (let d = 8; d <= L; d += 8) g.lineTo(x + d, y + Math.sin(d * .4 + i) * 2.5); g.stroke(); }
-    for (let i = 0; i < n / 3; i++){ const x = R() * W, y = h * (.2 + R() * .75); g.fillStyle = `rgba(235,250,255,${.15 + R() * .25})`; ell(g, x, y, 1.6 + R(), .9); g.fill(); }
+    for (let i = 0; i < n; i++){ const y = h * (.3 + Math.sqrt(R()) * .68), x = R() * W, L = 20 + R() * 40; g.strokeStyle = `rgba(${B ? '255,110,100' : '150,225,240'},${.08 + (y / h) * .14})`; g.beginPath(); g.moveTo(x, y); for (let d = 8; d <= L; d += 8) g.lineTo(x + d, y + Math.sin(d * .4 + i) * 2.5); g.stroke(); }
+    for (let i = 0; i < n / 3; i++){ const x = R() * W, y = h * (.2 + R() * .75); g.fillStyle = `rgba(${B ? '255,170,160' : '235,250,255'},${.15 + R() * .25})`; ell(g, x, y, 1.6 + R(), .9); g.fill(); }
   });
 }
-export function waveTile(k){
-  k = bakeK(k);
-  return bake(`wave:${k}`, 240, 30, 0, 0, k, g => {
+export function waveTile(k, blood){
+  k = bakeK(k); const B = __RELEASE__ >= 9 && !!blood;
+  return bake(`wave:${B ? 'marshN-blood:' : ''}${k}`, 240, 30, 0, 0, k, g => {
     const top = x => 11 + Math.sin(x / 240 * TAU * 2) * 3.5 + Math.sin(x / 240 * TAU * 4 + 1) * 1.5;
     g.beginPath(); g.moveTo(0, top(0)); for (let x = 4; x <= 240; x += 4) g.lineTo(x, top(x)); g.lineTo(240, 30); g.lineTo(0, 30); g.closePath();
-    const gr = g.createLinearGradient(0, 8, 0, 30); gr.addColorStop(0, 'rgba(170,225,240,.34)'); gr.addColorStop(1, 'rgba(170,225,240,0)'); g.fillStyle = gr; g.fill();
+    const gr = g.createLinearGradient(0, 8, 0, 30); const wc = B ? '255,120,110' : '170,225,240'; gr.addColorStop(0, `rgba(${wc},.34)`); gr.addColorStop(1, `rgba(${wc},0)`); g.fillStyle = gr; g.fill();
     g.lineCap = 'round';
-    g.beginPath(); g.moveTo(0, top(0) - 1.6); for (let x = 4; x <= 240; x += 4) g.lineTo(x, top(x) - 1.6); g.strokeStyle = 'rgba(30,90,120,.35)'; g.lineWidth = 1.2; g.stroke();
-    g.beginPath(); g.moveTo(0, top(0)); for (let x = 4; x <= 240; x += 4) g.lineTo(x, top(x)); g.strokeStyle = 'rgba(225,248,252,.6)'; g.lineWidth = 2; g.stroke();
-    for (const x of [60, 180]){ g.fillStyle = 'rgba(255,255,255,.55)'; ell(g, x, top(x) - 1, 5, 2); g.fill(); ell(g, x + 9, top(x + 9) - .5, 2.5, 1.4); g.fill(); }
+    g.beginPath(); g.moveTo(0, top(0) - 1.6); for (let x = 4; x <= 240; x += 4) g.lineTo(x, top(x) - 1.6); g.strokeStyle = B ? 'rgba(60,4,6,.4)' : 'rgba(30,90,120,.35)'; g.lineWidth = 1.2; g.stroke();
+    g.beginPath(); g.moveTo(0, top(0)); for (let x = 4; x <= 240; x += 4) g.lineTo(x, top(x)); g.strokeStyle = B ? 'rgba(255,138,128,.6)' : 'rgba(225,248,252,.6)'; g.lineWidth = 2; g.stroke();
+    for (const x of [60, 180]){ g.fillStyle = B ? 'rgba(255,190,180,.55)' : 'rgba(255,255,255,.55)'; ell(g, x, top(x) - 1, 5, 2); g.fill(); ell(g, x + 9, top(x + 9) - .5, 2.5, 1.4); g.fill(); }
   });
 }
-export function foamTile(k){
-  k = bakeK(k);
-  return bake(`foam:${k}`, 240, 30, 0, 0, k, g => {
+export function foamTile(k, blood){
+  k = bakeK(k); const B = __RELEASE__ >= 9 && !!blood;
+  return bake(`foam:${B ? 'marshN-blood:' : ''}${k}`, 240, 30, 0, 0, k, g => {
     const R = rng(5);
-    g.strokeStyle = 'rgba(8,36,54,.4)'; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(0, 17); for (let x = 8; x <= 240; x += 8) g.lineTo(x, 17 + Math.sin(x / 240 * TAU * 3) * 1.5); g.stroke();
+    g.strokeStyle = B ? 'rgba(40,2,4,.45)' : 'rgba(8,36,54,.4)'; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(0, 17); for (let x = 8; x <= 240; x += 8) g.lineTo(x, 17 + Math.sin(x / 240 * TAU * 3) * 1.5); g.stroke();
     for (let i = 0; i < 18; i++){ const x = i * 13.3 + R() * 6, y = 12 + (R() - .5) * 5, r = 4.5 + R() * 4.5;
-      for (const xx of [x - 240, x, x + 240]){ const gr = g.createRadialGradient(xx, y, 0, xx, y, r); gr.addColorStop(0, 'rgba(255,255,255,.95)'); gr.addColorStop(.55, 'rgba(240,250,255,.8)'); gr.addColorStop(1, 'rgba(240,250,255,0)'); g.fillStyle = gr; ell(g, xx, y, r, r * .7); g.fill(); } }
-    for (let i = 0; i < 14; i++){ const x = R() * 240, y = 6 + R() * 12; g.fillStyle = 'rgba(255,255,255,.75)'; ell(g, x, y, 1.2 + R(), 1 + R() * .6); g.fill(); }
+      for (const xx of [x - 240, x, x + 240]){ const gr = g.createRadialGradient(xx, y, 0, xx, y, r); gr.addColorStop(0, B ? 'rgba(255,200,192,.95)' : 'rgba(255,255,255,.95)'); gr.addColorStop(.55, B ? 'rgba(255,138,128,.8)' : 'rgba(240,250,255,.8)'); gr.addColorStop(1, B ? 'rgba(255,138,128,0)' : 'rgba(240,250,255,0)'); g.fillStyle = gr; ell(g, xx, y, r, r * .7); g.fill(); } }
+    for (let i = 0; i < 14; i++){ const x = R() * 240, y = 6 + R() * 12; g.fillStyle = B ? 'rgba(255,170,160,.75)' : 'rgba(255,255,255,.75)'; ell(g, x, y, 1.2 + R(), 1 + R() * .6); g.fill(); }
   });
 }
 
@@ -709,3 +712,141 @@ export function countSpearSprite(k){ k = bakeK(k); return bake(`fcspear:${k}`, F
   S.ln(g, [[0, 66], [0, 100]], { deep:'#ffb0b0' }, .9, .55);
 }); }
 export function prebakeCountFx(k){ countWarnSprite(k); countBoltSprite(k); countSpearSprite(k); }
+
+// ---------- the Fallen Twin Tides (Release 9): the water spear's column warning and strike, the blood bolt and the water bolt; each baked once ----------
+// The column sprites are baked in fixed drawing units and stretched onto the patch at draw time (render/draw.js drawTidesSpear), as the Fallen Count's lightning; the bolts
+// are small blobs blitted at the arrow (drawArrows). Keyed by the bake scale K, so a resize that changes K bakes them once more.
+export const FT_COL = { w:100, h:500 }, FT_STRIKE = { w:160, h:620 }, FT_BOLT = { w:44, h:76 };
+/** A patch column under the water spear's warning: a pale aqua wash with deep-blue dashed edges and chevrons pointing down. */
+export function tidesWarnSprite(k){ k = bakeK(k); return bake(`ftwarn:${k}`, FT_COL.w, FT_COL.h, 0, 0, k, g => {
+  const { w, h } = FT_COL;
+  const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, 'rgba(120,230,255,.6)'); gr.addColorStop(.18, 'rgba(90,200,240,.22)'); gr.addColorStop(.82, 'rgba(90,200,240,.22)'); gr.addColorStop(1, 'rgba(120,230,255,.6)');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(20,70,160,.9)'; g.lineWidth = 3; g.setLineDash([14, 10]); g.strokeRect(2, 2, w - 4, h - 4); g.setLineDash([]);
+  g.strokeStyle = 'rgba(230,250,255,.8)'; g.lineWidth = 5; g.lineCap = 'round'; g.lineJoin = 'round';
+  for (let y = 40; y < h - 20; y += 90){ g.beginPath(); g.moveTo(w * .3, y); g.lineTo(w * .5, y + 22); g.lineTo(w * .7, y); g.stroke(); }
+}); }
+/** The spear itself: a column of water with a bright core, a spear point at its foot and droplets thrown off its sides. */
+export function tidesSpearSprite(k){ k = bakeK(k); return bake(`ftspear:${k}`, FT_STRIKE.w, FT_STRIKE.h, 0, 0, k, g => {
+  const { w, h } = FT_STRIKE, R = rng(41), cx = w / 2, body = (hw) => { g.beginPath(); g.moveTo(cx - hw, 0); g.lineTo(cx - hw * 1.05, h - 90); g.lineTo(cx, h - 4); g.lineTo(cx + hw * 1.05, h - 90); g.lineTo(cx + hw, 0); g.closePath(); };
+  g.save(); g.shadowColor = '#7af0ff'; g.shadowBlur = 26; body(30); g.fillStyle = 'rgba(70,170,230,.55)'; g.fill(); g.restore();
+  body(22); let gr = g.createLinearGradient(cx - 22, 0, cx + 22, 0); gr.addColorStop(0, 'rgba(30,110,190,.85)'); gr.addColorStop(.5, 'rgba(150,230,255,.92)'); gr.addColorStop(1, 'rgba(30,110,190,.85)'); g.fillStyle = gr; g.fill();
+  body(7); g.fillStyle = 'rgba(245,253,255,.95)'; g.fill();
+  g.strokeStyle = 'rgba(235,252,255,.7)'; g.lineWidth = 2.5; g.lineCap = 'round';
+  for (let i = 0; i < 5; i++){ const y = 40 + i * 110; g.beginPath(); g.moveTo(cx - 24, y); g.quadraticCurveTo(cx, y + 14, cx + 24, y); g.stroke(); }   // swirling bands down the column
+  g.fillStyle = 'rgba(200,244,255,.9)';
+  for (let i = 0; i < 26; i++){ const y = R() * (h - 60), side = R() < .5 ? -1 : 1, x = cx + side * (30 + R() * 40), r = 2 + R() * 3.5; g.beginPath(); g.ellipse(x, y, r, r * 1.3, 0, 0, TAU); g.fill(); }
+}); }
+/** A bolt thrown by a twin: `blood` (a dark crimson glob trailing blood) or `water` (a deep-blue glob trailing spray), point down. Drawn centred on the arrow. */
+export function tidesBoltSprite(k, kind){ k = bakeK(k); const blood = kind === 'blood'; return bake(`ftbolt:${kind}:${k}`, FT_BOLT.w, FT_BOLT.h, FT_BOLT.w / 2, FT_BOLT.h - 22, k, g => {
+  const cx = 0, cy = 0, c0 = blood ? ['#ff9a9a', '#d01828', '#5a0410'] : ['#e8fbff', '#4aa8e8', '#103a7a'], trail = blood ? 'rgba(200,16,40,' : 'rgba(110,200,240,', glow = blood ? '#ff2030' : '#7af0ff';
+  for (let i = 1; i <= 3; i++){ g.fillStyle = trail + (0.6 - i * .15) + ')'; g.beginPath(); g.ellipse(cx + (i % 2 ? 3 : -3), cy - 12 - i * 12, 4.5 - i * .8, 5.5 - i * .8, 0, 0, TAU); g.fill(); }
+  g.save(); g.shadowColor = glow; g.shadowBlur = 10;
+  const gr = g.createRadialGradient(cx - 4, cy - 4, 2, cx, cy, 14); gr.addColorStop(0, c0[0]); gr.addColorStop(.4, c0[1]); gr.addColorStop(1, c0[2]);
+  g.fillStyle = gr; g.beginPath(); g.moveTo(cx, cy + 15); g.bezierCurveTo(cx + 15, cy + 2, cx + 12, cy - 12, cx, cy - 13); g.bezierCurveTo(cx - 12, cy - 12, cx - 15, cy + 2, cx, cy + 15); g.fill(); g.restore();
+  g.strokeStyle = blood ? 'rgba(60,2,10,.8)' : 'rgba(10,40,100,.7)'; g.lineWidth = 1.5; g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.75)'; g.beginPath(); g.ellipse(cx - 4, cy - 5, 3.5, 2.2, -.6, 0, TAU); g.fill();
+}); }
+export function prebakeTidesFx(k){ tidesWarnSprite(k); tidesSpearSprite(k); tidesBoltSprite(k, 'blood'); tidesBoltSprite(k, 'water'); }
+
+// ---------- Whirlpools (Release 9): one baked spiral per colour and canvas scale, spun and pulsed when blitted ----------
+const WHIRL_R = CS * 0.46;
+/** A whirlpool disc in `col`: a dark core, three curling arms and a bright rim. Baked once per colour and scale; never drawn live. */
+export function whirlSprite(col, k){
+  const R = WHIRL_R, pad = 4;
+  return bake('whirl:' + col + ':' + bakeK(k).toFixed(2), R * 2 + pad * 2, R * 2 + pad * 2, R + pad, R + pad, bakeK(k), g => {
+    const core = g.createRadialGradient(0, 0, 0, 0, 0, R); core.addColorStop(0, 'rgba(10,0,10,.85)'); core.addColorStop(.55, rgba(col, .38)); core.addColorStop(1, rgba(col, 0));
+    g.fillStyle = core; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.fill();
+    g.lineCap = 'round';
+    for (let a = 0; a < 3; a++){
+      g.strokeStyle = rgba(col, .9); g.lineWidth = 3.2; g.beginPath();
+      for (let i = 0; i <= 18; i++){ const u = i / 18, r = R * (.16 + .78 * u), ang = a * TAU / 3 + u * 3.4; const x = Math.cos(ang) * r, y = Math.sin(ang) * r; i ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.2; g.stroke();
+    }
+    g.strokeStyle = rgba(col, .8); g.lineWidth = 2; g.beginPath(); g.arc(0, 0, R * .96, 0, TAU); g.stroke();
+  });
+}
+
+// ---------- The Drowned Pirate's aim (Release 9): a dashed red line down his column to the target and a reticle on it, and the shot itself ----------
+/** The aim line: a dashed beam 8 px wide and AIM_LEN tall, drawn stretched to the real length. Baked once per canvas scale. */
+export const AIM_LEN = 64;
+export function pirateAimSprite(k){
+  return bake('pirateaim:' + bakeK(k).toFixed(2), 10, AIM_LEN, 5, 0, bakeK(k), g => {
+    g.lineCap = 'round';
+    g.strokeStyle = 'rgba(255,60,60,.35)'; g.lineWidth = 8; g.beginPath(); g.moveTo(0, 2); g.lineTo(0, AIM_LEN - 2); g.stroke();
+    g.strokeStyle = '#ff5a5a'; g.lineWidth = 2.6; g.setLineDash([7, 6]); g.beginPath(); g.moveTo(0, 2); g.lineTo(0, AIM_LEN - 2); g.stroke();
+    g.strokeStyle = '#ffd0c8'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, 2); g.lineTo(0, AIM_LEN - 2); g.stroke();
+  });
+}
+/** The reticle on the doomed pumpkin: a ring with four ticks. 52 px, centred. */
+export function pirateReticleSprite(k){
+  return bake('pirateret:' + bakeK(k).toFixed(2), 52, 52, 26, 26, bakeK(k), g => {
+    g.lineCap = 'round';
+    g.strokeStyle = 'rgba(255,60,60,.4)'; g.lineWidth = 7; g.beginPath(); g.arc(0, 0, 17, 0, TAU); g.stroke();
+    g.strokeStyle = '#ff4a4a'; g.lineWidth = 3; g.beginPath(); g.arc(0, 0, 17, 0, TAU); g.stroke();
+    g.lineWidth = 3; for (let i = 0; i < 4; i++){ const a = i * TAU / 4; g.beginPath(); g.moveTo(Math.cos(a) * 10, Math.sin(a) * 10); g.lineTo(Math.cos(a) * 24, Math.sin(a) * 24); g.stroke(); }
+    g.fillStyle = '#ffe0d8'; g.beginPath(); g.arc(0, 0, 2.4, 0, TAU); g.fill();
+  });
+}
+/** The shot: a glowing lead ball with a short tail up the lane, point down. 14 x 40, the ball at the foot of the tail. */
+export function pirateShotSprite(k){
+  return bake('pirateshot:' + bakeK(k).toFixed(2), 14, 40, 7, 34, bakeK(k), g => {
+    const tail = g.createLinearGradient(0, -34, 0, 0); tail.addColorStop(0, 'rgba(255,200,120,0)'); tail.addColorStop(1, 'rgba(255,210,120,.9)');
+    g.fillStyle = tail; g.beginPath(); g.moveTo(-3, -34); g.lineTo(3, -34); g.lineTo(4.5, 0); g.lineTo(-4.5, 0); g.closePath(); g.fill();
+    g.shadowColor = '#ffb040'; g.shadowBlur = 8; g.fillStyle = '#3a3640'; g.beginPath(); g.arc(0, 0, 5.5, 0, TAU); g.fill(); g.shadowBlur = 0;
+    g.fillStyle = 'rgba(255,255,255,.6)'; g.beginPath(); g.arc(-1.6, -1.8, 1.7, 0, TAU); g.fill();
+  });
+}
+export function prebakePirateFx(k){ pirateAimSprite(k); pirateReticleSprite(k); pirateShotSprite(k); }
+
+// ---------- Hidden rows (Release 9, the Siren's song; engine/marsh.js hideRow) ----------
+/** What a pumpkin in a hidden row shows: a glossy red sphere with a darker question mark. CS x CS, centred. Baked once per canvas scale; one drawImage per cell. */
+export function hiddenSphereSprite(k){
+  return bake('hiddensphere:' + bakeK(k).toFixed(2), CS, CS, CS / 2, CS / 2, bakeK(k), g => {
+    const R = CS * 0.4, body = g.createRadialGradient(-R * 0.35, -R * 0.4, R * 0.1, 0, 0, R * 1.05);
+    body.addColorStop(0, '#ff8a8a'); body.addColorStop(0.45, '#d8242c'); body.addColorStop(1, '#5e0814');
+    g.fillStyle = body; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.fill();
+    g.strokeStyle = 'rgba(40,0,8,.85)'; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(-R * 0.38, -R * 0.5, R * 0.3, R * 0.16, -0.6, 0, TAU); g.fill();
+    g.fillStyle = 'rgba(70,0,12,.8)'; g.font = `bold ${Math.round(R * 1.05)}px Fredoka, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', 0, R * 0.08);
+  });
+}
+/** The warning laid over a row about to be hidden: a red wash fading at the ends, with a sea-green song note in every cell. COLS x CS wide, top-left origin. */
+export function hiddenWarnSprite(k){
+  return bake('hiddenwarn:' + bakeK(k).toFixed(2), COLS * CS, CS, 0, 0, bakeK(k), g => {
+    const band = g.createLinearGradient(0, 0, 0, CS); band.addColorStop(0, 'rgba(255,60,70,.08)'); band.addColorStop(0.5, 'rgba(255,60,70,.42)'); band.addColorStop(1, 'rgba(255,60,70,.08)');
+    g.fillStyle = band; g.fillRect(0, 0, COLS * CS, CS);
+    g.strokeStyle = 'rgba(255,110,110,.8)'; g.lineWidth = 2; g.strokeRect(2, 2, COLS * CS - 4, CS - 4);
+    g.fillStyle = 'rgba(255,225,220,.85)'; g.strokeStyle = 'rgba(255,225,220,.85)'; g.lineWidth = 3; g.lineCap = 'round';
+    for (let c = 0; c < COLS; c++){   // an eighth note in each cell
+      const x = (c + 0.5) * CS, y = CS * 0.58;
+      g.beginPath(); g.ellipse(x - 5, y, 9, 6.5, -0.45, 0, TAU); g.fill();
+      g.beginPath(); g.moveTo(x + 3, y - 2); g.lineTo(x + 3, y - 28); g.quadraticCurveTo(x + 16, y - 24, x + 13, y - 11); g.stroke();
+    }
+  });
+}
+export function prebakeHiddenFx(k){ hiddenSphereSprite(k); hiddenWarnSprite(k); }
+
+// ---------- The Swan Gourd's black-hole ring (Release 9) ----------
+/** A ring of marsh-dark with a faint violet rim and a thin violet glint inside, 100 units across, centred on its origin. Baked once per canvas
+ *  scale; draw it scaled from 0.3 to 1.6 CS across and faded over its 0.5 s, one drawImage. */
+export const BLACK_RING_D = 100;
+export function blackRingSprite(k){
+  const D = BLACK_RING_D, R = D / 2 - 3;
+  return bake('blackring:' + bakeK(k).toFixed(2), D, D, D / 2, D / 2, bakeK(k), g => {
+    const gr = g.createRadialGradient(0, 0, R * .2, 0, 0, R);
+    gr.addColorStop(0, 'rgba(6,2,14,0)'); gr.addColorStop(.55, 'rgba(6,2,14,.55)'); gr.addColorStop(.86, 'rgba(10,4,22,.9)'); gr.addColorStop(1, 'rgba(10,4,22,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.fill();
+    g.strokeStyle = 'rgba(176,150,230,.5)'; g.lineWidth = 2.5; g.beginPath(); g.arc(0, 0, R * .95, 0, TAU); g.stroke();
+    g.strokeStyle = 'rgba(214,196,255,.35)'; g.lineWidth = 1.2; g.beginPath(); g.arc(0, 0, R * .78, 0, TAU); g.stroke();
+  });
+}
+/** One black ring at its moment: grows from 0.3 to 1.6 CS across while it fades (the first blit also bakes the sprite, which a night start does too). */
+export function drawBlackRing(g, v, k){
+  const p = Math.min(1, v.t / v.dur), sp = blackRingSprite(k), d = CS * (.3 + 1.3 * (1 - (1 - p) * (1 - p)));
+  g.globalAlpha = (1 - p) * (p < .12 ? p / .12 : 1) * .95;
+  g.drawImage(sp.c, v.x - d / 2, v.y - d / 2, d, d);
+  g.globalAlpha = 1;
+}
+export const prebakeBlackRing = k => { blackRingSprite(k); };

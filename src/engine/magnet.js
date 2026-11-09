@@ -8,9 +8,9 @@ import { G, LANE, FIELD_TOP, FIELD_BOT, walls } from './state.js';
 import { TILE_P, mY } from './monsters.js';
 import { SFX } from './audio.js';
 
-const NEVER = new Set(['boss', 'sack', 'jukebox', 'diver', ...(__RELEASE__ >= 8 ? ['lobbercart'] : [])]);   // ... and from Release 8 the Lobber Cart, which stays put (owner 2026-11-09)   // bosses (mini bosses and forms are bosses too), the Loot Sack, the Frenzy jukebox, and Puddle Divers (owner, 2026-11-08: one pulled out of its puddle kept diving on dry ground)
+const NEVER = new Set(['boss', 'sack', 'jukebox', 'diver', ...(__RELEASE__ >= 8 ? ['lobbercart'] : []), ...(__RELEASE__ >= 9 ? ['eel', 'tentacle', 'siren'] : [])]);   // Release 9: the water dwellers that never walk (Storm Eel, Kraken tentacle, Siren) stay in the tide   // ... and from Release 8 the Lobber Cart, which stays put (owner 2026-11-09)   // bosses (mini bosses and forms are bosses too), the Loot Sack, the Frenzy jukebox, and Puddle Divers (owner, 2026-11-08: one pulled out of its puddle kept diving on dry ground)
 
-/** Can a Magnet hit move this monster? Never a boss, the Loot Sack, the jukebox or a Puddle Diver, anything hidden, a mummy lying down, or one off the field. */
+/** Can a Magnet hit move this monster? Never a boss, the Loot Sack, the jukebox, a Puddle Diver or (Release 9) a Storm Eel, Kraken tentacle or Siren, anything hidden, a mummy lying down, or one off the field. */
 export function magnetPullable(m){
   return !m.dead && !NEVER.has(m.type) && !m.hidden && !(m.rise > 0) && m.p >= 0 && m.p <= 1;
 }

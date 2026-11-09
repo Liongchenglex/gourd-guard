@@ -3,7 +3,7 @@
   Playtest build:  npm run build:playtest then .venv/bin/python tools/w6_check.py --url http://127.0.0.1:4173/ --expect on
   Release 2 build: VITE_RELEASE=2 npx vite build then  ... --expect r2   (World 6 to 6-16, nothing from Release 3)
   Release 3 build: VITE_RELEASE=3 npx vite build then  ... --expect r3   (World 6 complete, nothing from Release 4; tools/nm_check.py --expect r3 too)
-  Release 4..7 builds: VITE_RELEASE=N npx vite build then  ... --expect r4|r5|r6|r7   (everything up to Release 3 is `on`; the build must say Release N)
+  Release 4..8 builds: VITE_RELEASE=N npx vite build then  ... --expect r4|r5|r6|r7|r8   (everything up to Release 3 is `on`; the build must say Release N)
   Checks take `on` (World 6 present: on, r3 or r2); Release 3 checks read the global R3 (on or r3).
 Exits 1 on any failure. --only runs one check by name."""
 import argparse, json, pathlib, sys, time, os
@@ -1036,11 +1036,11 @@ CHECKS.update({'check_hex_mummies': check_hex_mummies, 'check_glue_on_hit': chec
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)
-    ap.add_argument('--expect', choices=['on', 'r7', 'r6', 'r5', 'r4', 'r3', 'r2', 'off'], required=True)
+    ap.add_argument('--expect', choices=['on', 'r8', 'r7', 'r6', 'r5', 'r4', 'r3', 'r2', 'off'], required=True)
     ap.add_argument('--only', default=None)
     a = ap.parse_args()
     global R3, MODE, WANT_RELEASE
-    if a.expect in ('r7', 'r6', 'r5', 'r4'): WANT_RELEASE = int(a.expect[1]); a.expect = 'on'
+    if a.expect in ('r8', 'r7', 'r6', 'r5', 'r4'): WANT_RELEASE = int(a.expect[1]); a.expect = 'on'
     MODE = a.expect; R3 = a.expect in ('on', 'r3')
     on = a.expect in ('on', 'r3', 'r2')
     with sync_playwright() as p:

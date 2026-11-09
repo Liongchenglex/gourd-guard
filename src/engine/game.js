@@ -33,11 +33,12 @@ import { prebakePotions } from './render/potion.js';
 import { prebakeWeather } from './render/weather.js';
 import { prebakeCastlePieces } from './render/castlepieces.js';
 import { updateNets, netSnapshot, restoreNets } from './nets.js';
+import { initHidden, updateHidden, hiddenSnapshot, restoreHidden } from './marsh.js';
 import { initTide, updateTide, tideSnapshot, restoreTide, initWhirls, whirlSnapshot, restoreWhirls } from './tide.js';
 import { prebakeTide } from './render/tide.js';
 import { lancerHit, shieldSnapshot, restoreShields, carryCheck, newCastle, updateCastlePieces, siegeSnapshot, countSnapshot } from './keep.js';
 import { prebakeNets } from './render/nets.js';
-import { prebakeCountFx, prebakePirateFx } from './render/fx.js';
+import { prebakeCountFx, prebakePirateFx, prebakeHiddenFx } from './render/fx.js';
 import { K } from './render/canvas.js';
 import { prebakeTongue, prebakeBarrier, prebakeCroneZone, prebakeFallenHex } from './render/witchwood.js';
 import { startCoach, coachHolds, coachUpdate } from './coach.js';
@@ -190,6 +191,7 @@ export function startGame(mode, n, loadout, gourds){
   else if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def && def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def && def.puddles) placePuddles(def.puddles);
   if (__RELEASE__ >= 9 && def) initWhirls(def);   // whirlpool pairs, now the pools stand (Release 9)
+  if (__RELEASE__ >= 9) initHidden();   // no row hidden yet (the Siren's song, engine/marsh.js)
   if (__RELEASE__ >= 4 && def){ startFires(def); if (def.nightmare) prebakeFire(); }   // after the castles, so random fires skip them; the flame strip is baked now, not on first sight
   if (__RELEASE__ >= 5 && def && def.poison) prebakePoison();   // the fog and its warning strips, baked now
   if (__RELEASE__ >= 7 && def && bakeKeys(def).some(k => k.split('|')[0] === 'triptych')) prebakeBarrier();   // the Triptych's barrier frames (Release 7, ~4-6 MB), only on a night that can spawn one
@@ -198,6 +200,7 @@ export function startGame(mode, n, loadout, gourds){
   if (__RELEASE__ >= 7 && def && (def.boss === 'fallenhexwitch' || def.boss2 === 'fallenhexwitch')) prebakeFallenHex();   // her altar's crack states and her 5x5 zone (Release 7), only on her night
   if (__RELEASE__ >= 7 && def && def.nightmare) prebakePotions();   // the three bottles, their icons and the drink puffs (Release 7), baked now
   if (__RELEASE__ >= 8 && def && def.nightmare) prebakeNets();   // the rope net, the crimson one and the net in flight, baked now
+  if (__RELEASE__ >= 9 && def && bakeKeys(def).some(k => k.split('|')[0] === 'siren')) prebakeHiddenFx(K);   // the hidden-row sphere and warning (render/fx.js), baked before she can sing
   if (__RELEASE__ >= 9 && def && bakeKeys(def).some(k => k.split('|')[0] === 'pirate')) prebakePirateFx(K);   // a Pirate's aim line, reticle and shot (render/fx.js), baked before he can aim
   if (__RELEASE__ >= 8 && def && def.boss === 'fallencount') prebakeCountFx(K);   // his lightning warning, bolt and blood spear, baked now (render/fx.js)
   if (__RELEASE__ >= 8 && def && (def.boss === 'fallencount' || (def.castlesLayout || []).some(e => e[2] === 'gate' || e[2] === 'tower'))) prebakeCastlePieces();   // the Gatehouse's and the Archer Tower's frames, baked now (render/castlepieces.js)
@@ -503,6 +506,7 @@ export function update(dt){
   if (__RELEASE__ >= 8 && G.shieldCarry) carryCheck();   // a continued night: red nets nobody came back for turn ordinary (engine/keep.js)
   if (__RELEASE__ >= 7 && g.roots && g.roots.length) updateRoots(dt);   // the Treant's roots: their age, and the fence roots squeezing (engine/witchwood.js)
   if (__RELEASE__ >= 7 && g.potions) updatePotions(dt);   // potions on the field: the clock, and monsters drinking what they walk onto (engine/potion.js)
+  if (__RELEASE__ >= 9 && g.hidden) updateHidden(dt);   // hidden rows: the warnings and the time left (engine/marsh.js)
   if (__RELEASE__ >= 9 && g.tide) updateTide(dt);   // the blood tide: the next mark, and the surge sweeping the shore (engine/tide.js)
   if (__RELEASE__ >= 5) updatePoison(dt);   // poison fog: the warning, the fog, the rot under it (engine/poison.js)
   if (__RELEASE__ >= 4 && g.crowDives && g.crowDives.length) updateCrowDives(dt);   // crows diving into the patch (engine/nightmare.js)
@@ -639,7 +643,7 @@ export function continueState(){
     ...(__RELEASE__ >= 5 ? { bossMood:living.map(m => bossSnapshot(m) || (__RELEASE__ >= 7 ? treantSnapshot(m) || fallenHexSnapshot(m) : null) || (__RELEASE__ >= 8 ? siegeSnapshot(m) || countSnapshot(m) : null)), rot:rotSnapshot(), poison:poisonClock() } : {}),   // a Treant's root clock, the Fallen Hexwitch's marks and standing altar too (Release 7)   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
     ...(__RELEASE__ >= 7 ? { potions:potionSnapshot(), roots:rootSnapshot() } : {}),   // the Treant's roots as they stand; the potions on the field, their clock and what the drinkers on the field had drunk (Release 7)
     ...(__RELEASE__ >= 8 ? { nets:netSnapshot(), shields:shieldSnapshot() } : {}),   // the nets on the patch and in flight (Release 8)
-    ...(__RELEASE__ >= 9 ? { tide:tideSnapshot(), whirls:whirlSnapshot() } : {}) };   // the blood tide's marks passed and the shore reached (Release 9)
+    ...(__RELEASE__ >= 9 ? { tide:tideSnapshot(), whirls:whirlSnapshot(), hidden:hiddenSnapshot() } : {}) };   // the blood tide's marks passed and the shore reached, the rows hidden and their time left (Release 9)
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
 export function continueNight(c){
@@ -655,6 +659,7 @@ export function continueNight(c){
   if (__RELEASE__ >= 8 && c.nets) restoreShields(c.shields);   // red nets wait for their owner's type to come back, a Bride's veil for the next Bride (engine/keep.js)
   if (__RELEASE__ >= 7 && c.potions) restorePotions(c.potions);   // the same potions stand, the clock carries on, and the drinkers come back with what they drank (Release 7)
   if (__RELEASE__ >= 9 && c.whirls) restoreWhirls(c.whirls);   // the same whirlpool pairs (Release 9)
+  if (__RELEASE__ >= 9 && c.hidden) restoreHidden(c.hidden);   // the same rows stay hidden, with their time left (Release 9)
   if (__RELEASE__ >= 9 && c.tide) restoreTide(c.tide);   // the same shore and marks; no surge replays (Release 9)
   if (__RELEASE__ >= 7 && c.roots) restoreRoots(c.roots);   // the Treant's roots stand where they stood, with their hits left and their age (Release 7)
   if (__RELEASE__ >= 4 && c.bossSpawned && c.bossPhase2) G.bossPhase2 = c.bossPhase2.slice();   // spawner.js puts each returning boss back in its phase

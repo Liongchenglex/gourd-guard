@@ -33,7 +33,7 @@ def marsh_page(browser, url):
 # ---------- Task 1: the track, the book page, the blood sea ----------
 # Names no lower build may hold. Not listed, because older builds already hold them for story reasons: 'Kraken' and 'Turtle Rider'
 # (comments in ported art, absent from a minified bundle but not from the source) and 'e4d9bd' (the Protector Gourd's shell colour).
-R9_NAMES = ['Blood Slime', 'Storm Eel', 'Siren', 'Swan Gourd', 'Fallen Twin Tides', 'Whirlpool', 'Drowned Pirate', 'Bloodlet', 'pirateshot', 'Beat Nightmare 4-4', 'marshN-blood', 'The tide rises!', '#4affd0', 'turtlerider', 'rotshot']
+R9_NAMES = ['Blood Slime', 'Storm Eel', 'Siren', 'Swan Gourd', 'Fallen Twin Tides', 'Whirlpool', 'Drowned Pirate', 'Bloodlet', 'pirateshot', 'Beat Nightmare 4-4', 'marshN-blood', 'The tide rises!', '#4affd0', 'turtlerider', 'rotshot', 'sirennote', 'hiddensphere']
 
 
 def check_r9_absent(browser, url):
@@ -538,7 +538,7 @@ def check_pirate(browser, url):
     # an empty column: no shot, he walks on
     page.evaluate("() => { window.__gg.G.monsters.length = 0; }")
     page.evaluate(PIR, {'cells': [(1, 3)], 'stops': [0.35]})
-    page.evaluate(STEP, [8, 0.05])
+    page.evaluate(STEP, [11, 0.05])
     ok(page.evaluate("() => [window.__p.aiming, window.__p.p > 0.4]") == [False, True] and page.evaluate(CELL, [1, 3]) == 'pumpkin', 'an empty column means no shot: he walks on')
     ok(page.evaluate("() => { const G = window.__gg.G; return G.projs.length + G.drops.length; }") >= 0, 'no leftovers')
     # two shots
@@ -750,6 +750,145 @@ def check_eel_budget(browser, url):
 
 CHECKS.update({'check_turtlerider': check_turtlerider, 'check_eel': check_eel, 'check_eel_tide': check_eel_tide, 'check_eel_hidden': check_eel_hidden,
                'check_eel_no_leap': check_eel_no_leap, 'check_eel_budget': check_eel_budget})
+
+
+# ---------- Task 6: the Siren and hidden rows ----------
+def siren_page(browser, url, lane=2):
+    """slime_page (empty patch, paused) with one Siren in `lane`, its fence made strong. Returns (page, errors)."""
+    page, errors = slime_page(browser, url)
+    page.evaluate("""(lane) => { const g = window.__gg; g.G.monsters.length = 0; g.G.vfx.length = 0; g.walls.forEach(w => { w.hp = w.max = 500; });
+      const m = g.spawnMonster('siren', lane, true); m.age = 5; window.__s = m; }""", lane)
+    return page, errors
+
+
+HIDDEN = "() => [...window.__gg.G.hidden]"
+
+
+def check_siren(browser, url):
+    if not R9: return
+    page, errors = siren_page(browser, url)
+    T = page.evaluate("() => { const T = window.__gg.TYPES.siren; return [T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.back, T.singEvery]; }")
+    ok(T == [6, 24, 0, 12, 0, 32, 2, True, 12], f'Siren numbers {T}')
+    p0 = page.evaluate("() => [window.__s.lane, window.__s.p, window.__gg.liveShore()]")
+    ok(abs(p0[1] - (p0[2] - 0.03)) < 1e-6, f'she surfaces at the shore - 0.03 ({p0})')
+    ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.type === 'siren').length") == 1, 'one Siren stands')
+    page.evaluate(STEP, [11.7, 0.05])
+    ok(page.evaluate("() => [window.__s.sing > 0, window.__gg.G.hideWarn.some(w => w > 0), window.__gg.G.hidden.some(h => h > 0)]") == [False, False, False], 'she has not sung before 12 s')
+    page.evaluate(STEP, [0.5, 0.05])   # 12.2 s
+    st = page.evaluate("() => [window.__s.sing > 0, window.__gg.G.hideWarn.filter(w => w > 0).length, window.__gg.G.hidden.filter(h => h > 0).length, window.__gg.G.vfx.some(v => v.kind === 'sirennote')]")
+    ok(st == [True, 1, 0, True], f'at 12 s she sings, a row is warned (not hidden yet) and a note drifts down {st}')
+    row = page.evaluate("() => window.__gg.G.hideWarn.findIndex(w => w > 0)")
+    page.evaluate(STEP, [1.4, 0.05])   # 13.6 s: the warning (1.5 s from 12.0) is over
+    h = page.evaluate(HIDDEN)
+    ok(h[row] > 5.5 and h[row] <= 6 and sum(1 for x in h if x > 0) == 1 and len(h) == 5, f'after the warning that row is hidden for 6 s {h} (row {row})')
+    ok(page.evaluate("(r) => window.__gg.rowHidden(r)", row) is True and page.evaluate("(r) => window.__gg.rowHidden((r + 1) % 5)", row) is False, 'rowHidden reads it')
+    page.evaluate(STEP, [6.1, 0.05])
+    ok(not any(x > 0 for x in page.evaluate(HIDDEN)), f'six seconds later it is over {page.evaluate(HIDDEN)}')
+    p1 = page.evaluate("() => [window.__s.lane, window.__s.p, window.__s.dead]")
+    ok(p1[0] == p0[0] and abs(p1[1] - p0[1]) < 1e-9 and not p1[2], f'she never walks ({p0[:2]} -> {p1})')
+    ok(page.evaluate("() => window.__gg.walls[2].hp") == 500, 'and never chews the fence')
+    # a second song picks a row that is not hidden: hide six rows by hand, she must pick the seventh
+    page.evaluate("() => { const g = window.__gg; for (let r = 0; r < 5; r++) if (r !== 4) g.hideRow(r, 0, 99); window.__s.singT = 0.05; }")
+    page.evaluate(STEP, [0.2, 0.05])
+    ok(page.evaluate("() => window.__gg.G.hideWarn[4] > 0 || window.__gg.G.hidden[4] > 0"), 'she picks a row that is not hidden')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def hide_page(browser, url):
+    page, errors = slime_page(browser, url)
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; g.G.vfx.length = 0; g.G.def.total = 999; g.G.total = 999; g.walls.forEach(w => { w.hp = w.max = 500; }); }")
+    return page, errors
+
+
+def check_hidden_play(browser, url):
+    if not R9: return
+    page, errors = hide_page(browser, url)
+    # a lone Green at (3,0) and another at (3,2): sliding the first right makes a bunch of two. The hint may find it while the row shows...
+    page.evaluate("() => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); g.grid[3][0] = g.newCell(0); g.grid[3][2] = g.newCell(0); g.G.hint = null; }")
+    b = page.evaluate("() => { const b = window.__gg.bestMove(); return b && window.__gg.G && [window.__gg.grid[3].indexOf(b.ref), b.dir]; }")
+    ok(b is not None and b[0] in (0, 2), f'the hint finds the slide when the row is shown {b}')
+    page.evaluate("() => window.__gg.hideRow(3, 0, 6)")
+    ok(page.evaluate("() => window.__gg.rowHidden(3)"), 'row 3 is hidden')
+    ok(page.evaluate("() => window.__gg.bestMove()") is None, 'the hint never targets a hidden row')
+    # a visible cell pushing into the hidden row is no hint either
+    page.evaluate("() => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); g.grid[2][1] = g.newCell(0); g.grid[4][1] = g.newCell(0); g.grid[3][0] = g.newCell(0); g.grid[3][2] = g.newCell(0); }")
+    bm = page.evaluate("() => { const g = window.__gg, b = g.bestMove(); if (!b) return null; let r = -1; for (let i = 0; i < 5; i++) if (g.grid[i].includes(b.ref)) r = i; return [r, b.dir]; }")
+    ok(bm is None or (bm[0] != 3 and not (bm[0] == 2 and bm[1] == 'down') and not (bm[0] == 4 and bm[1] == 'up')), f'neither from nor into the hidden row {bm}')
+    # three Greens in the hidden row still light and launch as Green
+    page.evaluate("() => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); for (const c of [0, 1, 2]) g.grid[3][c] = g.newCell(0); g.resolveMatches(); }")
+    lit = page.evaluate("() => window.__gg.grid[3].slice(0, 3).map(c => [c.lit, c.c])")
+    ok(lit == [[True, 0]] * 3, f'three Greens in a hidden row still light as Green {lit}')
+    page.evaluate("""() => { const g = window.__gg; const m = g.spawnMonster('ghoul', 1, true, 0.5); m.age = 5; m.sp = 0; window.__g = m; window.__hp0 = m.hp; g.launchGroup(g.grid[3][1]); }""")
+    page.evaluate(STEP, [3, 0.02])
+    ok(page.evaluate("() => window.__g.dead || window.__g.hp < window.__hp0"), 'and launch: the ghoul in the lane is hit')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_hidden_refresh(browser, url):
+    if not R9: return
+    page, errors = hide_page(browser, url)
+    page.evaluate("() => window.__gg.hideRow(2, 0, 6)")
+    page.evaluate(STEP, [4, 0.05])
+    a = page.evaluate("() => window.__gg.G.hidden[2]")
+    ok(1.8 <= a <= 2.2, f'2 s left after 4 s {a}')
+    page.evaluate("() => window.__gg.hideRow(2)")   # the default warning does not shorten or delay a row already hidden
+    b = page.evaluate("() => window.__gg.G.hidden[2]")
+    ok(5.9 <= b <= 6.0, f'a second hide resets it to 6 s, not 2 {b}')
+    page.evaluate(STEP, [3, 0.05])
+    c = page.evaluate("() => window.__gg.G.hidden[2]")
+    ok(2.8 <= c <= 3.2, f'and it runs from there {c}')
+    # a fresh row warns first: 1.5 s, then 6 s
+    page.evaluate("() => window.__gg.hideRow(0)")
+    ok(page.evaluate("() => [window.__gg.G.hidden[0], window.__gg.G.hideWarn[0]]") == [0, 1.5], 'a fresh row is only warned at first')
+    page.evaluate(STEP, [1.55, 0.05])
+    d = page.evaluate("() => window.__gg.G.hidden[0]")
+    ok(5.9 <= d <= 6.0, f'after 1.5 s it is hidden for 6 s {d}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_hidden_continue(browser, url):
+    if not R9: return
+    page, errors = hide_page(browser, url)
+    page.evaluate("() => { const g = window.__gg; g.hideRow(1, 0, 6); g.hideRow(4, 0, 9); }")
+    page.evaluate(STEP, [2, 0.05])
+    cs = page.evaluate("() => window.__gg.continueState().hidden")
+    ok(cs is not None and len(cs) == 5 and 3.8 <= cs[1] <= 4.2 and 6.8 <= cs[4] <= 7.2, f'the snapshot holds each row\'s time left {cs}')
+    r = page.evaluate("() => { const g = window.__gg, c = g.continueState(); c.remaining = 8; g.continueNight(c); return [...g.G.hidden]; }")
+    ok(all(abs(a - b) < 0.3 for a, b in zip(r, cs)) and r[1] > 0 and r[4] > 0 and r[0] == r[2] == r[3] == 0, f'hidden rows and their time survive a continue {r}')   # the new night is live: a frame or two may pass
+    page.evaluate(STEP, [2, 0.05])
+    ok(1.8 <= page.evaluate("() => window.__gg.G.hidden[1]") <= 2.2, 'and keep counting down')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_hidden_budget(browser, url):
+    if not R9: return
+    page, errors = hide_page(browser, url)
+    probe = """() => { const g = window.__gg, c = g.ctx, d = c.drawImage, f = c.fill, s = c.stroke, n = { img:0, fill:0, stroke:0, srcs:[] };
+      c.drawImage = function(...a){ n.img++; n.srcs.push(a[0]); return d.apply(this, a); }; c.fill = function(...a){ n.fill++; return f.apply(this, a); }; c.stroke = function(...a){ n.stroke++; return s.apply(this, a); };
+      try { g.drawGrid(1.0); g.drawHiddenRows(1.0); } finally { delete c.drawImage; delete c.fill; delete c.stroke; } return { img:n.img, fill:n.fill, stroke:n.stroke, same:n.srcs.length && n.srcs.every(x => x === n.srcs[0]) }; }"""
+    page.evaluate("() => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); for (let c = 0; c < 7; c++) g.grid[3][c] = g.newCell(c % 3); g.resolveMatches(); g.hideRow(3, 0, 6); }")
+    page.evaluate(probe)   # the first call bakes
+    n = page.evaluate(probe)
+    ok(0 < n['img'] <= 7 and n['fill'] == 0 and n['stroke'] == 0, f'a hidden row adds at most 7 drawImage and no fill/stroke {n}')
+    ok(n['same'], 'every cell of the row is the same baked red sphere')
+    page.evaluate("() => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); g.G.hidden.fill(0); g.hideRow(3, 1.5, 6); }")   # the warning, over an empty patch
+    page.evaluate(probe)
+    w = page.evaluate(probe)
+    ok(1 <= w['img'] <= 2 and w['fill'] == 0 and w['stroke'] == 0, f'a warned row is one baked sprite, no fill/stroke {w}')
+    shot = os.environ.get('GG_HIDDEN_SHOT')
+    if shot:
+        page.evaluate("() => { const g = window.__gg; g.G.hidden.fill(0); g.G.hideWarn.fill(0); for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) g.grid[r][c] = g.newCell((r + c) % 3); g.resolveMatches(); g.hideRow(3, 0, 6); g.hideRow(1, 1.5, 6); }")
+        page.evaluate("() => document.querySelectorAll('.overlay, [id^=ov]').forEach(e => { e.style.display = 'none'; })"); time.sleep(0.4); page.screenshot(path=shot)
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_siren': check_siren, 'check_hidden_play': check_hidden_play, 'check_hidden_refresh': check_hidden_refresh,
+               'check_hidden_continue': check_hidden_continue, 'check_hidden_budget': check_hidden_budget})
 
 
 def main():

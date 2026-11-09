@@ -141,7 +141,7 @@ function standsStill(o){
   if (o.type === 'boss') return o.p >= (o.hold || 1) - 0.001;
   if (o.type === 'archer') return o.p >= TYPES.archer.hold;
   if (o.type === 'diver') return !o.walker;
-  if (__RELEASE__ >= 9 && o.type === 'eel') return true;   // a Storm Eel never walks (engine/marsh.js)
+  if (__RELEASE__ >= 9 && (o.type === 'eel' || o.type === 'siren')) return true;   // a Storm Eel and the Siren never walk (engine/marsh.js)
   if (o.type === 'sack' || o.type === 'jukebox') return true;
   if (__RELEASE__ >= 8 && keepParked(o)) return true;   // a parked Lobber Cart never moves on (engine/keep.js)
   if (__RELEASE__ >= 4 && o.type === 'coffin') return true;   // Casket Jack's Fallen Casket lies still: others walk round it

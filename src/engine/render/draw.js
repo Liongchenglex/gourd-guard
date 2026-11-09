@@ -13,7 +13,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite, magSparkSprite } from './tools.js';
-import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, whirlSprite, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR, pirateAimSprite, pirateReticleSprite, pirateShotSprite } from './fx.js';
+import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, whirlSprite, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR, pirateAimSprite, pirateReticleSprite, pirateShotSprite, hiddenSphereSprite, hiddenWarnSprite } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -111,6 +111,7 @@ export function render(){
   if (G.aim === 'repair') drawAimWalls(t);
   updatePaintPull(t);   // marks borrowed pumpkins so drawGrid lights them
   drawGrid(t);
+  if (__RELEASE__ >= 9) drawHiddenRows(t);   // rows the Siren is about to hide: a baked red wash (Release 9)
   if (__RELEASE__ >= 8 && G.fcBolt) drawCountBolt(t);   // the Fallen Count's lightning over a patch column: the warning, then the bolt (baked)
   if (__RELEASE__ >= 8 && G.netsFlying) for (const f of G.netsFlying) drawNetFlight(ctx, f.x, f.y, LANE(f.c), GY + f.r * CS + CS / 2, 1 - f.t / NET_FLY, f.kind, f.r + f.c);   // nets in flight
   if (__RELEASE__ >= 5 && G.poison && (G.poison.warn || G.poison.on)) drawPoison(G.poison, t);   // poison fog and its arrows, over the pumpkins (Release 5)
@@ -575,6 +576,12 @@ export function drawCell(r, c, cell, t, hg){
   if (cell.fly > 0){ s *= 0.85; y -= Math.sin((1 - cell.fly / 0.55) * Math.PI) * 50; }
   if (cell.wig > 0) x += Math.sin(cell.wig * 30) * 3 * cell.wig;
   if (__RELEASE__ >= 4 && cell.gourd){ drawGourdCell(ctx, x, y, s, t, (r * 7 + c * 13) * .37, cell.gourd === true ? 'grave' : cell.gourd); return; }   // a gourd: its kind's baked sprite (no colour, never lit)
+  if (__RELEASE__ >= 9 && G.hidden && G.hidden[r] > 0 && !(cell.fly > 0)){   // a hidden row (the Siren): a baked red sphere, no colour and no light; the true pumpkin is still there
+    const sp = hiddenSphereSprite(K), sz = CS * s * 0.92; ctx.drawImage(sp.c, x - sz / 2, y - sz / 2, sz, sz);
+    if (__RELEASE__ >= 8 && cell.net) drawNetOver(ctx, x, y, cell.net, (cell.t - (cell.netAt || 0)) / 0.25);
+    if (cell.pinned > 0) drawPin(ctx, x, y, cell.pinned, cell.pinMax);
+    return;
+  }
   const lit = cell.lit || cell.borrowed;   // a pumpkin a Paint bunch will borrow lights up too (owner, 2026-10-09)
   const rotten = __RELEASE__ >= 5 && cell.c === ROTTEN;   // a rotten pumpkin (Release 5): its baked sprite, a sickly green halo when bunched, no costume
   if (lit){
@@ -612,6 +619,19 @@ export function drawCell(r, c, cell, t, hg){
     ctx.fillStyle = '#ffe27a'; ctx.strokeStyle = 'rgba(60,30,0,.7)'; ctx.lineWidth = 1.5;
     drawStar(x + CS * 0.3, y - CS * 0.34, 6.5, t * 2);
   }
+}
+
+/** Rows about to be hidden (Release 9): a pulsing baked red wash with a note in each cell, one drawImage a row. The hidden rows themselves are drawn by drawCell. */
+export function drawHiddenRows(t){
+  if (!G.hideWarn) return;
+  let sp = null;
+  for (let r = 0; r < ROWS; r++){
+    if (!(G.hideWarn[r] > 0)) continue;
+    if (!sp) sp = hiddenWarnSprite(K);
+    ctx.globalAlpha = 0.6 + 0.35 * Math.sin(t * 12 + r);
+    ctx.drawImage(sp.c, GX, GY + r * CS, sp.w, sp.h);
+  }
+  ctx.globalAlpha = 1;
 }
 
 export function drawSproutBar(){
@@ -722,6 +742,10 @@ function drawVfx(){
     else if (v.kind === 'hexbolt') drawHexBolt(ctx, v);
     else if (__MAGNET__ && v.kind === 'magpull') drawMagPull(v);
     else if (__RELEASE__ >= 9 && v.kind === 'pirateshot') drawPirateShot(v);
+    else if (__RELEASE__ >= 9 && v.kind === 'sirennote'){   // the Siren's note drifting down her lane: a baked frame
+      const p = Math.min(1, v.t / v.dur); ctx.save(); ctx.globalAlpha = Math.min(1, (1 - p) * 2.2); ctx.translate(v.x + Math.sin(v.t * 5) * 6, v.y0 + (v.y1 - v.y0) * p); ctx.scale(1.4, 1.4);
+      drawChar(ctx, {}, 'sirennote', null, ['drift', Math.floor(v.t * 10) % 8]); ctx.restore();
+    }
     else if (__RELEASE__ >= 9 && v.kind === 'rotshot'){   // a Turtle Rider's rotten pumpkin lobbed to its cell: a baked frame on an arc
       ctx.save(); ctx.translate(v.x0 + (v.x1 - v.x0) * p, v.y0 + (v.y1 - v.y0) * p - Math.sin(p * Math.PI) * 70); ctx.scale(1.5, 1.5);
       drawChar(ctx, {}, 'rotshot', null, ['fly', Math.floor(v.t * 12) % 6]); ctx.restore();

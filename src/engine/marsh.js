@@ -16,6 +16,12 @@
 //  - The Storm Eel (`eel`): the Puddle Diver's hidden/up cycle (m.hidden, m.upT, m.puddle) with a charge: up `up` s, which are the surface clip, the `charge` clip,
 //    the shoot clip (the bolt leaves its mouth 0.17 s in, FIRE_AT) and the dive. The bolt is a G.arrows entry with `zap` (the Diver's wall damage, baked sprite).
 //    Each dive it picks a new spot (eelSpot): another pool, or a random lane and place in the tide, never the spot it left. It never walks (sp 0).
+//  - The Siren (`siren`): surfaces at the live shore - 0.03 in her lane and never walks (sp 0, no knockback; whirlpools never take her). Her clock `singT` runs while
+//    she is free to act (not frozen); every `singEvery` s she sings (`sing` runs SING_CLIP s: the sing clip, and a note drifting down her lane, a vfx 'sirennote')
+//    and hideRow()s a random row that is neither hidden nor already warned. Hidden rows: G.hidden[r] is the seconds left, G.hideWarn[r] the warning left
+//    (HIDE_WARN s, a red wash on the row), G.hideDur[r] the time the warning will give it. A hide on a row already hidden resets it to its time at once. The
+//    drawing only changes (render/draw.js: baked red spheres); bunches, lights and launches use the pumpkins' true colours, and the hint never points into a
+//    hidden row (board.js). The Fallen blood twin calls hideRow too. A continued night keeps each row's time left (hiddenSnapshot / restoreHidden).
 
 import { TYPES, SLIME_CAP } from '../data/monsters.js';
 import { PTYPES } from '../data/pumpkins.js';
@@ -26,9 +32,11 @@ import { isProtected } from './gourd.js';
 import { ROTTEN, rotCell } from './rot.js';
 import { liveShore, inWater } from './tide.js';
 import { mS, mY, spawnMonster } from './monsters.js';
-import { COLS, CS, G, GY, LANE, ROWS, gest, grid, walls } from './state.js';
+import { COLS, CS, FENCE_Y, G, GY, LANE, ROWS, gest, grid, walls } from './state.js';
 import { rnd } from './util.js';
 
+export const HIDE_WARN = 1.5, HIDE_DUR = 6;   // a row is warned this long, then hidden this long (spec)
+const SING_CLIP = 1.5, NOTE_DRIFT = 2.2;   // the sing clip's length, and how long the note takes down her lane
 export const SWELL_MAX = 1.7;   // a Bloodlet about to regrow is drawn this much bigger (r 13 -> a Blood Slime's r 23 is 1.77)
 
 const ROT_WIND = 0.45;   // the imp's throw clip: it lets go 0.45 s in (render/chars/marsh.js, 10 frames at 14 fps, release at 0.63)
@@ -49,6 +57,7 @@ export function initMarshMonster(m){
     m.aiming = false; m.aimT = 0; m.aimRow = -1;
   }
   if (m.type === 'turtlerider'){ m.rotT = TYPES.turtlerider.rotEvery; m.winding = false; }
+  if (m.type === 'siren'){ m.singT = TYPES.siren.singEvery; m.sing = 0; m.noKnockback = true; m.p = Math.max(0.02, liveShore() - 0.03); }   // she sits at the water's edge
   if (m.type === 'eel'){   // lurks in the water from the start, as a Diver in its pool
     m.hidden = true; m.upT = TYPES.eel.down; m.fired = false; m.charged = false;
     if (!m.puddle) m.puddle = { lane:m.lane, p:Math.max(0, m.p) };
@@ -113,6 +122,42 @@ function eelBolt(m){
   SFX.monsterAct('eel', 'bolt');
 }
 
+// ---------- hidden rows (the Siren's song; the Fallen blood twin calls hideRow too) ----------
+/** Start of a night: no row hidden or warned. */
+export function initHidden(){ G.hidden = Array(ROWS).fill(0); G.hideWarn = Array(ROWS).fill(0); G.hideDur = Array(ROWS).fill(HIDE_DUR); }
+export const rowHidden = r => !!(G && G.hidden && G.hidden[r] > 0);
+/** Warn row r for `warn` s, then hide it for `dur` s. A row already hidden is reset to `dur` at once; a row already warned keeps its warning (the longer time). */
+export function hideRow(r, warn = HIDE_WARN, dur = HIDE_DUR){
+  if (!G.hidden) initHidden();
+  if (r < 0 || r >= ROWS) return;
+  if (G.hidden[r] > 0){ G.hidden[r] = dur; return; }
+  if (G.hideWarn[r] > 0){ G.hideDur[r] = Math.max(G.hideDur[r], dur); return; }
+  if (warn <= 0){ G.hidden[r] = dur; return; }
+  G.hideWarn[r] = warn; G.hideDur[r] = dur;
+}
+/** Per-frame (game.js): the warnings run down into hidden time, and hidden time runs down. */
+export function updateHidden(dt){
+  for (let r = 0; r < ROWS; r++){
+    if (G.hideWarn[r] > 0){ G.hideWarn[r] -= dt; if (G.hideWarn[r] <= 0){ G.hideWarn[r] = 0; G.hidden[r] = G.hideDur[r]; } }
+    else if (G.hidden[r] > 0) G.hidden[r] = Math.max(0, G.hidden[r] - dt);
+  }
+}
+/** Each row's time left (a warning not yet over is dropped). */
+export const hiddenSnapshot = () => G.hidden ? G.hidden.slice() : null;
+/** A continued night: the same rows hidden with the same time left. */
+export function restoreHidden(s){
+  initHidden();
+  if (Array.isArray(s)) for (let r = 0; r < ROWS; r++) G.hidden[r] = s[r] > 0 ? s[r] : 0;
+}
+
+function sing(m){
+  m.sing = SING_CLIP;
+  const free = []; for (let r = 0; r < ROWS; r++) if (!(G.hidden[r] > 0) && !(G.hideWarn[r] > 0)) free.push(r);
+  if (free.length) hideRow(free[Math.floor(Math.random() * free.length)]);
+  if (G.vfx) G.vfx.push({ kind:'sirennote', x:m.x, y0:mY(m) - m.r * 0.5, y1:FENCE_Y - 20, t:0, dur:NOTE_DRIFT });
+  SFX.monsterAct('siren', 'sing');
+}
+
 /** combat.js kill(): a Blood Slime falls into Bloodlets, as many as the cap leaves room for. */
 export function splitBlood(m, y){
   const room = SLIME_CAP - slimesAlive(), n = Math.max(0, Math.min(TYPES.bloodslime.splits, room));
@@ -168,6 +213,10 @@ export function updateMarshMonster(m, dt){
       }
       return true;
     }
+    case 'siren':
+      m.x = m.tx; m.singT -= dt; if (m.sing > 0) m.sing -= dt;
+      if (m.singT <= 0){ m.singT += TYPES.siren.singEvery; sing(m); }
+      return true;
     case 'eel': {
       const T = TYPES.eel;
       m.x = m.tx; m.upT -= dt;

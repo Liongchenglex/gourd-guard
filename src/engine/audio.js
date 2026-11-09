@@ -387,6 +387,7 @@ export const SFX = {
       case (__RELEASE__ >= 9 ? 'bloodslime:split' : ''): case (__RELEASE__ >= 9 ? 'bloodslime:regrow' : ''): S('slime', 0.5, { rate: 1.05 }) || (tone(500, 0.06, 'sine', 0.08, 800), tone(560, 0.06, 'sine', 0.08, 900, 0.09)); break;
       case (__RELEASE__ >= 9 ? 'pirate:aim' : ''): S('metallight', 0.35, { rate: 1.6 }) || tone(900, 0.05, 'square', 0.04, 700); break;   // the flintlock cocks
       case (__RELEASE__ >= 9 ? 'pirate:shoot' : ''): S('arrow', 0.6, { rate: 0.7 }) || (tone(200, 0.1, 'triangle', 0.08, 90), noise(0.1, 0.25, 1800, 1)); break;
+      case (__RELEASE__ >= 9 ? 'siren:sing' : ''): S('ghost', 0.45, { rate: 1.35 }) || tone(660, 0.5, 'sine', 0.06, 880); S('sparkle', 0.3, { delay: 0.1 }); break;   // the Siren sings (Release 9)
       case (__RELEASE__ >= 9 ? 'eel:surface' : ''): S('splash', 0.5, { rate: 1.1 }) || splash(0.16); break;   // the Storm Eel rises (Release 9)
       case (__RELEASE__ >= 9 ? 'eel:charge' : ''): S('zap', 0.4, { rate: 1.3 }) || tone(700, 0.2, 'sawtooth', 0.04, 1500); break;   // it crackles up
       case (__RELEASE__ >= 9 ? 'eel:bolt' : ''): S('zap', 0.6, { rate: 0.9 }) || (noise(0.12, 0.22, 2400, 1.5), tone(900, 0.1, 'square', 0.05, 200)); break;

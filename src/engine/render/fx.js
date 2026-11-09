@@ -4,7 +4,7 @@
 // Everything is deterministic per frame (seeded), so nothing flickers randomly. Owner asked for these on 2026-09-26.
 
 import { E, PL, RR, S, SM, SO, ell, mix, pal, rgba, rng } from './paint.js';
-import { CS, W } from '../state.js';
+import { COLS, CS, W } from '../state.js';
 import { TAU } from '../util.js';
 
 const ease = t => 1 - (1 - t) * (1 - t);
@@ -762,3 +762,31 @@ export function pirateShotSprite(k){
   });
 }
 export function prebakePirateFx(k){ pirateAimSprite(k); pirateReticleSprite(k); pirateShotSprite(k); }
+
+// ---------- Hidden rows (Release 9, the Siren's song; engine/marsh.js hideRow) ----------
+/** What a pumpkin in a hidden row shows: a glossy red sphere with a darker question mark. CS x CS, centred. Baked once per canvas scale; one drawImage per cell. */
+export function hiddenSphereSprite(k){
+  return bake('hiddensphere:' + bakeK(k).toFixed(2), CS, CS, CS / 2, CS / 2, bakeK(k), g => {
+    const R = CS * 0.4, body = g.createRadialGradient(-R * 0.35, -R * 0.4, R * 0.1, 0, 0, R * 1.05);
+    body.addColorStop(0, '#ff8a8a'); body.addColorStop(0.45, '#d8242c'); body.addColorStop(1, '#5e0814');
+    g.fillStyle = body; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.fill();
+    g.strokeStyle = 'rgba(40,0,8,.85)'; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(-R * 0.38, -R * 0.5, R * 0.3, R * 0.16, -0.6, 0, TAU); g.fill();
+    g.fillStyle = 'rgba(70,0,12,.8)'; g.font = `bold ${Math.round(R * 1.05)}px Fredoka, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', 0, R * 0.08);
+  });
+}
+/** The warning laid over a row about to be hidden: a red wash fading at the ends, with a sea-green song note in every cell. COLS x CS wide, top-left origin. */
+export function hiddenWarnSprite(k){
+  return bake('hiddenwarn:' + bakeK(k).toFixed(2), COLS * CS, CS, 0, 0, bakeK(k), g => {
+    const band = g.createLinearGradient(0, 0, 0, CS); band.addColorStop(0, 'rgba(255,60,70,.08)'); band.addColorStop(0.5, 'rgba(255,60,70,.42)'); band.addColorStop(1, 'rgba(255,60,70,.08)');
+    g.fillStyle = band; g.fillRect(0, 0, COLS * CS, CS);
+    g.strokeStyle = 'rgba(255,110,110,.8)'; g.lineWidth = 2; g.strokeRect(2, 2, COLS * CS - 4, CS - 4);
+    g.fillStyle = 'rgba(255,225,220,.85)'; g.strokeStyle = 'rgba(255,225,220,.85)'; g.lineWidth = 3; g.lineCap = 'round';
+    for (let c = 0; c < COLS; c++){   // an eighth note in each cell
+      const x = (c + 0.5) * CS, y = CS * 0.58;
+      g.beginPath(); g.ellipse(x - 5, y, 9, 6.5, -0.45, 0, TAU); g.fill();
+      g.beginPath(); g.moveTo(x + 3, y - 2); g.lineTo(x + 3, y - 28); g.quadraticCurveTo(x + 16, y - 24, x + 13, y - 11); g.stroke();
+    }
+  });
+}
+export function prebakeHiddenFx(k){ hiddenSphereSprite(k); hiddenWarnSprite(k); }

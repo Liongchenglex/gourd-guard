@@ -343,6 +343,7 @@ export function bestMove(){
     for (const dir of ['up', 'left', 'right', 'down']){
       if (cell.lit && dir === 'up') continue;
       const moves = planMove(r, c, dir); if (!moves) continue;
+      if (__RELEASE__ >= 9 && G.hidden && moves.some(([a, , x]) => G.hidden[a] > 0 || G.hidden[x] > 0 || G.hideWarn[a] > 0 || G.hideWarn[x] > 0)) continue;   // the hint never moves a pumpkin from or into a hidden (or about to be hidden) row (the Siren)
       const cells = applyMove(moves, false);
       const sc = boardScore(grid, threat) - (moves.length > 1 ? 0.1 : 0);
       revertMove(moves, cells);

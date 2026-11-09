@@ -198,7 +198,7 @@ export const TYPES = {
     // The Fallen Twin Tides (N5-16, engine/marsh.js updateFallenTides): two bosses, `twin` 'blood' and 'blue', in distinct lanes, each holding in the tide at
     // min(hold, the live shore) and never reaching the wall. At each `diveAt` mark of its own health a twin dives and rises at a random spot in the water in another lane.
     // Killed together: when one falls it is down and untargetable for `window` s; the other falling inside that window ends the fight, else the first rises at full
-    // health and the rule starts over. Both throw a bolt at a random standing fence every `boltEvery` s for `boltDmg` (blood: a blood bolt; blue: a water bolt). Blood: sings
+    // health and the rule starts over. Both throw a bolt down their own lane every `boltEvery` s for `boltDmg` (blood: a blood bolt; blue: a water bolt). Blood: sings
     // every `songEvery` s (eyes red, hides a row as the Siren), a 3x3 aura heals it `auraHeal` per monster that spawns in or steps into it, and it summons one of
     // `summonPool` every `summonEvery` s as an extra. Blue: every `spearEvery` s a water spear takes a whole patch column (gourds spared) after `spearWarn` s of warning;
     // every `whirlEvery` s (eyes blue) it opens a whirlpool pair in the water (never past the cap). noItems: no boss items or costume.

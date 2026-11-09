@@ -1430,7 +1430,7 @@ CHECKS.update({'check_magnet_marsh': check_magnet_marsh, 'check_kraken': check_k
 FT_UP = """() => { const g = window.__gg, G = g.G; G.monsters.length = 0; G.arrows.length = 0; G.vfx.length = 0; G.whirls = []; G.ftSpear = null; g.walls.forEach(w => { w.hp = w.max = 200; });
   G.def.boss = 'fallentides'; G.def.bossForm = 1; G.def.bossChest = 'normal'; G.bossSpawned = true; G.bossDead = false;
   const a = g.spawnMonster('boss'); window.__a = a; window.__b = a.twin; return [a.kind, a.twinKind, a.twin.twinKind, a.hp, a.maxHp, a.lane !== a.twin.lane, a.minion, a.twin.minion]; }"""
-FT_PARK = """() => { [window.__a, window.__b].forEach(m => { m.boltT = m.songT = m.sumT = m.spearT = m.whirlT = 999; m.p = 0.12; m.age = 5; m.sp = 0; }); }"""
+FT_PARK = """() => { [window.__a, window.__b].forEach(m => { m.boltT = m.songT = m.spearT = m.whirlT = 999; m.p = 0.12; m.age = 5; m.sp = 0; }); window.__gg.G.ftSumT = 999; }"""
 FT_KILL = "([w]) => { const g = window.__gg, m = window[w]; m.lastHit = 0; g.damage(m, 999, '#fff'); }"
 FT_NOISE = "() => window.__gg.G.monsters.filter(m => !m.dead && m.type !== 'boss').length"
 
@@ -1466,7 +1466,7 @@ def check_fallen_tides(browser, url):
         page, errors, _ = ft_page(browser, url, up=False)
         page.evaluate("([sh]) => { const G = window.__gg.G; G.def.shoreFrac = sh; if (G.tide) G.tide.shore = sh; }", [shore])
         page.evaluate(FT_UP)
-        page.evaluate("() => { [window.__a, window.__b].forEach(m => { m.boltT = m.songT = m.sumT = m.spearT = m.whirlT = 999; }); }")
+        page.evaluate("() => { [window.__a, window.__b].forEach(m => { m.boltT = m.songT = m.spearT = m.whirlT = 999; }); window.__gg.G.ftSumT = 999; }")
         page.evaluate(STEP, [9, 0.05])
         h = page.evaluate("() => [window.__a.p, window.__b.p, window.__gg.liveShore(), window.__gg.inWater(window.__a.lane, window.__a.p), window.__gg.inWater(window.__b.lane, window.__b.p)]")
         ok(abs(h[0] - want) < 0.01 and abs(h[1] - want) < 0.01 and h[3] and h[4], f'with the shore at {h[2]:.2f} both hold in the water at min(0.12, shore) = {want} {h}')
@@ -1493,12 +1493,17 @@ def check_fallen_tides(browser, url):
     page.evaluate(STEP, [6.2, 0.05])
     ok(page.evaluate("() => window.__gg.G.hidden.filter(x => x > 0).length") == 0, 'and shows again after 6 s')
     # the summon: one of the pool every 15 s, as an extra
-    page.evaluate("() => { window.__a.sumT = 15; window.__a.songT = 999; window.__gg.G.spawned = 5; }")
+    page.evaluate("() => { window.__gg.G.ftSumT = 15; window.__a.songT = 999; window.__gg.G.spawned = 5; }")
     page.evaluate(STEP, [14.5, 0.05])
     ok(page.evaluate(FT_NOISE) == 0, 'no summon before 15 s')
     page.evaluate(STEP, [1, 0.05])
     sm = page.evaluate("() => window.__gg.G.monsters.filter(m => !m.dead && m.type !== 'boss').map(m => [m.type, m.minion])")
     ok(len(sm) == 1 and sm[0][0] in ('bloodslime', 'pirate', 'eel') and sm[0][1] is True and page.evaluate("() => window.__gg.G.spawned") == 5, f'at 15 s one of bloodslime, pirate or eel, an extra that is not counted in the night {sm}')
+    # the summon is the fight's: it still arrives while the blood twin is down
+    page.evaluate(FT_PARK); page.evaluate("() => { window.__gg.G.monsters = window.__gg.G.monsters.filter(m => m.type === 'boss'); }")
+    page.evaluate(FT_KILL, ['__a']); page.evaluate("() => { window.__gg.G.ftSumT = 3; }"); page.evaluate(STEP, [3.5, 0.05])
+    sm = page.evaluate("() => window.__gg.G.monsters.filter(m => !m.dead && m.type !== 'boss').map(m => m.minion)")
+    ok(sm == [True] and page.evaluate("() => window.__a.rise > 0"), f'a summon still arrives while the blood twin is down {sm}')
     # a Magnet never pulls a twin
     mp = page.evaluate("() => window.__gg.magnetPullable ? [window.__gg.magnetPullable(window.__a), window.__gg.magnetPullable(window.__b)] : null")
     ok(mp is None or mp == [False, False], f'a Magnet hit never moves a twin {mp}')
@@ -1579,9 +1584,15 @@ def check_ft_dive(browser, url):
     ok(d == [2, True, True], f'at 15 (50%) it dives again and rises elsewhere in the water {d}')
     page.evaluate("() => { window.__a.hp = 7; }"); page.evaluate(STEP, [2, 0.05])
     ok(page.evaluate("() => [window.__a.ftDone, window.__gg.inWater(window.__a.lane, window.__a.p), window.__a.dead]") == [3, True, False], 'at 7 (25%) a third dive')
-    # healed past a mark: it can dive again; the story rule "one mark, one dive" holds while it only falls
-    page.evaluate("() => { window.__a.hp = 30; }"); page.evaluate(STEP, [0.1, 0.05])
-    ok(page.evaluate("() => window.__a.ftDone") == 0, 'back at full health its marks start over')
+    # each mark fires once per life: healed back over a mark and hit again, it does not dive a second time
+    page.evaluate("() => { window.__a.hp = 28; }"); page.evaluate(STEP, [0.1, 0.05])
+    page.evaluate("() => { const g = window.__gg, a = window.__a; a.lastHit = 0; g.damage(a, 6, '#fff'); }"); page.evaluate(STEP, [0.1, 0.05])
+    ok(page.evaluate("() => [window.__a.diveT, window.__a.ftDone, window.__a.hp]") == [0, 3, 22], 'healed back over a mark and hit again, it does not dive a second time')
+    # after a fall and a revival the marks fire again
+    page.evaluate("() => { window.__b.hp = 30; }"); page.evaluate(FT_KILL, ['__a']); page.evaluate(STEP, [12.5, 0.05])
+    ok(page.evaluate("() => [window.__a.hp, window.__a.rise]") == [30, 0], '(it rises again at full health)')
+    page.evaluate("() => { window.__a.hp = 22; }"); page.evaluate(STEP, [0.1, 0.05])
+    ok(page.evaluate("() => [window.__a.diveT > 0, window.__a.ftDone]") == [True, 1], 'after the revival its marks fire again')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
@@ -1631,13 +1642,22 @@ def check_ft_spear(browser, url):
     page.evaluate("() => { window.__gg.G.ftSpear.c = 2; }")
     page.evaluate(STEP, [1.2, 0.05])
     ok(page.evaluate("() => window.__gg.grid.every(r => r[2] != null)"), 'the column still stands during the warning')
-    page.evaluate(STEP, [0.5, 0.05])
+    page.evaluate(STEP, [0.25, 0.05])
+    st = page.evaluate("() => { const f = window.__gg.G.ftSpear; return f ? [f.warn, f.strike > 0] : null; }")
+    ok(st == [0, True], f'the warning ends and the strike flash begins {st}')
     col = page.evaluate("() => window.__gg.grid.map((r, i) => [r[2] == null, !!(r[2] && r[2].gourd), r[1] != null, r[3] != null])")
     ok(all(c[2] and c[3] for c in col) and [c[0] for c in col] == [True, True, False, True, True] and col[2][1], f'then the spear clears that column but for its gourd, and only it {col}')
-    ok(page.evaluate("() => window.__gg.G.ftSpear") is None or page.evaluate("() => window.__gg.G.ftSpear.strike") >= 0, 'the strike flash runs out')
-    page.evaluate(STEP, [1, 0.05])
+    page.evaluate(STEP, [0.5, 0.05])
     ok(page.evaluate("() => window.__gg.G.ftSpear") is None, 'and the spear is gone after its flash')
     ok(page.evaluate("() => +window.__b.spearT.toFixed(1)") > 7, "the blue twin's spear clock restarted at 12 s")
+    # a dive in mid-warning does not stretch the 1.5 s warning
+    page.evaluate("() => { window.__b.spearT = 999; window.__gg.G.ftSpear = { c:4, warn:1.5, strike:0 }; window.__b.hp = 22; }")
+    page.evaluate(STEP, [0.1, 0.05]); ok(page.evaluate("() => window.__b.diveT") > 0, '(the blue twin dives mid-warning)')
+    page.evaluate(STEP, [1.35, 0.05])
+    w = page.evaluate("() => { const f = window.__gg.G.ftSpear; return f ? f.warn : null; }")
+    ok(w is not None and 0 < w < 0.1, f'the warning keeps running through the dive {w}')
+    page.evaluate(STEP, [0.3, 0.05])
+    ok(page.evaluate("() => { const f = window.__gg.G.ftSpear; return f ? f.warn : 0; }") == 0, 'and the strike lands 1.5 s after it began')
     # a down blue twin cancels a spear in the air
     page.evaluate("() => { window.__gg.G.ftSpear = { c:4, warn:1, strike:0 }; }"); page.evaluate(FT_KILL, ['__b'])
     ok(page.evaluate("() => window.__gg.G.ftSpear") is None, 'when the blue twin goes down its warning is cancelled')
@@ -1659,6 +1679,9 @@ def check_ft_whirl(browser, url):
         page.evaluate("() => { window.__b.whirlT = 0.01; }"); page.evaluate(STEP, [0.3, 0.05])
     ok(page.evaluate("() => window.__gg.G.whirls.length") == page.evaluate("() => window.__gg.WHIRL_MAX"), 'the pairs stop at the cap (4), never a fifth')
     ok(page.evaluate("() => window.__gg.G.whirls.length") == 4, 'WHIRL_MAX is 4')
+    ok(page.evaluate("() => window.__gg.G.whirls.every(w => w.a.lane !== w.b.lane)"), 'each pair has its ends in different lanes')
+    page.evaluate("() => { window.__b.anim = null; window.__b.whirlT = 0.01; }"); page.evaluate(STEP, [0.1, 0.05])
+    ok(page.evaluate("() => window.__b.anim") is None, 'at the cap nothing opens and no skill clip plays')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
@@ -1670,17 +1693,19 @@ def check_fallen_tides_continue(browser, url):
     page.evaluate("() => { const g = window.__gg; window.__a.hp = 12; }"); page.evaluate(STEP, [2.5, 0.05])
     page.evaluate("() => { const g = window.__gg; g.addWhirlPair({ lane:1, p:0.05 }, { lane:5, p:0.07 }); g.addWhirlPair({ lane:2, p:0.04 }, { lane:4, p:0.08 }); }")
     page.evaluate(FT_KILL, ['__b']); page.evaluate(STEP, [3, 0.05])
-    page.evaluate("() => { const a = window.__a; a.boltT = 4; a.songT = 7; a.sumT = 9; }")
-    before = page.evaluate("() => { const a = window.__a, b = window.__b; return [a.hp, a.ftDone, +b.rise.toFixed(1), window.__gg.G.whirls.length, a.lane, +a.p.toFixed(3), +a.boltT.toFixed(2), +a.songT.toFixed(2), +a.sumT.toFixed(2)]; }")
+    page.evaluate("() => { const a = window.__a; a.boltT = 4; a.songT = 7; window.__gg.G.ftSumT = 9; }")
+    before = page.evaluate("() => { const a = window.__a, b = window.__b; return [a.hp, a.ftDone, +b.rise.toFixed(1), window.__gg.G.whirls.length, a.lane, +a.p.toFixed(3), +a.boltT.toFixed(2), +a.songT.toFixed(2), +window.__gg.G.ftSumT.toFixed(2)]; }")
     page.evaluate("() => { const g = window.__gg; g.setState('play'); const c = g.continueState(); g.continueNight(c); g.setState('pause'); }")
     page.evaluate(STEP, [0.3, 0.05])
     after = page.evaluate("""() => { const g = window.__gg, bs = g.G.monsters.filter(m => m.type === 'boss' && !m.dead); const a = bs.find(m => m.twinKind === 'blood'), b = bs.find(m => m.twinKind === 'blue');
-      return a && b ? [a.hp, a.ftDone, +b.rise.toFixed(1), g.G.whirls.length, a.lane, +a.p.toFixed(3), +a.boltT.toFixed(2), +a.songT.toFixed(2), +a.sumT.toFixed(2), b.hp] : null; }""")
+      return a && b ? [a.hp, a.ftDone, +b.rise.toFixed(1), g.G.whirls.length, a.lane, +a.p.toFixed(3), +a.boltT.toFixed(2), +a.songT.toFixed(2), +g.G.ftSumT.toFixed(2), b.hp] : null; }""")
     ok(before[:2] == [12, 2] and before[3] == 2, f'(before: blood at 12 health, two dives, two whirlpools {before})')
     ok(after is not None and after[0] == before[0] and after[1] == before[1], f'the blood twin returns with its health and marks {before} -> {after}')
     ok(after is not None and abs(after[2] - (before[2] - 0.3)) < 0.2 and after[9] == 0, f'the blue twin is still down with its window running {after}')
     ok(after is not None and after[3] == 2 and after[4] == before[4] and abs(after[5] - before[5]) < 0.002, f'the whirlpools and its spot stay {after}')
     ok(after is not None and all(abs(after[i] - (before[i] - 0.3)) < 0.12 for i in (6, 7, 8)), f'and its clocks run on from where they were {after}')
+    page.evaluate("() => { const g = window.__gg, a = g.G.monsters.find(m => m.twinKind === 'blood' && !m.dead); a.lastHit = 0; g.damage(a, 999, '#fff'); }")
+    ok(page.evaluate("() => [window.__gg.G.monsters.filter(m => m.type === 'boss').every(m => m.dead), window.__gg.G.bossDead]") == [True, True], 'a twin killed inside the restored window still ends the fight')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 

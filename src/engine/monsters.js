@@ -445,7 +445,7 @@ export function updateMonster(m, dt){
   if (__RELEASE__ >= 7 && m.type === 'toad') np = Math.min(np, toadStop(m));   // the Cauldron Toad stops at its tongue hold while its fence stands (engine/witchwood.js)
   if (m.chewing && !m.chewing.dead) np = Math.min(np, m.chewing.p);   // held at a scarecrow
   if (np > m.p) m.p = np;
-  if (__RELEASE__ >= 8 && m.p >= 1 && m.type === 'lancer' && lancerHit(m)) return;   // the charge lands: half the fence, never its last 1, and it is gone (engine/keep.js)
+  if (__RELEASE__ >= 8 && m.p >= 1 && m.type === 'lancer' && lancerHit(m)) return;   // the charge lands: half the fence, never its last 1; then it stays and chews (engine/keep.js)
   if (__RELEASE__ >= 4 && m.p >= 1 && m.type === 'crow' && crowStrike(m)) return;   // over the fence and into the patch (engine/nightmare.js)
   if (m.p >= 1){ m.p = 1; m.eating = true; if (G.q){ G.q.touched[m.type] = true; if (__RELEASE__ >= 5 && TYPES[m.type] && TYPES[m.type].questAs) G.q.touched[TYPES[m.type].questAs] = true; } }   // quests: "do not let a ghoul reach the fence" (a Fogwalker 2 counts as a fogwalker: questAs, Release 5)
 }

@@ -8,7 +8,7 @@
 //    its nets (spec: "Killing it does not free its nets").
 //  - The Storm Lancer (`lancer`): charges at `charge` times its walk from the moment it spawns (keepSpeed, read where monsters.js reads `sp`, so Ice slow
 //    and freeze still scale from the boosted speed). Reaching the fence it takes `fenceHit` of the fence's full health, never the last 1 (the Hayrick's
-//    fork rule; a fence at 1 or less takes nothing) and is gone with no kill reward (lancerHit). A broken fence: it walks through like any monster.
+//    fork rule; a fence at 1 or less takes nothing; lancerHit), then its charge ends (`spent`): it stays and chews at `chew` (a Shield Knight's 0.6). A broken fence: it walks through like any monster.
 //    It never queues: it rides through the monsters ahead in its lane (monsters.js aheadLimit), while others still queue behind it. A Lancer that is at a
 //    fence which was down and is back up strikes at once (monsters.js, the eating branch). Castle walls never stop a monster, and it passes them. A Gatehouse does not stop a walker either (check_lancer_edges).
 //  - The Storm Marshal (`marshal`): a clock of `rallyEvery` s; at zero he raises his sword for `rallyLast` s. At the start of the rally every monster in
@@ -95,7 +95,7 @@ function anyRally(){
   return rallyAny;
 }
 
-/** A Lancer that has reached the fence (monsters.js): true when it struck and is gone. A fallen fence: false, and it walks through like any monster. */
+/** A charging Lancer that has reached the fence (monsters.js) or a scarecrow (game.js): true when it struck (its charge then ends, `m.spent`). A fallen fence and no scarecrow: false, and it walks through like any monster. */
 export function lancerHit(m, sc){
   if (m.spent) return false;   // its charge ended on a scarecrow: an ordinary walker now, chewing the fence like any monster
   const w = walls[m.lane]; if (!w || (!sc && w.hp <= 0)) return false;   // a scarecrow ends the charge even when the fence is down
@@ -110,12 +110,10 @@ export function lancerHit(m, sc){
   G.shake = Math.max(G.shake || 0, 0.6);
   for (let i = 0; i < 12; i++){ chunk(m.x + rnd(-14, 14), y, '#8a6440', 220); spark(m.x, y + 2, i % 2 ? '#cfe0ff' : '#ffffff', 140); }
   ring(m.x, y + 4, 56, 'rgba(180,200,255,.9)');
-  if (sc){   // the charge ends here: no second strike, normal walking speed and a normal chew from now on (it stays and chews the scarecrow until it breaks)
-    m.spent = true; m.eat = TYPES.lancer.chew; m.chewing = sc;
-    if (G.q) G.q.touched.lancer = true;
-    return true;
-  }
-  m.dead = true; m.eating = false; if (!m.minion) G.resolved++;   // off the field without a kill: it counts as dealt with, like a diving crow
+  // the charge ends here, at a scarecrow or the fence (owner, 2026-11-09): no second strike, normal walking speed and a Shield Knight's chew from
+  // now on; it stays and chews what stopped it like any monster
+  m.spent = true; m.eat = TYPES.lancer.chew;
+  if (sc) m.chewing = sc;
   if (G.q) G.q.touched.lancer = true;
   return true;
 }

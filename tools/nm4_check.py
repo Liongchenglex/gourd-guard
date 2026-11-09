@@ -426,6 +426,20 @@ def spawn_at(page, typ, lane, p, hp=None, sp=0.03):
     return page.evaluate("""([t, l, p, hp, sp]) => { const m = window.__gg.spawnMonster(t, l, true, p); m.sp = sp; if (hp != null) m.hp = m.maxHp = hp; window.__last = m; return true; }""", [typ, lane, p, hp, sp])
 
 
+def until_spent(page, *names, n=600):
+    """Step 0.1 s at a time until every window.__<name> Lancer has struck (its charge spent), so the fence is read before it starts chewing."""
+    cond = "() => " + " && ".join(f"!!window.__{k}.spent" for k in names)
+    for _ in range(n):
+        if page.evaluate(cond): return True
+        page.evaluate(STEP, [1, 0.1])
+    return page.evaluate(cond)
+
+
+def stop_lancer(page, *names):
+    """Take measured Lancers off the field so their chewing does not disturb later cases."""
+    for k in names: page.evaluate(f"() => {{ window.__{k}.dead = true; window.__{k}.eating = false; }}")
+
+
 def hold(page):
     """Stop the live game loop (state 'pause'): only the steps a check takes advance the night, so the numbers are exact."""
     page.evaluate("() => window.__gg.setState('pause')")
@@ -447,16 +461,20 @@ def check_lancer(browser, url):
     page.evaluate(STEP, [1, 0.1])
     d = page.evaluate("() => window.__L.p") + 0.02
     ok(abs(d - 0.012) < 1e-6, f'it moves at 4x its walk from the first step (dp {d:.4f}, a walk would be 0.003)')
-    page.evaluate(STEP, [100, 0.1])
-    ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[3].hp") == 10, f'at the fence it takes half: 20/20 -> {page.evaluate("() => window.__gg.walls[3].hp")}/20, and is gone')
+    until_spent(page, 'L')
+    ok(not page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[3].hp") == 10, f'at the fence it takes half: 20/20 -> {page.evaluate("() => window.__gg.walls[3].hp")}/20, and it stays')
+    ok(abs(page.evaluate("() => window.__L.eat") - 0.6) < 1e-9 and page.evaluate("() => window.__gg.TYPES.knight.eat") == 0.6, 'its charge spent, it chews at 0.6, a Shield Knight\'s rate')
+    page.evaluate(STEP, [20, 0.1])
+    ok(page.evaluate("() => window.__L.eating") and page.evaluate("() => window.__gg.walls[3].hp") < 10 and page.evaluate("() => window.__gg.walls[3].hp") > 5, f'it chews the fence after the strike, with no second strike ({page.evaluate("() => window.__gg.walls[3].hp")}/20)')
     ok(page.evaluate("() => window.__gg.G.coins") == page.evaluate("() => window.__c0") and page.evaluate("() => window.__gg.G.kills") == page.evaluate("() => window.__k0") and page.evaluate("() => window.__gg.G.drops.length") == page.evaluate("() => window.__d0"), 'no coins, kill or drop for the impact')
     # never the last 1
     page.evaluate("() => { window.__gg.walls[4].max = 20; window.__gg.walls[4].hp = 1; window.__gg.walls[5].max = 20; window.__gg.walls[5].hp = 6; }")
     spawn_at(page, 'lancer', 4, 0.9); page.evaluate("() => { window.__L = window.__last; }")
     spawn_at(page, 'lancer', 5, 0.9); page.evaluate("() => { window.__L2 = window.__last; }")
-    page.evaluate(STEP, [10, 0.1])
-    ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[4].hp") == 1, 'a fence at 1/20 takes nothing (the lancer is still gone)')
-    ok(page.evaluate("() => window.__L2.dead") and page.evaluate("() => window.__gg.walls[5].hp") == 1, f'a fence at 6/20 loses 5 (not 10): left {page.evaluate("() => window.__gg.walls[5].hp")}')
+    until_spent(page, 'L', 'L2')
+    ok(page.evaluate("() => window.__L.spent") and page.evaluate("() => window.__gg.walls[4].hp") == 1, 'a fence at 1/20 takes nothing from the strike (the charge still ends)')
+    ok(page.evaluate("() => window.__L2.spent") and page.evaluate("() => window.__gg.walls[5].hp") == 1, f'a fence at 6/20 loses 5 (not 10): left {page.evaluate("() => window.__gg.walls[5].hp")}')
+    stop_lancer(page, 'L', 'L2')
     # five hits kill it, and a kill pays
     spawn_at(page, 'lancer', 2, 0.2); page.evaluate("() => { window.__L = window.__last; window.__k0 = window.__gg.G.kills; }")
     for i in range(4): page.evaluate("() => window.__gg.damage(window.__L, 1)")
@@ -478,22 +496,25 @@ def check_lancer_edges(browser, url):
     page.evaluate(STEP, [11, 0.1]); p0 = page.evaluate("() => window.__L.p")
     page.evaluate("() => { window.__L.slowT = 5; }"); page.evaluate(STEP, [1, 0.1]); p1 = page.evaluate("() => window.__L.p")
     ok(abs((p1 - p0) - 0.006) < 1e-6, f'slowed, it charges at half the charge ({p1 - p0:.4f})')
+    stop_lancer(page, 'L')   # it would strike lane 1 and then chew it down (it stays now), ending the night mid-check
     # passes a castle wall
     page.evaluate("() => { window.__gg.G.castles.push({ lane:2, p:0.5, hp:12, maxHp:12, flash:0, dead:false }); }")
     spawn_at(page, 'lancer', 2, 0.1); page.evaluate("() => { window.__L = window.__last; }")
-    page.evaluate(STEP, [100, 0.1])
-    ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[2].hp") == 10 and page.evaluate("() => window.__gg.G.castles[0].hp") == 12, 'it charges through a castle wall to the fence, the wall untouched')
+    until_spent(page, 'L')
+    ok(page.evaluate("() => window.__L.p") >= 1 and page.evaluate("() => window.__gg.walls[2].hp") == 10 and page.evaluate("() => window.__gg.G.castles[0].hp") == 12, 'it charges through a castle wall to the fence, the wall untouched')
+    stop_lancer(page, 'L')
     # and through a Gatehouse (Task 6): it stands there untouched, the Lancer reaches the fence
     page.evaluate("() => { const g = window.__gg; g.G.castles.push(g.newCastle(3, 0.5, 'gate', 12)); }")
     spawn_at(page, 'lancer', 3, 0.1); page.evaluate("() => { window.__L = window.__last; }")
-    page.evaluate(STEP, [100, 0.1])
-    ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[3].hp") == 10 and page.evaluate("() => window.__gg.G.castles.find(c => c.kind === 'gate').hp") == 30, 'it charges through a Gatehouse to the fence, the gate untouched')
+    until_spent(page, 'L')
+    ok(page.evaluate("() => window.__L.p") >= 1 and page.evaluate("() => window.__gg.walls[3].hp") == 10 and page.evaluate("() => window.__gg.G.castles.find(c => c.kind === 'gate').hp") == 30, 'it charges through a Gatehouse to the fence, the gate untouched')
+    stop_lancer(page, 'L')
     # a scarecrow stops it: the strike lands on the scarecrow (half the fence's full health), the charge ends, it walks at 0.03 and chews it down, then the fence with no second strike
     page.evaluate("() => { const g = window.__gg; const w = g.walls[2]; w.max = 20; w.hp = 20; g.G.scarecrows.push({ lane:2, p:0.5, x:g.LANE(2), y:300, hp:25, maxHp:25, dead:false, age:0 }); }")
     spawn_at(page, 'lancer', 2, 0.1); page.evaluate("() => { window.__S = window.__last; }")
     page.evaluate(STEP, [40, 0.1])
     st = page.evaluate("() => [window.__S.dead, window.__S.spent, window.__S.eat, window.__gg.G.scarecrows[0].hp, window.__gg.walls[2].hp]")
-    ok(st[0] is False and st[1] is True and abs(st[2] - 0.8) < 1e-9 and st[3] <= 15 and st[3] > 4 and st[4] == 20, f'the strike hits the scarecrow (25 -> 15 less chewing), not the fence; the Lancer stays, charge ended, normal chew {st}')
+    ok(st[0] is False and st[1] is True and abs(st[2] - 0.6) < 1e-9 and st[3] <= 15 and st[3] > 4 and st[4] == 20, f'the strike hits the scarecrow (25 -> 15 less chewing), not the fence; the Lancer stays, charge ended, normal chew {st}')
     page.evaluate("() => { const g = window.__gg; g.G.scarecrows[0].hp = 1e6; g.G.scarecrows[0].maxHp = 1e6; }")
     p0 = page.evaluate("() => window.__S.p"); page.evaluate(STEP, [5, 0.1])
     ok(abs(page.evaluate("() => window.__S.p") - p0) < 1e-6 and page.evaluate("() => !!window.__S.chewing"), 'held at the scarecrow, chewing it, not charging on')
@@ -528,16 +549,17 @@ def check_lancer_ride(browser, url):
     spawn_at(page, 'lancer', 1, 0.1); page.evaluate("() => { window.__L = window.__last; }")
     page.evaluate(STEP, [60, 0.1])
     ok(page.evaluate("() => window.__L.p") > page.evaluate("() => window.__W.p"), 'a slow ghoul ahead does not stop the Lancer (it passes it)')
-    page.evaluate(STEP, [30, 0.1])
-    ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[1].hp") == 10, 'and it reaches the fence at charge speed and strikes')
+    until_spent(page, 'L')
+    ok(page.evaluate("() => window.__L.p") >= 1 and page.evaluate("() => window.__gg.walls[1].hp") == 10, 'and it reaches the fence at charge speed and strikes')
+    stop_lancer(page, 'L')
     # a fence broken, the Lancer at it, the fence repaired
     page.evaluate("() => { window.__gg.walls[3].max = 20; window.__gg.walls[3].hp = 0; }")
     spawn_at(page, 'lancer', 3, 0.95); page.evaluate("() => { window.__L = window.__last; }")
     page.evaluate(STEP, [10, 0.1])
     ok(page.evaluate("() => window.__L.eating") and not page.evaluate("() => window.__L.dead"), 'it waits at the broken fence')
     page.evaluate("() => { window.__gg.walls[3].hp = 20; window.__gg.G.over = false; }")
-    page.evaluate(STEP, [2, 0.1])
-    ok(page.evaluate("() => window.__L.dead") and page.evaluate("() => window.__gg.walls[3].hp") == 10, f'the fence repaired, it strikes at once ({page.evaluate("() => window.__gg.walls[3].hp")}/20) and is not stuck')
+    until_spent(page, 'L', n=3)
+    ok(page.evaluate("() => window.__L.spent") and page.evaluate("() => window.__gg.walls[3].hp") == 10, f'the fence repaired, it strikes at once ({page.evaluate("() => window.__gg.walls[3].hp")}/20) and is not stuck')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 

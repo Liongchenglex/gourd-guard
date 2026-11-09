@@ -170,7 +170,7 @@ export const TYPES = {
   // The Storm Lancer charges from the moment it spawns at `charge` times its walk (Ice slows the charge); at the fence it takes `fenceHit` of the fence's
   // full health, never the last 1, and is gone without a reward. The Storm Marshal raises his sword for `rallyLast` s every `rallyEvery` s: monsters in
   // his 3x3 move `rallySp` times faster while it is up, and at the start of each rally each gets `rallyHp` times its health, once ever (engine/keep.js).
-  ...(__RELEASE__ >= 8 ? { lancer: { hp:5, sp:0.03, charge:4, r:26, coins:10, eat:0, pts:30, drop:2, fenceHit:0.5, chew:0.8 },
+  ...(__RELEASE__ >= 8 ? { lancer: { hp:5, sp:0.03, charge:4, r:26, coins:10, eat:0, pts:30, drop:2, fenceHit:0.5, chew:0.6 },
     marshal: { hp:10, sp:0.03, r:28, coins:12, eat:0.5, pts:36, drop:3, rallyEvery:8, rallyLast:4, rallySp:2, rallyHp:2 } } : {}),
   ...(__RELEASE__ >= 8 ? { lobbercart: { hp:6, sp:0.02, r:26, coins:10, eat:0, pts:30, drop:2, park:0.15, lobEvery:[6, 8] } } : {}),
   // The Blood Glutton throws `netsAtSpawn` red nets when it spawns and, every `netEvery` s, one more while it has fewer than `netMax` of its own (on the
@@ -323,7 +323,7 @@ export const MINTRO = {
     covenwitch:'New foe: the Blood Coven Witch. Every few seconds her cauldron boils over and one or two potions land just in front of monsters on the field, so they walk straight into them. Kill her early.',
     triptych:'New foe: the Triptych Sprite. Its mirror wall covers its own column and the one on each side: while it is up, a pumpkin in any of the three bounces straight back into that column\'s fence. Flick when the wall drops, or hit what stands in front of it.' } : {}),
   ...(__RELEASE__ >= 8 ? { lobbercart:'New foe: the Lobber Cart. It rolls in and parks at the back of its lane, and it never comes down to your fence. Every few seconds it lobs a net onto one of your pumpkins: a netted pumpkin cannot be slid, pushed or crushed, but it still bunches, lights up and flies with its bunch. Break the cart and the nets it threw stay where they landed.' } : {}),
-  ...(__RELEASE__ >= 8 ? { lancer:'New foe: the Storm Lancer. It gallops down its lane the moment it appears, four times as fast as a walk. At your fence it takes half the fence in one blow (never the last bit) and is gone. Ice slows the charge, so stop it before it arrives.',
+  ...(__RELEASE__ >= 8 ? { lancer:'New foe: the Storm Lancer. It gallops down its lane the moment it appears, four times as fast as a walk. At your fence or a scarecrow it takes half the fence in one blow (a fence never loses its last bit), then stays and chews like a Shield Knight. Ice slows the charge, so stop it before it arrives.',
     marshal:'New foe: the Storm Marshal. Every few seconds he raises his sword: for a moment the monsters around him run twice as fast, and each of them grows twice as tough (once only). Bring him down first.' } : {}),
   ...(__RELEASE__ >= 8 ? { glutton:'New foe: the Blood Glutton. It throws two red nets onto your pumpkins, and while any of its red nets is on the patch nothing hurts it. Launch the netted pumpkins (they fly with their bunch) or break a Crookneck Gourd to strip them, then strike. Every few seconds it throws another, never more than two of its own.',
     bride:'New foe: the Bat Bride. She drapes a red veil over the nearest monster in her lane or one beside it, and nothing hurts that monster until she falls. Kill the Bride first. When the veiled one is gone she veils the next a few seconds later.' } : {}),

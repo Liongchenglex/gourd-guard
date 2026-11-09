@@ -31,6 +31,10 @@ function tongueSprites(){
   const sp = { strip, tip }; cache.set(k, sp); return sp;
 }
 
+/** Bake the tongue strip and tip now (game.js, on a night whose pool has a toad). */
+export const prebakeTongue = () => { tongueSprites(); };
+export const tongueBaked = () => cache.has(bk(K));
+
 /** Draw a lashing toad's tongue. `g` is already translated to the monster (its drawn y) and scaled by `s`; `y` is that drawn y on screen. */
 export function drawTongue(g, m, s, y){
   const t = ((m.ph * TOAD_FPS) % TOAD_N) / TOAD_N, { gape, reach } = toadLash(t);

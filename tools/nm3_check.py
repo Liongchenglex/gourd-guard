@@ -730,6 +730,45 @@ def check_wart_coach(browser, url):
     page.close()
 
 
+def check_wart_coach_fences(browser, url):
+    """The Wartling coach wears the three fences above it for the mend. Broken outside the top row (so no mend), the lesson puts them back,
+    both when it breaks during the slide-up step and when it breaks in the hold step after being moved off the top row."""
+    if not R7: return
+    STEP = "(s) => { const g = window.__gg; for (let i = 0; i < Math.round(s / 0.05); i++) g.update(0.05); return g.G.coach ? g.G.coach.step : null; }"
+    FEN = "() => window.__gg.walls.map(w => w.hp)"
+    BRK = "() => { const g = window.__gg, p = g.gourdPos('wartling'); g.destroyGourd(g.grid[p.r][p.c]); }"
+    page, errors = open_page(browser, url)
+    def to_wtop():
+        page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true }; s.seenGourdCoach = true; s.seenProtectorCoach = true; s.seenWartlingCoach = false; s.lv.green = 1; }")
+        page.evaluate("(lo) => window.__gg.startGame('story', 1205, lo, ['grave', 'wartling'])", [0, 1, 2, 3, 4]); time.sleep(0.3)
+        page.evaluate(STEP, 0.5)
+        page.evaluate("() => { const g = window.__gg, c = g.G.coach; g.slideOne(c.move.ref, c.move.dir); }"); page.evaluate(STEP, 0.4)
+        page.evaluate("() => { const g = window.__gg; g.launchGroup(g.bestLitGroup()); }")
+        return page.evaluate(STEP, 2)
+    full = None
+    ok(to_wtop() == 'wtop', 'reached the slide-up step')
+    worn = page.evaluate(FEN)
+    ok(any(h < w for h, w in zip(worn, page.evaluate("() => window.__gg.walls.map(w => w.max)"))), f'the fences are worn for the lesson {worn}')
+    page.evaluate(BRK)
+    ok(page.evaluate(STEP, 0.1) == 'wback', 'broken before the top row: the respawn step')
+    after = page.evaluate(FEN)
+    ok(after != worn and all(a >= w for a, w in zip(after, worn)) and sum(after) > sum(worn), f'the fences are back to their earlier health {worn} -> {after}')
+    # hold step, moved off the top row before it breaks
+    ok(to_wtop() == 'wtop', 'again at the slide-up step')
+    before = page.evaluate("() => window.__gg.walls.map(w => w.max)")
+    page.evaluate("() => { const g = window.__gg, c = g.G.coach; g.slideOne(c.move.ref, c.move.dir); }")
+    ok(page.evaluate(STEP, 0.4) == 'whold', 'in the top row: the hold step')
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos('wartling'), x = g.grid[p.r][p.c]; g.grid[p.r][p.c] = null; g.grid[1][p.c] = x; }")
+    page.evaluate(STEP, 0.1)
+    worn = page.evaluate(FEN)
+    page.evaluate(BRK)
+    ok(page.evaluate(STEP, 0.1) == 'praise', 'broken: Nice')
+    after = page.evaluate(FEN)
+    ok(sum(after) > sum(worn), f'a break outside the top row does not leave the fences worn {worn} -> {after}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 def check_wart_unlock(browser, url):
     if not R7: return
     page, errors = open_page(browser, url)
@@ -767,7 +806,7 @@ def check_wart_art(browser, url):
     page.close()
 
 
-CHECKS.update({'check_wart_damage': check_wart_damage, 'check_wart_break_heal': check_wart_break_heal, 'check_picker_three_gourds': check_picker_three_gourds,
+CHECKS.update({'check_wart_coach_fences': check_wart_coach_fences, 'check_wart_damage': check_wart_damage, 'check_wart_break_heal': check_wart_break_heal, 'check_picker_three_gourds': check_picker_three_gourds,
                'check_wart_coach': check_wart_coach, 'check_wart_unlock': check_wart_unlock, 'check_wart_art': check_wart_art})
 
 
@@ -1672,6 +1711,14 @@ def check_n3_prebake(browser, url):
         if got: missing.append((k, got))
         time.sleep(0.4)
     ok(not missing, f'every level bakes its new monsters, what they bring, brew mark crows and its boss at night start {missing}')
+    ti = next(k for k, d in enumerate(L, 1) if 'toad' in d['pool'])
+    page.reload(); page.wait_for_function('() => !!window.__gg'); time.sleep(0.3)
+    page.evaluate("() => { Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true }); }")
+    ok(page.evaluate("() => window.__gg.tongueBaked()") is False, 'fresh page: no tongue sprite yet')
+    nm3_start(page, 1)
+    ok(page.evaluate("() => window.__gg.tongueBaked()") is False, 'a night without toads bakes no tongue')
+    nm3_start(page, ti)
+    ok(page.evaluate("() => window.__gg.tongueBaked()") is True, f'N3-{ti} bakes the toad tongue sprite at night start, before any toad lashes')
     ok('ashcrone' in L[1]['pool'] and 'crow' not in L[1]['pool'], f"N3-2's crows come only with its Ash Crones (so its crow is baked through ALSO_BAKE) {L[1]['pool']}")
     ok(not errors, f'no page errors on any night {errors[:2]}')
     page.close()

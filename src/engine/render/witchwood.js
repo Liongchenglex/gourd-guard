@@ -7,7 +7,7 @@ import { K } from './canvas.js';
 import { E, S, pal } from './paint.js';
 import { TOAD_FPS, TOAD_MOUTH, TOAD_N, WITCHWOOD, toadLash } from './chars/witchwood.js';
 import { CS, FENCE_Y, LANE } from '../state.js';
-import { ALTAR_STATES, BARRIER_N, altarSprite, barrierSprite, prebakeUndeadZone } from './fx.js';
+import { ALTAR_STATES, BARRIER_N, altarSprite, barrierSprite, prebakeHexZone, prebakeUndeadZone } from './fx.js';
 import { drawChar } from './anim.js';
 import { ROOT_RISE, altarY, rootGround, rootScale } from '../witchwood.js';
 import { TYPES } from '../../data/monsters.js';
@@ -64,6 +64,8 @@ export function drawRoots(g, roots, fence){
 export const undeadZoneSize = () => [CS * 5 * 0.98, CS * 5];
 /** Her night's field props, baked at the canvas scale when it starts (game.js): the altar's crack states and her 5x5 zone. */
 export function prebakeFallenHex(){ for (let i = 0; i < ALTAR_STATES; i++) altarSprite(K, i); const [w, h] = undeadZoneSize(); prebakeUndeadZone(w, h, K); }
+/** The Ash Crone's 3x3 zone (G.hexZones shape 'box'; render/draw.js drawHexZones) is the story Hexwitch's box: bake its backdrop at night start, not on first sight. */
+export const prebakeCroneZone = () => prebakeHexZone(CS * 3 * 0.98, CS * 3, K);
 /** The altar (G.altar): its crack state by health left, rising out of the ground over its first 0.4 s. One drawImage. */
 export function drawAltar(g, a){
   const f = a.hp / TYPES.fallenhexwitch.altarHp, st = f > 2 / 3 ? 0 : f > 1 / 3 ? 1 : 2, sp = altarSprite(K, st);

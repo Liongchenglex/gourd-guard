@@ -114,7 +114,7 @@ function ashZone(m, dt){
   const near = G.monsters.filter(o => onField(o, m) && o.type !== 'boss' && Math.abs(o.lane - m.lane) <= 2);
   if (!near.length) return;
   const o = near[Math.floor(Math.random() * near.length)];
-  G.hexZones.push({ shape:'box', lane:o.lane, p:o.p, t:T.zoneLast });
+  G.hexZones.push({ shape:'box', lane:o.lane, p:o.p, t:T.zoneLast, src:'crone' });
   const y = mY(o);
   for (let i = 0; i < 12; i++) spark(o.x, y, i % 2 ? '#8a8a92' : '#ff2a3a', 140);   // ash and a red glint where it opens
   addFloat('Undead zone!', m.x, mY(m) - m.r - 30, '#d8d4cc', 16, 1.1);

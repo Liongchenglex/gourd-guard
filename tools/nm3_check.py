@@ -1697,6 +1697,38 @@ def check_n3_coach_potions(browser, url):
 CHECKS.update({'check_n3_levels': check_n3_levels, 'check_n3_intros': check_n3_intros, 'check_n3_bestiary': check_n3_bestiary, 'check_n3_prebake': check_n3_prebake,
                'check_n3_coach_potions': check_n3_coach_potions})
 
+
+# ---------- Task 11: the Ash Crone's zone is a baked sprite ----------
+def check_n3_zone_budget(browser, url):
+    """The Ash Crone's 3x3 zone (G.hexZones src 'crone', drawn by drawCroneZoneFx) must not lag a phone (the 6-20 lesson, w6_check check_draw_budget):
+    its sprite is baked when a night that can spawn her starts (not on first sight), and four zones on N3-10 cost at most 40 strokes and 2 new gradients a frame."""
+    if not R7: return
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script("""(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+      for (const k of ['stroke', 'fill', 'arc', 'createRadialGradient', 'drawImage']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; } })();""")
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    nm3_start(page, 1); time.sleep(1.0)
+    ok(page.evaluate("() => window.__gg.hexZoneBaked()") == 0, 'a night without Ash Crones bakes no hex zone sprite')
+    nm3_start(page, 10); time.sleep(3.2)
+    ok(page.evaluate("() => window.__gg.hexZoneBaked()") >= 1, 'N3-10 bakes the 3x3 hex zone sprite at night start, not on first sight')
+    page.evaluate(PQ); page.evaluate("() => { window.__gg.G.hexZones.length = 0; }")
+    count = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 30) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.stroke || 0) / 30, (c.createRadialGradient || 0) / 30, (c.fill || 0) / 30, (c.arc || 0) / 30, (c.drawImage || 0) / 30]); } }; requestAnimationFrame(tick); })"
+    time.sleep(0.5); base = page.evaluate(count)
+    page.evaluate("() => { const G = window.__gg.G; for (const [l, p] of [[1, 0.3], [3, 0.5], [5, 0.3], [6, 0.65]]) G.hexZones.push({ shape:'box', lane:l, p, t:60, src:'crone' }); }")
+    time.sleep(0.6); lit = page.evaluate(count)
+    d = [lit[i] - base[i] for i in range(5)]
+    print(f'    four crone zones add per frame: stroke {d[0]:.1f}, new gradients {d[1]:.1f}, fill {d[2]:.1f}, arc {d[3]:.1f}, drawImage {d[4]:.1f}')
+    ok(lit[0] <= 40 and lit[1] <= 2, f'four Ash Crone zones are baked: {lit[0]:.1f} strokes and {lit[1]:.1f} new gradients per frame (limits 40 / 2; empty field {base[0]:.1f} / {base[1]:.1f})')
+    ok(d[0] <= 24, f'and they add at most 24 strokes a frame ({d[0]:.1f})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_n3_zone_budget': check_n3_zone_budget})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

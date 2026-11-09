@@ -30,7 +30,7 @@ import { openLoadout, setState, showResult } from '../ui/screens.js';
 import { SPROUT_EVERY, FIREWORK_TARGETS, FIREWORK_DAMAGE, EMERGENCY_N, POTION_SPEED } from '../data/rules.js';
 import { updatePotions, potionSnapshot, restorePotions } from './potion.js';
 import { prebakePotions } from './render/potion.js';
-import { prebakeBarrier, prebakeFallenHex } from './render/witchwood.js';
+import { prebakeBarrier, prebakeCroneZone, prebakeFallenHex } from './render/witchwood.js';
 import { startCoach, coachHolds, coachUpdate } from './coach.js';
 import { lightFire, lightRandomFires, fireAhead, burnPumpkin, updateFires } from './fire.js';
 import { updateCrowDives } from './nightmare.js';
@@ -162,6 +162,7 @@ export function startGame(mode, n, loadout, gourds){
   if (__RELEASE__ >= 4 && def){ startFires(def); if (def.nightmare) prebakeFire(); }   // after the castles, so random fires skip them; the flame strip is baked now, not on first sight
   if (__RELEASE__ >= 5 && def && def.poison) prebakePoison();   // the fog and its warning strips, baked now
   if (__RELEASE__ >= 7 && def && bakeKeys(def).some(k => k.split('|')[0] === 'triptych')) prebakeBarrier();   // the Triptych's barrier frames (Release 7, ~4-6 MB), only on a night that can spawn one
+  if (__RELEASE__ >= 7 && def && bakeKeys(def).some(k => k.split('|')[0] === 'ashcrone')) prebakeCroneZone();   // the Ash Crone's 3x3 zone sprite (Release 7), only on a night that can spawn her
   if (__RELEASE__ >= 7 && def && (def.boss === 'fallenhexwitch' || def.boss2 === 'fallenhexwitch')) prebakeFallenHex();   // her altar's crack states and her 5x5 zone (Release 7), only on her night
   if (__RELEASE__ >= 7 && def && def.nightmare) prebakePotions();   // the three bottles, their icons and the drink puffs (Release 7), baked now
   if (__RELEASE__ >= 5 && def && def.nightmare) prebakeRot();   // the rotten pumpkin (Release 5), baked now, not on first sight

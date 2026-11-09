@@ -12,7 +12,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite } from './tools.js';
-import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawHexBolt, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
+import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -343,6 +343,7 @@ export function drawHexZones(t){
     const a = Math.min(1, z.t / 1.5), pulse = 0.5 + 0.5 * Math.sin(t * 3);
     let x, y, w, h;
     if (__RELEASE__ >= 7 && z.shape === 'box5'){ [w, h] = undeadZoneSize(); drawUndeadZoneFx(ctx, LANE(z.lane) - w / 2, FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - h / 2, w, h, t, a, K); continue; }   // the Fallen Hexwitch's 5x5 (Release 7): one baked sprite
+    if (__RELEASE__ >= 7 && z.src === 'crone'){ w = CS * 3 * 0.98; h = CS * 3; drawCroneZoneFx(ctx, LANE(z.lane) - w / 2, FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - h / 2, w, h, t, a, K); continue; }   // the Ash Crone's 3x3 (Release 7): one baked sprite
     if (z.shape === 'col'){ x = LANE(z.lane) - CS * 0.49; y = FIELD_TOP; w = CS * 0.98; h = FIELD_BOT - FIELD_TOP; }
     else if (z.shape === 'row'){ x = GX; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 0.5; w = CS * COLS; h = CS; }
     else { x = LANE(z.lane) - CS * 1.5 * 0.98; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 1.5; w = CS * 3 * 0.98; h = CS * 3; }

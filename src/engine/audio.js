@@ -2,7 +2,7 @@ import { save } from '../save.js';
 import { BANK } from '../data/sfxbank.js';
 import { MUSIC } from '../data/music.js';
 import { MUSIC_W6 } from '../data/music_w6.js';
-import { BEIGE } from '../data/pumpkins.js';
+import { BEIGE, MAGNET } from '../data/pumpkins.js';
 const W6_MUSIC = __RELEASE__ >= 2 ? MUSIC_W6 : {};   // World 6 beta tracks (the Frenzy jukebox); dropped from store builds
 
 // ---------- Audio ----------
@@ -247,6 +247,7 @@ export const SFX = {
     layer(1, 0.05, () => this._phit(type, size, rainbow));
   },
   _phit(type, size, rainbow){
+    if (__MAGNET__ && type === MAGNET){ S('metallight', 0.5, { rate: 1.1 }) || thump(); return; }   // Magnet: a light metal tink
     if (__RELEASE__ >= 3 && type === BEIGE){ S('slime', 0.5, { rate: 0.9 }) || thump(); return; }   // Beige: a sticky splat
     if (__RELEASE__ >= 5 && type === -2){ S('slime', 0.5, { rate: 0.65 }) || thump(); return; }   // a rotten pumpkin (ROTTEN, engine/rot.js): a soft wet splat
     switch (type){
@@ -269,6 +270,7 @@ export const SFX = {
       case 'chain': if (gate('chain', 30)) S('zap', 0.4, { rate: 1.3 }) || noise(0.08, 0.14, 2600, 1.2, 0, 900); break;
       case 'splash': if (gate('splash', 30)) S('splash', 0.5) || tone(60, 0.2, 'sine', 0.1, 35); break;
       case 'pierce': break;   // no extra sound: each pierced monster just gets the normal pumpkin hit (owner)
+      case (__MAGNET__ ? 'magnet' : ''): if (gate('magnet', 80)){ S('clank', 0.45, { rate: 0.85 }) || thump(); S('zap', 0.12, { rate: 1.6, delay: 0.24 }); } break;   // Magnet pull: a soft metal clunk as they land (Release 6)
       case 'glue': if (gate('glue', 60)) S('slime', 0.35, { rate: 0.8 }); break;   // Beige glue lands (Release 3)
       case 'rot': if (__RELEASE__ >= 5 && gate('rot', 80)) S('slime', 0.3, { rate: 0.55 }); break;   // a pumpkin goes rotten (Release 5)
       case 'blocked': if (__RELEASE__ >= 5 && gate('blocked', 60)) S('tap', 0.35, { rate: 0.7 }) || tap(); break;   // the wrong kind of pumpkin: a dull tap (Release 5)

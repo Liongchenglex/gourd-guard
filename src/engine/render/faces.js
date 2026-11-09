@@ -27,6 +27,12 @@ export const LIT_FACES = {
     g.beginPath(); g.moveTo(-R * .32, R * .24); g.quadraticCurveTo(0, R * .52, R * .32, R * .24); g.quadraticCurveTo(0, R * .32, -R * .32, R * .24); g.fill();
     g.beginPath(); g.ellipse(R * .12, R * .46, R * .045, R * .07, 0, 0, TAU); g.fill();
     dark(g, () => { for (const s of [-1, 1]){ const x = s * R * .3; pup(g, x, ey + R * .01, R * .05); brow(g, R, x - R * .15, ey - R * .2, x + R * .15, ey - R * .2); } }); } } : {}),
+  // Magnet (Release 6): smug, half-lidded eyes, one brow cocked, a lopsided smirk
+  ...(__MAGNET__ ? { magnet(g, R){ glow(g, R, '#fff4e0', '#ffa860', '#ffc890'); const ey = -R * .1;
+    for (const s of [-1, 1]) almond(g, s * R * .3, ey, R * .19, R * .07, s * .08); nose(g, R);
+    g.beginPath(); g.moveTo(-R * .3, R * .3); g.quadraticCurveTo(R * .02, R * .4, R * .34, R * .18); g.quadraticCurveTo(R * .06, R * .3, -R * .3, R * .3); g.fill();
+    dark(g, () => { for (const s of [-1, 1]){ const x = s * R * .3; g.fillRect(x - R * .19, ey - R * .085, R * .38, R * .06); pup(g, x + R * .05, ey + R * .015, R * .045); }
+      brow(g, R, -R * .45, ey - R * .2, -R * .15, ey - R * .18); brow(g, R, R * .15, ey - R * .26, R * .45, ey - R * .32); }); } } : {}),
   // Green: the classic jack-o'-lantern, triangle eyes and a toothy grin
   green(g, R){ glow(g, R, '#fff6c0', '#ff9a1a', '#ffb020'); const ey = -R * .1; tri(g, -R * .33, ey, R * .17, R * .28); tri(g, R * .33, ey, R * .17, R * .28); tri(g, 0, R * .06, R * .08, R * .12); zig(g, R, R * .24, .25, 6); },
   // Yellow: greedy excitement, wide eyes looking up at the prize, a big toothy grin

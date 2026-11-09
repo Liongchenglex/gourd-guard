@@ -11,10 +11,12 @@ export const PAINT_UNLOCK = { seeds:100, night:100 };
 /** Pumpkins bought with seeds once a level is beaten: price, the night that opens the buy, the save flag, and the shop's words. */
 export const BUY_PUMPKIN = {
   paint:{ ...PAINT_UNLOCK, flag:'paintOwned', blurb:'When 3 light up, the pumpkins touching the bunch launch with it, each with its own colour and power.', how:'Beat 5-20, the Twin Tides\u2019 last stand, to unlock it with seeds.' },
-  ...(__RELEASE__ >= 3 ? { beige:{ seeds:50, night:116, flag:'beigeOwned', blurb:'When it kills, it leaves sticky glue behind: monsters stuck in it slow down and keep losing health.', how:'Beat 6-16, Four Serpents, to unlock it with seeds.' } } : {}),   // owner, 2026-11-02
+  ...(__RELEASE__ >= 3 ? { beige:{ seeds:50, night:116, flag:'beigeOwned', blurb:'When it kills, it leaves sticky glue behind: monsters stuck in it slow down and keep losing health.', how:'Beat 6-16, Four Serpents, to unlock it with seeds.' } } : {}),   // owner, 2026-11-02,
+  ...(__MAGNET__ ? { magnet:{ seeds:50, night:100, flag:'magnetOwned', blurb:'Its hit pulls nearby monsters onto one tile, even off your walls. Line them up for Grey, Black, Deep Blue and friends.', how:'Beat 5-20, the Twin Tides\u2019 last stand, to unlock it with seeds.' } } : {}),   // Release 6 (owner, 2026-11-08)
 };
+const MG = [{ coins:3000 }, { coins:5000 }, { coins:10000 }, { seeds:50 }];        // Magnet (owner, 2026-11-08: the same as Beige; Release 6)
 const BG = [{ coins:3000 }, { coins:5000 }, { coins:10000 }, { seeds:50 }];        // Beige (owner, 2026-11-03: cheaper, it is not that strong; was 5,000 / 10,000 / 50 / 75 seeds; Release 3)
-export const UPGRADE_COST = { green:A, yellow:A, fire:B, ice:B, white:B, pink:B, purple:B, turquoise:B, grey:C, black:C, blue:C, brown:C, paint:P, ...(__RELEASE__ >= 3 ? { beige:BG } : {}) };
+export const UPGRADE_COST = { green:A, yellow:A, fire:B, ice:B, white:B, pink:B, purple:B, turquoise:B, grey:C, black:C, blue:C, brown:C, paint:P, ...(__RELEASE__ >= 3 ? { beige:BG } : {}), ...(__MAGNET__ ? { magnet:MG } : {}) };
 export const upgradeCost = (key, lv) => (UPGRADE_COST[key] || A)[lv - 1] || null;
 
 export const TOOL_COST = 300;

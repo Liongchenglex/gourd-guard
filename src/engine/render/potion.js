@@ -106,6 +106,13 @@ function puffSprite(kind, k){
   for (let i = 0; i < 7; i++){ const a = i / 7 * TAU + 0.4, d = 14 + (i % 3) * 5; g.fillStyle = i % 2 ? C.swirl : '#ffffff'; g.beginPath(); g.ellipse(PW / 2 + Math.cos(a) * d, PW / 2 + Math.sin(a) * d, 2.2, 2.2, 0, 0, TAU); g.fill(); }
   cache.set(key, c); return c;
 }
+/** The three bottles side by side on a px-square canvas: the Potions intro card's icon (Release 7). Painted once per call, never per frame. */
+export function potionsCard(px = 160){
+  const c = document.createElement('canvas'); c.width = c.height = px; const g = c.getContext('2d');
+  const k = px / 150; g.scale(k, k);
+  for (const [kd, x, y] of [['bulky', 30, 112], ['colour', 120, 112], ['speed', 75, 100]]){ g.save(); g.translate(x, y); g.scale(1.25, 1.25); paintBottle(g, kd, true); g.restore(); }
+  return c;
+}
 /** Bake everything now (night start), not on first sight. */
 export function prebakePotions(){ for (const kd of KINDS){ potionSprite(kd, K); potionIcon(kd, K); puffSprite(kd, K); } }
 
@@ -117,10 +124,10 @@ export function drawPotions(potions, t){
     ctx.drawImage(c, x - OX * s, y - OY * s + bob, BW * s, BH * s);
   }
 }
-/** A drinker's icons, one per potion it drank, in kind order, leftward from x (the left end of its health pips), centred on y. */
+/** A drinker's icons, one per potion it drank (stacked ones repeat), in kind order, leftward from x (the left end of its health pips), centred on y. */
 export function drawPotionIcons(cx, drank, x, y){
   let n = 0;
-  for (const kd of KINDS) if (drank[kd]){ cx.drawImage(potionIcon(kd, K), x - (n + 1) * (IW + 1), y - IH / 2, IW, IH); n++; }
+  for (const kd of KINDS) for (let i = +drank[kd] || 0; i > 0; i--){ cx.drawImage(potionIcon(kd, K), x - (n + 1) * (IW + 1), y - IH / 2, IW, IH); n++; }
 }
 /** The drink puff (vfx kind 'potiondrink'): it swells and fades. */
 export function drawPotionFx(v){

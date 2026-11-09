@@ -63,7 +63,7 @@ const LOB_LEAD = LOB_DUR * 0.5;   // the net leaves the cup at half the clip (re
 
 /** A new monster's Release 8 set-up (spawnMonster, before it joins the field). */
 export function initKeepMonster(m){
-  if (m.type === 'lobbercart'){ const T = TYPES.lobbercart; m.lobT = rnd(T.lobEvery[0], T.lobEvery[1]); m.lobbing = false; m.parked = false; }
+  if (m.type === 'lobbercart'){ const T = TYPES.lobbercart; m.lobT = T.lobFirst; m.lobbing = false; m.parked = false; }   // its first net soon after it parks (owner 2026-11-09)
   if (m.type === 'marshal'){ m.rallyT = TYPES.marshal.rallyEvery; m.rallying = false; m.rallyLeft = 0; }
   if (m.type === 'boss' && m.kind === 'siegetower') initSiege(m);
   if (isCount(m)) initFallenCount(m);
@@ -172,7 +172,7 @@ export function updateKeepMonster(m, dt){
 //  - 'gate': hp 2.5x the level's castle hp. Its clock `t` counts down GATE_EVERY s; GATE_OPEN s before zero the `open` clip plays, at zero one monster
 //    from `def.gatePool` (a random entry) walks out in front of it (spawnMonster, a minion: an extra that does not count toward the night) and `shut`
 //    plays. One at a time: a new clock starts at once, nothing queues. Broken: no more. A level with no pool summons nothing.
-//  - 'tower': hp 1.5x. Every TOWER_SHOT s an arrow goes down its lane (G.arrows, the Skeleton Archer's, 3 wall damage; held while the fence is down, as
+//  - 'tower': hp 3x (owner 2026-11-09; was 1.5x). Every TOWER_SHOT s an arrow goes down its lane (G.arrows, the Skeleton Archer's, 3 wall damage; held while the fence is down, as
 //    the archer does); `shoot` plays TOWER_LEAD s before it leaves. Dead: the `crumble` sprite plays (G.crumbles) and a real Skeleton Archer stands on
 //    the rubble at its p, holding and shooting at once on the tower's own clock, not stunned.
 //  - A continued night rebuilds castles from the level as it does walls: pieces come back with their kind, full health and a fresh clock.

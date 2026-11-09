@@ -174,10 +174,31 @@ export function drawBulwarkZoneFx(g, x, y, w, h, t, k){
   blitZone(g, zoneSprite('bulwark', w, h, k, bulwarkBack), x, y, .75 + .25 * pulse);
   const q = (t * .8) % 1, pr = 10 + q * CS * 1.4; g.save(); g.globalAlpha = (1 - q) * .6; g.strokeStyle = '#cfe0ff'; g.lineWidth = 2; g.beginPath(); g.arc(cx, cy, pr, 0, TAU); g.stroke(); g.restore();
 }
+const hexSprite = (w, h, k) => zoneSprite('hex', w, h, k, (z, zx, zy, zw, zh) => zoneBase(z, zx, zy, zw, zh, '#c07cff', 1, 0));
+/** The Ash Crone's 3x3 zone (Release 7): the Hexwitch's purple box, but with its dashed rim, sigil and skull motes baked into the one sprite
+ *  (`zoneSprite('crone')`, prebaked on a night that can spawn her); only its alpha pulses live, one drawImage a zone. (Story zones above keep their live sigil.) */
+function croneBack(g, x, y, w, h){
+  const col = '#c07cff', R = rng(57);
+  zoneBase(g, x, y, w, h, col, 1, 0);
+  g.save(); g.strokeStyle = rgba(col, .7); g.lineWidth = 2; g.setLineDash([6, 6]); g.beginPath(); g.roundRect(x + 2, y + 2, w - 4, h - 4, 12); g.stroke(); g.restore();
+  const nx = Math.max(1, Math.round(w / (CS * 2.2))), ny = Math.max(1, Math.round(h / (CS * 2.2)));
+  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++){ const cx = x + (i + .5) * w / nx, cy = y + (j + .5) * h / ny, r = Math.min(CS * .8, w / nx * .4, h / ny * .4);
+    g.save(); g.translate(cx, cy); g.globalAlpha = .5; g.strokeStyle = col; g.lineWidth = 1.5;
+    g.beginPath(); g.arc(0, 0, r, 0, TAU); g.stroke(); g.beginPath(); for (let q = 0; q < 5; q++){ const ang = -Math.PI / 2 + q * TAU * 2 / 5; g.lineTo(Math.cos(ang) * r * .8, Math.sin(ang) * r * .8); } g.closePath(); g.stroke();
+    for (let q = 0; q < 10; q++){ const ang = q * TAU / 10; g.beginPath(); g.moveTo(Math.cos(ang) * r * .85, Math.sin(ang) * r * .85); g.lineTo(Math.cos(ang) * r * .96, Math.sin(ang) * r * .96); g.stroke(); }
+    g.restore(); }
+  for (let i = 0; i < Math.round(w * h / (CS * CS) * .6) + 2; i++){ const mx = x + 10 + R() * (w - 20), my = y + 10 + R() * (h - 20), a = .3 + R() * .4;
+    g.globalAlpha = a * .7; g.fillStyle = '#e8d8ff'; ell(g, mx, my, 4.5, 5); g.fill(); g.fillStyle = '#4a2a6a'; ell(g, mx - 1.8, my - .8, 1.2, 1.5); g.fill(); ell(g, mx + 1.8, my - .8, 1.2, 1.5); g.fill(); }
+  g.globalAlpha = 1;
+}
+const croneSprite = (w, h, k) => zoneSprite('crone', w, h, k, croneBack);
+export function drawCroneZoneFx(g, x, y, w, h, t, a, k){ blitZone(g, croneSprite(w, h, k), x, y, a * (.8 + .2 * (.5 + .5 * Math.sin(t * 3)))); }
+/** Bake her zone's sprite now (render/witchwood.js prebakeCroneZone, at night start). */
+export const prebakeHexZone = (w, h, k) => { croneSprite(w, h, k); };
 /** Hexwitch zones: purple, a spinning sigil every couple of tiles, ghostly skull motes drifting up. */
 export function drawHexZoneFx(g, x, y, w, h, t, a, k){
   const pulse = .5 + .5 * Math.sin(t * 3), col = '#c07cff';
-  blitZone(g, zoneSprite('hex', w, h, k, (z, zx, zy, zw, zh) => zoneBase(z, zx, zy, zw, zh, col, 1, 0)), x, y, a * (.8 + .2 * pulse));
+  blitZone(g, hexSprite(w, h, k), x, y, a * (.8 + .2 * pulse));
   g.save(); g.strokeStyle = rgba(col, a * (.5 + .3 * pulse)); g.lineWidth = 2; g.setLineDash([6, 6]); g.lineDashOffset = t * 24; g.beginPath(); g.roundRect(x + 2, y + 2, w - 4, h - 4, 12); g.stroke(); g.setLineDash([]);
   const nx = Math.max(1, Math.round(w / (CS * 2.2))), ny = Math.max(1, Math.round(h / (CS * 2.2)));
   for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++){ const cx = x + (i + .5) * w / nx, cy = y + (j + .5) * h / ny, r = Math.min(CS * .8, w / nx * .4, h / ny * .4);
@@ -321,6 +342,7 @@ function altar(g, st){
 /** Crack state st (0 whole .. 2 shattered) of the altar, baked at scale k. */
 export function altarSprite(k, st){ k = bakeK(k); return bake(`altar:${k}:${st}`, ALTAR_W + 24, ALTAR_H + 22, ALTAR_W / 2 + 12, ALTAR_H + 12, k, g => altar(g, st)); }
 /** Test hook: [altar frames baked, her zone sizes baked]. */
+export const hexZoneBaked = () => [...propCache.keys()].filter(k => k.startsWith('zone:crone:')).length;   // test hook (Release 7)
 export const fallenHexBaked = () => [[...propCache.keys()].filter(k => k.startsWith('altar:')).length, [...propCache.keys()].filter(k => k.startsWith('zone:undead:')).length];
 
 const path = (g, pts) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); };

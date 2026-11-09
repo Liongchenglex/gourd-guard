@@ -232,8 +232,16 @@ function setupWartLaunch(wp){
 }
 /** Step wtop: the fences above the Wartling's square are worn, so the mend shows; the hand slides it up into the top row. */
 function setupWartTop(wp){
+  const c = G.coach;
+  if (__RELEASE__ >= 7 && c && !c.worn) c.worn = walls.map(w => w ? w.hp : null);   // remembered, so a break outside the top row (no mend) can put the fences back
   for (let k = Math.max(0, wp.c - 1); k <= Math.min(COLS - 1, wp.c + 1); k++){ const w = walls[k]; if (w) w.hp = Math.min(w.hp, Math.round(w.max * 0.3)); }
   findWartMove(true);
+}
+/** Release 7: the lesson wore the fences for a mend that never came (the Wartling broke outside the top row): put them back. */
+function restoreWorn(c){
+  if (!c.worn) return;
+  c.worn.forEach((hp, k) => { const w = walls[k]; if (w && hp != null && w.hp < hp) w.hp = hp; });
+  c.worn = null;
 }
 function wartlingCoachUpdate(c){
   const wp = gourdPos('wartling'), go = step => { c.step = step; c.stepT = 0; tip(step); };
@@ -248,11 +256,11 @@ function wartlingCoachUpdate(c){
     else if (lit) c.ref = lit;   // the hand swipes the bunch up
     else if (!G.projs.length){ c.ref = null; toTop(); }   // launched (or broken up) and every pumpkin has landed
   } else if (c.step === 'wtop'){
-    if (!wp) go('wback');
+    if (!wp){ if (__RELEASE__ >= 7) restoreWorn(c); go('wback'); }
     else if (wp.r === 0){ c.move = null; c.ref = grid[wp.r][wp.c]; go('whold'); }
     else if (!c.move || !findCell(c.move.ref) || c.move.ref !== grid[wp.r][wp.c] || !planMove(wp.r, wp.c, 'up')) findWartMove(true);   // slid somewhere else: show the way up from here
   } else if (c.step === 'whold'){
-    if (!wp) go('praise'); else c.ref = grid[wp.r][wp.c];   // any way of breaking it counts (a real hold)
+    if (!wp){ if (__RELEASE__ >= 7){ if (c.wr !== 0) restoreWorn(c); c.worn = null; } go('praise'); } else { c.wr = wp.r; c.ref = grid[wp.r][wp.c]; }   // any way of breaking it counts (a real hold)
   } else if (c.step === 'wback'){
     if (wp) toTop();
     else if (c.stepT > 1.2 && !c.sprouted){ c.sprouted = true; spawnSprouts(); }   // the next sprout tick brings it back

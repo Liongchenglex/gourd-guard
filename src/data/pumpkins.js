@@ -16,11 +16,17 @@ export const PTYPES = [
   { key:'paint',  name:'Paint',  role:'pulls touching pumpkins of any colour into its bunch, and they launch together', base:'#c9b6f0', light:'#ece2ff', dark:'#7a62b0', spark:'#ffb59a', patches:['#7fe0c3', '#ffb59a', '#ffe27a', '#6aaeff'] },   // post-game, bought with seeds (owner, 2026-10-08)
   // Beige (Release 3, owner 2026-11-02): bought with seeds after 6-16; a kill leaves glue that slows and hurts (src/engine/glue.js)
   ...(__RELEASE__ >= 3 ? [{ key:'beige', name:'Beige', role:'leaves sticky glue where it kills: monsters in it slow down and take damage', base:'#e9ada0', light:'#f8d3ca', dark:'#a5685d', spark:'#fff0ec', drips:true }] : []),
+  // Magnet (Release 6, owner 2026-11-08; __MAGNET__ in vite.config.js): bought with seeds after 5-20; a hit pulls nearby monsters onto its tile (src/engine/magnet.js)
+  ...(__MAGNET__ ? [{ key:'magnet', name:'Magnet', role:'pulls nearby monsters onto the one it hits, even off your walls', base:'#c46a35', light:'#f0a070', dark:'#6e3414', spark:'#ffc890', magnet:true }] : []),
   { key:'rainbow',name:'Rainbow',role:'joins any bunch as any color', rainbow:true, spark:'#fff3a0' },
 ];
 
-export const RAINBOW = __RELEASE__ >= 3 ? 14 : 13, NTYPES = RAINBOW;   // type indices: 0 Green, 1 Yellow, 2 Ice, 3 Fire, 4 Grey, 5 Purple, 6 White, 7 Black, 8 Deep Blue, 9 Pink, 10 Turquoise, 11 Brown, 12 Paint, 13 Rainbow
+export const RAINBOW = 13 + (__RELEASE__ >= 3 ? 1 : 0) + (__MAGNET__ ? 1 : 0), NTYPES = RAINBOW;   // type indices: 0 Green, 1 Yellow, 2 Ice, 3 Fire, 4 Grey, 5 Purple, 6 White, 7 Black, 8 Deep Blue, 9 Pink, 10 Turquoise, 11 Brown, 12 Paint, 13 Rainbow
 export const BEIGE = __RELEASE__ >= 3 ? 13 : -1;   // Release 3; -1 (never a type) in earlier builds
+export const MAGNET = __MAGNET__ ? (__RELEASE__ >= 3 ? 14 : 13) : -1;   // Release 6 (or wherever MAGNET_AT puts it); after Beige when Beige is in the build
+// Magnet pull (owner, 2026-11-08), by level: monsters pulled, and rows it pulls from counting the hit monster's own row (the rest are below it,
+// closer to the wall); the visible slide in seconds
+export const MAG_N = [3, 3, 4, 5, 6], MAG_ROWS = [1, 1, 2, 2, 3], MAG_SLIDE = 0.3;
 // Beige glue (owner, 2026-11-02; durations 2-10 s, owner 2026-11-03): laid on a Beige kill; tiles by level: one, one, 3 across, 3 across, a plus
 export const GLUE_T = [2, 4, 6, 8, 10], GLUE_SHAPE = ['one', 'one', 'row', 'row', 'plus'], GLUE_DMG = 0.3, GLUE_EVERY = 1, GLUE_SLOW = 0.5;
 export const YELLOW = 1, BLUE = 8, PINK = 9, WHITE = 6, BLACK = 7, TURQUOISE = 10, BROWN = 11, PAINT = 12;
@@ -66,6 +72,7 @@ export function pct(v){ return Math.round(v * 100) + '%'; }
 export function lvStats(t, L){
   const i = L - 1, kb = v => v ? pct(v) : 'none';
   let power = String(t === 10 ? POWER[i] * TURQ_FRAC : POWER[i]), knock = kb(KB_CHANCE[i]), special = 'none';
+  if (__MAGNET__ && t === MAGNET){ knock = 'none'; special = `pulls up to ${MAG_N[i]} monsters from ${MAG_ROWS[i] === 1 ? 'the same row' : `the same row and ${MAG_ROWS[i] - 1} row${MAG_ROWS[i] > 2 ? 's' : ''} below`} onto the one it hits, even off your walls`; }
   if (__RELEASE__ >= 3 && t === BEIGE) special = `a kill leaves glue on ${['1 tile', '1 tile', '3 across', '3 across', 'a plus of 5 tiles'][i]} for ${GLUE_T[i]} s: monsters in it walk at half speed and lose ${GLUE_DMG} a second`;
   switch (t){
     case 1: special = `kills always pay coins, ×${COIN_MULT[i]}`; break;
@@ -90,6 +97,7 @@ export function lvDesc(t, L){
   else if (t === 3) parts.push(`burns ${BURN_N[i]} times for ${BURN_AMT[i]}`);
   else if (t === 9) parts.push(`heals wall ${HEAL_AMT[i]}`, `${pct(KB_PINK[i])} knockback`);
   else if (t === 11) parts.push(BROWN_KB[i] ? `${pct(BROWN_KB[i])} knockback` : 'no knockback', `full size in ${BROWN_GROW[i][0]}s`, 'big = double power');
+  else if (__MAGNET__ && t === MAGNET) parts.push('no knockback', `pulls up to ${MAG_N[i]} monsters onto its hit`);
   else {
     parts.push(KB_CHANCE[i] ? `${pct(KB_CHANCE[i])} knockback` : 'no knockback');
     if (t === 4) parts.push('pierces');

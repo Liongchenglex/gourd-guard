@@ -592,8 +592,8 @@ def check_beige_shop(browser, url, on):
         ok(not has, 'no Beige pumpkin in this build')
         page.close(); return
     ok(has, 'the Beige pumpkin exists')
-    d = page.evaluate("() => { const g = window.__gg, i = g.PTYPES.findIndex(p => p.key === 'beige'); return { i, B:g.BEIGE, R:g.RAINBOW, rb:!!g.PTYPES[g.RAINBOW].rainbow, costs:[1, 2, 3, 4].map(L => g.upgradeCost('beige', L)), s5:g.lvStats(i, 5).special, s3:g.lvStats(i, 3).special, p5:g.lvStats(i, 5).power }; }")
-    ok(d['i'] == d['B'] == d['R'] - 1 and d['rb'], f"Beige sits just before Rainbow {d['i']} {d['B']} {d['R']}")
+    d = page.evaluate("() => { const g = window.__gg, i = g.PTYPES.findIndex(p => p.key === 'beige'); return { i, B:g.BEIGE, R:g.RAINBOW, M:g.MAGNET == null ? -1 : g.MAGNET, rb:!!g.PTYPES[g.RAINBOW].rainbow, costs:[1, 2, 3, 4].map(L => g.upgradeCost('beige', L)), s5:g.lvStats(i, 5).special, s3:g.lvStats(i, 3).special, p5:g.lvStats(i, 5).power }; }")
+    ok(d['i'] == d['B'] == d['R'] - 1 - (1 if d['M'] >= 0 else 0) and d['rb'], f"Beige sits just before Rainbow (or before Magnet, Release 6) {d['i']} {d['B']} {d['R']} {d['M']}")
     ok(d['costs'] == [{'coins': 3000}, {'coins': 5000}, {'coins': 10000}, {'seeds': 50}], f"upgrades cost 3,000 / 5,000 / 10,000 coins, then 50 seeds (owner, 2026-11-03) {d['costs']}")
     ok('plus' in d['s5'] and '10 s' in d['s5'] and '6 s' in d['s3'] and '3 across' in d['s3'] and d['p5'] == '2', f"level stats describe the glue {d['s3']!r} / {d['s5']!r}")
     set_stars(page, {n: 3 for n in range(1, 116)}); page.evaluate("() => { window.__gg.save.seeds = 60; }")

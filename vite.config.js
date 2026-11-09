@@ -7,4 +7,8 @@ const STORE_RELEASE = 1;
 const e = process.env;
 const RELEASE = e.VITE_RELEASE === 'all' || e.VITE_W6 ? 999 : Number(e.VITE_RELEASE || STORE_RELEASE);   // VITE_W6=1 is the old name for "all"
 
-export default defineConfig({ base: './', define: { __RELEASE__: JSON.stringify(RELEASE) }, build: { target: 'es2019', assetsInlineLimit: 0 } });
+// Per-feature switch (owner, 2026-11-08): the Magnet pumpkin ships in release MAGNET_AT (6). Lower it to ship Magnet ahead of the nightmare worlds;
+// VITE_MAGNET_AT overrides it for tools/mag_check.py --expect solo only.
+const MAGNET_AT = Number(e.VITE_MAGNET_AT || 6);
+
+export default defineConfig({ base: './', define: { __RELEASE__: JSON.stringify(RELEASE), __MAGNET__: JSON.stringify(RELEASE >= MAGNET_AT) }, build: { target: 'es2019', assetsInlineLimit: 0 } });

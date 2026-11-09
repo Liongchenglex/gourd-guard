@@ -5,7 +5,7 @@ import { ell, rrect } from './util.js';
 import { pumpkin } from './chars.js';
 import { faceFor } from './faces.js';
 import { skinnedPumpkin } from './wardrobe.js';
-import { paintPatches, glueDrips } from './paintpumpkin.js';
+import { paintPatches, glueDrips, magnetBand } from './paintpumpkin.js';
 import { save } from '../../save.js';
 import { E, pal, rng, rgba, mix, SM, SO } from './paint.js';
 import { COLS, CS, FENCE_Y, FIELD_TOP, GX, GY, H, ROWS, W } from '../state.js';
@@ -26,6 +26,7 @@ export function paintPumpkin(g, cx, cy, R, col, lit){
   if (skin) skinnedPumpkin(g, skin, R, lit);
   else if (col.patches){ const f = faceFor(col.key); pumpkin(g, pal(col.base), lit, R, (g2, R2, c2, isLit) => { paintPatches(g2, R2, col.patches); f(g2, R2, c2, isLit); }); }   // Paint: patches under the face, lit or not
   else if (__RELEASE__ >= 3 && col.drips){ const f = faceFor(col.key); pumpkin(g, pal(col.base), lit, R, (g2, R2, c2, isLit) => { glueDrips(g2, R2); f(g2, R2, c2, isLit); }); }   // Beige: glue drips under the face
+  else if (__MAGNET__ && col.magnet){ const f = faceFor(col.key); pumpkin(g, pal(col.base), lit, R, (g2, R2, c2, isLit) => { f(g2, R2, c2, isLit); }); magnetBand(g, R); }   // Magnet: a horseshoe over the stem (Release 6)
   else pumpkin(g, col.rainbow ? RAINBOW_RIBS.map(c => pal(c.base)) : pal(col.base), lit, R, faceFor(col.key));   // no face in the patch; a carved face per type when bunched (owner, 2026-09-27)
   g.restore();
 }

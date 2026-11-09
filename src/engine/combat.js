@@ -1,6 +1,7 @@
 import { TYPES, BOSS_NAMES, ICE_ONLY, HUSK_STRIP } from '../data/monsters.js';
-import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW, TURQUOISE, BROWN, TURQ_FRAC, BROWN_KB, BROWN_SIZE_MULT, PAINT, BEIGE } from '../data/pumpkins.js';
+import { BLUE, BURN_AMT, BURN_EVERY, BURN_N, CHAIN_FRAC, CHAIN_N, COIN_MULT, FREEZE_P, HEAL_AMT, KB_CHANCE, KB_PINK, PINK, POWER, PTYPES, RAINBOW, RAINBOW_P, SLOW_T, SPAWN_P, SPLASH_FRAC, SPLASH_ROWS, YELLOW, TURQUOISE, BROWN, TURQ_FRAC, BROWN_KB, BROWN_SIZE_MULT, PAINT, BEIGE, MAGNET } from '../data/pumpkins.js';
 import { layGlue } from './glue.js';
+import { magnetPull } from './magnet.js';
 import { hkGate, hkAfterHit, onHkFormDown, onKingDown } from './hollowking.js';
 import { SFX, musicStart } from './audio.js';
 import { MUSIC } from '../data/music.js';
@@ -314,8 +315,8 @@ function hitMonsterNow(pr, m){
   const wc = save.wardrobe && save.wardrobe.costume;   // the worn costume's hit effect (visual only), capped so a big bunch stays cheap
   if (wc && G.vfx && G.vfx.filter(v => v.kind === 'costumeHit').length < 5) { G.vfx.push({ kind:'costumeHit', key:wc, x:m.x, y:y - m.r * .3, t:0, dur:0.75 }); SFX.costumeHit(wc); }
   for (let k = 0; k < 10; k++) chunk(pr.x, pr.y, pr.vis === RAINBOW ? '#f0a020' : PTYPES[pr.vis].base, 200);
-  let kb = pr.guar || (pr.type === PINK ? Math.random() < KB_PINK[i] : pr.type === BROWN ? Math.random() < BROWN_KB[i] : (pr.type <= 1 || pr.type >= 4) && Math.random() < KB_CHANCE[i]);
-  if (__RELEASE__ >= 5 && pr.ward && !pr.wardHit){ pr.wardHit = true; kb = true; }   // launched from a Protector Gourd's square: its first monster hit always knocks back (bosses and noKnockback stay immune in knockback)
+  let kb = !(__MAGNET__ && pr.type === MAGNET) && (pr.guar || (pr.type === PINK ? Math.random() < KB_PINK[i] : pr.type === BROWN ? Math.random() < BROWN_KB[i] : (pr.type <= 1 || pr.type >= 4) && Math.random() < KB_CHANCE[i]));
+  if (__RELEASE__ >= 5 && pr.ward && !pr.wardHit){ pr.wardHit = true; kb = !(__MAGNET__ && pr.type === MAGNET); }   // ... except a Magnet: never knockback (Release 6)   // launched from a Protector Gourd's square: its first monster hit always knocks back (bosses and noKnockback stay immune in knockback)
   if (pr.type === 2){
     G.q.chill++;
     if (m.type !== 'boss' && Math.random() < FREEZE_P[i]){ m.frozenT = Math.max(m.frozenT, SLOW_T[i]); addFloat('Frozen!', m.x, y - m.r - 34, '#bfefff', 18, 0.9); SFX.freeze(); }
@@ -324,6 +325,7 @@ function hitMonsterNow(pr, m){
   }
   if (pr.type === 3){ G.q.burn++; m.burnLeft = Math.max(m.burnLeft, BURN_N[i]); m.burnAmt = Math.max(m.burnAmt, BURN_AMT[i]); m.burnTick = BURN_EVERY; }
   if ((m.type === 'mirror' || (__RELEASE__ >= 7 && m.type === 'triptych')) && m.reflecting){ reflectPumpkin(pr, m, m.lane); return; }   // bounces the pumpkin back down its lane into the wall (a Triptych's barrier is normally met first: game.js)
+  if (__MAGNET__ && pr.type === MAGNET) magnetPull(m, pr.lv);   // Magnet: nearby monsters slide onto this tile, even off walls (Release 6)
   m.lastHit = pr.type; m.lastHitLv = pr.lv; m.lastHitAlt = pr.vis === PAINT && pr.type !== PAINT ? PAINT : -1;
   const hitPower = pumpkinPower(pr) * (__RELEASE__ >= 7 && pr.wart ? WART_DMG : 1);   // launched from a Wartling Gourd's square (Release 7): its hit damage doubles; damage() still applies every immunity
   if (__RELEASE__ >= 8 && !shieldedNow(m) && knockArcher(m)) { /* an archer takes the hit: no health lost (engine/keep.js) */ }

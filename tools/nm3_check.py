@@ -198,8 +198,14 @@ def check_potion_drink(browser, url):
     t = gwait(page, "() => !window.__gg.potionAt(3, 0.5)", 4)
     ok(t is not None, f'a ghoul walking onto the bulky potion drinks it: the potion is gone ({t})')
     ok(mon(page, i, "[m.hp, m.maxHp, !!(m.drank && m.drank.bulky)]") == [6, 6, True], f'bulky: 3 hp -> 6/6 and drank.bulky {mon(page, i, "[m.hp, m.maxHp]")}')
-    page.evaluate("() => { window.__ms[0].sp = 0; window.__gg.placePotion(3, window.__ms[0].p, 'bulky'); window.__gg.updatePotions(0); }")
-    ok(page.evaluate("() => !!window.__gg.potionAt(3, window.__ms[0].p)") and mon(page, i, "[m.hp, m.maxHp]") == [6, 6], 'a second bulky: unchanged, the potion stays')
+    # stacking (owner 2026-11-09): a second and third bulky add the 3 it started with (9/9, 12/12); a fourth is left standing
+    for want in ([9, 9], [12, 12]):
+        page.evaluate("() => { window.__ms[0].sp = 0; window.__gg.placePotion(3, window.__ms[0].p, 'bulky'); window.__gg.updatePotions(0); }")
+        ok(not page.evaluate("() => !!window.__gg.potionAt(3, window.__ms[0].p)") and mon(page, i, "[m.hp, m.maxHp]") == want, f'another bulky stacks: {want} {mon(page, i, "[m.hp, m.maxHp, m.drank.bulky]")}')
+    page.evaluate("() => { window.__gg.placePotion(3, window.__ms[0].p, 'bulky'); window.__gg.updatePotions(0); }")
+    ok(page.evaluate("() => !!window.__gg.potionAt(3, window.__ms[0].p)") and mon(page, i, "[m.hp, m.maxHp]") == [12, 12], 'a fourth bulky: unchanged, the potion stays')
+    r = page.evaluate("() => { const g = window.__gg, m = window.__ms[0]; g.drink(m, 'speed', true); g.drink(m, 'speed', true); g.drink(m, 'speed', true); return [g.canDrink(m, 'speed'), m.drank.speed, g.potionSnapshot().drank.length]; }")
+    ok(r[:2] == [False, 3], f'three speed potions stack, a fourth may not be drunk {r}')
     page.evaluate("() => { const g = window.__gg; g.G.potions.length = 0; g.G.monsters.length = 0; window.__ms = []; }")
     # speed: two ghouls at the same pace; the one that drank covers 1.5x the distance
     a = page.evaluate(GHOUL, [1, 0.1, 3, 0.05]); b = page.evaluate(GHOUL, [5, 0.1, 3, 0.05])
@@ -369,13 +375,13 @@ def check_toad_tongue(browser, url):
     if not R7: return
     page, errors = potion_page(browser, url)
     t = page.evaluate("() => { const T = window.__gg.TYPES.toad; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop, T.tongueHold]; }")
-    ok(t == [5, 0.03, 24, 10, 0.5, 30, 2, 0.67], f'toad: hp 5, sp 0.03, r 24, coins 10, eat 0.5, pts 30, drop 2, tongueHold 0.67 {t}')
+    ok(t == [5, 0.03, 24, 10, 0.5, 30, 2, 0.45], f'toad: hp 5, sp 0.03, r 24, coins 10, eat 0.5, pts 30, drop 2, tongueHold 0.45 {t}')
     ok(page.evaluate("() => window.__gg.MNAME.toad") == 'Cauldron Toad', 'its name is the Cauldron Toad')
     page.evaluate("() => { for (const w of window.__gg.walls){ w.hp = w.max = 99; } }")
-    i = page.evaluate(NEW, ['toad', 2, 0.55]); page.evaluate("(i) => { window.__ms[i].sp = 0.06; }", i)
+    i = page.evaluate(NEW, ['toad', 2, 0.35]); page.evaluate("(i) => { window.__ms[i].sp = 0.06; }", i)
     tt = gwait(page, "() => window.__ms[0].eating", 5)
     p = page.evaluate("() => window.__ms[0].p")
-    ok(tt is not None and abs(p - 0.67) < 1e-6, f'it walks to 0.67 of the field and stops there, lashing ({tt}, p {p})')
+    ok(tt is not None and abs(p - 0.45) < 1e-6, f'it walks to 0.45 of the field and stops there, lashing ({tt}, p {p})')
     page.evaluate("() => { window.__gg.walls[2].hp = 99; window.__pmax = 0; window.__t0 = window.__gg.G.t; }")
     t0 = page.evaluate("() => window.__gg.G.t")
     pmax = 0
@@ -384,7 +390,7 @@ def check_toad_tongue(browser, url):
     lost = page.evaluate("([t0]) => [99 - window.__gg.walls[2].hp, window.__gg.G.t - t0]", [t0])
     rate = lost[0] / lost[1]
     ok(abs(rate - 0.5) < 0.05, f'its own fence loses about 2 in 4 s ({lost[0]:.2f} in {lost[1]:.2f} s, {rate:.3f}/s)')
-    ok(pmax <= 0.67 + 1e-6, f'it never moves closer (max p {pmax:.4f})')
+    ok(pmax <= 0.45 + 1e-6, f'it never moves closer (max p {pmax:.4f})')
     ok(page.evaluate("() => window.__gg.walls.every((w, c) => c === 2 || w.hp === 99)"), 'no other fence is touched')
     # speed: 1.5x the tongue
     page.evaluate("() => { const g = window.__gg; g.drink(window.__ms[0], 'speed', true); g.walls[2].hp = 99; }")
@@ -396,9 +402,9 @@ def check_toad_tongue(browser, url):
     ok(page.evaluate("() => window.__gg.walls[2].hp") == 99, 'frozen, it does not lash')
     page.evaluate("() => { window.__ms[0].frozenT = 0; }")
     # knocked back: it walks back to 0.67 and lashes again
-    page.evaluate("() => { const m = window.__ms[0]; m.eating = false; m.p = 0.6; }")
+    page.evaluate("() => { const m = window.__ms[0]; m.eating = false; m.p = 0.38; }")
     tt = gwait(page, "() => window.__ms[0].eating", 4)
-    ok(tt is not None and abs(page.evaluate("() => window.__ms[0].p") - 0.67) < 1e-6, f'pushed back it returns to 0.67 and lashes again ({tt})')
+    ok(tt is not None and abs(page.evaluate("() => window.__ms[0].p") - 0.45) < 1e-6, f'pushed back it returns to 0.45 and lashes again ({tt})')
     # its fence down: nothing to lash, it walks on to the gap
     page.evaluate("() => { window.__gg.walls[2].hp = 0; }")
     tt = gwait(page, "() => window.__ms[0].p > 0.75", 6)
@@ -642,6 +648,10 @@ def check_picker_three_gourds(browser, url):
     page.click('#bLoGo'); time.sleep(0.5)
     r = page.evaluate("() => [window.__gg.state, window.__gg.G.n, window.__gg.G.gourdKinds, window.__gg.gourdsOn().map(o => [o.kind, o.r, o.c])]")
     ok(r == ['play', 1205, ['protector', 'wartling'], [['protector', 2, 1], ['wartling', 2, 5]]], f'Start: Protector at (2, 1), Wartling at (2, 5), by slot order {r}')
+    ok(page.evaluate("() => window.__gg.save.lastGourds") == ['protector', 'wartling'], 'Start remembers the gourds picked, in slot order')
+    u = witch_picker(page, ALL3)
+    ok(u['slots'] == ['protector', 'wartling'], f'the next night with a choice starts with the remembered gourds (owner 2026-11-09) {u["slots"]}')
+    page.evaluate("() => { delete window.__gg.save.lastGourds; }")
     # its tutorial unseen: the Wartling starts picked in place of the last
     u = witch_picker(page, ALL3, seen=False)
     ok(u['slots'] == ['grave', 'wartling'], f'with the Wartling tutorial unseen, N3-5 starts with the Grave and the Wartling {u["slots"]}')
@@ -730,6 +740,45 @@ def check_wart_coach(browser, url):
     page.close()
 
 
+def check_wart_coach_fences(browser, url):
+    """The Wartling coach wears the three fences above it for the mend. Broken outside the top row (so no mend), the lesson puts them back,
+    both when it breaks during the slide-up step and when it breaks in the hold step after being moved off the top row."""
+    if not R7: return
+    STEP = "(s) => { const g = window.__gg; for (let i = 0; i < Math.round(s / 0.05); i++) g.update(0.05); return g.G.coach ? g.G.coach.step : null; }"
+    FEN = "() => window.__gg.walls.map(w => w.hp)"
+    BRK = "() => { const g = window.__gg, p = g.gourdPos('wartling'); g.destroyGourd(g.grid[p.r][p.c]); }"
+    page, errors = open_page(browser, url)
+    def to_wtop():
+        page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true }; s.seenGourdCoach = true; s.seenProtectorCoach = true; s.seenWartlingCoach = false; s.lv.green = 1; }")
+        page.evaluate("(lo) => window.__gg.startGame('story', 1205, lo, ['grave', 'wartling'])", [0, 1, 2, 3, 4]); time.sleep(0.3)
+        page.evaluate(STEP, 0.5)
+        page.evaluate("() => { const g = window.__gg, c = g.G.coach; g.slideOne(c.move.ref, c.move.dir); }"); page.evaluate(STEP, 0.4)
+        page.evaluate("() => { const g = window.__gg; g.launchGroup(g.bestLitGroup()); }")
+        return page.evaluate(STEP, 2)
+    full = None
+    ok(to_wtop() == 'wtop', 'reached the slide-up step')
+    worn = page.evaluate(FEN)
+    ok(any(h < w for h, w in zip(worn, page.evaluate("() => window.__gg.walls.map(w => w.max)"))), f'the fences are worn for the lesson {worn}')
+    page.evaluate(BRK)
+    ok(page.evaluate(STEP, 0.1) == 'wback', 'broken before the top row: the respawn step')
+    after = page.evaluate(FEN)
+    ok(after != worn and all(a >= w for a, w in zip(after, worn)) and sum(after) > sum(worn), f'the fences are back to their earlier health {worn} -> {after}')
+    # hold step, moved off the top row before it breaks
+    ok(to_wtop() == 'wtop', 'again at the slide-up step')
+    before = page.evaluate("() => window.__gg.walls.map(w => w.max)")
+    page.evaluate("() => { const g = window.__gg, c = g.G.coach; g.slideOne(c.move.ref, c.move.dir); }")
+    ok(page.evaluate(STEP, 0.4) == 'whold', 'in the top row: the hold step')
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos('wartling'), x = g.grid[p.r][p.c]; g.grid[p.r][p.c] = null; g.grid[1][p.c] = x; }")
+    page.evaluate(STEP, 0.1)
+    worn = page.evaluate(FEN)
+    page.evaluate(BRK)
+    ok(page.evaluate(STEP, 0.1) == 'praise', 'broken: Nice')
+    after = page.evaluate(FEN)
+    ok(sum(after) > sum(worn), f'a break outside the top row does not leave the fences worn {worn} -> {after}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
 def check_wart_unlock(browser, url):
     if not R7: return
     page, errors = open_page(browser, url)
@@ -767,7 +816,7 @@ def check_wart_art(browser, url):
     page.close()
 
 
-CHECKS.update({'check_wart_damage': check_wart_damage, 'check_wart_break_heal': check_wart_break_heal, 'check_picker_three_gourds': check_picker_three_gourds,
+CHECKS.update({'check_wart_coach_fences': check_wart_coach_fences, 'check_wart_damage': check_wart_damage, 'check_wart_break_heal': check_wart_break_heal, 'check_picker_three_gourds': check_picker_three_gourds,
                'check_wart_coach': check_wart_coach, 'check_wart_unlock': check_wart_unlock, 'check_wart_art': check_wart_art})
 
 
@@ -780,7 +829,7 @@ def check_ashcrone(browser, url):
     if not R7: return
     page, errors = potion_page(browser, url)
     t = page.evaluate("() => { const T = window.__gg.TYPES.ashcrone; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop, T.zoneEvery, T.zoneLast, T.crows]; }")
-    ok(t == [4, 0.035, 22, 9, 0.5, 30, 2, 10, 8, 4], f'ashcrone: hp 4, sp 0.035, r 22, coins 9, eat 0.5, pts 30, drop 2, zoneEvery 10, zoneLast 8, crows 4 {t}')
+    ok(t == [4, 0.035, 22, 9, 0.5, 30, 2, 6, 8, 4], f'ashcrone: hp 4, sp 0.035, r 22, coins 9, eat 0.5, pts 30, drop 2, zoneEvery 6, zoneLast 8, crows 4 {t}')
     ok(page.evaluate("() => window.__gg.MNAME.ashcrone") == 'Ash Crone' and bool(page.evaluate("() => window.__gg.MINTRO.ashcrone")), 'her name is the Ash Crone, with an intro card')
     # ringed by crows: left, right, ahead and behind (the Vampire's spots); none when she is a minion
     c = sorted(page.evaluate("() => { const m = window.__gg.spawnMonster('ashcrone', 3, false, 0.3); m.sp = 0; return (" + CROWS + ")(); }"))   # read before a frame moves them (crows are fast)
@@ -795,7 +844,8 @@ def check_ashcrone(browser, url):
     page.evaluate(GHOUL, [0, 0.6, 3, 0])   # 3 lanes away: never her centre
     tz = gwait(page, "() => window.__gg.G.hexZones.length >= 1", 12)
     z = page.evaluate("() => window.__gg.G.hexZones.map(z => [z.shape, z.lane, Math.round(z.p * 1000) / 1000, z.t])")
-    ok(tz is not None and abs(tz - 10) < 0.4, f'her first zone comes at 10 s ({tz})')
+    ok(tz is not None and abs(tz - 1.5) < 0.4, f'her first zone comes 1.5 s after she spawns ({tz})')
+    page.evaluate("() => { window.__z0 = window.__gg.G.hexZones[0]; }")
     ok(len(z) == 1 and z[0][:3] == ['box', 5, 0.5] and abs(z[0][3] - 8) < 0.3, f'one box zone centred on the ghoul in lane 5 (2 lanes away), 8 s to run {z}')
     ok(mon(page, i, "m.anim && m.anim.clip") == 'hex', 'she plays her hex clip as she casts')
     # a ghoul killed inside it collapses and rises after 4 s
@@ -803,7 +853,7 @@ def check_ashcrone(browser, url):
     ok(d == [False, 0] and mon(page, j, "m.rise") > 3.5, f'the ghoul killed inside collapses to rise {d}')
     tr = gwait(page, "() => window.__ms[1].rise <= 0", 6)
     ok(tr is not None and abs(tr - 4) < 0.4 and mon(page, j, "[m.dead, m.hp > 0]") == [False, True], f'and rises again after 4 s ({tr})')
-    tg = gwait(page, "() => window.__gg.G.hexZones.length === 0 || window.__gg.G.hexZones[0].t > 7.5", 6)
+    tg = gwait(page, "() => !window.__gg.G.hexZones.includes(window.__z0)", 8)
     ok(tg is not None, f'the zone runs out 8 s after it was cast ({tg})')
     # nobody else within 2 lanes: no zone
     page.evaluate("() => { const g = window.__gg, G = g.G; G.monsters.length = 0; G.hexZones.length = 0; window.__ms = []; }")
@@ -819,14 +869,14 @@ def check_covenwitch(browser, url):
     if not R7: return
     page, errors = potion_page(browser, url)
     t = page.evaluate("() => { const T = window.__gg.TYPES.covenwitch; return T && [T.hp, T.sp, T.r, T.coins, T.eat, T.pts, T.drop, T.brewEvery, T.brewN]; }")
-    ok(t == [3, 0.04, 22, 9, 0.5, 28, 2, 7, [1, 2]], f'covenwitch: hp 3, sp 0.04, r 22, coins 9, eat 0.5, pts 28, drop 2, brewEvery 7, brewN [1, 2] {t}')
+    ok(t == [3, 0.04, 22, 9, 0.5, 28, 2, 5, [1, 2]], f'covenwitch: hp 3, sp 0.04, r 22, coins 9, eat 0.5, pts 28, drop 2, brewEvery 5, brewN [1, 2] {t}')
     ok(page.evaluate("() => window.__gg.MNAME.covenwitch") == 'Blood Coven Witch' and bool(page.evaluate("() => window.__gg.MINTRO.covenwitch")), 'her name is the Blood Coven Witch, with an intro card')
     i = page.evaluate(NEW, ['covenwitch', 0, 0.1])
     page.evaluate(GHOUL, [3, 0.5, 3, 0]); page.evaluate(GHOUL, [5, 0.3, 3, 0]); page.evaluate(GHOUL, [6, 0.6, 3, 0])
     ahead = {(3, tile_of(page, 0.5)[0] + 1), (5, tile_of(page, 0.3)[0] + 1), (6, tile_of(page, 0.6)[0] + 1)}
     tb = gwait(page, "() => window.__gg.G.potions.length >= 1", 9)
     ps = potions_rc(page)
-    ok(tb is not None and abs(tb - 7) < 0.4, f'her first brew at 7 s ({tb})')
+    ok(tb is not None and abs(tb - 1.5) < 0.4, f'her first brew 1.5 s after she spawns ({tb})')
     ok(1 <= len(ps) <= 2 and all((l, r) in ahead for l, r, _ in ps) and all(k in ('bulky', 'speed', 'colour') for *_, k in ps), f'1-2 potions, each one tile ahead of a ghoul {ps} (ahead tiles {sorted(ahead)})')
     ok(mon(page, i, "m.anim && m.anim.clip") == 'hex', 'she plays her hex clip as she brews')
     # many brews: one or two potions each, never two on a tile, all kinds seen
@@ -1331,7 +1381,7 @@ def check_fallen_hex(browser, url):
     page.evaluate("() => { const g = window.__gg; g.G.altar.hp = 8; g.damage(window.__b, 5, '#fff'); }")
     ok(page.evaluate("() => [window.__b.hp, window.__gg.G.floats.some(f => f.text === 'No damage')]") == [33.75, True], 'while it stands she takes no damage ("No damage")')
     al = page.evaluate("() => window.__gg.G.altar.lane")
-    page.evaluate("() => { window.__gg.G.altar.hp = 1; }")
+    page.evaluate("() => { const G = window.__gg.G; G.altar.hp = 1; for (let i = G.monsters.length - 1; i >= 0; i--) if (G.monsters[i].type === 'crow') G.monsters.splice(i, 1); }")   # her glides' crows (owner 2026-11-09) would meet the pumpkin first
     page.evaluate(TSHOOT, [0, al])
     ok(page.evaluate(ALTAR) is None, 'a pumpkin up its lane breaks it')
     page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 5, '#fff'); }")
@@ -1509,6 +1559,233 @@ def check_fallen_hex_baked(browser, url):
 
 
 CHECKS.update({'check_fallen_hex': check_fallen_hex, 'check_fh_altar_immune': check_fh_altar_immune, 'check_fallen_hex_continue': check_fallen_hex_continue, 'check_fallen_hex_baked': check_fallen_hex_baked})
+
+
+# ---------- Task 10: the real levels N3-1 to N3-16, intro cards, the nightmare bestiary ----------
+N3_NAMES = ["Witch's Brew", 'Ash and Crows', 'Blood Coven', 'The Treant', 'The Wartling Gourd', 'Bottle Imps', 'Toad Song', 'Hall of Mirrors',
+            'Turncoat Brew', 'Graveless Dead', 'Ill Wind', 'The Cauldron', 'Treant Returns', 'Glass Coven', 'The Long Night', 'The Fallen Hexwitch']
+R7_NAMES += ['Witchwood: Nightmare', 'Ash and Crows', 'Blood Coven', 'Bottle Imps', 'Toad Song', 'Turncoat Brew', 'Graveless Dead', 'Ill Wind', 'The Cauldron',
+             'Treant Returns', 'Glass Coven', 'The brew boils', 'Brew marks', 'brewmarks']   # the other names ('Hall of Mirrors', 'The Long Night', ...) are world 3 / N2 names too
+N3_NEW = {'ashcrone': 2, 'covenwitch': 3, 'flaskbearer': 6, 'toad': 7, 'triptych': 8}   # each new monster and the level that brings it first (spec Part 7)
+N3_ALSO = {'ashcrone': ['crow']}   # what each brings onto the field (companions); the Treant's roots and the Fallen Hexwitch's crows come through ALSO_BAKE too
+N3_LEVELS_JS = """() => { const g = window.__gg; return g.NIGHTMARE_LEVELS[2].map((d, i) => { const L = g.levelFor(1201 + i);
+  return { level:d.level, name:d.name, pool:d.pool.map(e => e[0]), weights:d.pool.map(e => e[1]), types:d.pool.every(([k]) => !!(g.TYPES[k] || g.VARIANTS[k])), gourd:!!d.gourd, gourds:d.gourds || null,
+    unlockGourds:d.unlockGourds || null, boss:d.boss, bossForm:d.bossForm, bossChest:d.bossChest || null, coach:d.coach || null, intro:d.intro || [], potions:d.potions || null,
+    brewMarks:d.brewMarks || null, gust:d.gust || null, graves:d.graves, spawnGap:d.spawnGap, spawnBurst:d.spawnBurst, total:d.total, interval:d.interval,
+    quests:g.questsFor(L), questsOk:g.questsFor(L).every(([t]) => !!g.QUEST_TYPES[t]) }; }); }"""
+
+
+def n3_open_all(page):
+    """Every story level, every Release 4 and 5 nightmare level and N3-1 to N3-15 beaten (so all of N3 is open); all three gourds unlocked."""
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 17)}, **{1100 + k: 3 for k in range(1, 17)}, **{1200 + k: 3 for k in range(1, 16)}})
+    page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true }; s.seenGourdCoach = true; s.seenProtectorCoach = true; s.seenWartlingCoach = true; }")
+
+
+def check_n3_levels(browser, url):
+    """The 16 designed levels (spec Part 7): names, pools, gourds, bosses, potions, brew marks and pacing are data, and every preview opens."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    L = page.evaluate(N3_LEVELS_JS)
+    ok(len(L) == 16 and [d['level'] for d in L] == list(range(1, 17)), f'16 witchwood nightmare levels in order ({len(L)})')
+    ok([d['name'] for d in L] == N3_NAMES, f"each level has the spec's name {[d['name'] for d in L]}")
+    ok(all(d['pool'] and d['types'] for d in L), 'every pool is non-empty and every pool type exists in TYPES or VARIANTS')
+    intros = {k + 1: d['intro'] for k, d in enumerate(L) if d['intro']}
+    ok(intros == {n: [t] for t, n in N3_NEW.items()}, f'each new monster is introduced on the level that first brings it {intros}')
+    ok(all(t in d['pool'] for d in L for t in d['intro']), 'every introduced monster is in its level pool')
+    early = [(t, k + 1) for k, d in enumerate(L) for t in d['pool'] if t in N3_NEW and k + 1 < N3_NEW[t]]
+    ok(not early, f'no new monster walks in before its introduction {early}')
+    ok(all(t in L[14]['pool'] for t in N3_NEW), f"N3-15 (The Long Night) holds every new monster {L[14]['pool']}")
+    ok(all(d['gourd'] for d in L), 'a gourd night on every level')
+    ok(all(d['gourds'] == ['grave', 'protector'] for d in L[:4]) and all(d['gourds'] == ['grave', 'protector', 'wartling'] for d in L[4:]), f"N3-1 to N3-4 offer the Grave and Protector Gourds, N3-5 on all three {[d['gourds'] for d in L]}")
+    ok(L[3]['boss'] == 'treant' and L[3]['bossForm'] == 1 and L[3]['bossChest'] == 'normal' and L[3]['unlockGourds'] == ['wartling'], f"N3-4: the Treant, a normal chest, unlocks the Wartling {L[3]['boss'], L[3]['bossChest'], L[3]['unlockGourds']}")
+    ok(L[12]['boss'] == 'treant' and L[12]['bossForm'] == 2 and L[12]['bossChest'] == 'normal', 'N3-13: the Treant in form 2 with a normal chest')
+    ok(L[15]['boss'] == 'fallenhexwitch' and L[15]['bossChest'] == 'normal', 'N3-16: the Fallen Hexwitch with a normal chest')
+    ok([k + 1 for k, d in enumerate(L) if d['boss']] == [4, 13, 16], 'bosses on N3-4, N3-13 and N3-16 only')
+    ok(L[4]['coach'] == 'wartling' and [k + 1 for k, d in enumerate(L) if d['coach']] == [5], 'N3-5 keeps the Wartling tutorial (the only coach)')
+    P = [d['potions'] for d in L]
+    ok(all(p and p['every'] > 0 and 1 <= p['count'][0] <= p['count'][1] for p in P), f'potions on every level {P}')
+    ok(all(not p.get('kinds') for k, p in enumerate(P) if k != 8) and P[8].get('kinds') == ['colour'], f"N3-9 (Turncoat Brew): colour potions only; the rest all three kinds {[p.get('kinds') for p in P]}")
+    bm = [k + 1 for k, d in enumerate(L) if d['brewMarks']]
+    ok(bm == [6, 7, 8, 9, 10, 11, 12, 14, 15], f'brew marks on N3-6 to N3-15 except N3-13 {bm}')
+    ok(all(d['brewMarks'] == [0.33, 0.66] for d in L if d['brewMarks']), 'two marks at 0.33 and 0.66')
+    gust = [k + 1 for k, d in enumerate(L) if d['gust']]
+    ok(gust == [11] and L[10]['gust'].get('partial') is True and L[10]['gust']['every'] > 0, f"N3-11 (Ill Wind): the world 3 patch wind with partial gusts, only there {gust} {L[10]['gust']}")
+    ok({'flaskbearer'} <= set(L[10]['pool']), f"N3-11 brings Flask Bearers {L[10]['pool']}")
+    ok({'chameleon', 'rchameleon', 'witch'} <= set(L[8]['pool']), f"N3-9: Chameleons, Reverse Chameleons and witches {L[8]['pool']}")
+    top = lambda d: d['pool'][d['weights'].index(max(d['weights']))]
+    ok(top(L[9]) == 'ashcrone' or L[9]['weights'][L[9]['pool'].index('ashcrone')] >= 6, f"N3-10 (Graveless Dead): many Ash Crones {list(zip(L[9]['pool'], L[9]['weights']))}")
+    ok({'toad', 'covenwitch'} <= set(L[11]['pool']) and P[11]['every'] <= min(p['every'] for p in P), f"N3-12 (The Cauldron): toads and Coven Witches, the quickest potions {L[11]['pool']} {P[11]}")
+    ok({'triptych', 'mirror'} <= set(L[7]['pool']), f"N3-8: Triptych Sprites with Mirror Sprites {L[7]['pool']}")
+    ok({'triptych', 'covenwitch'} <= set(L[13]['pool']), f"N3-14 (Glass Coven): Triptych Sprites and Coven Witches {L[13]['pool']}")
+    ok(all(not d['graves'] for d in L), "no graves (N3-5's coach needs the Wartling's side columns clear)")
+    ok(all(isinstance(d['spawnGap'], (int, float)) and isinstance(d['spawnBurst'], (int, float)) for d in L), 'every level sets spawnGap and spawnBurst')
+    ok(all(d['questsOk'] and len(d['quests']) == 3 for d in L), 'every level has three quests of existing types')
+    ok(len({(d['total'], d['interval'], tuple(d['pool'])) for d in L}) == 16, 'no two levels share pool and pacing (each has its own theme)')
+    n3_open_all(page)
+    for k in range(1, 17):
+        page.evaluate(f"() => {{ document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); window.__gg.openPreview({1200 + k}); }}"); time.sleep(0.25)
+    ok(not errors, f'every preview opens without a page error {errors[:2]}')
+    page.close()
+
+
+def n3_intro_titles(page, n):
+    """Play night n from its preview card and read the intro cards it shows, in order."""
+    page.evaluate(f"() => {{ document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); window.__gg.openPreview({n}); }}"); time.sleep(0.4)
+    page.click('#bPvGo'); time.sleep(0.4)
+    out = []
+    for _ in range(8):
+        if page.evaluate("() => window.__gg.state") != 'intro': break
+        out.append(page.evaluate("() => document.querySelector('#inTitle').textContent"))
+        page.click('#bIntroOk'); time.sleep(0.3)
+    return out
+
+
+def check_n3_intros(browser, url):
+    """First appearances on the witchwood track show a card: potions (N3-1), each new monster where it first walks in, the Treant (both forms),
+    the Wartling Gourd (N3-5), brew marks (N3-6) and the Fallen Hexwitch."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    n3_open_all(page)
+    SEEN = "() => { window.__gg.save.seenIntro = { quests:true, gourd:true, 'gourd:protector':true, wind:true }; }"   # the Grave and Protector cards were shown on N1-5 and N2-5, the wind card in world 3
+    page.evaluate(SEEN)
+    txt = page.evaluate("""() => { const g = window.__gg; g.openPreview(1201); document.querySelector('#bPvGo').click();
+      return [document.querySelector('#inTitle').textContent, document.querySelector('#inText').textContent, document.querySelector('#inIcon canvas') ? 1 : 0]; }""")
+    ok(txt[0] == 'Potions' and 'drinks' in txt[1] and 'cannot' in txt[1] and txt[2] == 1, f'the potions card says monsters drink them and you cannot clear them, with the bottles drawn {txt}')
+    page.evaluate(SEEN)
+    t = {k: n3_intro_titles(page, 1200 + k) for k in range(1, 17)}
+    ok(t[1] == ['Potions'], f'N3-1 explains potions only {t[1]}')
+    for k, name in ((2, 'Ash Crone'), (3, 'Blood Coven Witch'), (6, 'Flask Bearer'), (7, 'Cauldron Toad'), (8, 'Triptych Sprite')):
+        ok(any(x.startswith('New monster') and name in x for x in t[k]), f'N3-{k} introduces the {name} {t[k]}')
+    ok(any('Treant' in x and 'full form' not in x for x in t[4]), f'N3-4 introduces the Treant {t[4]}')
+    ok(t[5] == ['The Wartling Gourd'], f'N3-5 explains the Wartling Gourd {t[5]}')
+    ok('Brew marks' in t[6] and t[6].index('Brew marks') < len(t[6]), f'N3-6 explains brew marks {t[6]}')
+    ok(all(not t[k] for k in (9, 10, 11, 12, 14, 15)), f'N3-9 to N3-12, N3-14 and N3-15 bring nothing new {[t[k] for k in (9, 10, 11, 12, 14, 15)]}')
+    ok(any('Treant' in x and 'full form' in x for x in t[13]), f"N3-13 shows the Treant's form-2 card {t[13]}")
+    ok(any('Fallen Hexwitch' in x for x in t[16]), f'N3-16 introduces the Fallen Hexwitch {t[16]}')
+    ok(not any(x in ('Potions', 'Brew marks') for k in range(2, 17) for x in t[k] if not (k == 6 and x == 'Brew marks')), 'the potion and brew mark cards never repeat')
+    bt = page.evaluate("() => { const g = window.__gg; g.save.seenIntro = { quests:true, gourd:true, 'gourd:protector':true, 'gourd:wartling':true, wind:true, potions:true, 'm:flaskbearer':true }; g.openPreview(1206); document.querySelector('#bPvGo').click(); return [document.querySelector('#inTitle').textContent, document.querySelector('#inText').textContent]; }")
+    ok(bt[0] == 'Brew marks' and 'crows' in bt[1] and 'faster' in bt[1], f'the brew marks card says crows swoop in and potions come faster {bt}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_n3_bestiary(browser, url):
+    """The witchwood nightmare book's bestiary (Release 7): the new monsters in first-met order with the Ash Crone's crows, the Treant, and the
+    Fallen Hexwitch last; story monsters are not repeated."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    # N3-1 to N3-3 open: the Ash Crone, her crows and the Blood Coven Witch have been met
+    set_stars(page, {**story_done(), 1104: 3, 1201: 3, 1202: 3})
+    open_nm_book(page, 2)
+    ok(page.evaluate("() => !document.querySelector('#bBkFlip').hidden"), 'with the gate open the page has a Bestiary button')
+    page.click('#bBkFlip'); time.sleep(0.7)
+    b = page.evaluate("() => [document.querySelector('#bsTitle').textContent, [...document.querySelectorAll('#bestiary .bs')].map(e => [e.classList.contains('unmet'), e.querySelector('b').textContent, e.querySelector('.ab').textContent, (e.querySelector('.lo') || {}).textContent || ''])]")
+    ok('Nightmare' in b[0] and 'Witchwood' in b[0], f'the page is titled as the witchwood nightmare edition ({b[0]!r})')
+    met = [x[1] for x in b[1] if not x[0]]
+    ok(met == ['Ash Crone', 'Crow', 'Blood Coven Witch'], f'met so far, in order: the Ash Crone, her crow, the Blood Coven Witch {met}')
+    ok(all(x[2] and x[3] for x in b[1] if not x[0]), 'each met entry has an ability and a lore line')
+    ok(len(b[1]) == 8 and all(x[0] for x in b[1][3:]), f'eight entries, the rest unmet silhouettes ({len(b[1])})')
+    n3_open_all(page)
+    open_nm_book(page, 2)
+    page.evaluate("() => { if (document.querySelector('#bestiary').hidden) document.querySelector('#bBkFlip').click(); }"); time.sleep(0.7)
+    e = page.evaluate("() => [...document.querySelectorAll('#bestiary .bs')].map(e => e.classList.contains('unmet') ? null : [e.querySelector('b').textContent, !!(e.querySelector('.lo') || {}).textContent])")
+    names = [x and x[0] for x in e]
+    want = ['Ash Crone', 'Crow', 'Blood Coven Witch', 'The Treant', 'Flask Bearer', 'Cauldron Toad', 'Triptych Sprite', 'The Fallen Hexwitch']
+    ok(names == want, f'the full list in first-met order, the Fallen Hexwitch last {names}')
+    ok(all(x and x[1] for x in e), 'every entry has lore')
+    ok(not any(n in names for n in ('Wood Ghoul', 'Broom Imp', 'Owl-bat', 'Wisp', 'Mirror Sprite', 'Chameleon', 'Reverse Chameleon', 'Witch')), 'story monsters are not repeated')
+    for w, last in ((0, 'The Fallen Gravekeeper'), (1, 'The Fallen Poltergeist')):
+        open_nm_book(page, w)
+        page.evaluate("() => { if (document.querySelector('#bestiary').hidden) document.querySelector('#bBkFlip').click(); }"); time.sleep(0.7)
+        bb = page.evaluate("() => [...document.querySelectorAll('#bestiary .bs b')].map(e => e.textContent)")
+        ok(bb and bb[-1] == last and 'Ash Crone' not in bb, f'the world {w + 1} nightmare bestiary is unchanged (ends on {last}) {bb[-2:]}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_n3_prebake(browser, url):
+    """Each level bakes what it can spawn when its night starts: its pool, what those monsters bring (the Ash Crone's crows), a brew mark's
+    crows, the Treant's roots and its boss; every night starts and runs a moment without a page error."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    L = page.evaluate(N3_LEVELS_JS)
+    missing = []
+    for k, d in enumerate(L, 1):
+        page.reload(); page.wait_for_function('() => !!window.__gg'); time.sleep(0.3)   # a fresh atlas cache: what is baked is this night's
+        page.evaluate("() => { Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true }); window.__gg.save.gourds = { grave:true, protector:true, wartling:true }; }")
+        nm3_start(page, k)
+        want = {t for t in d['pool'] if t in N3_NEW or t == 'crow'} | {a for t in d['pool'] for a in N3_ALSO.get(t, [])} | ({d['boss']} if d['boss'] else set())
+        if d['brewMarks']: want.add('crow')
+        if d['boss'] == 'treant': want.add('root')
+        if d['boss'] == 'fallenhexwitch': want.add('crow')
+        got = page.evaluate("(ks) => ks.filter(k => !window.__gg.isBaked(k) && !window.__gg.isBaked(k + '|form2'))", sorted(want))   # a form-2 boss bakes as kind|form2
+        if got: missing.append((k, got))
+        time.sleep(0.4)
+    ok(not missing, f'every level bakes its new monsters, what they bring, brew mark crows and its boss at night start {missing}')
+    ti = next(k for k, d in enumerate(L, 1) if 'toad' in d['pool'])
+    page.reload(); page.wait_for_function('() => !!window.__gg'); time.sleep(0.3)
+    page.evaluate("() => { Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true }); }")
+    ok(page.evaluate("() => window.__gg.tongueBaked()") is False, 'fresh page: no tongue sprite yet')
+    nm3_start(page, 1)
+    ok(page.evaluate("() => window.__gg.tongueBaked()") is False, 'a night without toads bakes no tongue')
+    nm3_start(page, ti)
+    ok(page.evaluate("() => window.__gg.tongueBaked()") is True, f'N3-{ti} bakes the toad tongue sprite at night start, before any toad lashes')
+    ok('ashcrone' in L[1]['pool'] and 'crow' not in L[1]['pool'], f"N3-2's crows come only with its Ash Crones (so its crow is baked through ALSO_BAKE) {L[1]['pool']}")
+    ok(not errors, f'no page errors on any night {errors[:2]}')
+    page.close()
+
+
+def check_n3_coach_potions(browser, url):
+    """N3-5: the level's potion clock holds while the Wartling coach teaches (no potion lands on the lesson), and runs once it is done."""
+    if not R7: return
+    STEP = "(s) => { const g = window.__gg; for (let i = 0; i < Math.round(s / 0.05); i++) g.update(0.05); return [g.G.coach ? g.G.coach.step : null, g.G.potions.length, g.G.potionT]; }"
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true }; s.seenGourdCoach = true; s.seenProtectorCoach = true; s.seenWartlingCoach = false; }")
+    page.evaluate("(lo) => window.__gg.startGame('story', 1205, lo, ['grave', 'wartling'])", [0, 1, 2, 3, 4]); time.sleep(0.3)
+    every = page.evaluate("() => window.__gg.G.def.potions.every")
+    r = page.evaluate(STEP, every + 3)
+    ok(r[0] == 'wslide' and r[1] == 0 and abs(r[2] - every) < 1e-6, f'{every + 3:.0f} s into the lesson: no potions and the clock held at {every} s {r}')
+    page.evaluate("() => { const g = window.__gg; g.G.coach = null; }")
+    r = page.evaluate(STEP, every + 0.5)
+    ok(r[1] >= 1, f'with the coach done the potions come {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_n3_levels': check_n3_levels, 'check_n3_intros': check_n3_intros, 'check_n3_bestiary': check_n3_bestiary, 'check_n3_prebake': check_n3_prebake,
+               'check_n3_coach_potions': check_n3_coach_potions})
+
+
+# ---------- Task 11: the Ash Crone's zone is a baked sprite ----------
+def check_n3_zone_budget(browser, url):
+    """The Ash Crone's 3x3 zone (G.hexZones src 'crone', drawn by drawCroneZoneFx) must not lag a phone (the 6-20 lesson, w6_check check_draw_budget):
+    its sprite is baked when a night that can spawn her starts (not on first sight), and four zones on N3-10 cost at most 40 strokes and 2 new gradients a frame."""
+    if not R7: return
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script("""(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+      for (const k of ['stroke', 'fill', 'arc', 'createRadialGradient', 'drawImage']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; } })();""")
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    nm3_start(page, 1); time.sleep(1.0)
+    ok(page.evaluate("() => window.__gg.hexZoneBaked()") == 0, 'a night without Ash Crones bakes no hex zone sprite')
+    nm3_start(page, 10); time.sleep(3.2)
+    ok(page.evaluate("() => window.__gg.hexZoneBaked()") >= 1, 'N3-10 bakes the 3x3 hex zone sprite at night start, not on first sight')
+    page.evaluate(PQ); page.evaluate("() => { window.__gg.G.hexZones.length = 0; }")
+    count = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 30) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.stroke || 0) / 30, (c.createRadialGradient || 0) / 30, (c.fill || 0) / 30, (c.arc || 0) / 30, (c.drawImage || 0) / 30]); } }; requestAnimationFrame(tick); })"
+    time.sleep(0.5); base = page.evaluate(count)
+    page.evaluate("() => { const G = window.__gg.G; for (const [l, p] of [[1, 0.3], [3, 0.5], [5, 0.3], [6, 0.65]]) G.hexZones.push({ shape:'box', lane:l, p, t:60, src:'crone' }); }")
+    time.sleep(0.6); lit = page.evaluate(count)
+    d = [lit[i] - base[i] for i in range(5)]
+    print(f'    four crone zones add per frame: stroke {d[0]:.1f}, new gradients {d[1]:.1f}, fill {d[2]:.1f}, arc {d[3]:.1f}, drawImage {d[4]:.1f}')
+    ok(lit[0] <= 40 and lit[1] <= 2, f'four Ash Crone zones are baked: {lit[0]:.1f} strokes and {lit[1]:.1f} new gradients per frame (limits 40 / 2; empty field {base[0]:.1f} / {base[1]:.1f})')
+    ok(d[0] <= 24, f'and they add at most 24 strokes a frame ({d[0]:.1f})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_n3_zone_budget': check_n3_zone_budget})
+
 
 def main():
     ap = argparse.ArgumentParser()

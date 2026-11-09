@@ -6,7 +6,7 @@ import { pipSprite, veilSprite, VEIL_R } from './fx.js';
 import { veiledNow } from '../keep.js';
 import { drawPotionIcons } from './potion.js';
 import { drawTongue } from './witchwood.js';
-import { POTION_BULKY_SCALE } from '../../data/rules.js';
+import { bulkyScale } from '../../data/rules.js';
 import { FIELD_TOP } from '../state.js';
 import { TYPES, VARIANTS } from '../../data/monsters.js';
 import { CS } from '../state.js';
@@ -18,7 +18,7 @@ import { charIcon, drawChar } from './anim.js';
 import { clamp, TAU } from '../util.js';
 
 export function drawMonster(m, t){
-  let y = mY(m); const s = mS(m) * (__RELEASE__ >= 7 && m.drank && m.drank.bulky ? POTION_BULKY_SCALE : 1);   // a bulky potion: drawn bigger (Release 7)
+  let y = mY(m); const s = mS(m) * (__RELEASE__ >= 7 && m.drank ? bulkyScale(m) : 1);   // bulky potions: drawn bigger (Release 7)
   if (m.eating && m.frozenT <= 0) y += Math.sin(m.ph * 14) * 2.5;
   const fade = m.demo ? 1 : Math.min(1, m.age / 0.5);
   const blue = m.slowT > 0 || m.frozenT > 0;

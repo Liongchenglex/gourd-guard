@@ -3,8 +3,9 @@ import { SACK } from '../data/economy.js';
 import { resolveMatches } from './board.js';
 import { TYPES, MODS, VARIANTS, BURNS_TO, ICE_ONLY, BURNING_FROM, HUSK_STRIP } from '../data/monsters.js';
 import { BURN_EVERY, RAINBOW, GLUE_SLOW } from '../data/pumpkins.js';
-import { POTION_SPEED } from '../data/rules.js';
+import { potionSpeed } from '../data/rules.js';
 import { glueStep } from './glue.js';
+import { magnetSlide } from './magnet.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
 import { updateHollowMonster, reapLanes, initHollowMonster, initLamplighter, updateLamplighter, initFallenPolt, updateFallenPolt } from './hollow.js';
 import { newCastle, initKeepMonster, updateKeepMonster, keepStop, keepParked, keepSpeed, lancerHit, keepTick, updateSiege, updateFallenCount } from './keep.js';
@@ -20,7 +21,7 @@ import * as E from '../data/endless.js';
 
 // ---------- Monsters ----------
 
-export function mY(m){ return FIELD_TOP + clamp(m.p, -0.1, 1.05) * (FIELD_BOT - FIELD_TOP); }
+export function mY(m){ return FIELD_TOP + (clamp(m.p, -0.1, 1.05) + (__MAGNET__ && m.slideDp ? m.slideDp : 0)) * (FIELD_BOT - FIELD_TOP); }   // slideDp: a Magnet pull still sliding in (engine/magnet.js)
 
 export function mS(m){ return 0.85 + 0.2 * clamp(m.p, 0, 1); }
 
@@ -214,6 +215,7 @@ export function updateMonster(m, dt){
     if (m.rise <= 0){ m.rise = 0; m.hp = (m.type === 'mummy' || ICE_ONLY.has(m.type)) ? 1 : m.maxHp; m.flash = 0.2; addFloat('Rises again', m.x, mY(m) - m.r - 30, '#d8cfb0', 16, 0.9); if (m.type === 'boss') SFX.bossSfx(m.kind, 'revive'); else SFX.monsterAct('mummy', 'rise'); }   // mummies come back with 1 HP (owner)
     return;
   }
+  if (__MAGNET__ && magnetSlide(m, dt)) return;   // pulled by a Magnet hit: sliding onto its tile (engine/magnet.js)
   let sp = m.sp;
   if (m.frozenT > 0){ m.frozenT -= dt; sp = 0; }
   else if (m.slowT > 0){ m.slowT -= dt; sp *= 0.5; }
@@ -240,7 +242,7 @@ export function updateMonster(m, dt){
     if (__RELEASE__ >= 8 && m.type === 'lancer' && walls[m.lane].hp > 0 && lancerHit(m)) return;   // its fence was down and has been repaired: the charge lands now, not a chew of 0 (engine/keep.js)
     m.shield = false;   // a shield knight lowers its shield to chew
     m.reflecting = false;   // a mirror sprite drops its mirror to chew
-    const mul = (m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1) * (__RELEASE__ >= 7 && m.drank && m.drank.speed ? POTION_SPEED : 1);   // a speed potion: it chews (and walks through a gap) faster (Release 7, engine/potion.js)
+    const mul = (m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1) * (__RELEASE__ >= 7 && m.drank ? potionSpeed(m) : 1);   // speed potions: it chews (and walks through a gap) faster (Release 7, engine/potion.js)
     if (__RELEASE__ >= 7 && m.tongue){   // the Cauldron Toad lashes its fence from its hold with the same chew (engine/witchwood.js); its fence down, it walks on
       if (tongueFree(m)) return;
       damageWall(m.lane, m.eat * mul * dt);
@@ -438,7 +440,7 @@ export function updateMonster(m, dt){
     }
   }
   if (__RELEASE__ >= 4 && m.rush > 0) sp *= TYPES.rooster.rushMul;
-  if (__RELEASE__ >= 7 && m.drank && m.drank.speed) sp *= POTION_SPEED;   // a speed potion (Release 7, engine/potion.js)
+  if (__RELEASE__ >= 7 && m.drank) sp *= potionSpeed(m);   // speed potions, stacked (Release 7, engine/potion.js)
   if (__RELEASE__ >= 8) sp *= keepSpeed(m);   // a Storm Lancer's charge and a Storm Marshal's rally, on top of Ice (engine/keep.js)
   let np = Math.min(m.p + sp * dt, aheadLimit(m));
   if (__RELEASE__ >= 8) np = Math.min(np, keepStop(m));   // a Lobber Cart parks at its spot and never goes on to chew (engine/keep.js)

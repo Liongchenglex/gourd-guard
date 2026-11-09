@@ -11,8 +11,8 @@ import { drawMonster } from './monsters.js';
 import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
-import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite } from './tools.js';
-import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR } from './fx.js';
+import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite, magSparkSprite } from './tools.js';
+import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -259,6 +259,13 @@ function drawHkTell(t){
   const k = G.hkTell, x = LANE(k.col) - CS / 2;
   ctx.globalAlpha = 0.75 + 0.25 * Math.sin(t * 18); ctx.drawImage(tellSp, x, GY - CS * 0.5, CS, CS * (ROWS + 0.5)); ctx.globalAlpha = 1;
 }
+/** The Magnet pull (Release 6): a baked copper spark streak stretched from where a monster was to the hit tile, flickering out. */
+function drawMagPull(v){
+  const sp = magSparkSprite(), p = v.t / v.dur, dx = v.x2 - v.x1, dy = v.y2 - v.y1, len = Math.hypot(dx, dy); if (len < 4) return;
+  ctx.save(); ctx.translate(v.x1, v.y1); ctx.rotate(Math.atan2(dy, dx));
+  ctx.globalAlpha = (1 - p) * (0.75 + 0.25 * Math.sin(v.t * 60)); ctx.globalCompositeOperation = 'lighter';
+  ctx.drawImage(sp.c, 0, -sp.oy, len, sp.h); ctx.restore();
+}
 /** Beige glue tiles (Release 3): the baked splat, fading out over its last half second. */
 export function drawGlue(){
   const gl = G.glue; if (!gl || !gl.length) return;
@@ -376,6 +383,7 @@ export function drawHexZones(t){
     const a = Math.min(1, z.t / 1.5), pulse = 0.5 + 0.5 * Math.sin(t * 3);
     let x, y, w, h;
     if (__RELEASE__ >= 7 && z.shape === 'box5'){ [w, h] = undeadZoneSize(); drawUndeadZoneFx(ctx, LANE(z.lane) - w / 2, FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - h / 2, w, h, t, a, K); continue; }   // the Fallen Hexwitch's 5x5 (Release 7): one baked sprite
+    if (__RELEASE__ >= 7 && z.src === 'crone'){ w = CS * 3 * 0.98; h = CS * 3; drawCroneZoneFx(ctx, LANE(z.lane) - w / 2, FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - h / 2, w, h, t, a, K); continue; }   // the Ash Crone's 3x3 (Release 7): one baked sprite
     if (z.shape === 'col'){ x = LANE(z.lane) - CS * 0.49; y = FIELD_TOP; w = CS * 0.98; h = FIELD_BOT - FIELD_TOP; }
     else if (z.shape === 'row'){ x = GX; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 0.5; w = CS * COLS; h = CS; }
     else { x = LANE(z.lane) - CS * 1.5 * 0.98; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 1.5; w = CS * 3 * 0.98; h = CS * 3; }
@@ -506,7 +514,7 @@ export function drawGrid(t){
   for (const [r, c, cell] of flying) drawCell(r, c, cell, t, hg);
 }
 
-export const LIT_HALO = [[140, 255, 90], [255, 214, 70], [140, 220, 255], [255, 110, 50], [225, 230, 245], [200, 120, 255], [235, 242, 255], [255, 140, 50], [120, 160, 255], [255, 130, 200], [90, 240, 225], [240, 170, 80], [205, 170, 255], ...(__RELEASE__ >= 3 ? [[245, 220, 160]] : []), [255, 230, 140]];   // Beige (Release 3) sits before Rainbow   // ... Brown, Paint (lilac), Rainbow
+export const LIT_HALO = [[140, 255, 90], [255, 214, 70], [140, 220, 255], [255, 110, 50], [225, 230, 245], [200, 120, 255], [235, 242, 255], [255, 140, 50], [120, 160, 255], [255, 130, 200], [90, 240, 225], [240, 170, 80], [205, 170, 255], ...(__RELEASE__ >= 3 ? [[245, 220, 160]] : []), ...(__MAGNET__ ? [[255, 150, 80]] : []), [255, 230, 140]];   // Beige (Release 3) then Magnet (copper, Release 6) sit before Rainbow   // ... Brown, Paint (lilac), Rainbow
 export function drawCell(r, c, cell, t, hg){
   const held = hg != null && cell.lit && (__RELEASE__ >= 8 ? hg.has(cell) : cell.gids.includes(hg));
   let x = LANE(c) + cell.ox, y = GY + r * CS + CS / 2 + cell.oy;
@@ -661,6 +669,7 @@ function drawVfx(){
     } else if (v.kind === 'bolt') drawBolt(ctx, v);
     else if (v.kind === 'blast') drawBlast(ctx, v);
     else if (v.kind === 'hexbolt') drawHexBolt(ctx, v);
+    else if (__MAGNET__ && v.kind === 'magpull') drawMagPull(v);
     else if (v.kind === 'sigil') drawSigil(ctx, v);
     else if (__RELEASE__ >= 7 && v.kind === 'potiondrink') drawPotionFx(v);   // a monster drinks a potion (Release 7)
     else if (__RELEASE__ >= 4 && (v.kind === 'firehiss' || v.kind === 'fireflare' || v.kind === 'firewave')) drawFireFx(v);   // Ice puts a fire out / a pumpkin burns up in one / the Fallen Gravekeeper's smash   // Ice puts a fire out / a pumpkin burns up in one

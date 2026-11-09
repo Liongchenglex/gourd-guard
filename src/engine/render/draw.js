@@ -12,7 +12,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite, magSparkSprite } from './tools.js';
-import { castleSprite, coinSprite, discSprite, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawHexBolt, drawHexZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
+import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -26,6 +26,9 @@ import { drawPin, drawFlyingFork } from './pin.js';
 import { drawGourdCell, drawGourdGlow } from './gourd.js';
 import { ROTTEN, ROT_FX } from '../rot.js';
 import { rotSprite } from './rot.js';
+import { drawPotions, drawPotionFx } from './potion.js';
+import { drawRoots, drawAltar, undeadZoneSize } from './witchwood.js';
+import { barrierFront } from '../witchwood.js';
 
 // ---------- Render ----------
 
@@ -52,6 +55,8 @@ export function render(){
   drawPuddles(t);
   if (__RELEASE__ >= 3) drawGlue();
   if (__RELEASE__ >= 4 && g.fires && g.fires.length) drawFires(g.fires, t);   // fire tiles (Release 4): one baked frame each, under the monsters
+  if (__RELEASE__ >= 7 && g.roots && g.roots.length) drawRoots(ctx, g.roots, false);   // the Treant's mid-field roots (Release 7): one baked frame each, under the monsters
+  if (__RELEASE__ >= 7 && g.altar) drawAltar(ctx, g.altar);   // the Fallen Hexwitch's altar (Release 7): one baked frame, under the monsters
   for (const m of g.monsters) if (m.type === 'doctor' && !m.dead && m.p > 0) drawHealZone(m, t);
   for (const m of g.monsters) if (m.type === 'bulwark' && !m.dead && m.p > 0) drawBulwarkZone(m, t);
   if (__RELEASE__ >= 5) for (const m of g.monsters) if (m.type === 'rotdoctor' && !m.dead && m.p > 0) drawRotZone(m, t);
@@ -68,6 +73,7 @@ export function render(){
     if (m.hidden && m.type !== 'diver') continue;                       // wraith: invisible (a submerged diver still shows ripples)
     if ((m.type === 'sack' || m.type === 'jukebox') && fogOn) continue;   // drawn over the fog below: the ad-summoned Loot Sack must never hide
     if (fogOn && m.type !== 'boss' && m.p > -0.02 && (bands.some(([a, b]) => m.p >= a && m.p <= b) || fogCols.includes(m.lane))) continue;   // inside a fog bank (bosses glow through)
+    if (__RELEASE__ >= 7 && m.type === 'triptych' && m.reflecting && !m.eating) drawTriptychBarrier(m, t);   // its three-lane barrier, behind it (one baked sprite)
     drawMonster(m, t);
   }
   drawVfx();
@@ -79,10 +85,12 @@ export function render(){
   if (fogCols.length) drawFogCols(t, fogCols, g.fogClear > 0);
   if (bands.length || fogCols.length) drawBossBarsOverFog(g);   // owner: the boss's health bar must show through the mist
   if (fogOn) for (const m of ms) if (m.type === 'sack' || m.type === 'jukebox') drawMonster(m, t);
+  if (__RELEASE__ >= 7 && g.potions && g.potions.length) drawPotions(g.potions, t);   // potions (Release 7): one baked bottle each, above the fog and the monsters so every one is always seen
   if (g.gustDir) drawWindArrows(t);
   drawMines(t);
   drawDrops(t);
   drawWalls(t);
+  if (__RELEASE__ >= 7 && g.roots && g.roots.length) drawRoots(ctx, g.roots, true);   // its fence roots, gripping the fence
   if (__RELEASE__ >= 4) drawGourdGlow(ctx, t);   // each gourd's 3×3, one baked tile per gourd under the graves and pumpkins
   drawGraves();
   if (G.aim === 'buster') drawAimGraves(t);
@@ -323,6 +331,14 @@ export function drawCastles(t){
     ctx.fillStyle = '#d8d0c8'; rrect(ctx, bx, by, Math.max(0, bw * w.hp / w.maxHp), 5, 2.5); ctx.fill();
   }
 }
+/** The Triptych Sprite's barrier (Release 7): its own lane and TYPES.triptych.lanes either side (fewer at the field's edge), its base line at the
+ *  sprite's front (where pumpkins meet it, engine/witchwood.js barrierFront); it fades in over the first quarter second it is up. Drawn
+ *  at the field's scale (not the monster's depth scale) so its panes stay on the lanes. */
+function drawTriptychBarrier(m, t){
+  const n = TYPES.triptych.lanes, lo = Math.max(0, m.lane - n), hi = Math.min(COLS - 1, m.lane + n), up = TYPES.triptych.reflect - m.mirrorT;
+  const a = (up < 0 ? 1 : clamp(up / 0.25, 0, 1)) * Math.min(1, m.age / 0.5);   // unscaled, so its panes stay on the lanes
+  drawBarrierFx(ctx, (LANE(lo) + LANE(hi)) / 2, mY(m) + barrierFront(m), hi - lo + 1, t, K, 1, a);
+}
 /** Bulwark Knight's aura: 3 lanes × 3 tile heights, steel blue. */
 export function drawBulwarkZone(m, t){
   const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
@@ -333,6 +349,8 @@ export function drawHexZones(t){
   for (const z of G.hexZones || []){
     const a = Math.min(1, z.t / 1.5), pulse = 0.5 + 0.5 * Math.sin(t * 3);
     let x, y, w, h;
+    if (__RELEASE__ >= 7 && z.shape === 'box5'){ [w, h] = undeadZoneSize(); drawUndeadZoneFx(ctx, LANE(z.lane) - w / 2, FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - h / 2, w, h, t, a, K); continue; }   // the Fallen Hexwitch's 5x5 (Release 7): one baked sprite
+    if (__RELEASE__ >= 7 && z.src === 'crone'){ w = CS * 3 * 0.98; h = CS * 3; drawCroneZoneFx(ctx, LANE(z.lane) - w / 2, FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - h / 2, w, h, t, a, K); continue; }   // the Ash Crone's 3x3 (Release 7): one baked sprite
     if (z.shape === 'col'){ x = LANE(z.lane) - CS * 0.49; y = FIELD_TOP; w = CS * 0.98; h = FIELD_BOT - FIELD_TOP; }
     else if (z.shape === 'row'){ x = GX; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 0.5; w = CS * COLS; h = CS; }
     else { x = LANE(z.lane) - CS * 1.5 * 0.98; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 1.5; w = CS * 3 * 0.98; h = CS * 3; }
@@ -599,6 +617,7 @@ function drawVfx(){
     else if (v.kind === 'hexbolt') drawHexBolt(ctx, v);
     else if (__MAGNET__ && v.kind === 'magpull') drawMagPull(v);
     else if (v.kind === 'sigil') drawSigil(ctx, v);
+    else if (__RELEASE__ >= 7 && v.kind === 'potiondrink') drawPotionFx(v);   // a monster drinks a potion (Release 7)
     else if (__RELEASE__ >= 4 && (v.kind === 'firehiss' || v.kind === 'fireflare' || v.kind === 'firewave')) drawFireFx(v);   // Ice puts a fire out / a pumpkin burns up in one / the Fallen Gravekeeper's smash   // Ice puts a fire out / a pumpkin burns up in one
     else if (v.kind === 'clip'){
       ctx.save(); ctx.translate(v.x, v.y); ctx.scale(v.s, v.s);

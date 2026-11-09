@@ -4,6 +4,7 @@ import * as E from '../data/endless.js';
 import { PTYPES } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
 import { spawnMonster, spawnSack, spawnJukebox } from './monsters.js';
+import { carryDrank, dropBrewMark } from './potion.js';
 import { buildBg } from './render/sprites.js';
 import { G, COLS } from './state.js';
 import { rnd, shuffle } from './util.js';
@@ -13,6 +14,7 @@ import { musicStart } from './audio.js';
 import { coachHolds } from './coach.js';
 import { dropFireMark } from './fire.js';
 import { restoreBoss } from './hollow.js';
+import { restoreTreant, restoreFallenHex } from './witchwood.js';
 
 export function pickFrom(pool){
   let tot = 0; for (const [, w] of pool) tot += w;
@@ -39,6 +41,7 @@ function spawnOne(d){
   const pool = d.caps ? d.pool.filter(([t]) => (counts[t] || 0) < (d.caps[t] == null ? Infinity : d.caps[t])) : d.pool;   // per-type caps (owner: "only 2 haulers")
   const t = G.spawned >= 1 && G.introQueue.length ? G.introQueue.shift() : pickFrom(pool.length ? pool : d.pool);
   counts[t] = (counts[t] || 0) + 1; const m = spawnMonster(t);
+  if (__RELEASE__ >= 7 && G.drankCarry && G.drankCarry.length) carryDrank(m);   // a continued night: a drinker comes back with its potions (engine/potion.js)
   if (midJukebox() || (__RELEASE__ >= 4 && G.burstMinion)){ m.minion = true; return; }   // 6-19: the halfway Frenzy's monsters are extra; the bar waits at the mark. Release 4: so is a fire mark's horde
   G.spawned++;
 }
@@ -68,6 +71,10 @@ export function storySpawn(dt){
     const i = G.fmNext || 0;
     if (i < d.fireMarks.length && G.spawned >= Math.floor(d.total * d.fireMarks[i].at)) dropFireMark(d.fireMarks[i]);
   }
+  if (__RELEASE__ >= 7 && d.brewMarks){   // brew marks (Release 7): each fires once the bar (arrivals) reaches it
+    const i = G.bmNext || 0;
+    if (i < d.brewMarks.length && G.spawned >= Math.floor(d.total * d.brewMarks[i])) dropBrewMark();
+  }
   if (d.boss2 && !G.bossSpawned && (G.spawned >= Math.floor(d.total * 0.4) || (G.bossHp && G.bossHp.length))){   // two bosses at once (World 6)
     G.bossSpawned = true;
     const left = {}, hps = {};   // a continued night brings back only those still standing (a Twin Tides pair counts as two)
@@ -83,7 +90,7 @@ export function storySpawn(dt){
   } else if (d.boss && !G.bossSpawned && (G.spawned >= Math.floor(d.total * 0.4) || (G.bossHp && G.bossHp.length))){   // a continued night brings its hurt boss straight back
     const b = spawnMonster('boss'); G.bossSpawned = true;
     if (d.bossHpMul) for (const m of b.twin ? [b, b.twin] : [b]){ m.maxHp = Math.max(1, Math.round(m.maxHp * d.bossHpMul)); m.hp = m.maxHp; }   // per-level boss health (tuning, 2026-10-01)
-    if (G.bossHp && G.bossHp.length){ const bs = b.twin ? [b, b.twin] : [b]; bs.forEach((m, i) => { const hp = G.bossHp[Math.min(i, G.bossHp.length - 1)]; m.hp = Math.min(m.maxHp, hp); }); if (__RELEASE__ >= 4 && G.bossPhase2){ bs.forEach((m, i) => { if (G.bossPhase2[i]) m.phase2 = true; }); G.bossPhase2 = null; } if (__RELEASE__ >= 5 && G.bossMood){ bs.forEach((m, i) => restoreBoss(m, G.bossMood[i])); G.bossMood = null; } G.bossHp = null; }   // a continued night: the boss keeps the health it had left (a Strawlord its phase, a Lamplighter its mood and clocks, a Fallen Poltergeist its marks and reaper phase)
+    if (G.bossHp && G.bossHp.length){ const bs = b.twin ? [b, b.twin] : [b]; bs.forEach((m, i) => { const hp = G.bossHp[Math.min(i, G.bossHp.length - 1)]; m.hp = Math.min(m.maxHp, hp); }); if (__RELEASE__ >= 4 && G.bossPhase2){ bs.forEach((m, i) => { if (G.bossPhase2[i]) m.phase2 = true; }); G.bossPhase2 = null; } if (__RELEASE__ >= 5 && G.bossMood){ bs.forEach((m, i) => { restoreBoss(m, G.bossMood[i]); if (__RELEASE__ >= 7){ restoreTreant(m, G.bossMood[i]); restoreFallenHex(m, G.bossMood[i]); } }); G.bossMood = null; } G.bossHp = null; }   // a continued night: the boss keeps the health it had left (a Strawlord its phase, a Lamplighter its mood and clocks, a Fallen Poltergeist its marks and reaper phase)
     banner(BOSS_NAMES[d.boss] || 'Boss', (BOSS_INTRO[d.boss] || {})[d.bossForm] || 'Monsters keep coming until it falls.', 3); SFX.bossAlert(); setTimeout(() => SFX.bossSfx(d.boss, 'arrive'), 900); setTimeout(() => { if (G && !G.over && G.mode === 'story') musicStart('boss'); }, 1600);   // stakes rise: the boss track takes over (owner)
   }
 }

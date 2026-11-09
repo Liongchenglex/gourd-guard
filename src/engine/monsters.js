@@ -3,10 +3,12 @@ import { SACK } from '../data/economy.js';
 import { resolveMatches } from './board.js';
 import { TYPES, MODS, VARIANTS, BURNS_TO, ICE_ONLY, BURNING_FROM, HUSK_STRIP } from '../data/monsters.js';
 import { BURN_EVERY, RAINBOW, GLUE_SLOW } from '../data/pumpkins.js';
+import { POTION_SPEED } from '../data/rules.js';
 import { glueStep } from './glue.js';
 import { magnetSlide } from './magnet.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
 import { updateHollowMonster, reapLanes, initHollowMonster, initLamplighter, updateLamplighter, initFallenPolt, updateFallenPolt } from './hollow.js';
+import { initWitchwoodMonster, updateWitchwoodMonster, toadStop, tongueFree, initTreant, updateTreant, initFallenHex, updateFallenHex } from './witchwood.js';
 import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike, initFallenGK, updateFallenGK } from './nightmare.js';
 import { SFX } from './audio.js';
 import { chunk, damage, spark, ring, addFloat } from './combat.js';
@@ -110,12 +112,19 @@ export function spawnMonster(key, lane, minion, p, formArg){
     const spots = [[lane - 1, 0], [lane + 1, 0], [lane, 0.06], [lane, -0.06]];
     for (const [l, dp] of spots.slice(0, T.bats)) spawnMonster('bat', Math.max(0, Math.min(COLS - 1, l)), true, Math.max(-0.02, m.p + dp));
   }
+  if (__RELEASE__ >= 7 && type === 'ashcrone' && !minion){   // ringed by crows as the Vampire is by its bats: left, right, ahead and behind (engine/witchwood.js)
+    const spots = [[lane - 1, 0], [lane + 1, 0], [lane, 0.06], [lane, -0.06]];
+    for (const [l, dp] of spots.slice(0, T.crows)) spawnMonster('crow', Math.max(0, Math.min(COLS - 1, l)), true, Math.max(-0.02, m.p + dp));
+  }
   if (__RELEASE__ >= 5) initHollowMonster(m);   // Fogwalker 2's Mossbacks, the comet's cruise, the Mini Poltergeist's timers (engine/hollow.js)
+  if (__RELEASE__ >= 7) initWitchwoodMonster(m);   // Nightmare Witchwood's monsters (engine/witchwood.js)
   if (__RELEASE__ >= 3 && type === 'boss' && kind === 'hollowking') initHollowKing(m);
   if (__RELEASE__ >= 4 && type === 'boss' && kind === 'strawlord') initStrawlord(m);
   if (__RELEASE__ >= 4 && type === 'boss' && kind === 'fallengravekeeper') initFallenGK(m);
   if (__RELEASE__ >= 5 && type === 'boss' && kind === 'lamplighter') initLamplighter(m);   // the Nightmare Foggy Hollow mini boss (engine/hollow.js)
   if (__RELEASE__ >= 5 && type === 'boss' && kind === 'fallenpoltergeist') initFallenPolt(m);   // the hollow nightmare's boss, N2-16 (engine/hollow.js)
+  if (__RELEASE__ >= 7 && type === 'boss' && kind === 'treant') initTreant(m);   // the Nightmare Witchwood mini boss (engine/witchwood.js)
+  if (__RELEASE__ >= 7 && type === 'boss' && kind === 'fallenhexwitch') initFallenHex(m);   // the witchwood nightmare's boss, N3-16 (engine/witchwood.js)
   G.monsters.push(m);
   return m;
 }
@@ -225,7 +234,13 @@ export function updateMonster(m, dt){
     if (__RELEASE__ >= 4 && m.type === 'crow' && m.frozenT <= 0 && (m.peekT = (m.peekT || 0) - dt) <= 0){ m.peekT = 0.25; if (crowStrike(m)) return; }   // a crow pecking the fence looks over the patch 4 times a second and flies in once a pumpkin it may take is there (engine/nightmare.js)
     m.shield = false;   // a shield knight lowers its shield to chew
     m.reflecting = false;   // a mirror sprite drops its mirror to chew
-    const mul = m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1;
+    const mul = (m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1) * (__RELEASE__ >= 7 && m.drank && m.drank.speed ? POTION_SPEED : 1);   // a speed potion: it chews (and walks through a gap) faster (Release 7, engine/potion.js)
+    if (__RELEASE__ >= 7 && m.tongue){   // the Cauldron Toad lashes its fence from its hold with the same chew (engine/witchwood.js); its fence down, it walks on
+      if (tongueFree(m)) return;
+      damageWall(m.lane, m.eat * mul * dt);
+      if (mul > 0){ SFX.chew(m.type); if (Math.random() < dt * 4) chunk(m.tx + rnd(-10, 10), FENCE_Y - 18, '#8a6440', 90); }
+      return;
+    }
     if (walls[m.lane].hp <= 0){   // the wall is down: it walks through the gap; the night is lost when it is in
       m.breach = (m.breach || 0) + dt * mul;
       m.p = Math.min(1.05, 1 + m.breach * 0.04); SFX.alarm();
@@ -233,7 +248,7 @@ export function updateMonster(m, dt){
       return;
     }
     m.breach = 0;
-    const eaters = G.monsters.filter(o => !o.dead && o.eating && o.lane === m.lane), k = eaters.indexOf(m);
+    const eaters = G.monsters.filter(o => !o.dead && o.eating && o.lane === m.lane && !(__RELEASE__ >= 7 && o.tongue)), k = eaters.indexOf(m);   // a lashing toad keeps its own spot (Release 7)
     m.x = m.tx + (k - (eaters.length - 1) / 2) * 15;   // chewers share the wall side by side
     for (const c of (__RELEASE__ >= 5 && m.type === 'reaper' ? reapLanes(m) : lanesOf(m))) damageWall(c, m.eat * mul * dt);   // the Reaper's scythe swing is its chew: its fence and both beside it, continuously (engine/hollow.js)
     if (mul > 0){ SFX.chew(m.type); if (Math.random() < dt * 5) chunk(m.x + rnd(-10, 10), FENCE_Y - 18, '#8a6440', 90); }
@@ -355,6 +370,8 @@ export function updateMonster(m, dt){
         if (__RELEASE__ >= 3 && m.kind === 'hollowking'){ updateHollowKing(m, dt); if (m.p >= m.hold) sp = 0; break; }
         if (__RELEASE__ >= 4 && m.kind === 'strawlord'){ updateStrawlord(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // stops exactly at hold, never past it
         if (__RELEASE__ >= 5 && m.kind === 'lamplighter'){ updateLamplighter(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the Lamplighter's moods (engine/hollow.js); stops exactly at hold
+        if (__RELEASE__ >= 7 && m.kind === 'treant'){ updateTreant(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // its roots (engine/witchwood.js); stops exactly at hold and never moves on
+        if (__RELEASE__ >= 7 && m.kind === 'fallenhexwitch'){ updateFallenHex(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // N3-16's boss (engine/witchwood.js); stops exactly at hold
         if (__RELEASE__ >= 5 && m.kind === 'fallenpoltergeist'){ updateFallenPolt(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // N2-16's boss (engine/hollow.js); stops exactly at hold
         if (__RELEASE__ >= 4 && m.kind === 'fallengravekeeper'){ updateFallenGK(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the nightmare patch's boss (engine/nightmare.js)
         if (m.kind === 'poltergeist'){ updatePoltergeist(m, dt); if (m.p >= m.hold) sp = 0; break; }
@@ -409,11 +426,13 @@ export function updateMonster(m, dt){
         }
         break;
       }
-      default: if (!(__RELEASE__ >= 4 && updateNightmareMonster(m, dt)) && !(__RELEASE__ >= 5 && updateHollowMonster(m, dt))) m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
+      default: if (!(__RELEASE__ >= 4 && updateNightmareMonster(m, dt)) && !(__RELEASE__ >= 5 && updateHollowMonster(m, dt)) && !(__RELEASE__ >= 7 && updateWitchwoodMonster(m, dt))) m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
     }
   }
   if (__RELEASE__ >= 4 && m.rush > 0) sp *= TYPES.rooster.rushMul;
+  if (__RELEASE__ >= 7 && m.drank && m.drank.speed) sp *= POTION_SPEED;   // a speed potion (Release 7, engine/potion.js)
   let np = Math.min(m.p + sp * dt, aheadLimit(m));
+  if (__RELEASE__ >= 7 && m.type === 'toad') np = Math.min(np, toadStop(m));   // the Cauldron Toad stops at its tongue hold while its fence stands (engine/witchwood.js)
   if (m.chewing && !m.chewing.dead) np = Math.min(np, m.chewing.p);   // held at a scarecrow
   if (np > m.p) m.p = np;
   if (__RELEASE__ >= 4 && m.p >= 1 && m.type === 'crow' && crowStrike(m)) return;   // over the fence and into the patch (engine/nightmare.js)
@@ -565,10 +584,12 @@ function updateHexwitch(m, dt){
     addFloat('Hex zone!', m.x, mY(m) - m.r - 30, '#d09bff', 18, 1.2); SFX.bossSfx('hexwitch', 'zone'); m.anim = { clip:'zone', t:0, dur:0.8 };
   }
 }
-/** Is a monster inside a Hexwitch zone? (box: 3 lanes × 3 tile heights; col: whole column; row: 3 tile heights across the field) */
+/** Is a monster inside a Hexwitch zone? (box: 3 lanes × 3 tile heights; col: whole column; row: 3 tile heights across the field;
+ *  box5, the Fallen Hexwitch's from Release 7: 5 lanes × 5 tile heights) */
 export function inHexZone(m){
   for (const z of G.hexZones || []){
     if (z.shape === 'col'){ if (m.lane === z.lane) return true; }
+    else if (__RELEASE__ >= 7 && z.shape === 'box5'){ if (Math.abs(m.lane - z.lane) <= 2 && Math.abs(m.p - z.p) <= 2.5 * TILE_P()) return true; }
     else if (z.shape === 'row'){ if (Math.abs(m.p - z.p) <= 0.5 * TILE_P()) return true; }   // 1 tile tall across all 7 lanes
     else if (Math.abs(m.lane - z.lane) <= 1 && Math.abs(m.p - z.p) <= 1.5 * TILE_P()) return true;
   }

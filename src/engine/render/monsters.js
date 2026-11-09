@@ -3,6 +3,9 @@ import { PTYPES } from '../../data/pumpkins.js';
 import { mS, mY } from '../monsters.js';
 import { K, ctx } from './canvas.js';
 import { pipSprite } from './fx.js';
+import { drawPotionIcons } from './potion.js';
+import { drawTongue } from './witchwood.js';
+import { POTION_BULKY_SCALE } from '../../data/rules.js';
 import { FIELD_TOP } from '../state.js';
 import { TYPES, VARIANTS } from '../../data/monsters.js';
 import { CS } from '../state.js';
@@ -14,7 +17,7 @@ import { charIcon, drawChar } from './anim.js';
 import { clamp, TAU } from '../util.js';
 
 export function drawMonster(m, t){
-  let y = mY(m); const s = mS(m);
+  let y = mY(m); const s = mS(m) * (__RELEASE__ >= 7 && m.drank && m.drank.bulky ? POTION_BULKY_SCALE : 1);   // a bulky potion: drawn bigger (Release 7)
   if (m.eating && m.frozenT <= 0) y += Math.sin(m.ph * 14) * 2.5;
   const fade = m.demo ? 1 : Math.min(1, m.age / 0.5);
   const blue = m.slowT > 0 || m.frozenT > 0;
@@ -28,6 +31,7 @@ export function drawMonster(m, t){
     if (m.type === 'boss' && !m.demo && m.age < 0.5) cx.globalAlpha = 1;   // the teleport-in clip fades itself
     const tint = m.flash > 0 ? ['#ffffff', 0.85] : blue ? ['#7fd0ff', 0.5] : m.tint && !hasCostume(key, vkeyOf(m, key)) ? [m.tint, 0.45] : null;
     drawChar(cx, m, key, tint);
+    if (__RELEASE__ >= 7 && m.tongue && m.eating && m.frozenT <= 0 && !m.demo) drawTongue(cx, m, s, y);   // the Cauldron Toad's tongue down the lane to its fence (render/witchwood.js)
   } else {
   cx.fillStyle = 'rgba(0,0,0,.35)';
   if (m.type === 'bat') ell(cx, 0, m.r + 18, m.r * 0.6, 4);
@@ -91,6 +95,10 @@ export function drawMonster(m, t){
       const sp = pipSprite(K, fill > 0 ? Math.ceil(fill * 8) : 0);   // baked: three live ellipses and a clip per pip once cost more than the monster itself
       cx.drawImage(sp.c, px - sp.ox, by - sp.oy, sp.w, sp.h);
     }
+  }
+  if (__RELEASE__ >= 7 && m.drank){   // what it drank: one baked bottle icon per potion, left of its health pips or bar (Release 7, render/potion.js)
+    const left = m.maxHp > 8 ? m.x - Math.max(40, m.r * 1.7) * s / 2 - 2 : m.maxHp >= 2 || m.hp < m.maxHp ? m.x - (Math.ceil(m.maxHp) * 11 - 3) / 2 - 2 : m.x + 8;
+    drawPotionIcons(cx, m.drank, left, by + (m.maxHp > 8 ? 3 : 0));
   }
   if (m.bulk === 2){ cx.fillStyle = '#bcd0ff'; cx.font = 'bold 13px Fredoka, system-ui, sans-serif'; cx.textAlign = 'left'; cx.fillText('×2', m.x + Math.ceil(m.maxHp) * 5.5 + 8, by + 5); }   // bulwark aura
   const sign = m.colourLock != null ? m.colourLock : m.colourImmune;

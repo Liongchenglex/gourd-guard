@@ -5,11 +5,12 @@
 
 export const COMPANIONS = { hauler:['gargoyle'], slime:['blob'], vampire:['bat'],
   ...(__RELEASE__ >= 4 ? { hayrick:['hayrickBurning'], husker:['huskerBare', 'huskerBurning', 'huskerCharred'], strawlord:['crow'], casketjack:['coffin'] } : {}),   // Release 4: burning forms, the Strawlord's crows (met first on N1-4), Casket Jack's Fallen Casket
-  ...(__RELEASE__ >= 5 ? { reaper:['crow'], fogwalker2:['brute'] } : {}) };   // Release 5: the crow out of a fallen Reaper, Fogwalker 2's Mossbacks (a world 1 monster, new to the hollow's books)
+  ...(__RELEASE__ >= 5 ? { reaper:['crow'], fogwalker2:['brute'] } : {}),   // Release 5: the crow out of a fallen Reaper, Fogwalker 2's Mossbacks (a world 1 monster, new to the hollow's books)
+  ...(__RELEASE__ >= 7 ? { ashcrone:['crow'] } : {}) };   // Release 7: the four crows the Ash Crone arrives with (new to the witchwood books)
 
 /** The boss at the end of each nightmare book (Release 4), listed last in its nightmare bestiary. Once its fight is built (N1-16, the Fallen
  *  Gravekeeper, 2026-11-05) the level lists it like any boss; until then this entry holds its place (an entry may give `icon` [type, form] to draw). */
-export const FALLEN = __RELEASE__ >= 4 ? [{ key:'fallengravekeeper' }, ...(__RELEASE__ >= 5 ? [{ key:'fallenpoltergeist' }] : [])] : [];   // one per nightmare book, by world index (Release 5: the hollow book's, N2-16)
+export const FALLEN = __RELEASE__ >= 4 ? [{ key:'fallengravekeeper' }, ...(__RELEASE__ >= 5 ? [{ key:'fallenpoltergeist' }] : []), ...(__RELEASE__ >= 7 ? [{ key:'fallenhexwitch' }] : [])] : [];   // one per nightmare book, by world index (Release 5: the hollow book's, N2-16; Release 7: the witchwood book's, N3-16)
 
 export const BESTIARY = {
   ghoul:      { lore:'Dug itself out of the churchyard the night the moon turned orange. Not bright, but very determined.', ability:'Nothing special. Walks straight down its lane and chews the wall.' },
@@ -64,7 +65,7 @@ export const BESTIARY = {
   ...(__RELEASE__ >= 4 ? {   // the nightmare Pumpkin Patch (Release 4)
     rooster:    { lore:'Crowed once at the eclipse and the sun never came back. Its comb still smoulders.', ability:'Crows every few seconds: monsters in its lane and the two beside it sprint. Leaves a fire burning where it falls.' },
     strawlord:  { lore:'The scarecrow at the edge of the patch, nailed up the night the moon went dark. It got tired of waiting.', ability:'Never reaches the wall. Looses its crows, and leaves a trail of fire every time it hops to another lane. At half health it tears free and the crows come faster.' },
-    crow:       { lore:'The Strawlord’s flock. They stopped being afraid of it a long time ago.', ability:'Fast and frail. At the fence it flies over into your patch and destroys a pumpkin, anywhere but the Grave Gourd and the pumpkins around it. With nothing else to take, it pecks the fence.' },
+    crow:       { lore:'Black crows that came with the endless night. They no longer care whose patch they\u2019re stealing from.', ability:'Fast and frail. At the fence it flies over into your patch and destroys a pumpkin, anywhere but the Grave Gourd and the pumpkins around it. With nothing else to take, it pecks the fence.' },
     graveriser: { lore:'The patch’s old gravedigger. Works by lantern light and never asks whose grave it is.', ability:'Every few seconds digs a grave on an empty cell anywhere in your patch. The graves stay after it falls.' },
     casketjack: { lore:'A coffin from the farm graveyard that got up and walked. Nobody knows how many are still inside.', ability:'When it falls it becomes a Fallen Casket with a mummy inside.' },
     coffin:     { name:'Fallen Casket', lore:'Casket Jack’s last stop. Something inside is knocking.', ability:'Bursts open and lets out a mummy a few seconds after Casket Jack falls, unless a pumpkin smashes it first.' },
@@ -84,6 +85,15 @@ export const BESTIARY = {
     comet:      { lore:'A marsh goblin whose wisp caught the poison and went wild. Neither of them knows how to stop.', ability:'Cruises for a moment, then streaks down its lane to the fence without stopping. The first hit breaks the wisp: a plain Wisp drifts on and an Imp walks.' },
     minipolt:   { lore:'A small tantrum the Poltergeist left behind in the fog. It knows one trick: spoiling things.', ability:'Drifts between lanes and vanishes now and then. Every few seconds it turns one or two of your pumpkins rotten, never in a Protector square. Three health.' },
     fallenpoltergeist:{ lore:'The Poltergeist, left to rot in the poison fog. Its sheet hangs black and wet, and a scythe of shadow follows it.', ability:'Never reaches the wall. Vanishes from lane to lane, swaps your pumpkins and lays black fog where only rotten pumpkins hurt. Twice it shuffles your whole patch and twice it turns reaper: then only three rotten pumpkins hurt it. A Protector square keeps its pumpkins in place.' },
+  } : {}),
+  ...(__RELEASE__ >= 7 ? {   // the nightmare Witchwood (Release 7), in first-met order
+    ashcrone:   { lore:'She swept the ash from the witches\u2019 hearths for a hundred years, and learned what the ash remembers.', ability:'Slow, four health. Arrives with four crows around her that fly for your patch. Every few seconds she raises an undead zone around a monster near her: anything killed inside gets back up.' },
+    covenwitch: { lore:'The coven never threw anything away. What did not go into the cauldron went into whoever was nearest.', ability:'Three health. Every few seconds her cauldron boils over and one or two potions land just in front of monsters on the field.' },
+    treant:     { lore:'The oldest tree in Witchwood died standing. Its roots did not get the message.', ability:'Never reaches the wall. Stands at the back and summons roots: one on the field stops every pumpkin up its lane until three hits break it, one at your fence squeezes it.' },
+    flaskbearer:{ lore:'The coven\u2019s errand imp. It has never once delivered a bottle to the right witch.', ability:'Quick, two health. Leaves a potion on the field where it falls.' },
+    toad:       { lore:'It sat in the cauldron so long it started to enjoy the brew.', ability:'Slow, five health. Stops a third of the field short of your fence and lashes it with its tongue. When it dies every potion it drank bursts back onto the field.' },
+    triptych:   { lore:'Three Mirror Sprites who agreed on one thing: nobody gets through.', ability:'Three health. Its mirror wall covers its own column and the one on each side: a pumpkin that meets it bounces back into that column\u2019s fence. The wall drops for a moment, and while it chews.' },
+    fallenhexwitch:{ lore:'The Hexwitch, drained of every colour but red. Her broom grew bark and her cauldron never stops boiling.', ability:'Never reaches the wall. Lays great 5\u00d75 undead zones, scatters potions, sends crows and smashes your fence before gliding away. Three times she raises an altar in another lane: nothing hurts her until pumpkins break it.' },
   } : {}),
   twintides:  { lore:'Two serpents hatched from one egg on the night the village drowned. They finish each other’s sentences.', ability:'Never reach the wall. Both must die within a short window or the fallen one rises again.' },
 };

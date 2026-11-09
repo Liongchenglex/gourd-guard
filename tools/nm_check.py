@@ -107,6 +107,8 @@ def check_nm_story_rules(browser, url):
     page.close()
 
 
+from nm3_check import check_r7_absent   # `--expect r6` adds it to CHECKS (see main)
+
 CHECKS = {'check_r4_absent': check_r4_absent, 'check_r5_absent': check_r5_absent, 'check_nm_track': check_nm_track, 'check_nm_story_rules': check_nm_story_rules}
 
 
@@ -1590,10 +1592,11 @@ CHECKS.update({'check_fallen_gk': check_fallen_gk, 'check_fallen_gk_continue': c
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)
-    ap.add_argument('--expect', choices=['on', 'r4', 'r3', 'r2', 'off'], required=True)
+    ap.add_argument('--expect', choices=['on', 'r6', 'r4', 'r3', 'r2', 'off'], required=True)
     ap.add_argument('--only', default=None)
     a = ap.parse_args()
     global R4, MODE
+    if a.expect == 'r6': a.expect = 'on'; CHECKS['check_r7_absent'] = check_r7_absent   # a Release 6 build holds everything up to Release 6: these checks run as `on`, plus the Release 7 absence check
     MODE = a.expect; R4 = a.expect in ('on', 'r4')
     with sync_playwright() as p:
         browser = p.chromium.launch(args=os.environ.get('GG_CHROME_ARGS', '').split())   # e.g. GG_CHROME_ARGS=--disable-gpu when the headless GPU process hangs (a sleeping Mac)

@@ -45,6 +45,7 @@ if (!save.ads || typeof save.ads !== 'object') save.ads = { day:'', seed:0 };
 if (__RELEASE__ >= 4 && (!save.gourds || typeof save.gourds !== 'object')) save.gourds = {};   // gourds unlocked (Release 4: 'grave' after N1-4); older saves lack the key
 if (__RELEASE__ >= 4) save.seenGourdCoach = !!save.seenGourdCoach;   // the gourd tutorial on Nightmare 1-5 has played (src/engine/coach.js)
 if (__RELEASE__ >= 5) save.seenProtectorCoach = !!save.seenProtectorCoach;   // the Protector Gourd tutorial on Nightmare 2-5 has played (src/engine/coach.js)
+if (__RELEASE__ >= 7) save.seenWartlingCoach = !!save.seenWartlingCoach;   // the Wartling Gourd tutorial on Nightmare 3-5 has played (src/engine/coach.js)
 
 // Old upgrades were replaced by pumpkin levels: refund what was spent on them.
 

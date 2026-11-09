@@ -3,7 +3,7 @@ import { SPAWN_STEPS } from '../data/patterns.js';
 import { NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, prevLevelFor, firstNightOf, typesForNight, gearUnlockNightOf, NIGHTMARE_LEVELS, NM_BOOK_LEVELS, nmNight, nmGateText } from '../data/worlds/index.js';
-import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO, PROTECTOR_INTRO, POISON_INTRO, ROT_INTRO } from '../data/monsters.js';
+import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO, PROTECTOR_INTRO, WARTLING_INTRO, POISON_INTRO, ROT_INTRO, POTION_INTRO, BREW_INTRO } from '../data/monsters.js';
 import { hasFire, nightmareTitle } from '../data/levels.js';
 import { monsterIcon } from '../engine/render/monsters.js';
 import { prebakeAsync } from '../engine/render/anim.js';
@@ -38,6 +38,7 @@ import * as EN from '../data/endless.js';
 import { GOURDS, GOURD_SLOTS, ALLOW_SAME_GOURD } from '../data/gourds.js';
 import { gourdIcon } from '../engine/render/gourd.js';
 import { rotIcon } from '../engine/render/rot.js';
+import { potionsCard } from '../engine/render/potion.js';
 
 export function showResult(win){
   const g = G, box = $('#rBtns'); box.innerHTML = '';
@@ -308,8 +309,11 @@ function startPreviewedNight(){
     cards.push({ key:'poison', icon:'☠️', title:'Poison fog', text:POISON_INTRO });
     cards.push({ key:'rotten', icon:rotIcon(160), title:'Rotten pumpkins', text:ROT_INTRO });
   }
+  if (__RELEASE__ >= 7 && def.potions && !(prev && prev.potions)) cards.push({ key:'potions', icon:potionsCard(160), title:'Potions', text:POTION_INTRO });   // the witchwood nightmare's first potions (N3-1)
+  if (__RELEASE__ >= 7 && def.brewMarks && def.brewMarks.length && !(prev && prev.brewMarks && prev.brewMarks.length)) cards.push({ key:'brewmarks', icon:'🧪', title:'Brew marks', text:BREW_INTRO });   // the first night with brew marks (N3-6)
   if (__RELEASE__ >= 4 && def.gourd && !(prev && prev.gourd)) cards.push({ key:'gourd', icon:gourdIcon(160), title:'The Grave Gourd', text:GOURD_INTRO });   // its first night (N1-5)
   if (__RELEASE__ >= 5 && offeredGourds(def).includes('protector') && !(prev && offeredGourds(prev).includes('protector'))) cards.push({ key:'gourd:protector', icon:gourdIcon(160, 'protector'), title:'The Protector Gourd', text:PROTECTOR_INTRO });   // the first night that offers it (N2-5), once unlocked
+  if (__RELEASE__ >= 7 && offeredGourds(def).includes('wartling') && !(prev && offeredGourds(prev).includes('wartling'))) cards.push({ key:'gourd:wartling', icon:gourdIcon(160, 'wartling'), title:'The Wartling Gourd', text:WARTLING_INTRO });   // the first night that offers it (N3-5), once unlocked
   for (const t of def.intro) if (!VARIANTS[t]) cards.push({ key:'m:' + t, icon:monsterIcon(t, 160), title:`New monster: ${MNAME[t] || t}`, text:MINTRO[t] || '' });   // returning variants get no card (owner)
   for (const k of [...new Set([def.boss, def.boss2].filter(Boolean))]) cards.push({ key:`b:${k}:${def.bossForm}`, icon:monsterIcon(k, 200, def.bossForm), title:def.bossForm === 2 ? `${BOSS_NAMES[k]}, full form` : `Boss: ${BOSS_NAMES[k]}`, text:BOSS_INTRO[k][def.bossForm] });
   introQueue = cards.filter(c => !save.seenIntro[c.key]);
@@ -570,8 +574,8 @@ export let loadoutGourdSel = [];
 /** Pumpkins to pick: 5, or 4 with the 5-20 Focused patch power; never more than the types on offer (a gourd night opens the picker even
  *  with 5 or fewer types, Release 4). */
 const teamSize = () => Math.min(perkOn('pick4') ? 4 : 5, loadoutAvail ? loadoutAvail.length : 5);
-export function openLoadout(avail, next, required, gourds){
-  if (__RELEASE__ >= 4) renderGourds(gourds || []);   // the gourd pick: the Gourds section and the header's gourd slots, apart from the pumpkins
+export function openLoadout(avail, next, required, gourds, pre){
+  if (__RELEASE__ >= 4) renderGourds(gourds || [], pre);   // the gourd pick: the Gourds section and the header's gourd slots, apart from the pumpkins
   loadoutAvail = avail; loadoutNext = next; loadoutMust = (required || []).map(m => m.t); loadoutWhy = required || [];
   const pref = [...loadoutMust, ...(save.loadout || []).filter(t => avail.includes(t) && !loadoutMust.includes(t))];
   for (const t of avail) if (pref.length < teamSize() && !pref.includes(t)) pref.push(t);
@@ -616,12 +620,14 @@ function backToLoadout(){
  *  - More offered (N2-5 on): "Gourds · pick up to 2", "Your gourds" over GOURD_SLOTS slots, every offered gourd picked to start. A tile
  *    toggles its gourd (into the first free slot, the rest in the order picked); a tapped slot empties it. Start never waits for a gourd:
  *    either or both slots may be left empty (owner: "up to 2"). With ALLOW_SAME_GOURD (data/gourds.js) every gourd night opens GOURD_SLOTS
- *    slots and a picked tile fills the free one too (then a tap on it, with both full, drops one). */
-function renderGourds(keys){
+ *    slots and a picked tile fills the free one too (then a tap on it, with both full, drops one).
+ *  - More offered than slots (Release 7: three gourds, N3-5 on): `pre` (defaultGourds in engine/game.js) starts picked, the first two in
+ *    unlock order; a tile not picked, tapped with both slots full, replaces the last picked. */
+function renderGourds(keys, pre){
   loadoutGourds = keys.filter(k => GOURDS[k]);
   loadoutGourdSlots = !loadoutGourds.length ? 0 : ALLOW_SAME_GOURD ? GOURD_SLOTS : Math.min(GOURD_SLOTS, loadoutGourds.length);   // one kind offered: one slot, unless two of a kind are allowed
   const one = loadoutGourdSlots === 1;
-  loadoutGourdSel = loadoutGourds.slice(0, loadoutGourdSlots);   // both start picked (spec: the picker preselects every gourd it offers)
+  loadoutGourdSel = (__RELEASE__ >= 7 && pre ? pre.filter(k => loadoutGourds.includes(k)) : loadoutGourds).slice(0, loadoutGourdSlots);   // both start picked (spec: the picker preselects every gourd it offers; Release 7: the two the night starts with)
   $('#ovLoadout').classList.toggle('gNight', loadoutGourds.length > 0);
   $('#ovLoadout').classList.toggle('g2', loadoutGourdSlots > 1);
   let sec = $('#loGourdSec');
@@ -660,6 +666,7 @@ function renderGourds(keys){
       if (one) SFX.ui('tap');   // the night's only gourd stays picked
       else if (has && (!ALLOW_SAME_GOURD || full)){ loadoutGourdSel.splice(loadoutGourdSel.lastIndexOf(k), 1); SFX.ui('unpick'); }
       else if (!full){ loadoutGourdSel.push(k); SFX.ui('pick'); }
+      else if (__RELEASE__ >= 7 && !has){ loadoutGourdSel[loadoutGourdSel.length - 1] = k; SFX.ui('pick'); }   // a third gourd (Release 7): it takes the last picked one's slot
       else SFX.ui('locked');   // both slots taken: drop one first
       syncLoadout();
     };

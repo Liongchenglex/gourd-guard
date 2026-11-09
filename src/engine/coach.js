@@ -9,8 +9,10 @@
 // Release 5 adds a third on Nightmare 2-5 (`coach:'protector'`, PTIPS below): the Protector Gourd shields its square from a fog row, the
 // fog rots the rest, the hand slides a rotten one into the square and holds the Protector until it breaks (that rot turns Rainbow), and it
 // grows back on the next sprout.
+// Release 7 adds a fourth on Nightmare 3-5 (`coach:'wartling'`, WTIPS below): slide the Wartling Gourd, launch a bunch from its square at a
+// tough ghoul (doubled numbers), slide it to the top row, hold it until it breaks and the fences above it mend.
 // The hand is one baked sprite blitted with transforms (no painter calls or shadowBlur per frame).
-import { G, grid, graves, setGrid, ROWS, COLS, CS, GX, GY, LANE, FIELD_TOP, FENCE_Y } from './state.js';
+import { G, grid, graves, setGrid, walls, ROWS, COLS, CS, GX, GY, LANE, FIELD_TOP, FENCE_Y } from './state.js';
 import { newCell, spawnSprouts, planMove, applyMove, revertMove, sameColorSize, findCell, bestLitGroup, resolveMatches } from './board.js';
 import { spawnMonster } from './monsters.js';
 import { scale } from './render/canvas.js';
@@ -52,9 +54,24 @@ const PTIPS = __RELEASE__ >= 5 ? {
   praise: '<b>Nice!</b> Keep your best pumpkins in its square when the fog comes.',
 } : {};
 
+// The Wartling script (Release 7). Steps: wslide (the hand slides the Wartling, never into the top row) -> wlaunch (a bunch of three lights
+// up in its square and one tough ghoul walks down that column; the hand swipes it up and the doubled numbers show) -> wtop (the fences above
+// it are worn; the hand slides it up into the top row) -> whold (the hand holds it until it breaks: the fences above mend by half) -> praise.
+// Broken before whold it goes to wback (it grows back on the next sprout) and on to wtop. Monsters and sprouts wait (coachHolds); the script
+// sends its own ghoul (an extra, not counted toward the night's total) and runs its own sprout tick. It looks the Wartling up by kind.
+const WTIPS = __RELEASE__ >= 7 ? {
+  wslide: 'This is the <b>Wartling Gourd</b>. Drag it to slide it, like a pumpkin.',
+  wlaunch: 'Pumpkins flicked from the <b>3×3 around it</b> do <b>double damage</b>. <b>Swipe the bunch up!</b>',
+  wtop: 'Now slide it to the <b>top row</b>, right under the fence.',
+  whold: '<b>Press and hold</b> it to break it: each <b>fence above it</b> mends by half.',
+  wback: 'It <b>grows back</b> on the next sprout.',
+  praise: '<b>Nice!</b> Break it under a worn fence to mend it. It grows back on the next sprout.',
+} : {};
+
 /** Starts the coach on a fresh 1-1 (call after the board is built), or the gourd script on a Nightmare 1-5 that has not been seen, or the
  *  Protector script on a Nightmare 2-5 that has not been seen and was started with the Protector. */
 export function startCoach(){
+  if (__RELEASE__ >= 7 && G.mode === 'story' && G.def && G.def.coach === 'wartling'){ if (!save.seenWartlingCoach && gourdPos('wartling')) startWartlingCoach(); return; }
   if (__RELEASE__ >= 5 && G.mode === 'story' && G.def && G.def.coach === 'protector'){ if (!save.seenProtectorCoach && gourdPos('protector')) startProtectorCoach(); return; }
   if (__RELEASE__ >= 4 && G.mode === 'story' && G.def && G.def.coach === 'gourd' && !save.seenGourdCoach && gourdPos()) return startGourdCoach();
   if (!(G.mode === 'story' && G.n === 1 && !save.seenCoach)) return;
@@ -166,6 +183,76 @@ function protectorCoachUpdate(c){
   }
 }
 
+/** Wartling script start: a clear patch with the gourds where they stand (the level's graves stay). */
+function startWartlingCoach(){
+  const wp = gourdPos('wartling'), all = gourdsOn();
+  setGrid(Array.from({ length:ROWS }, () => Array(COLS).fill(null)));
+  for (const o of all) grid[o.r][o.c] = o.cell;
+  G.coach = { kind:'wartling', step:'wslide', t:0, stepT:0, move:null, ref:null, from:wp };
+  findWartMove(false); tip('wslide');
+}
+/** The slide the hand shows: `top` the one up into the top row, else one that keeps it out of the top row (right first, as the gourd script). */
+function findWartMove(top){
+  const c = G.coach, wp = gourdPos('wartling'); c.move = null; if (!wp) return;
+  const ref = grid[wp.r][wp.c];
+  for (const dir of top ? ['up'] : ['right', 'left', 'down', 'up']){
+    const moves = planMove(wp.r, wp.c, dir), mine = moves && moves.find(m => m[0] === wp.r && m[1] === wp.c);
+    if (mine && (top ? mine[2] === 0 : mine[2] !== 0)){ c.move = { ref, dir, tr:mine[2], tc:mine[3] }; return; }
+  }
+}
+/** Step wlaunch: a vertical bunch of three in a column beside the Wartling, inside its square (rows clamped to the patch), and one tough
+ *  ghoul walking down that column. Its colour is the team's first plain one. */
+function setupWartLaunch(wp){
+  const c = G.coach, cols = G.loadout.filter(t => PTYPES[t] && !PTYPES[t].rainbow && PTYPES[t].key !== 'paint'), col = cols.length ? cols[0] : 0;
+  const r0 = Math.min(ROWS - 2, Math.max(1, wp.r));
+  const free = cc => cc >= 0 && cc < COLS && [r0 - 1, r0, r0 + 1].every(r => !grid[r][cc] && !graves[r][cc]);
+  const cc = [wp.c - 1, wp.c + 1].find(free);
+  c.bunch = [];
+  if (cc != null) for (const r of [r0 - 1, r0, r0 + 1]){ const cell = newCell(col); grid[r][cc] = cell; c.bunch.push(cell); }
+  resolveMatches();
+  if (cc != null){ const m = spawnMonster('ghoul', cc, true, 0.08); if (m){ m.hp = m.maxHp = 20; m.sp *= 0.6; } }   // an extra, tough enough to show three doubled hits
+  c.ref = c.bunch[0] || null;
+}
+/** Step wtop: the fences above the Wartling's square are worn, so the mend shows; the hand slides it up into the top row. */
+function setupWartTop(wp){
+  const c = G.coach;
+  if (__RELEASE__ >= 7 && c && !c.worn) c.worn = walls.map(w => w ? w.hp : null);   // remembered, so a break outside the top row (no mend) can put the fences back
+  for (let k = Math.max(0, wp.c - 1); k <= Math.min(COLS - 1, wp.c + 1); k++){ const w = walls[k]; if (w) w.hp = Math.min(w.hp, Math.round(w.max * 0.3)); }
+  findWartMove(true);
+}
+/** Release 7: the lesson wore the fences for a mend that never came (the Wartling broke outside the top row): put them back. */
+function restoreWorn(c){
+  if (!c.worn) return;
+  c.worn.forEach((hp, k) => { const w = walls[k]; if (w && hp != null && w.hp < hp) w.hp = hp; });
+  c.worn = null;
+}
+function wartlingCoachUpdate(c){
+  const wp = gourdPos('wartling'), go = step => { c.step = step; c.stepT = 0; tip(step); };
+  const toTop = () => { if (wp.r === 0){ c.move = null; c.ref = grid[wp.r][wp.c]; setupWartTop(wp); go('whold'); } else { setupWartTop(wp); go('wtop'); } };
+  if (c.step === 'wslide'){
+    if (!wp) go('wback');   // broken before the lesson: carry on from the respawn
+    else if (wp.r !== c.from.r || wp.c !== c.from.c){ c.move = null; setupWartLaunch(wp); go('wlaunch'); }   // any slide of it counts
+    else if (!c.move || !findCell(c.move.ref)) findWartMove(false);
+  } else if (c.step === 'wlaunch'){
+    const lit = (c.bunch || []).find(x => x.lit && findCell(x));
+    if (!wp) go('wback');
+    else if (lit) c.ref = lit;   // the hand swipes the bunch up
+    else if (!G.projs.length){ c.ref = null; toTop(); }   // launched (or broken up) and every pumpkin has landed
+  } else if (c.step === 'wtop'){
+    if (!wp){ if (__RELEASE__ >= 7) restoreWorn(c); go('wback'); }
+    else if (wp.r === 0){ c.move = null; c.ref = grid[wp.r][wp.c]; go('whold'); }
+    else if (!c.move || !findCell(c.move.ref) || c.move.ref !== grid[wp.r][wp.c] || !planMove(wp.r, wp.c, 'up')) findWartMove(true);   // slid somewhere else: show the way up from here
+  } else if (c.step === 'whold'){
+    if (!wp){ if (__RELEASE__ >= 7){ if (c.wr !== 0) restoreWorn(c); c.worn = null; } go('praise'); } else { c.wr = wp.r; c.ref = grid[wp.r][wp.c]; }   // any way of breaking it counts (a real hold)
+  } else if (c.step === 'wback'){
+    if (wp) toTop();
+    else if (c.stepT > 1.2 && !c.sprouted){ c.sprouted = true; spawnSprouts(); }   // the next sprout tick brings it back
+    else if (c.sprouted && c.stepT > 2.4){ c.sprouted = false; c.stepT = 1.21; }   // no room on the patch: try the tick again
+  } else if (c.step === 'praise' && c.stepT > 3.5){
+    tip(null); G.coach = null; save.seenWartlingCoach = true; persist(); resolveMatches();
+  }
+}
+
 /** A slide that makes a bunch right now: the hand demonstrates this one. */
 function findMove(){
   const c = G.coach; c.move = null;
@@ -191,7 +278,7 @@ function spare(){
 function tip(step){
   const el = $('#coachTip'); if (!el) return;
   if (!step){ el.hidden = true; return; }
-  el.innerHTML = (__RELEASE__ >= 5 && G.coach && G.coach.kind === 'protector' && PTIPS[step]) || TIPS[step] || GTIPS[step]; el.hidden = false;
+  el.innerHTML = (__RELEASE__ >= 7 && G.coach && G.coach.kind === 'wartling' && WTIPS[step]) || (__RELEASE__ >= 5 && G.coach && G.coach.kind === 'protector' && PTIPS[step]) || TIPS[step] || GTIPS[step]; el.hidden = false;
   el.style.top = Math.round((FENCE_Y - CS * 1.25) * scale) + 'px';
 }
 
@@ -203,6 +290,7 @@ export function coachUpdate(dt){
   c.t += dt; c.stepT += dt;
   if (__RELEASE__ >= 4 && c.kind === 'gourd'){ gourdCoachUpdate(c); return; }
   if (__RELEASE__ >= 5 && c.kind === 'protector'){ protectorCoachUpdate(c); return; }
+  if (__RELEASE__ >= 7 && c.kind === 'wartling'){ wartlingCoachUpdate(c); return; }
   const lit = bestLitGroup();
   if (c.step === 'slide'){
     if (lit){   // a bunch formed: send one ghoul down its column
@@ -248,7 +336,7 @@ export function drawCoach(ctx){
   const c = G && G.coach; if (!c || G.over) return;
   const h = hand();
   const blit = (x, y, s, a) => { ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y); ctx.scale(s, s); ctx.drawImage(h, -18, -6, 64, 64); ctx.restore(); };
-  if ((c.step === 'slide' || c.step === 'gslide' || c.step === 'pslide') && c.move){
+  if ((c.step === 'slide' || c.step === 'gslide' || c.step === 'pslide' || c.step === 'wslide' || c.step === 'wtop') && c.move){
     const pos = findCell(c.move.ref); if (!pos) return;
     const [x0, y0] = cellXY(pos.r, pos.c), [x1, y1] = cellXY(c.move.tr, c.move.tc);
     const P = 2.0, u = (c.t % P) / P;   // press 0-.2, drag .2-.65, hold .65-.85, fade .85-1
@@ -258,7 +346,7 @@ export function drawCoach(ctx){
     ctx.strokeRect(GX + pos.c * CS + 5, GY + pos.r * CS + 5, CS - 10, CS - 10);
     ctx.setLineDash([6, 6]); ctx.strokeRect(GX + c.move.tc * CS + 5, GY + c.move.tr * CS + 5, CS - 10, CS - 10); ctx.restore();
     blit(x + 6, y + 4, press, u > .85 ? (1 - u) / .15 : 1);
-  } else if (c.step === 'smash' || c.step === 'ghold' || c.step === 'phold'){
+  } else if (c.step === 'smash' || c.step === 'ghold' || c.step === 'phold' || c.step === 'whold'){
     const pos = c.ref && findCell(c.ref); if (!pos) return;
     const [x0, y0] = cellXY(pos.r, pos.c), P = 2.2, u = (c.t % P) / P;   // press .0-.1, hold and fill .1-.7, crush flash .7-.85, rest
     const f = u < .1 ? 0 : u < .7 ? (u - .1) / .6 : 1;
@@ -268,7 +356,7 @@ export function drawCoach(ctx){
     if (u >= .7 && u < .85){ const k = (u - .7) / .15; ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#ffd35a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x0, y0, CS * (.45 + k * .35), 0, Math.PI * 2); ctx.stroke(); }
     ctx.restore();
     blit(x0 + 6, y0 + 4, u < .7 ? .88 : 1, u > .85 ? Math.max(0, (1 - u) / .15) : 1);
-  } else if (c.step === 'flick'){
+  } else if (c.step === 'flick' || c.step === 'wlaunch'){
     const pos = c.ref && findCell(c.ref); if (!pos) return;
     const [x0, y0] = cellXY(pos.r, pos.c), P = 1.4, u = (c.t % P) / P;
     const d = u < .25 ? 0 : u < .6 ? ease((u - .25) / .35) : 1, y = y0 - d * CS * 1.6;

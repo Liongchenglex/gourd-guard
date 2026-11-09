@@ -137,6 +137,33 @@ export const TYPES = {
     // hurt it until `reaperHits` of them have. No boss items or costume (noItems).
     fallenpoltergeist: { boss:true, hp:45, r:34, sp:0.03, coins:50, eat:0, pts:400, drop:6, hold:0.25, vanishEvery:6, swapEvery:8, swapN:3, zoneEvery:12, zoneFor:8,
       shuffleAt:[0.66, 0.33], reaperAt:[0.5, 0.2], reaperHits:3, noItems:true } } : {}),
+  // Release 7, Nightmare Witchwood (spec Part 3; engine/witchwood.js). The Flask Bearer, a quick little imp, leaves one potion of a random kind on its tile when it
+  // dies (the nearest free tile when that one holds a potion). The Cauldron Toad walks to `tongueHold` of the field and stops there: from then on it lashes its own
+  // fence with its tongue at `eat` a second (its chew from range; a speed potion makes it 1.5x). It drinks potions like any monster; when it dies it bursts and every
+  // potion it drank lands back on the field, one per tile, on the free tiles nearest where it died (ring by ring outwards).
+  ...(__RELEASE__ >= 7 ? { flaskbearer: { hp:2, sp:0.055, r:18, coins:8, eat:0.5, pts:24, drop:2 },
+    toad: { hp:5, sp:0.03, r:24, coins:10, eat:0.5, pts:30, drop:2, tongueHold:0.67 },
+    // The Ash Crone raises an undead zone (G.hexZones, the Hexwitch's 3×3 box) every `zoneEvery` s for `zoneLast` s, centred on a monster within 2 lanes
+    // of her; she arrives ringed by `crows` crows. The Blood Coven Witch brews every `brewEvery` s: brewN[0]..brewN[1] potions, each on the tile just
+    // ahead of a monster on the field (engine/witchwood.js).
+    ashcrone: { hp:4, sp:0.035, r:22, coins:9, eat:0.5, pts:30, drop:2, zoneEvery:10, zoneLast:8, crows:4 },
+    covenwitch: { hp:3, sp:0.04, r:22, coins:9, eat:0.5, pts:28, drop:2, brewEvery:7, brewN:[1, 2] },
+    // The Triptych Sprite: the Mirror Sprite's cycle (barrier up `reflect` s, down `open` s, down while it chews) with a barrier `lanes` lanes either side of
+    // its own: a pumpkin meeting it in any of them flies back down that lane into its fence for the pumpkin's power (combat.js reflectPumpkin, game.js).
+    triptych: { hp:3, sp:0.04, r:26, coins:10, eat:0.5, pts:32, drop:2, reflect:2, open:2.5, lanes:1 },
+    // The Treant (N3-4, N3-13), a mini boss (engine/witchwood.js updateTreant): holds at `hold` like the Lamplighter and never moves from there. Every
+    // `rootEvery` s it summons rootN[0]..rootN[1] roots in other lanes: a mid-field root blocks its lane until `rootHp` pumpkins hit it; a fence root
+    // squeezes its fence at `rootSqueeze` a second until destroyed the same way or it sinks after `rootLast` s. form2 (N3-13): more health, more
+    // roots more often. No boss items or costume (noItems).
+    treant: { boss:true, hp:24, r:34, sp:0.03, coins:40, eat:0, pts:300, drop:6, hold:0.12, rootEvery:7, rootN:[2, 3], rootHp:3, rootSqueeze:0.5, rootLast:8, noItems:true, form2:{ hp:34, rootEvery:5, rootN:[3, 4] } },
+    // The Fallen Hexwitch (N3-16, the witchwood nightmare's boss; spec Part 6; engine/witchwood.js updateFallenHex): holds at `hold` like the Fallen Gravekeeper.
+    // Every `zoneEvery` s she lays a 5x5 undead zone (G.hexZones shape 'box5') for `zoneLast` s; every `potionEvery` s potionN[0]..potionN[1] potions land on
+    // random field tiles; every `crowEvery` s crows[0]..crows[1] crows swoop in at the top of random lanes (minions); every `smashEvery` s she strikes her
+    // own lane's fence for `smashHit` of its full health (never its last 1), then glides glide[0]..glide[1] lanes. At each fraction of her health in
+    // `altarAt` an altar (`altarHp` health, only pumpkins hurt it) rises in another lane at the back: while it stands she takes no damage. She does not
+    // hex. No boss items or costume (noItems).
+    fallenhexwitch: { boss:true, hp:45, r:34, sp:0.03, coins:50, eat:0, pts:400, drop:6, hold:0.28, zoneEvery:12, zoneLast:10, potionEvery:8, potionN:[2, 3],
+      crowEvery:6, crows:[1, 3], smashEvery:10, smashHit:0.5, glide:[1, 2], altarAt:[0.75, 0.5, 0.25], altarHp:8, noItems:true } } : {}),
 };
 
 /** Modifiers (docs/WORLDS.md §6): data-only stat tweaks any monster can carry. */
@@ -174,16 +201,19 @@ export const ICE_ONLY = new Set(['firemummy', ...(__RELEASE__ >= 4 ? ['hayrickBu
 /** The Corn Husker's first hit strips its husk (no damage): husker -> huskerBare, huskerBurning -> huskerCharred. Any pumpkin strips it. */
 export const HUSK_STRIP = __RELEASE__ >= 4 ? { husker:'huskerBare', huskerBurning:'huskerCharred' } : {};
 /** Looks a type is always seen in during a night, baked with it so the first hit never hitches. */
-export const ALSO_BAKE = __RELEASE__ >= 4 ? { husker:['huskerBare'], huskerBurning:['huskerCharred'], strawlord:['crow'], casketjack:['coffin', 'mummy'], fallengravekeeper:['rooster', 'casketjack', 'coffin', 'mummy', 'graveriser', 'crow'], ...(__RELEASE__ >= 5 ? { reaper:['crow'], fogwalker2:['brute'], comet:['wisp', 'imp'] } : {}) } : {};   // a boss's minions too (the Strawlord's crows)
+export const ALSO_BAKE = __RELEASE__ >= 4 ? { husker:['huskerBare'], huskerBurning:['huskerCharred'], strawlord:['crow'], casketjack:['coffin', 'mummy'], fallengravekeeper:['rooster', 'casketjack', 'coffin', 'mummy', 'graveriser', 'crow'], ...(__RELEASE__ >= 5 ? { reaper:['crow'], fogwalker2:['brute'], comet:['wisp', 'imp'] } : {}), ...(__RELEASE__ >= 7 ? { treant:['root'], fallenhexwitch:['crow'], ashcrone:['crow'] } : {}) } : {};   // a boss's minions too (the Strawlord's crows)
 /** burning type -> the ordinary type it ignites */
 export const BURNING_FROM = Object.fromEntries(Object.entries(BURNS_TO).map(([a, b]) => [b, a]));
 
-export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch', ...(__RELEASE__ >= 3 ? { hollowking:'The Hollow King' } : {}), ...(__RELEASE__ >= 4 ? { strawlord:'The Strawlord', fallengravekeeper:'The Fallen Gravekeeper' } : {}), ...(__RELEASE__ >= 5 ? { lamplighter:'The Lamplighter', fallenpoltergeist:'The Fallen Poltergeist' } : {}) };
+export const BOSS_NAMES = { gravekeeper:'The Gravekeeper', poltergeist:'The Poltergeist', vampirecount:'The Vampire Count', twintides:'The Twin Tides', hexwitch:'The Hexwitch', ...(__RELEASE__ >= 3 ? { hollowking:'The Hollow King' } : {}), ...(__RELEASE__ >= 4 ? { strawlord:'The Strawlord', fallengravekeeper:'The Fallen Gravekeeper' } : {}), ...(__RELEASE__ >= 5 ? { lamplighter:'The Lamplighter', fallenpoltergeist:'The Fallen Poltergeist' } : {}), ...(__RELEASE__ >= 7 ? { treant:'The Treant', fallenhexwitch:'The Fallen Hexwitch' } : {}) };
 export const BOSS_NAME = BOSS_NAMES.gravekeeper;   // legacy alias used by endless mode
 
-export const MNAME = { sack:'Loot Sack', jukebox:'Jukebox', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss', ...(__RELEASE__ >= 4 ? { rooster:'Cinder Rooster', hayrick:'Hayrick', hayrickBurning:'Burning Hayrick', husker:'Corn Husker', huskerBare:'Bare Cob', huskerBurning:'Burning Husker', huskerCharred:'Charred Cob', crow:'Crow', graveriser:'Grave Riser', casketjack:'Casket Jack', coffin:'Fallen Casket' } : {}), ...(__RELEASE__ >= 5 ? { rotdoctor:'Plague Doctor 2', reaper:'Reaper', fogwalker2:'Fogwalker 2', comet:'Wisp Rider 2', minipolt:'Poltergeist 2' } : {}) };
+export const MNAME = { sack:'Loot Sack', jukebox:'Jukebox', ghoul:'Ghoul', bat:'Bat', imp:'Imp', brute:'Mossback', wisp:'Wisp', mummy:'Mummy', wraith:'Wraith', rider:'Wisp Rider', doctor:'Plague Doctor', knight:'Shield Knight', hauler:'Gargoyle Hauler', gargoyle:'Gargoyle', archer:'Skeleton Archer', vampire:'Vampire', crawler:'Puddle Crawler', sailor:'Drunk Sailor', diver:'Puddle Diver', slime:'Splitter Slime', blob:'Blob', chameleon:'Chameleon', rchameleon:'Reverse Chameleon', mirror:'Mirror Sprite', firemummy:'Flaming Mummy', fogwalker:'Fogwalker', witch:'Witch', bulwark:'Bulwark Knight', turtle:'Shell Turtle', boss:'Boss', ...(__RELEASE__ >= 4 ? { rooster:'Cinder Rooster', hayrick:'Hayrick', hayrickBurning:'Burning Hayrick', husker:'Corn Husker', huskerBare:'Bare Cob', huskerBurning:'Burning Husker', huskerCharred:'Charred Cob', crow:'Crow', graveriser:'Grave Riser', casketjack:'Casket Jack', coffin:'Fallen Casket' } : {}), ...(__RELEASE__ >= 5 ? { rotdoctor:'Plague Doctor 2', reaper:'Reaper', fogwalker2:'Fogwalker 2', comet:'Wisp Rider 2', minipolt:'Poltergeist 2' } : {}), ...(__RELEASE__ >= 7 ? { flaskbearer:'Flask Bearer', toad:'Cauldron Toad', ashcrone:'Ash Crone', covenwitch:'Blood Coven Witch', triptych:'Triptych Sprite' } : {}) };
 
 export const BOSS_INTRO = {
+  ...(__RELEASE__ >= 7 ? { treant: { 1:'A great hollow tree at the back of the field. It never moves, but every few seconds it summons roots in other lanes. A root on the field stops every pumpkin flicked up its lane until three have hit it; a root at your fence squeezes it until three hits break it or it sinks. Monsters keep coming until it falls.',
+    2:'Its roots come faster now, three or four at a time. Break the ones in your way, and the ones squeezing your fences. Monsters keep coming until it falls.' },
+    fallenhexwitch: { 1:'The Hexwitch, drained of every colour but red. She lays great undead zones where the dead rise again, scatters potions across the field, sends crows swooping in and smashes your fence before gliding away. Three times she raises an altar in another lane: while it stands nothing hurts her, so break it with pumpkins. Monsters keep coming until she falls.' } } : {}),
   ...(__RELEASE__ >= 5 ? { lamplighter: { 1:'A hooded figure with a ghost lantern, drifting at the back of the field. It switches moods: while its lantern burns amber only normal pumpkins hurt it, while it burns sickly green only rotten ones do. It drifts between lanes and calls poison fog onto your patch. Monsters keep coming until it falls.',
     2:'Its lantern switches colour faster now: amber, only normal pumpkins hurt it; green, only rotten ones. It still calls poison fog onto your patch. Monsters keep coming until it falls.' },
     fallenpoltergeist: { 1:'The Poltergeist, rotted through. It vanishes from lane to lane, swaps your pumpkins and lays black fog where only rotten pumpkins hurt. Twice it shuffles your whole patch, and twice it turns reaper: then only rotten pumpkins hurt it, three of them. Rotten pumpkins heal it otherwise. Pumpkins in a Protector square stay put. Monsters keep coming until it falls.' } } : {}),
@@ -216,6 +246,9 @@ export const GOURD_INTRO = __RELEASE__ >= 4 ? 'The Grave Gourd stands on your pa
 // Release 5 (the hollow nightmare): the poison fog and rotten pumpkin cards, on the first level with `poison` (N2-1).
 export const POISON_INTRO = __RELEASE__ >= 5 ? 'Poison fog rolls over your patch. Green arrows warn you first, then the fog lies over one or two whole rows or columns for a few seconds. Every pumpkin under it turns rotten, and so does any pumpkin slid or sprouted into it while it lasts. Gourds never rot.' : '';
 export const ROT_INTRO = __RELEASE__ >= 5 ? 'A rotten pumpkin bunches with other rotten ones and flies like any pumpkin, but it heals the monster it hits instead of hurting it. Some foes are hurt only by rot: every monster in a Plague Doctor 2\'s square, and the Lamplighter when its lantern burns green. Aim your rot, or crush it by holding it.' : '';
+export const WARTLING_INTRO = __RELEASE__ >= 7 ? 'The Wartling Gourd joins your patch: pick two of your three gourds. A pumpkin flicked from the 3×3 around it does double damage. Slide it to the top row and press and hold it to break it: each fence above it mends by half.' : '';   // Release 7, its first night (N3-5)
+export const POTION_INTRO = __RELEASE__ >= 7 ? 'Witches\u2019 brews appear on the field. A monster that walks onto one drinks it: red makes it twice as tough, green makes it walk and chew faster, violet hexes it as a witch would, so only one colour hurts it or every colour but one. Each monster drinks each kind once. You cannot clear potions, so kill monsters before they reach them. Bosses and mummies never drink.' : '';   // Release 7, its first night (N3-1)
+export const BREW_INTRO = __RELEASE__ >= 7 ? 'Two bottle marks on the spawn bar. When the monsters reach one, the brew boils: a swoop of crows dives at your patch and potions come faster for the rest of the night.' : '';   // Release 7, its first night (N3-6)
 export const PROTECTOR_INTRO = __RELEASE__ >= 5 ? 'The Protector Gourd joins your patch: pick it beside the Grave Gourd. Pumpkins in the 3×3 around it never rot, and no monster can destroy them. A pumpkin flicked from its square always knocks back and mends its fence. Press and hold it to break it: every rotten pumpkin around it turns Rainbow.' : '';
 
 export const MINTRO = {
@@ -248,4 +281,9 @@ export const MINTRO = {
     fogwalker2:'New foe: Fogwalker 2. It drags a fog bank over two rows, hiding everything in them, and it arrives with a Mossback on each side. It takes 3 hits. A Lantern shows it.',
     comet:'New foe: Wisp Rider 2. It cruises for a moment, then streaks straight down its lane and never stops until it chews your fence. The first hit breaks the wisp into a plain Wisp and an Imp on foot.',
     minipolt:'New foe: Poltergeist 2. It drifts between columns and vanishes for a moment, and every few seconds it turns one or two of your pumpkins rotten. Pumpkins in a Protector square are safe.' } : {}),
+  ...(__RELEASE__ >= 7 ? { flaskbearer:'New foe: flask bearers. Quick little imps with bottles on their belts. Where one falls it leaves a potion behind: kill it before it reaches the monsters behind it, or near nobody.',
+    toad:'New foe: cauldron toads. A toad stops a third of the field short of your fence and lashes it with its long tongue from there. It drinks potions like any monster, and when it dies it bursts: every potion it drank lands back on the field around it.',
+    ashcrone:'New foe: the Ash Crone. She comes with four crows around her that fly for your patch. Every so often she raises an undead zone around a monster near her: anything killed inside it gets back up a few seconds later. Kill her first, or wait for the zone to fade.',
+    covenwitch:'New foe: the Blood Coven Witch. Every few seconds her cauldron boils over and one or two potions land just in front of monsters on the field, so they walk straight into them. Kill her early.',
+    triptych:'New foe: the Triptych Sprite. Its mirror wall covers its own column and the one on each side: while it is up, a pumpkin in any of the three bounces straight back into that column\'s fence. Flick when the wall drops, or hit what stands in front of it.' } : {}),
 };

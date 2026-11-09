@@ -14,8 +14,9 @@ import { EXTRA } from './extra.js';
 import { HOLLOWKING } from './hollowking.js';
 import { NM1 } from './nm1.js';
 import { HOLLOW } from './hollow.js';
+import { WITCHWOOD } from './witchwood.js';
 
-export const CHARS = { ...W1, ...W2, ...W3, ...W4, ...W5, ...EXTRA, ...(__RELEASE__ >= 3 ? HOLLOWKING : {}), ...(__RELEASE__ >= 4 ? NM1 : {}), ...(__RELEASE__ >= 5 ? HOLLOW : {}) };   // the Hollow King fights from Release 3
+export const CHARS = { ...W1, ...W2, ...W3, ...W4, ...W5, ...EXTRA, ...(__RELEASE__ >= 3 ? HOLLOWKING : {}), ...(__RELEASE__ >= 4 ? NM1 : {}), ...(__RELEASE__ >= 5 ? HOLLOW : {}), ...(__RELEASE__ >= 7 ? WITCHWOOD : {}) };   // the Hollow King fights from Release 3
 export { pumpkin };
 /** The type or boss kind a monster is drawn as, or null when it still uses the old vector drawing. */
 export function charKey(m){ const k = m.look || (m.type === 'boss' ? m.kind : m.type); return CHARS[k] ? k : null; }   // look: a world boss form drawn as the Hollow King

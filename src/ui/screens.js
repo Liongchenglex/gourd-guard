@@ -3,7 +3,7 @@ import { SPAWN_STEPS } from '../data/patterns.js';
 import { NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, prevLevelFor, firstNightOf, typesForNight, gearUnlockNightOf, NIGHTMARE_LEVELS, NM_BOOK_LEVELS, nmNight, nmGateText } from '../data/worlds/index.js';
-import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO, PROTECTOR_INTRO, WARTLING_INTRO, POISON_INTRO, ROT_INTRO } from '../data/monsters.js';
+import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO, PROTECTOR_INTRO, WARTLING_INTRO, POISON_INTRO, ROT_INTRO, POTION_INTRO, BREW_INTRO } from '../data/monsters.js';
 import { hasFire, nightmareTitle } from '../data/levels.js';
 import { monsterIcon } from '../engine/render/monsters.js';
 import { prebakeAsync } from '../engine/render/anim.js';
@@ -38,6 +38,7 @@ import * as EN from '../data/endless.js';
 import { GOURDS, GOURD_SLOTS, ALLOW_SAME_GOURD } from '../data/gourds.js';
 import { gourdIcon } from '../engine/render/gourd.js';
 import { rotIcon } from '../engine/render/rot.js';
+import { potionsCard } from '../engine/render/potion.js';
 
 export function showResult(win){
   const g = G, box = $('#rBtns'); box.innerHTML = '';
@@ -308,6 +309,8 @@ function startPreviewedNight(){
     cards.push({ key:'poison', icon:'☠️', title:'Poison fog', text:POISON_INTRO });
     cards.push({ key:'rotten', icon:rotIcon(160), title:'Rotten pumpkins', text:ROT_INTRO });
   }
+  if (__RELEASE__ >= 7 && def.potions && !(prev && prev.potions)) cards.push({ key:'potions', icon:potionsCard(160), title:'Potions', text:POTION_INTRO });   // the witchwood nightmare's first potions (N3-1)
+  if (__RELEASE__ >= 7 && def.brewMarks && def.brewMarks.length && !(prev && prev.brewMarks && prev.brewMarks.length)) cards.push({ key:'brewmarks', icon:'🧪', title:'Brew marks', text:BREW_INTRO });   // the first night with brew marks (N3-6)
   if (__RELEASE__ >= 4 && def.gourd && !(prev && prev.gourd)) cards.push({ key:'gourd', icon:gourdIcon(160), title:'The Grave Gourd', text:GOURD_INTRO });   // its first night (N1-5)
   if (__RELEASE__ >= 5 && offeredGourds(def).includes('protector') && !(prev && offeredGourds(prev).includes('protector'))) cards.push({ key:'gourd:protector', icon:gourdIcon(160, 'protector'), title:'The Protector Gourd', text:PROTECTOR_INTRO });   // the first night that offers it (N2-5), once unlocked
   if (__RELEASE__ >= 7 && offeredGourds(def).includes('wartling') && !(prev && offeredGourds(prev).includes('wartling'))) cards.push({ key:'gourd:wartling', icon:gourdIcon(160, 'wartling'), title:'The Wartling Gourd', text:WARTLING_INTRO });   // the first night that offers it (N3-5), once unlocked

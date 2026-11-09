@@ -100,7 +100,7 @@ const THEMES = [
     w:{ sky:['#03050c','#141c33','#3a4a6a'], ground:['#2a2c36','#12131a'], moon:'#c8d4ff', halo:'#6a80c8', sil:['#10131e','#05060b'], rim:'#b8c8ff', soil:['#4a4c58','#2c2e38','#15161c'] } },
   { key:'marshN', name:'Drowned Marsh: Nightmare', tag:'Nightmare', base:3, desc:'The red sea. A huge blood moon hangs low over crimson water. Tentacles rise beside the wreck, shark fins circle, a ghost ship with tattered sails drifts on the horizon and the lighthouse burns red.',
     w:{ sky:['#0c0206','#3e0610','#a8141c'], ground:['#3a1c1a','#170a0a'], moon:'#ff3a26', halo:'#c01010', sil:['#2a0508','#100203'], rim:'#ff7a60', soil:['#6a3a2c','#43221a','#21100c'] }, moonAt:[110, 70, 44] },
-  { key:'woodN', name:'Witchwood: Nightmare', tag:'Nightmare', base:4, desc:'All the colour drained away, except for what watches you. Bare skeletal trees with screaming faces in their trunks, iron cages swinging from the branches, cobwebs and a spider, skulls on stakes, ash falling, and the witch\'s window burning red.',
+  { key:'woodN', name:__RELEASE__ >= 7 ? 'Witchwood: Nightmare' : 'Witchwood', tag:'Nightmare', base:4, desc:'All the colour drained away, except for what watches you. Bare skeletal trees with screaming faces in their trunks, iron cages swinging from the branches, cobwebs and a spider, skulls on stakes, ash falling, and the witch\'s window burning red.',
     w:{ sky:['#0c0c0e','#2a2a2e','#6a6a70'], ground:['#34343a','#141418'], moon:'#f0f0f0', halo:'#b8b8c0', sil:['#26262c','#0c0c10'], rim:'#e0e0e8', soil:['#5a5a60','#38383e','#1a1a1e'] }, grey:true },
 ];
 

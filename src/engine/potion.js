@@ -15,6 +15,7 @@ import { TILE_P, hexMonster, hexable, lanesOf, mY, spawnMonster } from './monste
 import { COLS, FIELD_BOT, FIELD_TOP, G, LANE } from './state.js';
 import { shuffle } from './util.js';
 import { banner } from '../ui/hud.js';
+import { coachHolds } from './coach.js';
 
 export const POTION_KINDS = ['bulky', 'speed', 'colour'];
 /** Each kind's colours: the bottle's glow and the sparks of a drink (render/potion.js paints the bottles). */
@@ -128,7 +129,7 @@ export function updatePotions(dt){
   if (!G || !G.potions) return;
   for (const o of G.potions) o.t += dt;
   const d = G.def && G.def.potions;
-  if (d && d.every > 0){
+  if (d && d.every > 0 && !coachHolds()){   // the level clock holds while a coach teaches (N3-5's Wartling script), as monsters and sprouts do
     G.potionT -= dt;
     if (G.potionT <= 0){
       G.potionT = potionEveryNow();

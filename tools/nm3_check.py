@@ -1510,6 +1510,193 @@ def check_fallen_hex_baked(browser, url):
 
 CHECKS.update({'check_fallen_hex': check_fallen_hex, 'check_fh_altar_immune': check_fh_altar_immune, 'check_fallen_hex_continue': check_fallen_hex_continue, 'check_fallen_hex_baked': check_fallen_hex_baked})
 
+
+# ---------- Task 10: the real levels N3-1 to N3-16, intro cards, the nightmare bestiary ----------
+N3_NAMES = ["Witch's Brew", 'Ash and Crows', 'Blood Coven', 'The Treant', 'The Wartling Gourd', 'Bottle Imps', 'Toad Song', 'Hall of Mirrors',
+            'Turncoat Brew', 'Graveless Dead', 'Ill Wind', 'The Cauldron', 'Treant Returns', 'Glass Coven', 'The Long Night', 'The Fallen Hexwitch']
+R7_NAMES += ['Witchwood: Nightmare', 'Ash and Crows', 'Blood Coven', 'Bottle Imps', 'Toad Song', 'Turncoat Brew', 'Graveless Dead', 'Ill Wind', 'The Cauldron',
+             'Treant Returns', 'Glass Coven', 'The brew boils', 'Brew marks', 'brewmarks']   # the other names ('Hall of Mirrors', 'The Long Night', ...) are world 3 / N2 names too
+N3_NEW = {'ashcrone': 2, 'covenwitch': 3, 'flaskbearer': 6, 'toad': 7, 'triptych': 8}   # each new monster and the level that brings it first (spec Part 7)
+N3_ALSO = {'ashcrone': ['crow']}   # what each brings onto the field (companions); the Treant's roots and the Fallen Hexwitch's crows come through ALSO_BAKE too
+N3_LEVELS_JS = """() => { const g = window.__gg; return g.NIGHTMARE_LEVELS[2].map((d, i) => { const L = g.levelFor(1201 + i);
+  return { level:d.level, name:d.name, pool:d.pool.map(e => e[0]), weights:d.pool.map(e => e[1]), types:d.pool.every(([k]) => !!(g.TYPES[k] || g.VARIANTS[k])), gourd:!!d.gourd, gourds:d.gourds || null,
+    unlockGourds:d.unlockGourds || null, boss:d.boss, bossForm:d.bossForm, bossChest:d.bossChest || null, coach:d.coach || null, intro:d.intro || [], potions:d.potions || null,
+    brewMarks:d.brewMarks || null, gust:d.gust || null, graves:d.graves, spawnGap:d.spawnGap, spawnBurst:d.spawnBurst, total:d.total, interval:d.interval,
+    quests:g.questsFor(L), questsOk:g.questsFor(L).every(([t]) => !!g.QUEST_TYPES[t]) }; }); }"""
+
+
+def n3_open_all(page):
+    """Every story level, every Release 4 and 5 nightmare level and N3-1 to N3-15 beaten (so all of N3 is open); all three gourds unlocked."""
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 17)}, **{1100 + k: 3 for k in range(1, 17)}, **{1200 + k: 3 for k in range(1, 16)}})
+    page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true }; s.seenGourdCoach = true; s.seenProtectorCoach = true; s.seenWartlingCoach = true; }")
+
+
+def check_n3_levels(browser, url):
+    """The 16 designed levels (spec Part 7): names, pools, gourds, bosses, potions, brew marks and pacing are data, and every preview opens."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    L = page.evaluate(N3_LEVELS_JS)
+    ok(len(L) == 16 and [d['level'] for d in L] == list(range(1, 17)), f'16 witchwood nightmare levels in order ({len(L)})')
+    ok([d['name'] for d in L] == N3_NAMES, f"each level has the spec's name {[d['name'] for d in L]}")
+    ok(all(d['pool'] and d['types'] for d in L), 'every pool is non-empty and every pool type exists in TYPES or VARIANTS')
+    intros = {k + 1: d['intro'] for k, d in enumerate(L) if d['intro']}
+    ok(intros == {n: [t] for t, n in N3_NEW.items()}, f'each new monster is introduced on the level that first brings it {intros}')
+    ok(all(t in d['pool'] for d in L for t in d['intro']), 'every introduced monster is in its level pool')
+    early = [(t, k + 1) for k, d in enumerate(L) for t in d['pool'] if t in N3_NEW and k + 1 < N3_NEW[t]]
+    ok(not early, f'no new monster walks in before its introduction {early}')
+    ok(all(t in L[14]['pool'] for t in N3_NEW), f"N3-15 (The Long Night) holds every new monster {L[14]['pool']}")
+    ok(all(d['gourd'] for d in L), 'a gourd night on every level')
+    ok(all(d['gourds'] == ['grave', 'protector'] for d in L[:4]) and all(d['gourds'] == ['grave', 'protector', 'wartling'] for d in L[4:]), f"N3-1 to N3-4 offer the Grave and Protector Gourds, N3-5 on all three {[d['gourds'] for d in L]}")
+    ok(L[3]['boss'] == 'treant' and L[3]['bossForm'] == 1 and L[3]['bossChest'] == 'normal' and L[3]['unlockGourds'] == ['wartling'], f"N3-4: the Treant, a normal chest, unlocks the Wartling {L[3]['boss'], L[3]['bossChest'], L[3]['unlockGourds']}")
+    ok(L[12]['boss'] == 'treant' and L[12]['bossForm'] == 2 and L[12]['bossChest'] == 'normal', 'N3-13: the Treant in form 2 with a normal chest')
+    ok(L[15]['boss'] == 'fallenhexwitch' and L[15]['bossChest'] == 'normal', 'N3-16: the Fallen Hexwitch with a normal chest')
+    ok([k + 1 for k, d in enumerate(L) if d['boss']] == [4, 13, 16], 'bosses on N3-4, N3-13 and N3-16 only')
+    ok(L[4]['coach'] == 'wartling' and [k + 1 for k, d in enumerate(L) if d['coach']] == [5], 'N3-5 keeps the Wartling tutorial (the only coach)')
+    P = [d['potions'] for d in L]
+    ok(all(p and p['every'] > 0 and 1 <= p['count'][0] <= p['count'][1] for p in P), f'potions on every level {P}')
+    ok(all(not p.get('kinds') for k, p in enumerate(P) if k != 8) and P[8].get('kinds') == ['colour'], f"N3-9 (Turncoat Brew): colour potions only; the rest all three kinds {[p.get('kinds') for p in P]}")
+    bm = [k + 1 for k, d in enumerate(L) if d['brewMarks']]
+    ok(bm == [6, 7, 8, 9, 10, 11, 12, 14, 15], f'brew marks on N3-6 to N3-15 except N3-13 {bm}')
+    ok(all(d['brewMarks'] == [0.33, 0.66] for d in L if d['brewMarks']), 'two marks at 0.33 and 0.66')
+    gust = [k + 1 for k, d in enumerate(L) if d['gust']]
+    ok(gust == [11] and L[10]['gust'].get('partial') is True and L[10]['gust']['every'] > 0, f"N3-11 (Ill Wind): the world 3 patch wind with partial gusts, only there {gust} {L[10]['gust']}")
+    ok({'flaskbearer'} <= set(L[10]['pool']), f"N3-11 brings Flask Bearers {L[10]['pool']}")
+    ok({'chameleon', 'rchameleon', 'witch'} <= set(L[8]['pool']), f"N3-9: Chameleons, Reverse Chameleons and witches {L[8]['pool']}")
+    top = lambda d: d['pool'][d['weights'].index(max(d['weights']))]
+    ok(top(L[9]) == 'ashcrone' or L[9]['weights'][L[9]['pool'].index('ashcrone')] >= 6, f"N3-10 (Graveless Dead): many Ash Crones {list(zip(L[9]['pool'], L[9]['weights']))}")
+    ok({'toad', 'covenwitch'} <= set(L[11]['pool']) and P[11]['every'] <= min(p['every'] for p in P), f"N3-12 (The Cauldron): toads and Coven Witches, the quickest potions {L[11]['pool']} {P[11]}")
+    ok({'triptych', 'mirror'} <= set(L[7]['pool']), f"N3-8: Triptych Sprites with Mirror Sprites {L[7]['pool']}")
+    ok({'triptych', 'covenwitch'} <= set(L[13]['pool']), f"N3-14 (Glass Coven): Triptych Sprites and Coven Witches {L[13]['pool']}")
+    ok(all(not d['graves'] for d in L), "no graves (N3-5's coach needs the Wartling's side columns clear)")
+    ok(all(isinstance(d['spawnGap'], (int, float)) and isinstance(d['spawnBurst'], (int, float)) for d in L), 'every level sets spawnGap and spawnBurst')
+    ok(all(d['questsOk'] and len(d['quests']) == 3 for d in L), 'every level has three quests of existing types')
+    ok(len({(d['total'], d['interval'], tuple(d['pool'])) for d in L}) == 16, 'no two levels share pool and pacing (each has its own theme)')
+    n3_open_all(page)
+    for k in range(1, 17):
+        page.evaluate(f"() => {{ document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); window.__gg.openPreview({1200 + k}); }}"); time.sleep(0.25)
+    ok(not errors, f'every preview opens without a page error {errors[:2]}')
+    page.close()
+
+
+def n3_intro_titles(page, n):
+    """Play night n from its preview card and read the intro cards it shows, in order."""
+    page.evaluate(f"() => {{ document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); window.__gg.openPreview({n}); }}"); time.sleep(0.4)
+    page.click('#bPvGo'); time.sleep(0.4)
+    out = []
+    for _ in range(8):
+        if page.evaluate("() => window.__gg.state") != 'intro': break
+        out.append(page.evaluate("() => document.querySelector('#inTitle').textContent"))
+        page.click('#bIntroOk'); time.sleep(0.3)
+    return out
+
+
+def check_n3_intros(browser, url):
+    """First appearances on the witchwood track show a card: potions (N3-1), each new monster where it first walks in, the Treant (both forms),
+    the Wartling Gourd (N3-5), brew marks (N3-6) and the Fallen Hexwitch."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    n3_open_all(page)
+    SEEN = "() => { window.__gg.save.seenIntro = { quests:true, gourd:true, 'gourd:protector':true, wind:true }; }"   # the Grave and Protector cards were shown on N1-5 and N2-5, the wind card in world 3
+    page.evaluate(SEEN)
+    txt = page.evaluate("""() => { const g = window.__gg; g.openPreview(1201); document.querySelector('#bPvGo').click();
+      return [document.querySelector('#inTitle').textContent, document.querySelector('#inText').textContent, document.querySelector('#inIcon canvas') ? 1 : 0]; }""")
+    ok(txt[0] == 'Potions' and 'drinks' in txt[1] and 'cannot' in txt[1] and txt[2] == 1, f'the potions card says monsters drink them and you cannot clear them, with the bottles drawn {txt}')
+    page.evaluate(SEEN)
+    t = {k: n3_intro_titles(page, 1200 + k) for k in range(1, 17)}
+    ok(t[1] == ['Potions'], f'N3-1 explains potions only {t[1]}')
+    for k, name in ((2, 'Ash Crone'), (3, 'Blood Coven Witch'), (6, 'Flask Bearer'), (7, 'Cauldron Toad'), (8, 'Triptych Sprite')):
+        ok(any(x.startswith('New monster') and name in x for x in t[k]), f'N3-{k} introduces the {name} {t[k]}')
+    ok(any('Treant' in x and 'full form' not in x for x in t[4]), f'N3-4 introduces the Treant {t[4]}')
+    ok(t[5] == ['The Wartling Gourd'], f'N3-5 explains the Wartling Gourd {t[5]}')
+    ok('Brew marks' in t[6] and t[6].index('Brew marks') < len(t[6]), f'N3-6 explains brew marks {t[6]}')
+    ok(all(not t[k] for k in (9, 10, 11, 12, 14, 15)), f'N3-9 to N3-12, N3-14 and N3-15 bring nothing new {[t[k] for k in (9, 10, 11, 12, 14, 15)]}')
+    ok(any('Treant' in x and 'full form' in x for x in t[13]), f"N3-13 shows the Treant's form-2 card {t[13]}")
+    ok(any('Fallen Hexwitch' in x for x in t[16]), f'N3-16 introduces the Fallen Hexwitch {t[16]}')
+    ok(not any(x in ('Potions', 'Brew marks') for k in range(2, 17) for x in t[k] if not (k == 6 and x == 'Brew marks')), 'the potion and brew mark cards never repeat')
+    bt = page.evaluate("() => { const g = window.__gg; g.save.seenIntro = { quests:true, gourd:true, 'gourd:protector':true, 'gourd:wartling':true, wind:true, potions:true, 'm:flaskbearer':true }; g.openPreview(1206); document.querySelector('#bPvGo').click(); return [document.querySelector('#inTitle').textContent, document.querySelector('#inText').textContent]; }")
+    ok(bt[0] == 'Brew marks' and 'crows' in bt[1] and 'faster' in bt[1], f'the brew marks card says crows swoop in and potions come faster {bt}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_n3_bestiary(browser, url):
+    """The witchwood nightmare book's bestiary (Release 7): the new monsters in first-met order with the Ash Crone's crows, the Treant, and the
+    Fallen Hexwitch last; story monsters are not repeated."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    # N3-1 to N3-3 open: the Ash Crone, her crows and the Blood Coven Witch have been met
+    set_stars(page, {**story_done(), 1104: 3, 1201: 3, 1202: 3})
+    open_nm_book(page, 2)
+    ok(page.evaluate("() => !document.querySelector('#bBkFlip').hidden"), 'with the gate open the page has a Bestiary button')
+    page.click('#bBkFlip'); time.sleep(0.7)
+    b = page.evaluate("() => [document.querySelector('#bsTitle').textContent, [...document.querySelectorAll('#bestiary .bs')].map(e => [e.classList.contains('unmet'), e.querySelector('b').textContent, e.querySelector('.ab').textContent, (e.querySelector('.lo') || {}).textContent || ''])]")
+    ok('Nightmare' in b[0] and 'Witchwood' in b[0], f'the page is titled as the witchwood nightmare edition ({b[0]!r})')
+    met = [x[1] for x in b[1] if not x[0]]
+    ok(met == ['Ash Crone', 'Crow', 'Blood Coven Witch'], f'met so far, in order: the Ash Crone, her crow, the Blood Coven Witch {met}')
+    ok(all(x[2] and x[3] for x in b[1] if not x[0]), 'each met entry has an ability and a lore line')
+    ok(len(b[1]) == 8 and all(x[0] for x in b[1][3:]), f'eight entries, the rest unmet silhouettes ({len(b[1])})')
+    n3_open_all(page)
+    open_nm_book(page, 2)
+    page.evaluate("() => { if (document.querySelector('#bestiary').hidden) document.querySelector('#bBkFlip').click(); }"); time.sleep(0.7)
+    e = page.evaluate("() => [...document.querySelectorAll('#bestiary .bs')].map(e => e.classList.contains('unmet') ? null : [e.querySelector('b').textContent, !!(e.querySelector('.lo') || {}).textContent])")
+    names = [x and x[0] for x in e]
+    want = ['Ash Crone', 'Crow', 'Blood Coven Witch', 'The Treant', 'Flask Bearer', 'Cauldron Toad', 'Triptych Sprite', 'The Fallen Hexwitch']
+    ok(names == want, f'the full list in first-met order, the Fallen Hexwitch last {names}')
+    ok(all(x and x[1] for x in e), 'every entry has lore')
+    ok(not any(n in names for n in ('Wood Ghoul', 'Broom Imp', 'Owl-bat', 'Wisp', 'Mirror Sprite', 'Chameleon', 'Reverse Chameleon', 'Witch')), 'story monsters are not repeated')
+    for w, last in ((0, 'The Fallen Gravekeeper'), (1, 'The Fallen Poltergeist')):
+        open_nm_book(page, w)
+        page.evaluate("() => { if (document.querySelector('#bestiary').hidden) document.querySelector('#bBkFlip').click(); }"); time.sleep(0.7)
+        bb = page.evaluate("() => [...document.querySelectorAll('#bestiary .bs b')].map(e => e.textContent)")
+        ok(bb and bb[-1] == last and 'Ash Crone' not in bb, f'the world {w + 1} nightmare bestiary is unchanged (ends on {last}) {bb[-2:]}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_n3_prebake(browser, url):
+    """Each level bakes what it can spawn when its night starts: its pool, what those monsters bring (the Ash Crone's crows), a brew mark's
+    crows, the Treant's roots and its boss; every night starts and runs a moment without a page error."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    L = page.evaluate(N3_LEVELS_JS)
+    missing = []
+    for k, d in enumerate(L, 1):
+        page.reload(); page.wait_for_function('() => !!window.__gg'); time.sleep(0.3)   # a fresh atlas cache: what is baked is this night's
+        page.evaluate("() => { Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true }); window.__gg.save.gourds = { grave:true, protector:true, wartling:true }; }")
+        nm3_start(page, k)
+        want = {t for t in d['pool'] if t in N3_NEW or t == 'crow'} | {a for t in d['pool'] for a in N3_ALSO.get(t, [])} | ({d['boss']} if d['boss'] else set())
+        if d['brewMarks']: want.add('crow')
+        if d['boss'] == 'treant': want.add('root')
+        if d['boss'] == 'fallenhexwitch': want.add('crow')
+        got = page.evaluate("(ks) => ks.filter(k => !window.__gg.isBaked(k) && !window.__gg.isBaked(k + '|form2'))", sorted(want))   # a form-2 boss bakes as kind|form2
+        if got: missing.append((k, got))
+        time.sleep(0.4)
+    ok(not missing, f'every level bakes its new monsters, what they bring, brew mark crows and its boss at night start {missing}')
+    ok('ashcrone' in L[1]['pool'] and 'crow' not in L[1]['pool'], f"N3-2's crows come only with its Ash Crones (so its crow is baked through ALSO_BAKE) {L[1]['pool']}")
+    ok(not errors, f'no page errors on any night {errors[:2]}')
+    page.close()
+
+
+def check_n3_coach_potions(browser, url):
+    """N3-5: the level's potion clock holds while the Wartling coach teaches (no potion lands on the lesson), and runs once it is done."""
+    if not R7: return
+    STEP = "(s) => { const g = window.__gg; for (let i = 0; i < Math.round(s / 0.05); i++) g.update(0.05); return [g.G.coach ? g.G.coach.step : null, g.G.potions.length, g.G.potionT]; }"
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true }; s.seenGourdCoach = true; s.seenProtectorCoach = true; s.seenWartlingCoach = false; }")
+    page.evaluate("(lo) => window.__gg.startGame('story', 1205, lo, ['grave', 'wartling'])", [0, 1, 2, 3, 4]); time.sleep(0.3)
+    every = page.evaluate("() => window.__gg.G.def.potions.every")
+    r = page.evaluate(STEP, every + 3)
+    ok(r[0] == 'wslide' and r[1] == 0 and abs(r[2] - every) < 1e-6, f'{every + 3:.0f} s into the lesson: no potions and the clock held at {every} s {r}')
+    page.evaluate("() => { const g = window.__gg; g.G.coach = null; }")
+    r = page.evaluate(STEP, every + 0.5)
+    ok(r[1] >= 1, f'with the coach done the potions come {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_n3_levels': check_n3_levels, 'check_n3_intros': check_n3_intros, 'check_n3_bestiary': check_n3_bestiary, 'check_n3_prebake': check_n3_prebake,
+               'check_n3_coach_potions': check_n3_coach_potions})
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

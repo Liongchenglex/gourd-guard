@@ -97,9 +97,9 @@ export function beginEndless(){
 
 /** The sprite strips a level needs (prebaked when its night starts, and while its preview card is read): its pool, a boss and its minions
  *  (ALSO_BAKE), the jukebox, and on a nightmare night the burning form of every pool type that can catch fire (BURNS_TO), so the first
- *  ignition never hitches (Release 4). */
+ *  ignition never hitches (Release 4). A night with brew marks bakes their crows too (Release 7). */
 export function bakeKeys(def){
-  const kinds = [...def.pool.map(([k]) => k), def.boss].filter(Boolean), also = kinds.flatMap(k => (__RELEASE__ >= 4 && ALSO_BAKE[k]) || []);
+  const kinds = [...def.pool.map(([k]) => k), def.boss].filter(Boolean), also = [...kinds.flatMap(k => (__RELEASE__ >= 4 && ALSO_BAKE[k]) || []), ...(__RELEASE__ >= 7 && def.brewMarks && def.brewMarks.length ? ['crow'] : [])];   // a brew mark's swoop of crows (Release 7)
   return [...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...also,
     ...(__RELEASE__ >= 4 && def.nightmare ? [...kinds, ...also].map(k => BURNS_TO[k]).filter(Boolean) : []),
     ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []),

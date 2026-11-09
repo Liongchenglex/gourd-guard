@@ -601,6 +601,12 @@ def check_turtlerider(browser, url):
     page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; g.grid.forEach(r => r.fill(null)); g.grid[1][2] = g.newGourd('grave'); g.grid[2][0] = g.newCell(0); const m = g.spawnMonster('turtlerider', 2, true, 0.3); m.sp = 0; m.age = 5; }")
     page.evaluate(STEP, [16, 0.05])
     ok(page.evaluate(ROTTEN_N)['n'] == 0 and page.evaluate("() => !!window.__gg.grid[1][2].gourd"), 'a gourd and a pumpkin two columns away are never thrown at')
+    # Grey: a bunch fired up its lane damages it and does not push it back, as with the Shell Turtle
+    for kind in ('turtle', 'turtlerider'):
+        page.evaluate("([kind]) => { const g = window.__gg; g.G.monsters.length = 0; g.G.projs.length = 0; g.grid.forEach(r => r.fill(null)); g.walls.forEach(w => { w.hp = w.max = 500; }); const m = g.spawnMonster(kind, 2, true, 0.5); m.age = 5; m.sp = 0; m.hp = m.maxHp = 40; window.__g = [m, m.p]; for (const r of [1, 2, 3]) g.grid[r][2] = g.newCell(4); g.resolveMatches(); g.launchGroup(g.grid[2][2]); }", [kind])
+        page.evaluate(STEP, [2, 0.02])
+        r = page.evaluate("() => [window.__g[0].hp, window.__g[0].p - window.__g[1], window.__g[0].kb]")
+        ok(r[0] < 40 and r[1] > -1e-6 and r[2] == 0, f'a Grey bunch hurts the {kind} and does not knock it back {r}')
     # an imp appears where it dies
     page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; const m = g.spawnMonster('turtlerider', 3, true, 0.42); m.age = 5; window.__t = m; g.kill(m); }")
     imp = page.evaluate("() => window.__gg.G.monsters.filter(m => m.type === 'imp' && !m.dead).map(m => [m.lane, m.p])")
@@ -644,7 +650,7 @@ def check_eel(browser, url):
     page.evaluate(STEP, [2.9, 0.05])
     w1 = page.evaluate("() => window.__gg.walls[2].hp")
     ok(w0 - w1 == 2, f'the bolt takes 2 off its fence ({w0} -> {w1})')
-    ok(page.evaluate("() => window.__gg.G.vfx.length >= 0"), 'impact effect queued')
+    ok(page.evaluate("() => window.__gg.G.vfx.some(v => v.kind === 'clip' && v.key === 'stormbolt' && v.clip === 'zap')"), 'the bolt bursts on the fence: its zap effect is queued')
     # resurfacing: each time at a new spot that is in water
     spots = []; last = None
     page.evaluate("() => { const e = window.__e; e.sp = 0; }")

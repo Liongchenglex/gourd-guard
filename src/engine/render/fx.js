@@ -125,6 +125,21 @@ export function drawRotZoneFx(g, x, y, w, h, t, k){
   const pulse = .5 + .5 * Math.sin(t * 2.4);
   blitZone(g, zoneSprite('rot', w, h, k, rotZoneBack), x, y, .75 + .25 * pulse);
 }
+/** The Storm Marshal's rally square (Release 8): the same 3x3, in command crimson with a faint lightning-blue rim and a ring of pennant ticks, one baked sprite per size; only its alpha pulses. */
+function rallyZoneBack(g, x, y, w, h){
+  const col = '#ff4a5c', cx = x + w / 2, cy = y + h / 2, R = rng(53);
+  zoneBase(g, x, y, w, h, col, 1, 0);
+  g.save(); g.beginPath(); g.roundRect(x, y, w, h, 14); g.clip(); g.strokeStyle = rgba('#9fc0ff', .22); g.lineWidth = 1.2;
+  for (let i = 0; i < 6; i++){ const bx = x + 10 + R() * (w - 20); g.beginPath(); g.moveTo(bx, y); g.lineTo(bx + (R() - .5) * 30, y + h * .45); g.lineTo(bx + (R() - .5) * 30, y + h); g.stroke(); }
+  g.restore();
+  g.strokeStyle = rgba(col, .6); g.lineWidth = 1.5; g.beginPath(); g.arc(cx, cy, CS * .95, 0, TAU); g.stroke();
+  g.fillStyle = col;
+  for (let i = 0; i < 12; i++){ const ang = i * TAU / 12, px = cx + Math.cos(ang) * CS * .95, py = cy + Math.sin(ang) * CS * .95; g.save(); g.translate(px, py); g.rotate(ang); g.beginPath(); g.moveTo(-2, -3); g.lineTo(5, 0); g.lineTo(-2, 3); g.closePath(); g.fill(); g.restore(); }
+}
+export function drawRallyZoneFx(g, x, y, w, h, t, k, a){
+  const pulse = .5 + .5 * Math.sin(t * 4);
+  blitZone(g, zoneSprite('rally', w, h, k, rallyZoneBack), x, y, a * (.75 + .25 * pulse));
+}
 /** The Fallen Poltergeist's black fog (Release 5): Plague Doctor 2's square and geometry, darker: a black-green fog wash with curls of black fog and a
  *  dim poison rim, its own sprite baked once per size (`zoneSprite('blackfog')`). a fades it in and out; only that and the pulse are live. */
 function blackFogBack(g, x, y, w, h){
@@ -635,3 +650,62 @@ function bakeCastle(k, state){
   });
 }
 export function castleSprite(k, hpFrac){ return bakeCastle(bakeK(k), hpFrac > .66 ? 0 : hpFrac > .33 ? 1 : 2); }
+
+// ---------- the Bat Bride's veil (Release 8): a sheer crimson veil with a lace hem, draped over a veiled monster; baked once, one drawImage ----------
+// Drawn for a monster of radius 40 around its centre: the crown of the veil 1.8 r above, the hem 0.8 r below. render/monsters.js scales it to m.r.
+export const VEIL_R = 40;
+export function veilSprite(k){ k = bakeK(k); return bake(`veil:${k}`, 124, 112, 62, 76, k, g => {
+  const R = rng(11), hem = [];
+  for (let i = 0; i <= 12; i++){ const u = i / 12, x = -54 + u * 108; hem.push([x, 26 + Math.sin(u * Math.PI) * 6 + (i % 2 ? 7 : 0)]); }   // scalloped lace hem
+  const shape = gg => { gg.beginPath(); gg.moveTo(-54, 26); gg.bezierCurveTo(-60, -20, -34, -72, 0, -72); gg.bezierCurveTo(34, -72, 60, -20, 54, 26); for (let i = hem.length - 1; i >= 0; i--) gg.lineTo(hem[i][0], hem[i][1]); gg.closePath(); };
+  const gr = g.createLinearGradient(0, -72, 0, 34); gr.addColorStop(0, 'rgba(150,12,40,.5)'); gr.addColorStop(.55, 'rgba(190,24,56,.32)'); gr.addColorStop(1, 'rgba(220,40,70,.42)');
+  shape(g); g.fillStyle = gr; g.fill();
+  g.save(); shape(g); g.clip();
+  g.strokeStyle = 'rgba(255,170,190,.18)'; g.lineWidth = 1;   // the sheer weave
+  for (let x = -60; x <= 60; x += 9){ g.beginPath(); g.moveTo(x, -76); g.quadraticCurveTo(x * 1.1, -10, x * 1.25, 40); g.stroke(); }
+  g.strokeStyle = 'rgba(255,200,215,.35)'; g.lineWidth = 2.4;   // soft folds
+  for (const fx of [-30, -8, 16, 36]){ g.beginPath(); g.moveTo(fx * .4, -64); g.quadraticCurveTo(fx * .9 + (R() - .5) * 6, -16, fx * 1.15, 30); g.stroke(); }
+  g.restore();
+  g.strokeStyle = 'rgba(255,210,220,.75)'; g.lineWidth = 1.6; g.lineJoin = 'round';   // the lace hem and its picots
+  g.beginPath(); hem.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke();
+  g.fillStyle = 'rgba(255,220,228,.85)'; for (let i = 0; i < hem.length; i += 2){ g.beginPath(); g.ellipse(hem[i][0], hem[i][1] + 3, 1.8, 1.8, 0, 0, TAU); g.fill(); }
+  g.strokeStyle = 'rgba(110,6,28,.7)'; g.lineWidth = 1.4; shape(g); g.stroke();   // a dark edge so it reads on any monster
+  g.fillStyle = '#e0203a'; g.beginPath(); g.ellipse(0, -70, 4, 4, 0, 0, TAU); g.fill(); g.fillStyle = 'rgba(255,230,235,.9)'; g.beginPath(); g.ellipse(-1.2, -71.4, 1.2, 1.2, 0, 0, TAU); g.fill();   // the Bride's blood-red gem pinning it
+}); }
+
+
+// ---------- the Fallen Count (Release 8): the lightning column warning, the bolt, the blood spear; each baked once, one drawImage a frame ----------
+// Baked in fixed drawing units and stretched onto the patch at draw time (render/draw.js drawCountBolt / drawCountSpears), so a change of tile size
+// needs no new art; like every prop here they are keyed by the bake scale K, so a resize that changes K bakes them once more.
+export const FC_COL = { w:100, h:500 }, FC_BOLT = { w:160, h:620 }, FC_SPEAR = { w:28, h:110 };
+/** A patch column under a lightning warning: a pale storm-blue wash with crimson-lit edges and chevrons pointing down. */
+export function countWarnSprite(k){ k = bakeK(k); return bake(`fcwarn:${k}`, FC_COL.w, FC_COL.h, 0, 0, k, g => {
+  const { w, h } = FC_COL;
+  let gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, 'rgba(200,212,255,.55)'); gr.addColorStop(.18, 'rgba(160,180,255,.22)'); gr.addColorStop(.82, 'rgba(160,180,255,.22)'); gr.addColorStop(1, 'rgba(200,212,255,.55)');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(255,60,80,.85)'; g.lineWidth = 3; g.setLineDash([14, 10]); g.strokeRect(2, 2, w - 4, h - 4); g.setLineDash([]);
+  g.strokeStyle = 'rgba(240,246,255,.75)'; g.lineWidth = 5; g.lineCap = 'round'; g.lineJoin = 'round';
+  for (let y = 40; y < h - 20; y += 90){ g.beginPath(); g.moveTo(w * .3, y); g.lineTo(w * .5, y + 22); g.lineTo(w * .7, y); g.stroke(); }
+}); }
+/** The bolt itself: a forked white-blue stroke with a wide glow, top to bottom of the column. */
+export function countBoltSprite(k){ k = bakeK(k); return bake(`fcbolt:${k}`, FC_BOLT.w, FC_BOLT.h, 0, 0, k, g => {
+  const { w, h } = FC_BOLT, R = rng(77), pts = [[w / 2, 0]];
+  for (let i = 1; i < 12; i++) pts.push([w / 2 + (R() - .5) * w * .5, h * i / 12]);
+  pts.push([w / 2, h]);
+  const path = () => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
+    for (const k0 of [3, 7]){ const p = pts[k0], d = k0 === 3 ? -1 : 1; g.moveTo(p[0], p[1]); g.lineTo(p[0] + d * w * .22, p[1] + h * .05); g.lineTo(p[0] + d * w * .34, p[1] + h * .12); } };
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  g.save(); g.shadowColor = '#9fc0ff'; g.shadowBlur = 24; path(); g.strokeStyle = 'rgba(159,192,255,.6)'; g.lineWidth = 18; g.stroke(); g.restore();
+  path(); g.strokeStyle = 'rgba(200,220,255,.9)'; g.lineWidth = 8; g.stroke();
+  path(); g.strokeStyle = '#f6f9ff'; g.lineWidth = 3; g.stroke();
+}); }
+/** The blood spear in flight, point down: an iron shaft and a long glowing blade of blood. */
+export function countSpearSprite(k){ k = bakeK(k); return bake(`fcspear:${k}`, FC_SPEAR.w, FC_SPEAR.h, FC_SPEAR.w / 2, 0, k, g => {
+  S.tube(g, SO([[0, 4], [0, 62]]), pal('#1c1f2a'), 3.8);
+  for (let i = 0; i < 3; i++) S.ln(g, [[-2.6, 56 + i * 3], [2.6, 56 + i * 3]], pal('#b4101f'), 1.4, .9);
+  const blade = SM([[-4.2, 64, 1], [-5.6, 74], [-3.2, 88], [0, 106, 1], [3.2, 88], [5.6, 74], [4.2, 64, 1]], .7);
+  g.save(); g.shadowColor = '#ff2030'; g.shadowBlur = 10; S.dot(g, blade, '#ff2a3a', .5); g.restore();
+  S.part(g, blade, pal('#c8101e'), { x:0, y:80, r:14 }, { hx:-2.4, hy:72, lw:1 });
+  S.ln(g, [[0, 66], [0, 100]], { deep:'#ffb0b0' }, .9, .55);
+}); }
+export function prebakeCountFx(k){ countWarnSprite(k); countBoltSprite(k); countSpearSprite(k); }

@@ -194,6 +194,7 @@ const woosh = (up = false, v = 0.25) => noise(0.3, v, up ? 300 : 2000, 1.2, 0, u
 const boomSynth = () => { noise(0.9, 0.45, 300, 0.6, 0, 120); tone(90, 0.6, 'sine', 0.22, 40); };
 
 export const SFX = {
+  ...(__RELEASE__ >= 8 ? { thunder(){ if (!gate('thunder', 400)) return; noise(1.6, 0.08, 220, 0.7, 0, 60); tone(58, 1.3, 'sine', 0.07, 32); tone(41, 1.6, 'sine', 0.05, 28, 0.15); } } : {}),   // a quiet low rumble from the synthesiser (Release 8: the Keep's storm; the sample bank has no thunder)
   // ---- board and legacy names still used around the code ----
   slide(){ S('swish', 0.55, { rate: 1.25, jit: 0.12 }) || noise(0.14, 0.14, 700, 1, 0, 260); S('pop', 0.3, { rate: 1.35, delay: 0.09 }); },   // a quick swish and a landing pop (owner: exciting, not dull)
   push(){ S('whistle', 0.45, { rate: 1.1 }) || S('swish', 0.55, { rate: 0.95 }) || noise(0.16, 0.16, 500, 1, 0, 200); S('thud', 0.35, { rate: 1.1, delay: 0.12 }); },   // a cartoon slide whistle as the row shoves over
@@ -371,6 +372,13 @@ export const SFX = {
       case 'rider:break': S('cloth', 0.45) || noise(0.12, 0.2, 1200, 1, 0, 400); S('imp', 0.3, { delay: 0.05 }); break;
       case 'mirror:up': S('glassping', 0.4, { rate: 1.2 }) || tone(2400, 0.12, 'sine', 0.04, 3600); break;
       case 'mirror:reflect': S('glassping', 0.5, { rate: 0.8 }) || (tone(3200, 0.12, 'sine', 0.06, 2000), noise(0.06, 0.1, 5000, 2)); S('metallight', 0.3); break;
+      case (__RELEASE__ >= 8 ? 'marshal:rally' : ''): S('metallight', 0.5, { rate: 0.8 }) || tone(330, 0.2, 'sawtooth', 0.05, 520); S('whoosh', 0.35, { rate: 0.7, delay: 0.1 }) || noise(0.3, 0.14, 700, 1, 0.1, 1800); break;   // the sword rings and sweeps up (Release 8)
+      case (__RELEASE__ >= 8 ? 'shield:immune' : ''): S('clank', 0.5, { rate: 0.8 }) || tone(300, 0.08, 'square', 0.05); break;   // a shielded monster refuses a hit: the Hollow King's dull clink (Release 8)
+      case (__RELEASE__ >= 8 ? 'glutton:cast' : ''): S('whoosh', 0.45, { rate: 0.7 }) || noise(0.25, 0.16, 800, 1.2, 0, 2000); S('chuckle', 0.3, { rate: 0.7, delay: 0.1 }); break;   // the Glutton flings a red net and chuckles (Release 8)
+      case (__RELEASE__ >= 8 ? 'bride:veil' : ''): S('cloth', 0.4, { rate: 0.8 }) || noise(0.2, 0.14, 1200, 1, 0, 500); S('bat', 0.25, { rate: 0.8, delay: 0.08 }); break;   // the veil sweeps over with a flutter of bats (Release 8)
+      case (__RELEASE__ >= 8 ? 'lobbercart:lob' : ''): S('creak', 0.45, { rate: 0.9 }) || tone(140, 0.2, 'triangle', 0.06, 90); S('whoosh', 0.5, { rate: 0.8, delay: 0.4 }) || noise(0.25, 0.18, 900, 1.2, 0.4, 2200); S('wood', 0.3, { delay: 0.42 }); break;   // the crank creaks, the arm swings and the cup knocks (Release 8)
+      case (__RELEASE__ >= 8 ? 'gate:open' : ''): S('creak', 0.5, { rate: 0.75 }) || tone(110, 0.3, 'triangle', 0.06, 160); break;   // the portcullis rises (Release 8)
+      case (__RELEASE__ >= 8 ? 'gate:shut' : ''): S('stone', 0.7, { rate: 0.8 }) || (noise(0.1, 0.25, 500, 1), tone(100, 0.12, 'square', 0.06, 70)); break;   // and drops
       case 'witch:hex': S('zap', 0.55, { rate: 0.9 }) || shimmer(); S('witch', 0.3, { delay: 0.12 }) || cackle(2, 620, 0.05, 0.04); break;
       case (__RELEASE__ >= 7 ? 'ashcrone:zone' : ''): S('zap', 0.5, { rate: 0.7 }) || shimmer(); S('ghost', 0.3, { delay: 0.1 }); break;   // the Ash Crone raises an undead zone (Release 7)
       case (__RELEASE__ >= 7 ? 'covenwitch:brew' : ''): S('bubbles', 0.5, { rate: 0.8 }) || noise(0.15, 0.2, 1200, 1, 0, 300); S('witch', 0.25, { delay: 0.12 }) || cackle(2, 660, 0.05, 0.04); break;   // the cauldron boils over (Release 7)
@@ -479,6 +487,27 @@ export const SFX = {
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:reaperend' : ''): S('reverse', 0.45, { rate: 0.9 }) || noise(0.2, 0.15, 900, 0.7); S('glassping', 0.3, { rate: 0.8, delay: 0.05 }); break;
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:hit' : ''): S('ghost', 0.55, { rate: 0.8 }) || tone(260, 0.2, 'triangle', 0.07, 180); S('slime', 0.25, { delay: 0.03 }); break;
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:die' : ''): S('scream', 0.6, { rate: 0.75 }) || tone(600, 1.4, 'sine', 0.1, 120); S('ghostdie', 0.6, { rate: 0.8, delay: 0.4 }); S('hiss', 0.4, { delay: 0.6 }); break;
+      // The Siege Tower (Release 8): timber creaks and groans, a hit thuds on wood, an archer clatters off, the ramp crashes down, the sling throws a net, and it comes apart
+      case (__RELEASE__ >= 8 ? 'siegetower:arrive' : ''): S('creak', 0.65, { rate: 0.7 }) || tone(90, 0.5, 'triangle', 0.07, 70); S('roar', 0.35, { rate: 0.6, delay: 0.25 }); S('wood', 0.4, { delay: 0.5 }); break;
+      case (__RELEASE__ >= 8 ? 'siegetower:knock' : ''): S('wood', 0.5, { rate: 1.1 }) || noise(0.08, 0.2, 900, 1); S('metallight', 0.3, { delay: 0.12 }); S('bone', 0.3, { delay: 0.2 }); break;
+      case (__RELEASE__ >= 8 ? 'siegetower:net' : ''): S('creak', 0.4, { rate: 0.9 }) || tone(140, 0.2, 'triangle', 0.06, 90); S('whoosh', 0.45, { rate: 0.8, delay: 0.3 }) || noise(0.25, 0.18, 900, 1.2, 0.3, 2200); break;
+      case (__RELEASE__ >= 8 ? 'siegetower:ramp' : ''): S('creak', 0.5, { rate: 0.75 }) || tone(100, 0.4, 'triangle', 0.06, 70); S('woodbreak', 0.4, { rate: 1.1, delay: 0.45 }) || noise(0.2, 0.3, 300, 0.8, 0.45); break;
+      case (__RELEASE__ >= 8 ? 'siegetower:hit' : ''): S('wood', 0.5, { rate: 0.8 }) || tone(120, 0.12, 'square', 0.06, 70); S('creak', 0.2, { delay: 0.04, rate: 0.8 }); break;
+      case (__RELEASE__ >= 8 ? 'siegetower:die' : ''): S('woodbreak', 0.8, { rate: 0.85 }) || noise(0.5, 0.3, 300, 0.8); S('stonebreak', 0.5, { delay: 0.3 }); S('roar', 0.5, { rate: 0.6, delay: 0.2 }); break;
+      // The Fallen Count (Release 8): the story Count's chuckle pitched down, heartbeats in his trance, a crack of thunder for the bolt, a whoosh for the spear
+      case (__RELEASE__ >= 8 ? 'fallencount:arrive' : ''): S('chuckle', 0.65, { rate: 0.65 }) || tone(110, 1.2, 'sawtooth', 0.045); S('roar', 0.3, { rate: 0.55, delay: 0.5 }); S('bat', 0.35, { delay: 0.8 }); break;
+      case (__RELEASE__ >= 8 ? 'fallencount:nets' : ''): S('whoosh', 0.45, { rate: 0.7 }) || noise(0.25, 0.18, 900, 1.2, 0, 2200); S('chuckle', 0.4, { rate: 0.75, delay: 0.15 }); break;
+      case (__RELEASE__ >= 8 ? 'fallencount:trance' : ''): S('chuckle', 0.55, { rate: 0.7 }) || cackle(3, 240); break;
+      case (__RELEASE__ >= 8 ? 'fallencount:pulse' : ''): S('heartbeat', 0.5, { rate: 0.8 }) || (tone(58, 0.16, 'sine', 0.06, 44), tone(54, 0.14, 'sine', 0.05, 42, 0.16)); break;
+      case (__RELEASE__ >= 8 ? 'fallencount:tick' : ''): tone(1800, 0.05, 'sine', 0.06, 2200); break;
+      case (__RELEASE__ >= 8 ? 'fallencount:break' : ''): S('glass', 0.5, { rate: 0.85 }) || (noise(0.3, 0.3, 4000, 1, 0, 1500), tone(1300, 0.3, 'sine', 0.06, 500)); S('hiss', 0.4, { delay: 0.1 }); break;
+      case (__RELEASE__ >= 8 ? 'fallencount:spear' : ''): S('whoosh', 0.5, { rate: 1.2 }) || noise(0.2, 0.2, 1400, 1.4, 0, 3000); S('metallight', 0.35, { delay: 0.4 }); break;
+      case (__RELEASE__ >= 8 ? 'fallencount:warn' : ''): tone(900, 0.5, 'sine', 0.04, 1400); noise(0.5, 0.05, 3000, 2, 0, 5000); break;
+      case (__RELEASE__ >= 8 ? 'fallencount:bolt' : ''): noise(0.35, 0.3, 2400, 1.4, 0, 400); S('boom', 0.5, { rate: 1.2, delay: 0.03 }) || tone(60, 0.6, 'sine', 0.08, 30, 0.03); break;
+      case (__RELEASE__ >= 8 ? 'fallencount:summon' : ''): [0, 0.09, 0.18].forEach(d => S('bat', 0.35, { delay: d, rate: 0.9 }) || noise(0.05, 0.1, 2500, 1.5, d)); break;
+      case (__RELEASE__ >= 8 ? 'fallencount:raise' : ''): S('stonebreak', 0.45, { rate: 0.7 }) || noise(0.6, 0.22, 250, 2, 0, 120); break;
+      case (__RELEASE__ >= 8 ? 'fallencount:hit' : ''): S('chuckle', 0.5, { rate: 0.85 }) || noise(0.2, 0.16, 5000, 1.2, 0, 3000); break;
+      case (__RELEASE__ >= 8 ? 'fallencount:die' : ''): S('chuckle', 0.55, { rate: 0.55 }) || tone(700, 0.6, 'sawtooth', 0.09, 250); S('bat', 0.4, { delay: 0.3 }); S('boom', 0.5, { delay: 0.6 }); break;
       case 'hollowking:immune': S('clank', 0.5, { rate: 0.8 }) || tone(300, 0.08, 'square', 0.05); break;
       case 'hollowking:tell': S('darkcast', 0.8, { rate: 0.7 }); S('witchlong', 0.45, { rate: 0.6 }); tone(55, 0.9, 'sawtooth', 0.05, 110); break;
       case 'hollowking:wipe': S('stonecrash', 0.9, { rate: 0.8 }) || noise(0.4, 0.3, 300, 0.7); S('roar', 0.5, { rate: 0.6 }); break;

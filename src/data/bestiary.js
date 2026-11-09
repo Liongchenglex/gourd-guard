@@ -6,11 +6,13 @@
 export const COMPANIONS = { hauler:['gargoyle'], slime:['blob'], vampire:['bat'],
   ...(__RELEASE__ >= 4 ? { hayrick:['hayrickBurning'], husker:['huskerBare', 'huskerBurning', 'huskerCharred'], strawlord:['crow'], casketjack:['coffin'] } : {}),   // Release 4: burning forms, the Strawlord's crows (met first on N1-4), Casket Jack's Fallen Casket
   ...(__RELEASE__ >= 5 ? { reaper:['crow'], fogwalker2:['brute'] } : {}),   // Release 5: the crow out of a fallen Reaper, Fogwalker 2's Mossbacks (a world 1 monster, new to the hollow's books)
-  ...(__RELEASE__ >= 7 ? { ashcrone:['crow'] } : {}) };   // Release 7: the four crows the Ash Crone arrives with (new to the witchwood books)
+  ...(__RELEASE__ >= 7 ? { ashcrone:['crow'] } : {}),   // Release 7: the four crows the Ash Crone arrives with (new to the witchwood books)
+  ...(__RELEASE__ >= 8 ? { siegetower:['marshal'] } : {}) };   // Release 8: the Storm Marshal first walks down the Siege Tower's ramp (N4-4)
 
 /** The boss at the end of each nightmare book (Release 4), listed last in its nightmare bestiary. Once its fight is built (N1-16, the Fallen
  *  Gravekeeper, 2026-11-05) the level lists it like any boss; until then this entry holds its place (an entry may give `icon` [type, form] to draw). */
-export const FALLEN = __RELEASE__ >= 4 ? [{ key:'fallengravekeeper' }, ...(__RELEASE__ >= 5 ? [{ key:'fallenpoltergeist' }] : []), ...(__RELEASE__ >= 7 ? [{ key:'fallenhexwitch' }] : [])] : [];   // one per nightmare book, by world index (Release 5: the hollow book's, N2-16; Release 7: the witchwood book's, N3-16)
+export const FALLEN = __RELEASE__ >= 4 ? [{ key:'fallengravekeeper' }, ...(__RELEASE__ >= 5 ? [{ key:'fallenpoltergeist' }] : []), ...(__RELEASE__ >= 7 ? [{ key:'fallenhexwitch' }] : []), ...(__RELEASE__ >= 8 ? [{ key:'fallencount' }] : [])] : [];   // one per nightmare book, by world index (Release 5: the hollow book's, N2-16; Release 7: the witchwood's, N3-16; Release 8: the keep's, FALLEN[3], N4-16)
+// The Keep nightmare's castle pieces (the Gatehouse, the Archer Tower) are castle walls, not monsters: like world 4's castle walls they have no bestiary entry (their intro cards explain them).
 
 export const BESTIARY = {
   ghoul:      { lore:'Dug itself out of the churchyard the night the moon turned orange. Not bright, but very determined.', ability:'Nothing special. Walks straight down its lane and chews the wall.' },
@@ -94,6 +96,15 @@ export const BESTIARY = {
     toad:       { lore:'It sat in the cauldron so long it started to enjoy the brew.', ability:'Slow, five health. Stops a third of the field short of your fence and lashes it with its tongue. When it dies every potion it drank bursts back onto the field.' },
     triptych:   { lore:'Three Mirror Sprites who agreed on one thing: nobody gets through.', ability:'Three health. Its mirror wall covers its own column and the one on each side: a pumpkin that meets it bounces back into that column\u2019s fence. The wall drops for a moment, and while it chews.' },
     fallenhexwitch:{ lore:'The Hexwitch, drained of every colour but red. Her broom grew bark and her cauldron never stops boiling.', ability:'Never reaches the wall. Lays great 5\u00d75 undead zones, scatters potions, sends crows and smashes your fence before gliding away. Three times she raises an altar in another lane: nothing hurts her until pumpkins break it.' },
+  } : {}),
+  ...(__RELEASE__ >= 8 ? {   // the nightmare Crumbling Keep (Release 8), in first-met order
+    lobbercart: { lore:'The keep\u2019s old siege engine, wheeled out of the cellar the night the storm broke. It throws whatever the Count gives it, and tonight that is nets.', ability:'Rolls in and parks at the back of its lane; it never comes to your fence. Every few seconds it lobs a net onto one of your pumpkins. Its nets stay when it falls.' },
+    lancer:     { lore:'A knight who rode out at the first thunderclap and has not stopped since. The lightning rides with him.', ability:'Charges down its lane the moment it appears, four times as fast as a walk. At your fence or a scarecrow it takes half the fence in one blow (a fence never loses its last bit), then stays and chews. Ice slows the charge.' },
+    siegetower: { lore:'Built to take the keep, it was turned against the village instead. The archers on its deck have not come down in a hundred years.', ability:'Never reaches the wall. Two archers on top shoot at your fence and take the hits first; only then does the tower itself crack. It lobs nets, and its ramp lets out a Storm Lancer or a Storm Marshal.' },
+    marshal:    { lore:'The Count\u2019s field marshal, who led the charge at the last siege and lost. He would like a rematch.', ability:'Every few seconds he raises his sword: monsters in the 3\u00d73 around him run twice as fast, and each grows twice as tough, once only.' },
+    glutton:    { lore:'A guest who came to the Count\u2019s feast and never left the table. It still has its napkin.', ability:'Throws red nets onto your pumpkins, two at a time, and takes no damage while any of its red nets is on the patch. Launch the netted pumpkins or break a Crookneck Gourd, then strike.' },
+    bride:      { lore:'Married to the Count on the night of the first storm. She has kept her veil, and lends it to whoever needs it most.', ability:'Drapes a red veil over the nearest monster in her lane or one beside it; nothing hurts it until she falls. When it is gone she veils the next.' },
+    fallencount:{ lore:'The Vampire Count, fallen to the storm he waited for. The rain runs red where he walks, and his keep rebuilds itself around him.', ability:'Never reaches the wall. Throws red nets that shield him, heals in a trance for every netted pumpkin, hurls a blood spear at his fence, calls lightning down a column of your patch, summons Lancers and Brides, and raises an Archer Tower and a Gatehouse.' },
   } : {}),
   twintides:  { lore:'Two serpents hatched from one egg on the night the village drowned. They finish each other’s sentences.', ability:'Never reach the wall. Both must die within a short window or the fallen one rises again.' },
 };

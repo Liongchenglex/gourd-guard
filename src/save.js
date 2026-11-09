@@ -46,6 +46,7 @@ if (__RELEASE__ >= 4 && (!save.gourds || typeof save.gourds !== 'object')) save.
 if (__RELEASE__ >= 4) save.seenGourdCoach = !!save.seenGourdCoach;   // the gourd tutorial on Nightmare 1-5 has played (src/engine/coach.js)
 if (__RELEASE__ >= 5) save.seenProtectorCoach = !!save.seenProtectorCoach;   // the Protector Gourd tutorial on Nightmare 2-5 has played (src/engine/coach.js)
 if (__RELEASE__ >= 7) save.seenWartlingCoach = !!save.seenWartlingCoach;   // the Wartling Gourd tutorial on Nightmare 3-5 has played (src/engine/coach.js)
+if (__RELEASE__ >= 8) save.seenCrookneckCoach = !!save.seenCrookneckCoach;   // the Crookneck Gourd tutorial on Nightmare 4-3 has played (src/engine/coach.js)
 
 // Old upgrades were replaced by pumpkin levels: refund what was spent on them.
 

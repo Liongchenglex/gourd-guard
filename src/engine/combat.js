@@ -5,7 +5,7 @@ import { magnetPull } from './magnet.js';
 import { hkGate, hkAfterHit, onHkFormDown, onKingDown } from './hollowking.js';
 import { SFX, musicStart } from './audio.js';
 import { MUSIC } from '../data/music.js';
-import { emptyCells, flyInto, groupCells, primaryGid, randColor, randSprout, resolveMatches, brownSize, paintPull, paintInherit } from './board.js';
+import { emptyCells, flyInto, groupCells, launchGids, primaryGid, randColor, randSprout, resolveMatches, brownSize, paintPull, paintInherit } from './board.js';
 import { TILE_P, mS, mY, spMulNow, spawnMonster, inHexZone, stripHusk } from './monsters.js';
 import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS, walls, FENCE_Y } from './state.js';
 import { TAU, clamp, fmt, rnd } from './util.js';
@@ -21,6 +21,7 @@ import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
 import { reaperFalls, cometBreaks, fpAfterHit, fpReaperHit } from './hollow.js';
 import { witchwoodFalls, fhGate, fhAfterHit } from './witchwood.js';
+import { shieldedNow, shieldPuff, keepFalls, pieceFalls, knockArcher, archersGuard, siegeFalls, countGate, fcCross, countFalls } from './keep.js';
 import { inWartSquare, isProtected } from './gourd.js';
 import { ROTTEN, ROT_FX, hitRule } from './rot.js';
 
@@ -39,37 +40,54 @@ function wardLaunch(r, c){
 export function launchGroup(ref){
   if (!ref || !ref.lit || !G || G.over) return;
   const gid = primaryGid(ref), grp = G.groups[gid];
-  const bunch = { spawned:false, small:!!grp && grp.size < 3, kills:0 };   // shared by every projectile of this launch (Purple's one-per-bunch spawn; Turquoise pairs are half power)
   if (!grp) return;
-  const cells = groupCells(gid);
-  if (!cells.length) return;
-  const pulled = paintPull(gid);   // Paint: touching pumpkins of any colour launch with the bunch, each as itself (owner, 2026-10-08)
-  const type = grp.color, lv = __RELEASE__ >= 5 && type === ROTTEN ? 1 : lvOf(type), guar = grp.size + pulled.length >= 5;   // pulled pumpkins count toward the 5+ knockback (owner); rotten (Release 5) has no level
-  const inh = type === PAINT ? paintInherit(pulled) : null;   // Paint takes the power of the colour it borrows most, at Paint's own level (owner, 2026-10-09)
-  for (const { r, c, cell } of cells){
+  // Release 8: a Crookneck square's group goes with every bunch sharing a cell with it (board.js launchGids); bunches claim their cells first,
+  // so a Rainbow in a bunch flies as that bunch's colour, and no cell launches twice. Below Release 8 this is the one group.
+  const gids = __RELEASE__ >= 8 ? launchGids(gid) : [gid];
+  const order = gids.length > 1 ? [...gids.filter(g => !G.groups[g].crook), ...gids.filter(g => G.groups[g].crook)] : gids;
+  const seen = new Set(), sets = [];
+  for (const g of order){ const own = groupCells(g).filter(o => !seen.has(o.cell)); for (const o of own) seen.add(o.cell); sets.push({ grp:G.groups[g], own, g }); }
+  for (const st of sets){ st.pulled = paintPull(st.g, seen); for (const o of st.pulled) seen.add(o.cell); }   // Paint: touching pumpkins of any colour launch with the bunch, each as itself (owner, 2026-10-08)
+  const nOwn = sets.reduce((a, st) => a + st.own.length, 0), nPulled = sets.reduce((a, st) => a + st.pulled.length, 0);
+  if (!nOwn) return;
+  const bunch = { spawned:false, small:nOwn < 3, kills:0 };   // shared by every projectile of this launch (Purple's one-per-bunch spawn; Turquoise pairs are half power)
+  let guar = nOwn + nPulled >= 5;   // pulled pumpkins count toward the 5+ knockback (owner)
+  // Release 8: the Crookneck's mixed square is no bunch. Only same-colour sets count toward 5+ (the square's members add nothing), and a crook
+  // set is never "small" (a Turquoise flying from the square hits at full power); the small test counts the same-colour pumpkins only.
+  const nSame = sets.reduce((a, st) => a + (st.grp.crook ? 0 : st.own.length + st.pulled.length), 0), sameOwn = sets.reduce((a, st) => a + (st.grp.crook ? 0 : st.own.length), 0);
+  if (__RELEASE__ >= 8) guar = nSame >= 5;
+  let setSmall = bunch.small;
+  const fly = (r, c, cell, type, lv) => {
     const x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;
     const ward = __RELEASE__ >= 5 && wardLaunch(r, c);   // from a Protector Gourd's square (Release 5)
     const wart = __RELEASE__ >= 7 && inWartSquare(r, c);   // from a Wartling Gourd's square (Release 7): double damage
-    G.projs.push({ x, y, vy:-900, type:inh != null ? inh : type, vis:cell.c, lv, guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}), ...(wart ? { wart:true } : {}) });
+    G.projs.push({ x, y, vy:-900, type, vis:cell.c, lv, guar, ...(__RELEASE__ >= 8 ? { small:setSmall } : {}), lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}), ...(wart ? { wart:true } : {}) });
     grid[r][c] = null;
+  };
+  for (const { grp:gp, own, pulled } of sets){
+    if (__RELEASE__ >= 8) setSmall = gp.crook ? false : sameOwn < 3;
+    if (__RELEASE__ >= 8 && gp.crook){   // a Crookneck group (Release 8): each pumpkin as itself at its own level; a Rainbow as Green
+      for (const { r, c, cell } of own){ const t = cell.c === RAINBOW ? 0 : cell.c; fly(r, c, cell, t, lvOf(t)); }
+      continue;
+    }
+    const type = gp.color, lv = __RELEASE__ >= 5 && type === ROTTEN ? 1 : lvOf(type);   // rotten (Release 5) has no level
+    const inh = type === PAINT ? paintInherit(pulled) : null;   // Paint takes the power of the colour it borrows most, at Paint's own level (owner, 2026-10-09)
+    for (const { r, c, cell } of own) fly(r, c, cell, inh != null ? inh : type, lv);
+    for (const { r, c, cell } of pulled){ const o = cell.c === RAINBOW ? type : cell.c; fly(r, c, cell, o, lvOf(o)); }   // a pulled rainbow flies as Paint
   }
-  for (const { r, c, cell } of pulled){
-    const own = cell.c === RAINBOW ? type : cell.c, x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;   // a pulled rainbow flies as Paint
-    const ward = __RELEASE__ >= 5 && wardLaunch(r, c), wart = __RELEASE__ >= 7 && inWartSquare(r, c);
-    G.projs.push({ x, y, vy:-900, type:own, vis:cell.c, lv:lvOf(own), guar, lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}), ...(wart ? { wart:true } : {}) });
-    grid[r][c] = null;
-  }
-  if (pulled.length) cells.push(...pulled);
-  SFX.launch(cells.length);
-  const skin = save.wardrobe && save.wardrobe.skins[type]; if (skin) SFX.skinLaunch(skin);   // a skin's launch accent, once per flick (owner, 2026-09-27)
-  G.throws += cells.length;
-  if (cells.length >= 5) G.q.big++;   // quests: bunches of 5
+  const n = nOwn + nPulled;
+  SFX.launch(n);
+  const skin = save.wardrobe && save.wardrobe.skins[grp.color]; if (skin) SFX.skinLaunch(skin);   // a skin's launch accent, once per flick (owner, 2026-09-27)
+  G.throws += n;
+  if (__RELEASE__ >= 8 ? nSame >= 5 : n >= 5) G.q.big++;   // quests: bunches of 5 (Release 8: a same-colour bunch only, never the Crookneck's mixed square)
   G.idle = 0; G.hint = null;
   resolveMatches();
 }
 
 export function damage(m, amt, color, small, big){
   if (m.dead) return;
+  if (__RELEASE__ >= 8 && shieldedNow(m)){ shieldPuff(m); return; }   // the one shield door (engine/keep.js): red nets, a Bride's veil, the Fallen Count's clamp; every damage source comes through here
+  if (__RELEASE__ >= 8 && archersGuard(m)) return;   // a Siege Tower with archers up: only a pumpkin's own hit gets past them, and that knocks one off instead (knockArcher, hitMonsterNow)
   if (m.type === 'jukebox' && m.lastHit === -1){ m.flash = 0.1; addFloat('Pumpkins only', m.x, mY(m) - m.r - 14, '#ffd35a', 15, 0.7); return; }   // tools never hurt the jukebox (owner)
   if (__RELEASE__ >= 5 && m.rotOnly && !rotDmg){ blockedPuff(m); return; }   // only rot can hurt it (Release 5): every other damage (splash, lightning, burn, mines, tools) is refused
   if (m.shield){   // shield knight marching: the hit bounces off
@@ -90,8 +108,9 @@ export function damage(m, amt, color, small, big){
   m.calmT = 0;   // vampires and the Count stop regenerating for a while after any hit
   if (m.healing){   // Vampire Count trance: count the hit
     m.healHits--;
-    if (m.healHits <= 0){ m.healing = false; m.stunT = TYPES.vampirecount.stun; addFloat('Trance broken!', m.x, mY(m) - m.r - 34, '#ffd35a', 20, 1.2); ring(m.x, mY(m), 60, 'rgba(255,211,90,.9)'); SFX.bossSfx('vampirecount', 'break'); }
-    else { addFloat(`×${m.healHits} more`, m.x, mY(m) - m.r - 34, '#ff6a6a', 16, 0.8); SFX.bossSfx('vampirecount', 'tick'); }
+    const fc = __RELEASE__ >= 8 && m.kind === 'fallencount';   // the Fallen Count's blood trance works the same, with his own stun (engine/keep.js)
+    if (m.healHits <= 0){ m.healing = false; m.stunT = fc ? TYPES.fallencount.tranceStun : TYPES.vampirecount.stun; addFloat('Trance broken!', m.x, mY(m) - m.r - 34, '#ffd35a', 20, 1.2); ring(m.x, mY(m), 60, 'rgba(255,211,90,.9)'); SFX.bossSfx(fc ? 'fallencount' : 'vampirecount', 'break'); }
+    else { addFloat(`×${m.healHits} more`, m.x, mY(m) - m.r - 34, '#ff6a6a', 16, 0.8); SFX.bossSfx(fc ? 'fallencount' : 'vampirecount', 'tick'); }
   }
   if (m.carrier){   // wisp rider: the first hit breaks the carrier instead of hurting the rider
     if (__RELEASE__ >= 5 && m.type === 'comet'){ cometBreaks(m); return; }   // Wisp Rider 2: a plain Wisp and a walking Imp (engine/hollow.js)
@@ -102,11 +121,13 @@ export function damage(m, amt, color, small, big){
   }
   if (__RELEASE__ >= 3 && m.kind === 'hollowking' && !m.hkClone){ amt = hkGate(m, amt); if (amt <= 0) return; }   // immune while his form stands
   if (__RELEASE__ >= 7 && m.kind === 'fallenhexwitch'){ amt = fhGate(m, amt); if (amt <= 0) return; }   // the Fallen Hexwitch: immune while her altar stands, never past her next mark (engine/witchwood.js)
+  if (__RELEASE__ >= 8 && m.kind === 'fallencount'){ amt = countGate(m, amt); if (amt <= 0) return; }   // a hit stops at his next blood-net mark (engine/keep.js)
   m.hp -= amt; m.flash = 0.1;
   addFloat(fmt(amt), m.x + rnd(-8, 8), mY(m) - m.r * mS(m) - 14, color || '#fff', small ? 16 : big ? 30 : 23, big ? 1 : 0.8);   // big: a Wartling hit (Release 7)
   if (m.hp <= 0.001) kill(m);
   else if (__RELEASE__ >= 3 && m.kind === 'hollowking') hkAfterHit(m);
   else if (__RELEASE__ >= 7 && m.kind === 'fallenhexwitch') fhAfterHit(m);   // a mark reached: her altar rises on this hit
+  else if (__RELEASE__ >= 8 && m.kind === 'fallencount') fcCross(m);   // a blood-net mark reached: three red nets at once, so the next hit is refused (engine/keep.js)
   else if (__RELEASE__ >= 5 && m.kind === 'fallenpoltergeist') fpAfterHit(m);   // a reaper mark crossed: its phase starts on this hit (engine/hollow.js)
 }
 
@@ -203,6 +224,9 @@ export function kill(m){
   if (__RELEASE__ >= 4 && m.type === 'rooster') lightFire(m.lane, m.p);   // a Cinder Rooster leaves a fire tile where it falls, whatever killed it
   if (__RELEASE__ >= 5 && m.type === 'reaper') reaperFalls(m);   // a crow bursts out where the Reaper fell (engine/hollow.js)
   if (__RELEASE__ >= 7) witchwoodFalls(m);   // the Flask Bearer's potion, the Cauldron Toad's burst (engine/witchwood.js)
+  if (__RELEASE__ >= 8) countFalls(m);   // the Fallen Count's nets, bolt, spears and castle pieces go with him (engine/keep.js)
+  if (__RELEASE__ >= 8) siegeFalls(m);   // the Siege Tower's own nets go with it (engine/keep.js)
+  if (__RELEASE__ >= 8) keepFalls(m);   // a Glutton's red nets turn ordinary, a Bride's veil comes off (engine/keep.js)
   if (__RELEASE__ >= 4 && m.type === 'casketjack') dropCoffin(m);   // Casket Jack falls into a field coffin with one last mummy in it (engine/nightmare.js)
   if (hitBy){ const b = hitBy.grp; if (b){ b.kills++; if (b.kills > G.q.best) G.q.best = b.kills; } if (hitBy.type === BROWN && hitBy.size === 2) G.q.brown++; }   // quests: kills in one launch, big Brown kills
   G.kills++; if (!m.minion) G.resolved++;
@@ -213,6 +237,7 @@ export function kill(m){
   for (let i = 0; i < (m.type === 'boss' ? 60 : 16); i++) chunk(m.x, y, col, m.type === 'boss' ? 420 : 220);
   ring(m.x, y, m.r * s * 2.2, 'rgba(255,220,150,.8)');
   if (__RELEASE__ >= 7 && G.vfx && (m.type === 'flaskbearer' || m.type === 'toad')) G.vfx.push({ kind:'clip', key:m.type, clip:'die', x:m.x, y, s, t:0, dur:m.type === 'toad' ? 0.6 : 0.55 });   // the bottles shatter and it topples / the toad swells and bursts (render/chars/witchwood.js)
+  else if (__RELEASE__ >= 8 && G.vfx && m.kind === 'siegetower') G.vfx.push({ kind:'clip', key:'siegetower', clip:'break', n:10, m:{ type:'boss', kind:'siegetower', archers:m.archers || 0 }, x:m.x, y, s, t:0, dur:1 });   // it creaks and comes apart into a heap of timber (render/chars/keep.js)
   else if (__RELEASE__ >= 4 && G.vfx && m.type === 'graveriser') G.vfx.push({ kind:'clip', key:'graveriser', clip:'die', x:m.x, y, s, t:0, dur:0.7 });   // it sinks back into the earth, its hat left on the hole (render/chars/graveriser.js)
   else if (G.vfx) G.vfx.push({ kind:'pop', m:{ type:m.type, kind:m.kind, look:m.look, ph:m.ph, eating:m.eating, hop:m.hop, tint:m.tint, age:5, rise:0, flash:0, slowT:0, frozenT:0, r:m.r }, x:m.x, y, s, t:0, dur:0.35 });   // the last frame squashes and fades (baked characters only)
   if (reward === 'boss' || reward === 'coins' || reward === 'gold'){
@@ -266,7 +291,7 @@ export function knockback(m){
 }
 
 /** A launched pumpkin's hit power: Turquoise pairs half, Brown by size (small ×0.5, medium ×1, big ×2). Used for monsters and castle walls. */
-export function pumpkinPower(pr){ return POWER[pr.lv - 1] * (pr.type === TURQUOISE && pr.grp && pr.grp.small ? TURQ_FRAC : pr.type === BROWN ? BROWN_SIZE_MULT[pr.size == null ? 1 : pr.size] : 1); }
+export function pumpkinPower(pr){ return POWER[pr.lv - 1] * (pr.type === TURQUOISE && (__RELEASE__ >= 8 && pr.small != null ? pr.small : pr.grp && pr.grp.small) ? TURQ_FRAC : pr.type === BROWN ? BROWN_SIZE_MULT[pr.size == null ? 1 : pr.size] : 1); }
 /** Pink (owner, 2026-09-27): repairs the wall of its column once, as it flies over the fence, whether or not it hits anything. */
 export function pinkHeal(pr){
   const i = pr.lv - 1, w = walls[pr.lane]; if (!w || w.hp >= w.max) return;
@@ -303,7 +328,8 @@ function hitMonsterNow(pr, m){
   if (__MAGNET__ && pr.type === MAGNET) magnetPull(m, pr.lv);   // Magnet: nearby monsters slide onto this tile, even off walls (Release 6)
   m.lastHit = pr.type; m.lastHitLv = pr.lv; m.lastHitAlt = pr.vis === PAINT && pr.type !== PAINT ? PAINT : -1;
   const hitPower = pumpkinPower(pr) * (__RELEASE__ >= 7 && pr.wart ? WART_DMG : 1);   // launched from a Wartling Gourd's square (Release 7): its hit damage doubles; damage() still applies every immunity
-  if (__RELEASE__ >= 4 && HUSK_STRIP[m.type]) stripHusk(m);   // a Corn Husker's first hit only takes the husk off (Release 4)
+  if (__RELEASE__ >= 8 && !shieldedNow(m) && knockArcher(m)) { /* an archer takes the hit: no health lost (engine/keep.js) */ }
+  else if (__RELEASE__ >= 4 && HUSK_STRIP[m.type] && !(__RELEASE__ >= 8 && shieldedNow(m))) stripHusk(m);   // a Corn Husker's first hit only takes the husk off (Release 4); a shielded one keeps it: damage() refuses the hit (Release 8)
   else damage(m, hitPower, __RELEASE__ >= 7 && pr.wart ? '#d9b8ff' : PTYPES[pr.type].spark, false, __RELEASE__ >= 7 && pr.wart);
   if (pr.type === 5 && pr.grp && !pr.grp.spawned){   // Purple: every launched bunch spawns one pumpkin on its first hit
     pr.grp.spawned = true; purpleSpawn(m, y, i);
@@ -381,7 +407,7 @@ export function damageCastle(w, amt){
   const y = castleY(w);
   addFloat(fmt(amt), LANE(w.lane) + rnd(-8, 8), y - 30, '#d8d0c8', 16, 0.7);
   for (let i = 0; i < 6; i++) chunk(LANE(w.lane), y, '#8a8d96', 160);
-  if (w.hp <= 0.001){ w.dead = true; for (let i = 0; i < 22; i++) chunk(LANE(w.lane), y, i % 2 ? '#8a8d96' : '#55585f', 260); ring(LANE(w.lane), y, 44, 'rgba(220,220,230,.9)'); SFX.wallDown('castle'); G.shake = Math.max(G.shake, 0.5); }
+  if (w.hp <= 0.001){ w.dead = true; for (let i = 0; i < 22; i++) chunk(LANE(w.lane), y, i % 2 ? '#8a8d96' : '#55585f', 260); ring(LANE(w.lane), y, 44, 'rgba(220,220,230,.9)'); SFX.wallDown('castle'); G.shake = Math.max(G.shake, 0.5); if (__RELEASE__ >= 8 && w.kind && w.kind !== 'wall') pieceFalls(w); }
   else SFX.wallHit('castle');
 }
 

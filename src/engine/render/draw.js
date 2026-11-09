@@ -3,7 +3,7 @@ import { sproutEvery, shoreP, MINE_ARM } from '../game.js';
 import { perkOn } from '../../data/perks.js';
 import { GEAR } from '../../data/shop.js';
 import { PTYPES, RAINBOW, BROWN, PAINT } from '../../data/pumpkins.js';
-import { emptyCells, findCell, groupCells, heldGid, brownSize, paintPull, paintInherit } from '../board.js';
+import { emptyCells, findCell, groupCells, heldGid, heldLaunch, brownSize, paintPull, paintInherit } from '../board.js';
 import { dropHop, castleY } from '../combat.js';
 import { mS, mY, TILE_P } from '../monsters.js';
 import { K, coinTarget, ctx } from './canvas.js';
@@ -12,7 +12,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite, magSparkSprite } from './tools.js';
-import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile } from './fx.js';
+import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -23,10 +23,15 @@ import { drawCoach } from '../coach.js';
 import { drawFires, drawFireFx } from './fire.js';
 import { drawPoison } from './poison.js';
 import { drawPin, drawFlyingFork } from './pin.js';
+import { drawNetOver, drawNetFlight } from './nets.js';
+import { pieceFrame, pieceClip } from './castlepieces.js';
+import { CRUMBLE_DUR, CRUMBLE_LINGER, SPEAR_FLY, BOLT_FLASH } from '../keep.js';
+import { NET_FLY } from '../../data/rules.js';
 import { drawGourdCell, drawGourdGlow } from './gourd.js';
 import { ROTTEN, ROT_FX } from '../rot.js';
 import { rotSprite } from './rot.js';
 import { drawPotions, drawPotionFx } from './potion.js';
+import { drawWeatherFrame } from './weather.js';
 import { drawRoots, drawAltar, undeadZoneSize } from './witchwood.js';
 import { barrierFront } from '../witchwood.js';
 
@@ -50,6 +55,7 @@ export function render(){
     }
     ctx.globalAlpha = 1;
   }
+  if (__RELEASE__ >= 8) drawWeatherFrame(ctx);   // the Keep nightmare's rain and lightning (Release 8, render/weather.js), behind the monsters and the patch
   drawPreview(t);
   if ((g.def && g.def.sea) || g.sea) drawSea(t);
   drawPuddles(t);
@@ -60,6 +66,7 @@ export function render(){
   for (const m of g.monsters) if (m.type === 'doctor' && !m.dead && m.p > 0) drawHealZone(m, t);
   for (const m of g.monsters) if (m.type === 'bulwark' && !m.dead && m.p > 0) drawBulwarkZone(m, t);
   if (__RELEASE__ >= 5) for (const m of g.monsters) if (m.type === 'rotdoctor' && !m.dead && m.p > 0) drawRotZone(m, t);
+  if (__RELEASE__ >= 8) for (const m of g.monsters) if (m.type === 'marshal' && m.rallying && !m.dead) drawRallyZone(m, t);   // the Storm Marshal's rally square, while his sword is up (one baked sprite)
   if (__RELEASE__ >= 5) for (const m of g.monsters) if (m.type === 'boss' && m.kind === 'fallenpoltergeist' && !m.dead) drawFallenPoltFx(m, t);   // its black fogs and its reaper glow, under the monsters
   drawHexZones(t);
   const ms = g.monsters.slice().sort((a, b) => a.p - b.p);
@@ -79,8 +86,10 @@ export function render(){
   drawVfx();
   drawTails(t);
   drawCastles(t);
+  if (__RELEASE__ >= 8) drawCrumbles();   // fallen Gatehouses and Archer Towers settling (Release 8)
   drawScarecrows(t);
   drawArrows(t);
+  if (__RELEASE__ >= 8 && G.fcSpears && G.fcSpears.length) drawCountSpears();   // the Fallen Count's blood spears in flight (one baked sprite each)
   if (bands.length) drawFog(t, bands, g.fogClear > 0);
   if (fogCols.length) drawFogCols(t, fogCols, g.fogClear > 0);
   if (bands.length || fogCols.length) drawBossBarsOverFog(g);   // owner: the boss's health bar must show through the mist
@@ -97,6 +106,8 @@ export function render(){
   if (G.aim === 'repair') drawAimWalls(t);
   updatePaintPull(t);   // marks borrowed pumpkins so drawGrid lights them
   drawGrid(t);
+  if (__RELEASE__ >= 8 && G.fcBolt) drawCountBolt(t);   // the Fallen Count's lightning over a patch column: the warning, then the bolt (baked)
+  if (__RELEASE__ >= 8 && G.netsFlying) for (const f of G.netsFlying) drawNetFlight(ctx, f.x, f.y, LANE(f.c), GY + f.r * CS + CS / 2, 1 - f.t / NET_FLY, f.kind, f.r + f.c);   // nets in flight
   if (__RELEASE__ >= 5 && G.poison && (G.poison.warn || G.poison.on)) drawPoison(G.poison, t);   // poison fog and its arrows, over the pumpkins (Release 5)
   if (__RELEASE__ >= 4) drawCrowDives();
   if (__RELEASE__ >= 3 && G.hkTell) drawHkTell(t);
@@ -189,7 +200,7 @@ export function drawGraves(){
 
 export function drawPreview(t){
   const gid = heldGid(); if (gid == null || state !== 'play') return;
-  const cols = new Set(groupCells(gid).map(o => o.c));
+  const cols = __RELEASE__ >= 8 ? heldLaunch().cols : new Set(groupCells(gid).map(o => o.c));   // Release 8: the whole launch's columns, cached (board.js heldLaunch)
   for (const c of cols){
     const x = LANE(c);
     let best = null;
@@ -321,6 +332,7 @@ export function drawCastles(t){
   for (const w of cs){
     if (w.dead) continue;
     const x = LANE(w.lane), y = castleY(w), hw = CS * 0.46;
+    if (__RELEASE__ >= 8 && w.kind && w.kind !== 'wall'){ drawPiece(w, x, y, t, hw); continue; }   // the Gatehouse and the Archer Tower (Release 8): baked frames
     const sp = castleSprite(K, w.hp / w.maxHp);   // baked hewn stone with crenellations and a portcullis, cracking as it takes damage (render/fx.js)
     ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h);
     const tx = x + sp.w / 2 - 9, ty = y - 27, ga = 0.3 + 0.1 * Math.sin(t * 13 + w.lane * 2) + 0.06 * Math.sin(t * 7.3 + w.lane);   // torch flicker
@@ -329,6 +341,27 @@ export function drawCastles(t){
     const bw = hw * 1.6, bx = x - bw / 2, by = y + 24;
     ctx.fillStyle = 'rgba(0,0,0,.6)'; rrect(ctx, bx - 1, by - 1, bw + 2, 7, 3); ctx.fill();
     ctx.fillStyle = '#d8d0c8'; rrect(ctx, bx, by, Math.max(0, bw * w.hp / w.maxHp), 5, 2.5); ctx.fill();
+  }
+}
+/** A Gatehouse or an Archer Tower (Release 8, render/castlepieces.js): one baked frame of its clip, a white flash over it when hit, the health bar. */
+function drawPiece(w, x, y, t, hw){
+  const f = w.hp / w.maxHp, dmg = f > 0.66 ? 0 : f > 0.33 ? 1 : 2, loop = w.kind === 'gate' ? 'closed' : 'idle';
+  const clip = w.anim ? w.anim.clip : loop, cl = pieceClip(w.kind, clip);
+  const i = w.anim ? Math.floor(w.anim.t * cl.fps) : Math.floor(t * cl.fps + w.lane) % cl.n;   // a clip plays once from its start; the rest loops
+  const sp = pieceFrame(w.kind, clip, i, dmg, K);
+  ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h);
+  if (w.flash > 0){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55; ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  const bw = hw * 1.6, bx = x - bw / 2, by = y + 24;
+  ctx.fillStyle = 'rgba(0,0,0,.6)'; rrect(ctx, bx - 1, by - 1, bw + 2, 7, 3); ctx.fill();
+  ctx.fillStyle = '#d8d0c8'; rrect(ctx, bx, by, Math.max(0, bw * w.hp / w.maxHp), 5, 2.5); ctx.fill();
+}
+/** The heaps of fallen pieces (Release 8): the baked crumble clip, the last frame fading out. */
+export function drawCrumbles(){
+  for (const c of G.crumbles || []){
+    const cl = pieceClip(c.kind, 'crumble'), x = LANE(c.lane), y = FIELD_TOP + c.p * (FIELD_BOT - FIELD_TOP), i = Math.min(cl.n - 1, Math.floor(c.t * cl.fps));
+    const sp = pieceFrame(c.kind, 'crumble', i, 0, K), over = c.t - CRUMBLE_DUR[c.kind];
+    ctx.globalAlpha = over > 0 ? Math.max(0, 1 - over / CRUMBLE_LINGER) : 1;
+    ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h); ctx.globalAlpha = 1;
   }
 }
 /** The Triptych Sprite's barrier (Release 7): its own lane and TYPES.triptych.lanes either side (fewer at the field's edge), its base line at the
@@ -362,6 +395,11 @@ export function drawHealZone(m, t){
   const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
   drawHealZoneFx(ctx, x, y, w, h, t, K);
 }
+/** The Storm Marshal's rally square (Release 8): 3 lanes by 3 tile heights, crimson; fades out over the last half second. */
+export function drawRallyZone(m, t){
+  const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
+  drawRallyZoneFx(ctx, x, y, w, h, t, K, Math.min(1, m.rallyLeft / 0.5));
+}
 /** Plague Doctor 2's rot square (Release 5): the same 3 lanes by 3 tile heights, poison green. */
 export function drawRotZone(m, t){
   const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
@@ -377,6 +415,21 @@ function drawFallenPoltFx(m, t){
 /** Scarecrows (world 5 tool): a post with a straw figure and a health bar. */
 export function drawScarecrows(t){ drawScarecrowsFx(ctx, G.scarecrows || [], t, sc => G.monsters.some(m => !m.dead && m.chewing === sc)); }
 /** Archers' arrows. */
+/** The Fallen Count's lightning (Release 8): a pulsing baked wash on the warned column, then the baked bolt fading over it. */
+function drawCountBolt(t){
+  const b = G.fcBolt, x = LANE(b.c) - CS / 2, h = ROWS * CS;
+  ctx.save();
+  if (b.warn > 0){ const sp = countWarnSprite(K); ctx.globalAlpha = 0.55 + 0.35 * Math.sin(t * 14); ctx.drawImage(sp.c, x, GY, CS, h); }
+  else { const sp = countBoltSprite(K), bw = CS * 1.6, bh = h + CS * 1.5; ctx.globalAlpha = Math.max(0, b.strike / BOLT_FLASH); ctx.drawImage(sp.c, LANE(b.c) - bw / 2, GY - CS * 1.5, bw, bh); }
+  ctx.restore();
+}
+/** The Fallen Count's blood spears flying down his lane to the fence (Release 8). */
+function drawCountSpears(){
+  const sp = countSpearSprite(K), s = CS / 70;
+  for (const f of G.fcSpears){ const p = f.p0 + (1 - f.p0) * Math.min(1, f.t / SPEAR_FLY), y = FIELD_TOP + p * (FIELD_BOT - FIELD_TOP);
+    ctx.drawImage(sp.c, LANE(f.lane) - FC_SPEAR.w / 2 * s, y - FC_SPEAR.h * s, FC_SPEAR.w * s, FC_SPEAR.h * s); }
+}
+
 export function drawArrows(t){
   for (const a of G.arrows || []){
     const x = LANE(a.lane), y = FIELD_TOP + a.p * (FIELD_BOT - FIELD_TOP);
@@ -446,7 +499,7 @@ export function drawAimGraves(t){
   }
 }
 export function drawGrid(t){
-  const hg = heldGid(), flying = [];
+  const hg0 = heldGid(), hg = __RELEASE__ >= 8 && hg0 != null ? heldLaunch().cells : hg0, flying = [];   // Release 8: every cell the held pumpkin would launch, a cached Set (board.js heldLaunch)
   let gourds = null;
   ctx.save();
   ctx.beginPath(); ctx.rect(0, GY - 4, W, ROWS * CS + 8); ctx.clip();
@@ -463,7 +516,7 @@ export function drawGrid(t){
 
 export const LIT_HALO = [[140, 255, 90], [255, 214, 70], [140, 220, 255], [255, 110, 50], [225, 230, 245], [200, 120, 255], [235, 242, 255], [255, 140, 50], [120, 160, 255], [255, 130, 200], [90, 240, 225], [240, 170, 80], [205, 170, 255], ...(__RELEASE__ >= 3 ? [[245, 220, 160]] : []), ...(__MAGNET__ ? [[255, 150, 80]] : []), [255, 230, 140]];   // Beige (Release 3) then Magnet (copper, Release 6) sit before Rainbow   // ... Brown, Paint (lilac), Rainbow
 export function drawCell(r, c, cell, t, hg){
-  const held = hg != null && cell.lit && cell.gids.includes(hg);
+  const held = hg != null && cell.lit && (__RELEASE__ >= 8 ? hg.has(cell) : cell.gids.includes(hg));
   let x = LANE(c) + cell.ox, y = GY + r * CS + CS / 2 + cell.oy;
   let s = (1 + cell.pop * 0.25) * (0.2 + 0.8 * cell.grow);
   const bsz = cell.c === BROWN ? brownSize(cell) : -1;
@@ -501,6 +554,7 @@ export function drawCell(r, c, cell, t, hg){
   ctx.drawImage(rotten ? rotSprite(lit) : sprites[cell.c][lit ? 1 : 0], -sz / 2, -sz * .88, sz, sz);
   const wc = !rotten && save.wardrobe && save.wardrobe.costume; if (wc) drawCostume(ctx, wc, 0, -sz * .88 + sz * (0.5 + 3 / CS), sz * .4, Math.round(CS * K));   // the worn costume, on every pumpkin
   ctx.restore();
+  if (__RELEASE__ >= 8 && cell.net) drawNetOver(ctx, x, y, cell.net, (cell.t - (cell.netAt || 0)) / 0.25);   // a net holds it (Release 8, render/nets.js)
   if (__RELEASE__ >= 4 && cell.pinned > 0) drawPin(ctx, x, y, cell.pinned, cell.pinMax);   // a Hayrick's pitchfork holds it (Release 4)
   if (bsz === 0){ ctx.fillStyle = '#7fd05a'; ell(ctx, x + CS * 0.12, y - CS * 0.3, 6, 3, -0.6); ell(ctx, x + CS * 0.2, y - CS * 0.36, 5, 2.5, 0.5); }   // small brown: a sprout
   if (cell.lit && cell.bsize >= 5){
@@ -621,7 +675,7 @@ function drawVfx(){
     else if (__RELEASE__ >= 4 && (v.kind === 'firehiss' || v.kind === 'fireflare' || v.kind === 'firewave')) drawFireFx(v);   // Ice puts a fire out / a pumpkin burns up in one / the Fallen Gravekeeper's smash   // Ice puts a fire out / a pumpkin burns up in one
     else if (v.kind === 'clip'){
       ctx.save(); ctx.translate(v.x, v.y); ctx.scale(v.s, v.s);
-      drawChar(ctx, {}, v.key, null, [v.clip, Math.floor(p * 7.999)]); ctx.restore();
+      drawChar(ctx, v.m || {}, v.key, null, [v.clip, v.n ? Math.min(v.n - 1, Math.floor(p * v.n)) : Math.floor(p * 7.999)]); ctx.restore();   // v.n / v.m: a clip of more than 8 frames, and the monster whose look it keeps (the Siege Tower's break, Release 8)
     }
   }
 }

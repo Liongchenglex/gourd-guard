@@ -1,7 +1,8 @@
 // Gourds (Release 4, Nightmare Pumpkin Patch; spec Part 3). A gourd stands on the patch on its own; it is not a pumpkin colour and does not
 // take a pumpkin slot. Release 4 has the Grave Gourd; Release 5 (Nightmare Foggy Hollow, spec Part 6) adds the Protector Gourd, and a night
 // may stand up to two (engine: src/engine/gourd.js, art: src/engine/render/gourd.js). Release 7 (Nightmare Witchwood, spec Part 5) adds the
-// Wartling Gourd: with three unlocked, the player picks two of the three for the two slots.
+// Wartling Gourd: with three unlocked, the player picks two of the three for the two slots. Release 8 (Nightmare Crumbling Keep, spec Part 5)
+// adds the Crookneck Gourd: four unlocked, still two slots; on N4-3 a level's `gourdLock` keeps it in slot 1.
 // Wrapped in the release gates so lower builds carry none of these names.
 export const GOURDS = __RELEASE__ >= 4 ? {
   grave:{ key:'grave', name:'Grave Gourd', role:'Clears graves',
@@ -16,6 +17,11 @@ export const GOURDS = __RELEASE__ >= 4 ? {
     wartling:{ key:'wartling', name:'Wartling Gourd', role:'Doubles launch damage',
       power:'A pumpkin flicked from the 3×3 around it does double damage (its powers work as usual). Press and hold it to break it: in the top row, right under the fence, it mends each fence above its square by half; anywhere else it just breaks. A new one sprouts on the next tick.',
       lore:'A warty violet gourd from the witch\'s garden. Whatever leaves its patch flies with a hex behind it.' },
+  } : {}),
+  ...(__RELEASE__ >= 8 ? {   // Release 8 (Nightmare Crumbling Keep, spec Part 5): the fourth gourd, given at the start of N4-3
+    crookneck:{ key:'crookneck', name:'Crookneck Gourd', role:'Breaks nets',
+      power:'No net can land in the 3×3 around it. Every pumpkin in its square lights up and launches together, any colour, as long as there are at least 2; each flies up its own column with its own power. Press and hold it to break it: every net on the patch comes off, red nets too. A new one sprouts on the next tick.',
+      lore:'A lime gourd with a neck bent like a shepherd\'s crook. The keep\'s gardeners used it to hook the nets off their rows.' },
   } : {}),
 } : {};
 /** The picker's gourd slots (Release 5, spec Part 6): a night takes up to this many gourds, each slot any unlocked gourd the night offers

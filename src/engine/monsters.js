@@ -8,6 +8,7 @@ import { glueStep } from './glue.js';
 import { magnetSlide } from './magnet.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
 import { updateHollowMonster, reapLanes, initHollowMonster, initLamplighter, updateLamplighter, initFallenPolt, updateFallenPolt } from './hollow.js';
+import { newCastle, initKeepMonster, updateKeepMonster, keepStop, keepParked, keepSpeed, lancerHit, keepTick, updateSiege, updateFallenCount } from './keep.js';
 import { initWitchwoodMonster, updateWitchwoodMonster, toadStop, tongueFree, initTreant, updateTreant, initFallenHex, updateFallenHex } from './witchwood.js';
 import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike, initFallenGK, updateFallenGK } from './nightmare.js';
 import { SFX } from './audio.js';
@@ -54,6 +55,7 @@ export function resolveMonster(key){
   if (v) return { type:v.base, kind:v.base, T:TYPES[v.base], variant:v };
   return { type:key, kind:key, T:TYPES[key], variant:null };
 }
+let monsterIds = 0;
 export function spawnMonster(key, lane, minion, p, formArg){
   const { type, kind, T, variant } = resolveMonster(key);
   const mod = variant ? MODS[variant.mod] : null;
@@ -125,6 +127,8 @@ export function spawnMonster(key, lane, minion, p, formArg){
   if (__RELEASE__ >= 5 && type === 'boss' && kind === 'fallenpoltergeist') initFallenPolt(m);   // the hollow nightmare's boss, N2-16 (engine/hollow.js)
   if (__RELEASE__ >= 7 && type === 'boss' && kind === 'treant') initTreant(m);   // the Nightmare Witchwood mini boss (engine/witchwood.js)
   if (__RELEASE__ >= 7 && type === 'boss' && kind === 'fallenhexwitch') initFallenHex(m);   // the witchwood nightmare's boss, N3-16 (engine/witchwood.js)
+  if (__RELEASE__ >= 8) m.id = ++monsterIds;   // a stable id: the nets a monster throws and the Bride's veil are told apart by it (engine/nets.js, engine/keep.js)
+  if (__RELEASE__ >= 8) initKeepMonster(m);   // Nightmare Crumbling Keep's monsters (engine/keep.js; after the id: a Glutton throws its red nets at once)
   G.monsters.push(m);
   return m;
 }
@@ -135,11 +139,13 @@ function standsStill(o){
   if (o.type === 'archer') return o.p >= TYPES.archer.hold;
   if (o.type === 'diver') return !o.walker;
   if (o.type === 'sack' || o.type === 'jukebox') return true;
+  if (__RELEASE__ >= 8 && keepParked(o)) return true;   // a parked Lobber Cart never moves on (engine/keep.js)
   if (__RELEASE__ >= 4 && o.type === 'coffin') return true;   // Casket Jack's Fallen Casket lies still: others walk round it
   return false;
 }
 export function aheadLimit(m){
   let limit = 1;
+  if (__RELEASE__ >= 8 && m.type === 'lancer' && !m.spent) return limit;   // a Storm Lancer rides through the monsters ahead of it (engine/keep.js)
   if (__RELEASE__ >= 5 && m.dashing) return limit;   // a comet streaking down its lane never stops for anyone (engine/hollow.js)
   const myLanes = lanesOf(m);
   for (const o of G.monsters){
@@ -223,6 +229,7 @@ export function updateMonster(m, dt){
     if (Math.random() < dt * 16) G.parts.push({ x:m.x + rnd(-m.r * 0.6, m.r * 0.6), y:mY(m) + rnd(-4, 10), vx:rnd(-10, 10), vy:-rnd(50, 90), t:0, life:0.5, size:rnd(3, 6), color:'#ff8a3a', kind:'flame', grav:0 });
     if (m.burnTick <= 0){ m.burnLeft--; m.burnTick = BURN_EVERY; m.lastHit = 3; SFX.extra('burn'); damage(m, m.burnAmt, '#ff9a4a', true); if (m.dead) return; }
   }
+  if (__RELEASE__ >= 8 && (m.type === 'glutton' || m.type === 'bride')) keepTick(m, dt);   // the Glutton's net clock and the Bride's veil, walking or chewing (engine/keep.js)
   if (m.kb > 0){
     const st = Math.min(m.kb, dt * 2.2);
     m.p = Math.max(-0.05, m.p - st); m.kb -= st;
@@ -232,6 +239,7 @@ export function updateMonster(m, dt){
   if (m.type === 'jukebox') return;   // it only plays: never walks, never chews
   if (m.eating){
     if (__RELEASE__ >= 4 && m.type === 'crow' && m.frozenT <= 0 && (m.peekT = (m.peekT || 0) - dt) <= 0){ m.peekT = 0.25; if (crowStrike(m)) return; }   // a crow pecking the fence looks over the patch 4 times a second and flies in once a pumpkin it may take is there (engine/nightmare.js)
+    if (__RELEASE__ >= 8 && m.type === 'lancer' && walls[m.lane].hp > 0 && lancerHit(m)) return;   // its fence was down and has been repaired: the charge lands now, not a chew of 0 (engine/keep.js)
     m.shield = false;   // a shield knight lowers its shield to chew
     m.reflecting = false;   // a mirror sprite drops its mirror to chew
     const mul = (m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1) * (__RELEASE__ >= 7 && m.drank && m.drank.speed ? POTION_SPEED : 1);   // a speed potion: it chews (and walks through a gap) faster (Release 7, engine/potion.js)
@@ -369,6 +377,8 @@ export function updateMonster(m, dt){
       case 'boss': {
         if (__RELEASE__ >= 3 && m.kind === 'hollowking'){ updateHollowKing(m, dt); if (m.p >= m.hold) sp = 0; break; }
         if (__RELEASE__ >= 4 && m.kind === 'strawlord'){ updateStrawlord(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // stops exactly at hold, never past it
+        if (__RELEASE__ >= 8 && m.kind === 'fallencount'){ sp = updateFallenCount(m, dt) || m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the Fallen Count (engine/keep.js): walks like the story Count, still in his trance and stun; stops exactly at hold
+        if (__RELEASE__ >= 8 && m.kind === 'siegetower'){ updateSiege(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the Siege Tower (engine/keep.js); stops exactly at hold
         if (__RELEASE__ >= 5 && m.kind === 'lamplighter'){ updateLamplighter(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the Lamplighter's moods (engine/hollow.js); stops exactly at hold
         if (__RELEASE__ >= 7 && m.kind === 'treant'){ updateTreant(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // its roots (engine/witchwood.js); stops exactly at hold and never moves on
         if (__RELEASE__ >= 7 && m.kind === 'fallenhexwitch'){ updateFallenHex(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // N3-16's boss (engine/witchwood.js); stops exactly at hold
@@ -426,15 +436,18 @@ export function updateMonster(m, dt){
         }
         break;
       }
-      default: if (!(__RELEASE__ >= 4 && updateNightmareMonster(m, dt)) && !(__RELEASE__ >= 5 && updateHollowMonster(m, dt)) && !(__RELEASE__ >= 7 && updateWitchwoodMonster(m, dt))) m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
+      default: if (!(__RELEASE__ >= 4 && updateNightmareMonster(m, dt)) && !(__RELEASE__ >= 5 && updateHollowMonster(m, dt)) && !(__RELEASE__ >= 7 && updateWitchwoodMonster(m, dt)) && !(__RELEASE__ >= 8 && updateKeepMonster(m, dt))) m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
     }
   }
   if (__RELEASE__ >= 4 && m.rush > 0) sp *= TYPES.rooster.rushMul;
   if (__RELEASE__ >= 7 && m.drank && m.drank.speed) sp *= POTION_SPEED;   // a speed potion (Release 7, engine/potion.js)
+  if (__RELEASE__ >= 8) sp *= keepSpeed(m);   // a Storm Lancer's charge and a Storm Marshal's rally, on top of Ice (engine/keep.js)
   let np = Math.min(m.p + sp * dt, aheadLimit(m));
+  if (__RELEASE__ >= 8) np = Math.min(np, keepStop(m));   // a Lobber Cart parks at its spot and never goes on to chew (engine/keep.js)
   if (__RELEASE__ >= 7 && m.type === 'toad') np = Math.min(np, toadStop(m));   // the Cauldron Toad stops at its tongue hold while its fence stands (engine/witchwood.js)
   if (m.chewing && !m.chewing.dead) np = Math.min(np, m.chewing.p);   // held at a scarecrow
   if (np > m.p) m.p = np;
+  if (__RELEASE__ >= 8 && m.p >= 1 && m.type === 'lancer' && lancerHit(m)) return;   // the charge lands: half the fence, never its last 1; then it stays and chews (engine/keep.js)
   if (__RELEASE__ >= 4 && m.p >= 1 && m.type === 'crow' && crowStrike(m)) return;   // over the fence and into the patch (engine/nightmare.js)
   if (m.p >= 1){ m.p = 1; m.eating = true; if (G.q){ G.q.touched[m.type] = true; if (__RELEASE__ >= 5 && TYPES[m.type] && TYPES[m.type].questAs) G.q.touched[TYPES[m.type].questAs] = true; } }   // quests: "do not let a ghoul reach the fence" (a Fogwalker 2 counts as a fogwalker: questAs, Release 5)
 }
@@ -522,7 +535,7 @@ function updateVampireCount(m, dt){
       const used = new Set(G.castles.filter(w => !w.dead).map(w => w.lane));
       const free = [...Array(COLS).keys()].filter(l => !used.has(l));
       if (free.length){ const lane = free[Math.floor(Math.random() * free.length)]; const whp = G.mode === 'story' && G.def.castles ? G.def.castles.hp : T.wallHp;
-      G.castles.push({ lane, p:rnd(0.45, 0.7), hp:whp, maxHp:whp, flash:0, dead:false }); ring(LANE(lane), FIELD_TOP + 0.55 * (FIELD_BOT - FIELD_TOP), 40, 'rgba(200,180,220,.9)'); addFloat('A wall rises', m.x, mY(m) - m.r - 30, '#d8cfe0', 16, 1); SFX.bossSfx('vampirecount', 'wall'); m.anim = { clip:'wall', t:0, dur:0.8 }; }
+      { const wp = rnd(0.45, 0.7); G.castles.push(__RELEASE__ >= 8 ? newCastle(lane, wp, 'wall', whp) : { lane, p:wp, hp:whp, maxHp:whp, flash:0, dead:false }); } ring(LANE(lane), FIELD_TOP + 0.55 * (FIELD_BOT - FIELD_TOP), 40, 'rgba(200,180,220,.9)'); addFloat('A wall rises', m.x, mY(m) - m.r - 30, '#d8cfe0', 16, 1); SFX.bossSfx('vampirecount', 'wall'); m.anim = { clip:'wall', t:0, dur:0.8 }; }
     }
   }
   m.healT -= dt;

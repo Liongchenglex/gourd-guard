@@ -11,6 +11,8 @@
 // grows back on the next sprout.
 // Release 7 adds a fourth on Nightmare 3-5 (`coach:'wartling'`, WTIPS below): slide the Wartling Gourd, launch a bunch from its square at a
 // tough ghoul (doubled numbers), slide it to the top row, hold it until it breaks and the fences above it mend.
+// Release 8 adds a fifth on Nightmare 4-3 (`coach:'crookneck'`, CTIPS below): slide the Crookneck Gourd, launch a mixed group from its square,
+// watch a net land next to it (one aimed inside falls apart), hold it until it breaks and every net comes off.
 // The hand is one baked sprite blitted with transforms (no painter calls or shadowBlur per frame).
 import { G, grid, graves, setGrid, walls, ROWS, COLS, CS, GX, GY, LANE, FIELD_TOP, FENCE_Y } from './state.js';
 import { newCell, spawnSprouts, planMove, applyMove, revertMove, sameColorSize, findCell, bestLitGroup, resolveMatches } from './board.js';
@@ -22,6 +24,7 @@ import { gourdPos, gourdsOn, squareAround } from './gourd.js';
 import { isRotten } from './rot.js';
 import { poisonNow } from './poison.js';
 import { PTYPES } from '../data/pumpkins.js';
+import { NET_FLY } from '../data/rules.js';
 
 const TIPS = {
   slide: 'Drag a pumpkin to slide it. Line up <b>3 of the same colour</b> to make a bunch.',
@@ -68,9 +71,23 @@ const WTIPS = __RELEASE__ >= 7 ? {
   praise: '<b>Nice!</b> Break it under a worn fence to mend it. It grows back on the next sprout.',
 } : {};
 
+// The Crookneck script (Release 8). Steps: cslide (the hand slides the Crookneck) -> claunch (two pumpkins of different colours, not touching,
+// light up in its square; the hand swipes them up) -> cnet (two nets fly in: one at a pumpkin just outside its square lands, one aimed inside
+// falls apart) -> chold (the hand holds it until it breaks: every net comes off) -> praise. Broken before chold it goes to cback (it grows back
+// on the next sprout) and on to cnet. Monsters and sprouts wait (coachHolds); the script throws its own nets and runs its own sprout tick.
+const CTIPS = __RELEASE__ >= 8 ? {
+  cslide: 'This is the <b>Crookneck Gourd</b>. Drag it to slide it, like a pumpkin.',
+  claunch: 'Every pumpkin in the <b>3×3 around it</b> lights up together, <b>any colour</b>. <b>Swipe them up!</b>',
+  cnet: 'Nets are coming! <b>No net can land in its square</b>, but one lands right next to it.',
+  chold: '<b>Press and hold</b> it to break it: <b>every net</b> on the patch comes off, red ones too.',
+  cback: 'It <b>grows back</b> on the next sprout.',
+  praise: '<b>Nice!</b> Keep your pumpkins in its square when the nets fly. It grows back on the next sprout.',
+} : {};
+
 /** Starts the coach on a fresh 1-1 (call after the board is built), or the gourd script on a Nightmare 1-5 that has not been seen, or the
  *  Protector script on a Nightmare 2-5 that has not been seen and was started with the Protector. */
 export function startCoach(){
+  if (__RELEASE__ >= 8 && G.mode === 'story' && G.def && G.def.coach === 'crookneck'){ if (!save.seenCrookneckCoach && gourdPos('crookneck')) startCrookCoach(); return; }
   if (__RELEASE__ >= 7 && G.mode === 'story' && G.def && G.def.coach === 'wartling'){ if (!save.seenWartlingCoach && gourdPos('wartling')) startWartlingCoach(); return; }
   if (__RELEASE__ >= 5 && G.mode === 'story' && G.def && G.def.coach === 'protector'){ if (!save.seenProtectorCoach && gourdPos('protector')) startProtectorCoach(); return; }
   if (__RELEASE__ >= 4 && G.mode === 'story' && G.def && G.def.coach === 'gourd' && !save.seenGourdCoach && gourdPos()) return startGourdCoach();
@@ -253,6 +270,76 @@ function wartlingCoachUpdate(c){
   }
 }
 
+/** Crookneck script start (Release 8): a clear patch with the gourds where they stand (the level's graves stay), no nets. */
+function startCrookCoach(){
+  const cp = gourdPos('crookneck'), all = gourdsOn();
+  setGrid(Array.from({ length:ROWS }, () => Array(COLS).fill(null)));
+  for (const o of all) grid[o.r][o.c] = o.cell;
+  G.netsFlying = [];
+  G.coach = { kind:'crookneck', step:'cslide', t:0, stepT:0, move:null, ref:null, from:cp };
+  findCrookMove(); tip('cslide');
+}
+/** The slide the hand shows: any way the Crookneck can go (right first, as the gourd script). */
+function findCrookMove(){
+  const c = G.coach, cp = gourdPos('crookneck'); c.move = null; if (!cp) return;
+  for (const dir of ['right', 'left', 'down', 'up']){
+    const moves = planMove(cp.r, cp.c, dir), mine = moves && moves.find(m => m[0] === cp.r && m[1] === cp.c);
+    if (mine){ c.move = { ref:grid[cp.r][cp.c], dir, tr:mine[2], tc:mine[3] }; return; }
+  }
+}
+const plainColours = () => { const cols = G.loadout.filter(t => PTYPES[t] && !PTYPES[t].rainbow && PTYPES[t].key !== 'paint'); return cols.length ? cols : [0]; };
+/** Free cells (on the patch, no pumpkin, gourd or grave) at Chebyshev distance d from (r, c), two of them that do not touch. */
+function twoApart(r, c, d){
+  const out = [];
+  for (let a = r - d; a <= r + d; a++) for (let b = c - d; b <= c + d; b++){
+    if (Math.max(Math.abs(a - r), Math.abs(b - c)) !== d || a < 0 || a >= ROWS || b < 0 || b >= COLS || grid[a][b] || graves[a][b]) continue;
+    if (out.length === 1 && Math.abs(out[0][0] - a) + Math.abs(out[0][1] - b) === 1) continue;   // orthogonal neighbours would bunch or box in
+    out.push([a, b]); if (out.length === 2) break;
+  }
+  return out;
+}
+/** Step claunch: two pumpkins of the team's first two plain colours in the Crookneck's square, not touching: they light as one group. */
+function setupCrookLaunch(cp){
+  const c = G.coach, cols = plainColours();
+  c.bunch = twoApart(cp.r, cp.c, 1).map(([a, b], i) => { const cell = newCell(cols[i % cols.length]); grid[a][b] = cell; return cell; });
+  resolveMatches();
+  c.ref = c.bunch[0] || null;
+}
+/** Step cnet: a pumpkin just outside the square and a net flying at it, and a net aimed inside the square that falls apart on landing. */
+function setupCrookNets(cp){
+  const c = G.coach, cols = plainColours(), out = twoApart(cp.r, cp.c, 2).slice(0, 1), top = (cc) => ({ x:LANE(cc), y:FIELD_TOP + 20, kind:'net', by:null, t:NET_FLY });
+  for (const [a, b] of out){ grid[a][b] = newCell(cols[0]); G.netsFlying.push({ ...top(b), r:a, c:b }); }
+  const inside = squareAround(cp.r, cp.c).find(([a, b]) => !grid[a][b] && !graves[a][b]);
+  if (inside){ grid[inside[0]][inside[1]] = newCell(cols[cols.length > 1 ? 1 : 0]); G.netsFlying.push({ ...top(inside[1]), r:inside[0], c:inside[1] }); }
+  resolveMatches();
+  c.ref = null; c.netsUp = true;
+}
+function crookCoachUpdate(c){
+  const cp = gourdPos('crookneck'), go = step => { c.step = step; c.stepT = 0; tip(step); };
+  const toNets = () => { setupCrookNets(cp); go('cnet'); };
+  if (c.step === 'cslide'){
+    if (!cp) go('cback');   // broken before the lesson: carry on from the respawn
+    else if (cp.r !== c.from.r || cp.c !== c.from.c){ c.move = null; setupCrookLaunch(cp); go('claunch'); }   // any slide of it counts
+    else if (!c.move || !findCell(c.move.ref)) findCrookMove();
+  } else if (c.step === 'claunch'){
+    const lit = (c.bunch || []).find(x => x.lit && findCell(x));
+    if (!cp) go('cback');
+    else if (lit) c.ref = lit;   // the hand swipes the group up
+    else if (!G.projs.length){ c.ref = null; toNets(); }   // launched (or broken up) and every pumpkin has landed
+  } else if (c.step === 'cnet'){
+    if (!cp) go('cback');
+    else if (!(G.netsFlying || []).length){ c.ref = grid[cp.r][cp.c]; go('chold'); }   // the nets have landed (or fallen apart)
+  } else if (c.step === 'chold'){
+    if (!cp) go('praise'); else c.ref = grid[cp.r][cp.c];   // any way of breaking it counts (a real hold)
+  } else if (c.step === 'cback'){
+    if (cp) toNets();
+    else if (c.stepT > 1.2 && !c.sprouted){ c.sprouted = true; spawnSprouts(); }   // the next sprout tick brings it back
+    else if (c.sprouted && c.stepT > 2.4){ c.sprouted = false; c.stepT = 1.21; }   // no room on the patch: try the tick again
+  } else if (c.step === 'praise' && c.stepT > 3.5){
+    tip(null); G.coach = null; save.seenCrookneckCoach = true; persist(); resolveMatches();
+  }
+}
+
 /** A slide that makes a bunch right now: the hand demonstrates this one. */
 function findMove(){
   const c = G.coach; c.move = null;
@@ -278,7 +365,7 @@ function spare(){
 function tip(step){
   const el = $('#coachTip'); if (!el) return;
   if (!step){ el.hidden = true; return; }
-  el.innerHTML = (__RELEASE__ >= 7 && G.coach && G.coach.kind === 'wartling' && WTIPS[step]) || (__RELEASE__ >= 5 && G.coach && G.coach.kind === 'protector' && PTIPS[step]) || TIPS[step] || GTIPS[step]; el.hidden = false;
+  el.innerHTML = (__RELEASE__ >= 8 && G.coach && G.coach.kind === 'crookneck' && CTIPS[step]) || (__RELEASE__ >= 7 && G.coach && G.coach.kind === 'wartling' && WTIPS[step]) || (__RELEASE__ >= 5 && G.coach && G.coach.kind === 'protector' && PTIPS[step]) || TIPS[step] || GTIPS[step]; el.hidden = false;
   el.style.top = Math.round((FENCE_Y - CS * 1.25) * scale) + 'px';
 }
 
@@ -291,6 +378,7 @@ export function coachUpdate(dt){
   if (__RELEASE__ >= 4 && c.kind === 'gourd'){ gourdCoachUpdate(c); return; }
   if (__RELEASE__ >= 5 && c.kind === 'protector'){ protectorCoachUpdate(c); return; }
   if (__RELEASE__ >= 7 && c.kind === 'wartling'){ wartlingCoachUpdate(c); return; }
+  if (__RELEASE__ >= 8 && c.kind === 'crookneck'){ crookCoachUpdate(c); return; }
   const lit = bestLitGroup();
   if (c.step === 'slide'){
     if (lit){   // a bunch formed: send one ghoul down its column
@@ -336,7 +424,7 @@ export function drawCoach(ctx){
   const c = G && G.coach; if (!c || G.over) return;
   const h = hand();
   const blit = (x, y, s, a) => { ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y); ctx.scale(s, s); ctx.drawImage(h, -18, -6, 64, 64); ctx.restore(); };
-  if ((c.step === 'slide' || c.step === 'gslide' || c.step === 'pslide' || c.step === 'wslide' || c.step === 'wtop') && c.move){
+  if ((c.step === 'slide' || c.step === 'gslide' || c.step === 'pslide' || c.step === 'wslide' || c.step === 'wtop' || c.step === 'cslide') && c.move){
     const pos = findCell(c.move.ref); if (!pos) return;
     const [x0, y0] = cellXY(pos.r, pos.c), [x1, y1] = cellXY(c.move.tr, c.move.tc);
     const P = 2.0, u = (c.t % P) / P;   // press 0-.2, drag .2-.65, hold .65-.85, fade .85-1
@@ -346,7 +434,7 @@ export function drawCoach(ctx){
     ctx.strokeRect(GX + pos.c * CS + 5, GY + pos.r * CS + 5, CS - 10, CS - 10);
     ctx.setLineDash([6, 6]); ctx.strokeRect(GX + c.move.tc * CS + 5, GY + c.move.tr * CS + 5, CS - 10, CS - 10); ctx.restore();
     blit(x + 6, y + 4, press, u > .85 ? (1 - u) / .15 : 1);
-  } else if (c.step === 'smash' || c.step === 'ghold' || c.step === 'phold' || c.step === 'whold'){
+  } else if (c.step === 'smash' || c.step === 'ghold' || c.step === 'phold' || c.step === 'whold' || c.step === 'chold'){
     const pos = c.ref && findCell(c.ref); if (!pos) return;
     const [x0, y0] = cellXY(pos.r, pos.c), P = 2.2, u = (c.t % P) / P;   // press .0-.1, hold and fill .1-.7, crush flash .7-.85, rest
     const f = u < .1 ? 0 : u < .7 ? (u - .1) / .6 : 1;
@@ -356,7 +444,7 @@ export function drawCoach(ctx){
     if (u >= .7 && u < .85){ const k = (u - .7) / .15; ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#ffd35a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x0, y0, CS * (.45 + k * .35), 0, Math.PI * 2); ctx.stroke(); }
     ctx.restore();
     blit(x0 + 6, y0 + 4, u < .7 ? .88 : 1, u > .85 ? Math.max(0, (1 - u) / .15) : 1);
-  } else if (c.step === 'flick' || c.step === 'wlaunch'){
+  } else if (c.step === 'flick' || c.step === 'wlaunch' || c.step === 'claunch'){
     const pos = c.ref && findCell(c.ref); if (!pos) return;
     const [x0, y0] = cellXY(pos.r, pos.c), P = 1.4, u = (c.t % P) / P;
     const d = u < .25 ? 0 : u < .6 ? ease((u - .25) / .35) : 1, y = y0 - d * CS * 1.6;

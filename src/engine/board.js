@@ -1,6 +1,6 @@
 import { perkOn } from '../data/perks.js';
 import { PATTERNS } from '../data/patterns.js';
-import { SPROUT_COUNT } from '../data/rules.js';
+import { SPROUT_COUNT, CROOK_MIN } from '../data/rules.js';
 import { GEAR } from '../data/shop.js';
 import { PTYPES, RAINBOW, WILD_CHANCE, WILD_CHANCE_PERK, TURQUOISE, BROWN, BROWN_GROW, PAINT, PAINT_PULL } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
@@ -63,6 +63,11 @@ export function initBoard(pi, nGraves){
 }
 
 // Bunches: 3+ touching pumpkins of one color. Rainbows count as any color, except rotten (Release 5): rotten bunches with rotten only.
+// Release 8 (spec Part 5): the pumpkins in a Crookneck Gourd's 3×3 also make one group of any colour, CROOK, when there are CROOK_MIN or more;
+// a pumpkin may be in that group and a bunch at once (launchGids below sends them together).
+
+/** The Crookneck group's pseudo-colour (Release 8): no pumpkin has it; each cell of the group flies as itself (combat.js launchGroup). */
+export const CROOK = -3;
 
 export function computeGroups(gr){
   const groups = [], present = new Set();
@@ -102,7 +107,21 @@ export function computeGroups(gr){
     }
     if (cells.length >= 3 && !cells.some(([a, b]) => used.has(a * COLS + b))) groups.push({ color:0, cells });
   }
+  if (__RELEASE__ >= 8) crookGroups(gr, groups);
   return groups;
+}
+
+/** Release 8: for each Crookneck Gourd standing on `gr`, the pumpkins in its 3×3 that are not flying (gourds left out, and rotten ones: rot
+ *  bunches with rot only, our call), as one group when there are at least CROOK_MIN. */
+function crookGroups(gr, groups){
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
+    const g = gr[r][c]; if (!g || g.gourd !== 'crookneck' || g.fly > 0) continue;
+    const cells = [];
+    for (let a = Math.max(0, r - 1); a <= Math.min(ROWS - 1, r + 1); a++) for (let b = Math.max(0, c - 1); b <= Math.min(COLS - 1, c + 1); b++){
+      const n = gr[a][b]; if (n && !n.fly && !n.gourd && !(__RELEASE__ >= 5 && n.c === ROTTEN)) cells.push([a, b]);
+    }
+    if (cells.length >= CROOK_MIN) groups.push({ color:CROOK, cells, crook:true });
+  }
 }
 
 export function resolveMatches(){
@@ -114,10 +133,10 @@ export function resolveMatches(){
     cell.lit = false; cell.gids = []; cell.bsize = 0;
   }
   G.groups = {};
-  let sx = 0, sy = 0, n = 0, biggest = 0, fresh = 0;
+  let sx = 0, sy = 0, n = 0, biggest = 0, fresh = 0, bigSame = 0;
   for (const g of groups){
     const gid = nextGid(), size = g.cells.length;
-    G.groups[gid] = { color:g.color, size };
+    G.groups[gid] = { color:g.color, size, ...(__RELEASE__ >= 8 && g.crook ? { crook:true } : {}) };
     let changed = false;
     for (const [r, c] of g.cells){
       const cell = grid[r][c], before = was.get(cell) || 0;
@@ -129,11 +148,11 @@ export function resolveMatches(){
         for (let i = 0; i < 5; i++) spark(x, y, __RELEASE__ >= 5 && cell.c === ROTTEN ? ROT_FX.spark : PTYPES[cell.c].spark, 150);
       }
     }
-    if (changed){ fresh++; biggest = Math.max(biggest, size); }
+    if (changed){ fresh++; biggest = Math.max(biggest, size); if (!(__RELEASE__ >= 8 && g.crook)) bigSame = Math.max(bigSame, size); }
   }
   if (fresh){
     SFX.match(biggest, fresh);
-    const txt = fresh > 1 ? `Combo ×${fresh}` : biggest >= 5 ? 'Knockback bunch!' : '';
+    const txt = fresh > 1 ? `Combo ×${fresh}` : (__RELEASE__ >= 8 ? bigSame : biggest) >= 5 ? 'Knockback bunch!' : '';
     if (txt) addFloat(txt, sx / n, sy / n - 20, '#ffd35a', 24, 1.1);
     if (G.mode === 'story' && !save.seenFlick){
       save.seenFlick = true; persist();
@@ -157,11 +176,13 @@ export function planMove(r, c, dir){
   const [dr, dc] = DIRV[dir];
   if (!inside(r + dr, c + dc) || graves[r + dr][c + dc]) return null;
   if (__RELEASE__ >= 4 && grid[r][c] && grid[r][c].pinned > 0) return null;   // pinned by a Hayrick's pitchfork: it cannot slide
+  if (__RELEASE__ >= 8 && grid[r][c] && grid[r][c].net) return null;   // netted (Release 8, engine/nets.js): it cannot slide
   if (!grid[r + dr][c + dc]){ const [tr, tc] = slideDest(r, c, dir); return [[r, c, tr, tc]]; }
   const line = [[r, c]];
   let a = r + dr, b = c + dc;
   while (inside(a, b) && grid[a][b]){
     if (__RELEASE__ >= 4 && grid[a][b].pinned > 0) return null;   // a pinned pumpkin in the line cannot be pushed, so nothing in the line moves (as with a grave at its end)
+    if (__RELEASE__ >= 8 && grid[a][b].net) return null;   // nor can a netted one (Release 8)
     line.push([a, b]); a += dr; b += dc;
   }
   let k = 0;
@@ -278,6 +299,7 @@ export function collectDrop(d){
 
 export function smash(ref){
   if (__RELEASE__ >= 4 && ref && ref.gourd){ destroyGourd(ref); return; }   // holding a gourd breaks it (the Grave clears the graves around it)
+  if (__RELEASE__ >= 8 && ref && ref.net){ const p = findCell(ref); if (p) addFloat('Netted', LANE(p.c), GY + p.r * CS + CS / 2 - 30, '#ffd35a', 16, 0.8); SFX.bad(); return; }   // a net holds it: it cannot be crushed (Release 8)
   const pos = findCell(ref); if (!pos) return;
   grid[pos.r][pos.c] = null; G.smashes = (G.smashes || 0) + 1;   // counted for the 1-1 coach
   const x = LANE(pos.c), y = GY + pos.r * CS + CS / 2;
@@ -316,6 +338,7 @@ export function bestMove(){
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
     const cell = grid[r][c]; if (!cell || cell.fly) continue;
     if (__RELEASE__ >= 4 && cell.pinned > 0) continue;   // pinned: it cannot be slid
+    if (__RELEASE__ >= 8 && cell.net) continue;   // netted: it cannot be slid (Release 8)
     if (__RELEASE__ >= 4 && cell.gourd) continue;   // the Grave Gourd never makes a bunch, so the hint never slides it
     for (const dir of ['up', 'left', 'right', 'down']){
       if (cell.lit && dir === 'up') continue;
@@ -336,6 +359,33 @@ export function primaryGid(ref){
   return gid;
 }
 
+/** The groups one flick sends (Release 8, spec Part 5; controller ruling, Task 7 fix round 1): the Crookneck groups in the launch (the primary
+ *  group if it is one, else every Crookneck group sharing a cell with the primary bunch) and every bunch sharing a cell with any of them. So
+ *  bunch -> square -> bunches, at most these two hops (squares never overlap while ALLOW_SAME_GOURD is false; if two Crooknecks could ever
+ *  stand, it still stops here), and the set is the same whichever of its cells is flicked. A bunch touching no square: just [gid]. */
+export function launchGids(gid){
+  const out = [gid], grp = G.groups && G.groups[gid]; if (!(__RELEASE__ >= 8) || !grp) return out;
+  const crooks = grp.crook ? [gid] : [];
+  if (!grp.crook) for (const { cell } of groupCells(gid)) for (const g of cell.gids) if (G.groups[g] && G.groups[g].crook && !crooks.includes(g)) crooks.push(g);
+  for (const k of crooks){
+    if (!out.includes(k)) out.push(k);
+    for (const { cell } of groupCells(k)) for (const g of cell.gids) if (!out.includes(g) && G.groups[g] && !G.groups[g].crook) out.push(g);
+  }
+  return out;
+}
+
+/** The held launch (Release 8): the cells and columns the held lit pumpkin would send, worked out once per group set and held group (G.groups
+ *  is a new object on every resolveMatches), so the per-frame drawing reads a cached Set and list. Null when nothing is held. */
+let heldCache = { groups:null, gid:null, cells:null, cols:null };
+export function heldLaunch(){
+  const gid = heldGid(); if (gid == null) return null;
+  if (heldCache.groups === G.groups && heldCache.gid === gid) return heldCache;
+  const cells = new Set(), cols = [];
+  for (const g of launchGids(gid)) for (const o of groupCells(g)){ if (cells.has(o.cell)) continue; cells.add(o.cell); if (!cols.includes(o.c)) cols.push(o.c); }
+  heldCache = { groups:G.groups, gid, cells, cols };
+  return heldCache;
+}
+
 export function groupCells(gid){
   const out = [];
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){ const cell = grid[r][c]; if (cell && cell.lit && cell.gids.includes(gid)) out.push({ r, c, cell }); }
@@ -344,12 +394,12 @@ export function groupCells(gid){
 
 /** Paint (owner, 2026-10-08/09): the touching pumpkins a lit Paint bunch borrows when it launches. Any colour, even one that
  *  is lit in its own bunch (only the touching ones come; owner 2026-10-09); most threatened columns first, up to PAINT_PULL[level]. */
-export function paintPull(gid){
+export function paintPull(gid, skip){
   const grp = G.groups && G.groups[gid]; if (!grp || grp.color !== PAINT) return [];
-  const own = groupCells(gid), mine = new Set(own.map(o => o.cell)), seen = new Set(), out = [];
+  const own = groupCells(gid), mine = new Set(own.map(o => o.cell)), seen = new Set(), out = [];   // `skip` (Release 8): cells already launching, left out before the cap
   for (const { r, c } of own) for (const [dr, dc] of [[1,0],[-1,0],[0,1],[0,-1]]){
     const a = r + dr, b = c + dc; if (a < 0 || a >= ROWS || b < 0 || b >= COLS) continue;
-    const n = grid[a][b]; if (!n || n.fly || mine.has(n) || seen.has(n) || (__RELEASE__ >= 4 && n.gourd) || (__RELEASE__ >= 5 && n.c === ROTTEN)) continue;   // Paint never pulls a gourd, nor a rotten pumpkin (Release 5)
+    const n = grid[a][b]; if (!n || n.fly || mine.has(n) || seen.has(n) || (skip && skip.has(n)) || (__RELEASE__ >= 4 && n.gourd) || (__RELEASE__ >= 5 && n.c === ROTTEN)) continue;   // Paint never pulls a gourd, nor a rotten pumpkin (Release 5)
     seen.add(n); out.push({ r:a, c:b, cell:n });
   }
   const threat = laneThreat(), cap = PAINT_PULL[lvOf(PAINT) - 1];

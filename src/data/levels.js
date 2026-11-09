@@ -30,7 +30,8 @@
  * @property {number[]} [laneWeights]   relative spawn weight per lane (7 numbers); lanes at 0 never spawn
  * @property {number[]} [fogRows]       fogged field rows (tile rows, 0 = top); combined with `fog` bands
  * @property {number[]} [fogCols]       fogged lanes (whole column)
- * @property {Array<[number, number]>} [castlesLayout]  explicit castle walls [lane, p] (overrides `castles.n`; uses `castles.hp`)
+ * @property {Array<[number, number]>} [castlesLayout]  explicit castle walls [lane, p, kind?] (kind 'wall' | Release 8: 'gate' | 'tower'; overrides `castles.n`; uses `castles.hp`)
+ * @property {string[]} [gatePool]  Release 8: monster keys a Gatehouse (castlesLayout kind 'gate') summons from, one every few seconds
  * @property {number} [spawnGap]        overrides the spawn-gap multiplier from rules.js for this level
  * @property {number} [spawnBurst]      overrides the burst chance from rules.js for this level
  * @property {number} [bossHpMul]       boss levels: this level's boss health × this (the boss type's own health is unchanged elsewhere)
@@ -64,10 +65,12 @@
  * @property {boolean} [gourd]         the Grave Gourd stands on the patch this night (Release 4; src/engine/gourd.js): it starts in cell (2, 3), and one
  *   slot of every sprout tick fills the empty cells of its 3×3
  * @property {string} [coach]        a tutorial script the coach plays the first time this level is played (Release 4: 'gourd' on N1-5, src/engine/coach.js;
- *   Release 5: 'protector' on N2-5; Release 7: 'wartling' on N3-5)
+ *   Release 5: 'protector' on N2-5; Release 7: 'wartling' on N3-5; Release 8: 'crookneck' on N4-3)
  * @property {string[]} [gourds]     the gourds a `gourd:true` night offers in the picker, in slot order (Release 5; `GOURD_SLOTS` at most below Release 7;
  *   Release 7 may offer more, and the player picks two; each only once unlocked in save.gourds; the Grave Gourd counts as unlocked on any gourd
  *   night). Without it the night offers the Grave Gourd alone
+ * @property {string} [gourdLock]   a gourd key this night gives as it opens (save.gourds) and keeps in the picker's first slot, locked (Release 8:
+ *   'crookneck' on N4-3)
  * @property {string[]} [unlockGourds]  gourd keys (save.gourds) unlocked by winning this level (Release 4: N1-4 unlocks 'grave')
  * @property {Array<{at:number, n:number}>} [fireMarks]  fire marks on the spawn bar (Release 4): when `at` × `total` monsters have spawned, `n` random
  *   field tiles catch fire and a burst of FRENZY_BURST monsters arrives that does not count toward `total`; the bar counts arrivals, as with jukebox marks
@@ -85,9 +88,10 @@ export function expandLevel(def, n){
     boss:def.boss ? def.boss : false, bossForm:def.bossForm || 1, pool:def.pool.map(([t, w]) => [t, w]),
     pattern:def.pattern, graves:def.graves, unlockPumpkins:def.unlockPumpkins || [], unlockGear:def.unlockGear || [],
     intro:def.intro || [], fog:def.fog || [], castles:def.castles || null, puddles:def.puddles || 0, sea:!!def.sea || !!def.shore || !!def.shoreFrac, gust:def.gust || null, gravesLayout:def.gravesLayout || null, laneWeights:def.laneWeights || null,
-    fogRows:def.fogRows || [], fogCols:def.fogCols || [], caps:def.caps || null, spawnGap:def.spawnGap == null ? null : def.spawnGap, spawnBurst:def.spawnBurst == null ? null : def.spawnBurst, bossGap:def.bossGap || null, bossHpMul:def.bossHpMul || null, unlockCopy:def.unlockCopy || null, castlesLayout:def.castlesLayout || null, shore:def.shore || 0, hexAll:def.hexAll || null, quests:def.quests || null, name:def.name || null, introPumpkins:def.introPumpkins || [], puddlesLayout:def.puddlesLayout || null, shoreFrac:def.shoreFrac || 0, boss2:def.boss2 || null, frenzy:!!def.frenzy, frenzyAfterBoss:!!def.frenzyAfterBoss, frenzyAt:def.frenzyAt || 0, frenzyHp:def.frenzyHp || 0, extraChestP:def.extraChestP || 0, bossChests:def.bossChests || 1, worldNo:def.world, levelNo:def.level,
+    fogRows:def.fogRows || [], fogCols:def.fogCols || [], caps:def.caps || null, spawnGap:def.spawnGap == null ? null : def.spawnGap, spawnBurst:def.spawnBurst == null ? null : def.spawnBurst, bossGap:def.bossGap || null, bossHpMul:def.bossHpMul || null, unlockCopy:def.unlockCopy || null, castlesLayout:def.castlesLayout || null, gatePool:def.gatePool || null, shore:def.shore || 0, hexAll:def.hexAll || null, quests:def.quests || null, name:def.name || null, introPumpkins:def.introPumpkins || [], puddlesLayout:def.puddlesLayout || null, shoreFrac:def.shoreFrac || 0, boss2:def.boss2 || null, frenzy:!!def.frenzy, frenzyAfterBoss:!!def.frenzyAfterBoss, frenzyAt:def.frenzyAt || 0, frenzyHp:def.frenzyHp || 0, extraChestP:def.extraChestP || 0, bossChests:def.bossChests || 1, worldNo:def.world, levelNo:def.level,
     ...(__RELEASE__ >= 4 ? { fireStart:def.fireStart || 0, fireLayout:def.fireLayout || null, fireMarks:def.fireMarks || null, bossChest:def.bossChest || null, gourd:!!def.gourd, unlockGourds:def.unlockGourds || [], coach:def.coach || null } : {}),
     ...(__RELEASE__ >= 5 ? { poison:def.poison || null, gourds:def.gourds || null } : {}),
     ...(__RELEASE__ >= 7 ? { potions:def.potions || null, brewMarks:def.brewMarks || null } : {}),
+    ...(__RELEASE__ >= 8 ? { gourdLock:def.gourdLock || null } : {}),
     nightmare:!!def.nightmare, label:def.nightmare ? `N${def.world}-${def.level}` : `${def.world}-${def.level}` };
 }

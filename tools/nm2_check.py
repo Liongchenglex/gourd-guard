@@ -14,6 +14,7 @@ from nm3_check import check_r7_absent   # `--expect r6` adds it to CHECKS (see m
 
 R5 = False   # set by --expect: the build holds Release 5 (playtest)
 MODE = 'on'
+BUILD = 'on'   # the --expect given before r7/r6 are mapped to 'on': which later books' Fallen bosses the build holds
 
 
 def nm2_start(page, k, coach=False):
@@ -1514,7 +1515,9 @@ def check_fallen_polt(browser, url):
     L = page.evaluate("() => [13, 14, 15].map(i => { const d = window.__gg.NIGHTMARE_LEVELS[1][i]; return d && [d.level, d.name, d.boss, d.bossChest, !!d.gourd, d.gourds, !!d.poison]; })")
     ok(L[0] is not None and L[0][0] == 14 and L[1] is not None and L[1][0] == 15, f'placeholder nights N2-14 and N2-15 exist {L[:2]}')
     ok(L[2] == [16, 'The Fallen Poltergeist', 'fallenpoltergeist', 'normal', True, ['grave', 'protector'], True], f'N2-16: the Fallen Poltergeist, a normal chest, both gourds, steady poison {L[2]}')
-    ok(page.evaluate("() => window.__gg.FALLEN.map(f => f.key).slice(0, 2)") == ['fallengravekeeper', 'fallenpoltergeist'], 'the world 2 nightmare bestiary ends on it (FALLEN[1]; Release 7 adds FALLEN[2])')
+    want = ['fallengravekeeper', 'fallenpoltergeist'] + (['fallenhexwitch'] if BUILD in ('r7', 'on') else []) + (['fallencount'] if BUILD == 'on' else [])   # one per nightmare book: Release 7 adds the witchwood's, Release 8 the keep's
+    got = page.evaluate("() => window.__gg.FALLEN.map(f => f.key)")
+    ok(got == want, f'the world 2 nightmare bestiary ends on it (FALLEN[1]); the FALLEN list is exactly this build\'s books {got}')
     ok(bool(page.evaluate("() => (window.__gg.BESTIARY.fallenpoltergeist || {}).ability")), 'it has a bestiary entry')
     b = fp_up(page)
     ok(b is not None and b[0] == 'fallenpoltergeist' and b[1] == b[2] == 45, f'on N2-16 it arrives with 45 health {b}')
@@ -1888,11 +1891,13 @@ CHECKS.update({'check_n2_levels': check_n2_levels, 'check_n2_intros': check_n2_i
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)
-    ap.add_argument('--expect', choices=['on', 'r6', 'r4', 'r3', 'r2', 'off'], required=True)
+    ap.add_argument('--expect', choices=['on', 'r7', 'r6', 'r5', 'r4', 'r3', 'r2', 'off'], required=True)
     ap.add_argument('--only', default=None)
     a = ap.parse_args()
-    global R5, MODE
-    if a.expect == 'r6': a.expect = 'on'; CHECKS['check_r7_absent'] = check_r7_absent   # a Release 6 build holds everything up to Release 6: these checks run as `on`, plus the Release 7 absence check
+    global R5, MODE, BUILD
+    BUILD = a.expect
+    if a.expect == 'r7': a.expect = 'on'; from nm4_check import check_r8_absent; CHECKS['check_r8_absent'] = check_r8_absent   # a Release 7 build holds everything up to Release 7: these checks run as `on`, plus the Release 8 absence check
+    if a.expect in ('r6', 'r5'): a.expect = 'on'; CHECKS['check_r7_absent'] = check_r7_absent   # a Release 5 or 6 build holds everything up to that release: these checks run as `on`, plus the Release 7 absence check
     MODE = a.expect; R5 = a.expect == 'on'
     with sync_playwright() as p:
         browser = p.chromium.launch(args=os.environ.get('GG_CHROME_ARGS', '').split())   # e.g. GG_CHROME_ARGS=--disable-gpu when the headless GPU process hangs (a sleeping Mac)

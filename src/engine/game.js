@@ -30,6 +30,13 @@ import { openLoadout, setState, showResult } from '../ui/screens.js';
 import { SPROUT_EVERY, FIREWORK_TARGETS, FIREWORK_DAMAGE, EMERGENCY_N, POTION_SPEED } from '../data/rules.js';
 import { updatePotions, potionSnapshot, restorePotions } from './potion.js';
 import { prebakePotions } from './render/potion.js';
+import { prebakeWeather } from './render/weather.js';
+import { prebakeCastlePieces } from './render/castlepieces.js';
+import { updateNets, netSnapshot, restoreNets } from './nets.js';
+import { lancerHit, shieldSnapshot, restoreShields, carryCheck, newCastle, updateCastlePieces, siegeSnapshot, countSnapshot } from './keep.js';
+import { prebakeNets } from './render/nets.js';
+import { prebakeCountFx } from './render/fx.js';
+import { K } from './render/canvas.js';
 import { prebakeTongue, prebakeBarrier, prebakeCroneZone, prebakeFallenHex } from './render/witchwood.js';
 import { startCoach, coachHolds, coachUpdate } from './coach.js';
 import { lightFire, lightRandomFires, fireAhead, burnPumpkin, updateFires } from './fire.js';
@@ -62,7 +69,7 @@ export function makeDemo(){
 export function makePreview(n){
   const def = levelFor(n);
   setG({ q:newQuestCounters(), mode:'demo', preview:true, n, def, world:def.world, loadout:[0, 1, 2, 3], monsters:[], projs:[], parts:[], floats:[], coinFx:[], drops:[], vfx:[], coins:0, shake:0, t:0, flash:0, groups:{}, mines:[], fogClear:0, castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], glue:[], gustT:0, gustDir:null, sproutT:0, aim:null, over:false, spawned:0, bossSpawned:false, hint:null, hintT:0 });
-  if (def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
+  if (def.castlesLayout) for (const [lane, p, kind] of def.castlesLayout) G.castles.push(castleEntry(lane, p, kind, def.castles ? def.castles.hp : 12));
   else if (def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def.puddles) placePuddles(def.puddles);
   if (__RELEASE__ >= 4){ G.fires = []; startFires(def); for (const f of G.fires) f.t = 1; }   // the night's fire tiles at start (random ones land elsewhere in play, as puddles do), fully grown: the preview never runs their clocks
@@ -85,7 +92,8 @@ export function beginNight(n){
   const fireSource = __RELEASE__ >= 4 && (hasFire(def) || def.boss === 'strawlord' || def.boss2 === 'strawlord' || def.boss === 'fallengravekeeper' || def.pool.some(([k]) => k === 'rooster'));   // fire tiles, or something that lights them (the rooster's death, the Strawlord)
   if ((def.pool.some(([k]) => iceKind(k)) || fireSource) && !must.some(m => m.t === 2))   // Ice is locked in wherever Ice-only monsters or fire can be
     must.push({ t:2, why: __RELEASE__ >= 4 && (fireSource || def.pool.some(([k]) => iceKind(k) && k !== 'firemummy')) ? 'Only Ice puts out fire and kills burning monsters' : 'Flaming mummies only die to Ice' });
-  if (av.length > 5 || (__RELEASE__ >= 4 && def.gourd)) openLoadout(av, (lo, gk) => startGame('story', n, lo, gk), must, __RELEASE__ >= 4 && def.gourd ? offeredGourds(def) : null, __RELEASE__ >= 4 && def.gourd ? defaultGourds(def) : null);   // a gourd night always opens the picker, so its Gourds section is seen (Release 4); the picked kinds come back in slot order (Release 5)
+  if (__RELEASE__ >= 8 && def.gourd && def.gourdLock && GOURDS[def.gourdLock] && !save.gourds[def.gourdLock]){ save.gourds[def.gourdLock] = true; persist(); }   // N4-3 gives the Crookneck Gourd as the night opens (spec Part 5)
+  if (av.length > 5 || (__RELEASE__ >= 4 && def.gourd)) openLoadout(av, (lo, gk) => startGame('story', n, lo, gk), must, __RELEASE__ >= 4 && def.gourd ? offeredGourds(def) : null, __RELEASE__ >= 4 && def.gourd ? defaultGourds(def) : null, __RELEASE__ >= 8 && def.gourd ? def.gourdLock : null);   // a gourd night always opens the picker, so its Gourds section is seen (Release 4); the picked kinds come back in slot order (Release 5)
   else startGame('story', n, av);
 }
 
@@ -97,13 +105,14 @@ export function beginEndless(){
 
 /** The sprite strips a level needs (prebaked when its night starts, and while its preview card is read): its pool, a boss and its minions
  *  (ALSO_BAKE), the jukebox, and on a nightmare night the burning form of every pool type that can catch fire (BURNS_TO), so the first
- *  ignition never hitches (Release 4). A night with brew marks bakes their crows too (Release 7). */
+ *  ignition never hitches (Release 4), and on a Keep nightmare night a Gatehouse's pool and an Archer Tower's archer (Release 8). A night with brew marks bakes their crows too (Release 7). */
 export function bakeKeys(def){
   const kinds = [...def.pool.map(([k]) => k), def.boss].filter(Boolean), also = [...kinds.flatMap(k => (__RELEASE__ >= 4 && ALSO_BAKE[k]) || []), ...(__RELEASE__ >= 7 && def.brewMarks && def.brewMarks.length ? ['crow'] : [])];   // a brew mark's swoop of crows (Release 7)
   return [...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...also,
     ...(__RELEASE__ >= 4 && def.nightmare ? [...kinds, ...also].map(k => BURNS_TO[k]).filter(Boolean) : []),
     ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []),
-    ...(__RELEASE__ >= 3 && def.boss === 'hollowking' ? ['hollowking|' + TYPES.hollowking.forms[0]] : []), 'ghoul'];
+    ...(__RELEASE__ >= 3 && def.boss === 'hollowking' ? ['hollowking|' + TYPES.hollowking.forms[0]] : []),
+    ...(__RELEASE__ >= 8 ? [...(def.gatePool || []).map(k => poolKey(k, VARIANTS)), ...((def.castlesLayout || []).some(e => e[2] === 'tower') ? ['archer'] : [])] : []), 'ghoul'];   // Release 8: what a Gatehouse sends out, the archer a fallen Archer Tower drops
 }
 
 /** The gourds a night offers in the picker, in slot order (Release 5, spec Part 6): none unless the level has `gourd:true`; there, its
@@ -114,7 +123,8 @@ export function bakeKeys(def){
 export function offeredGourds(def){
   if (!(__RELEASE__ >= 4) || !def || !def.gourd) return [];
   const list = (__RELEASE__ >= 5 && def.gourds) || ['grave'];
-  const have = list.filter(k => GOURDS[k] && (k === 'grave' || (save.gourds && save.gourds[k])));
+  const lock = __RELEASE__ >= 8 ? def.gourdLock : null;   // Release 8: N4-3 gives the Crookneck it locks, so it is on offer before the save has it
+  const have = list.filter(k => GOURDS[k] && (k === 'grave' || k === lock || (save.gourds && save.gourds[k])));
   return __RELEASE__ >= 7 ? have : have.slice(0, GOURD_SLOTS);
 }
 /** The gourds a night starts with picked, in slot order (Release 7, spec Part 5): the first GOURD_SLOTS of its offer, in unlock order. On a
@@ -123,6 +133,7 @@ export function offeredGourds(def){
 export function defaultGourds(def){
   const offer = offeredGourds(def), pick = offer.slice(0, GOURD_SLOTS);
   if (__RELEASE__ >= 7 && def && def.coach === 'wartling' && !save.seenWartlingCoach && offer.includes('wartling') && !pick.includes('wartling')) pick[pick.length - 1] = 'wartling';
+  if (__RELEASE__ >= 8 && def && def.gourdLock && offer.includes(def.gourdLock)) return [def.gourdLock, ...offer.filter(k => k !== def.gourdLock)].slice(0, GOURD_SLOTS);   // N4-3: the locked gourd in slot 1, the first other in unlock order in slot 2
   return pick;
 }
 
@@ -150,13 +161,14 @@ export function startGame(mode, n, loadout, gourds){
     t:0, shake:0, flash:0, idle:0, hint:null, hintT:0, over:false, bossDead:false, aim:null, fogClear:0, mines:[], castles:[], arrows:[], puddles:[], scarecrows:[], hexZones:[], tails:[], glue:[],
     gustT:def && def.gust ? def.gust.every : 0, gustDir:null,
     loot:{ chests:0, seeds:0 }, chestDropped:false, continued:false, sackT:0, jukebox:null, jukeboxDone:false, jbNext:0,
+    ...(__RELEASE__ >= 8 ? { netsFlying:[], crumbles:[] } : {}),   // nets in flight (engine/nets.js)
     ...(__RELEASE__ >= 7 ? { potions:[], bmNext:0, bmT:-99, potionT:def && def.potions ? def.potions.every : 0, drankCarry:null, roots:[], altar:null } : {}),   // potions on the field (engine/potion.js): the potions standing, the clock to the next ones, a continued night's drinkers still to come back
     ...(__RELEASE__ >= 5 ? { poison:{ t:def && def.poison ? def.poison.every : 0, warn:null, on:null } } : {}),   // poison fog (engine/poison.js): the clock to the next fog, the warning and the fog lying now
     ...(__RELEASE__ >= 4 ? { fires:[], fmNext:0, fmT:-99, fireBurst:0, fireBurstT:0, fireTrickleT:null, burstMinion:false, gourdDue:false, gourdDueOf:{}, gourdKinds:nightGourds(def, gourds), crowDives:[] } : {}),   // fire tiles and fire marks (src/engine/fire.js); the night's gourds (slot order) and which are due back: gourdDue the Grave Gourd's flag, gourdDueOf the other kinds' (src/engine/gourd.js)
   });
   if (mode === 'story' && takeSack()) G.sackT = SACK.spawnAt;
   if (def) prebake(bakeKeys(def));   // bake this level's sprite strips now, not on first sight
-  if (def && def.castlesLayout) for (const [lane, p] of def.castlesLayout) G.castles.push({ lane, p, hp:def.castles ? def.castles.hp : 12, maxHp:def.castles ? def.castles.hp : 12, flash:0, dead:false });
+  if (def && def.castlesLayout) for (const [lane, p, kind] of def.castlesLayout) G.castles.push(castleEntry(lane, p, kind, def.castles ? def.castles.hp : 12));
   else if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def && def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def && def.puddles) placePuddles(def.puddles);
   if (__RELEASE__ >= 4 && def){ startFires(def); if (def.nightmare) prebakeFire(); }   // after the castles, so random fires skip them; the flame strip is baked now, not on first sight
@@ -166,6 +178,10 @@ export function startGame(mode, n, loadout, gourds){
   if (__RELEASE__ >= 7 && def && bakeKeys(def).some(k => k.split('|')[0] === 'toad')) prebakeTongue();   // the Cauldron Toad's tongue strip and tip (Release 7), only on a night that can spawn one
   if (__RELEASE__ >= 7 && def && (def.boss === 'fallenhexwitch' || def.boss2 === 'fallenhexwitch')) prebakeFallenHex();   // her altar's crack states and her 5x5 zone (Release 7), only on her night
   if (__RELEASE__ >= 7 && def && def.nightmare) prebakePotions();   // the three bottles, their icons and the drink puffs (Release 7), baked now
+  if (__RELEASE__ >= 8 && def && def.nightmare) prebakeNets();   // the rope net, the crimson one and the net in flight, baked now
+  if (__RELEASE__ >= 8 && def && def.boss === 'fallencount') prebakeCountFx(K);   // his lightning warning, bolt and blood spear, baked now (render/fx.js)
+  if (__RELEASE__ >= 8 && def && (def.boss === 'fallencount' || (def.castlesLayout || []).some(e => e[2] === 'gate' || e[2] === 'tower'))) prebakeCastlePieces();   // the Gatehouse's and the Archer Tower's frames, baked now (render/castlepieces.js)
+  if (__RELEASE__ >= 8 && def) prebakeWeather();   // fresh weather timers every night; the Keep storm's rain and bolts baked now (Release 8, render/weather.js)
   if (__RELEASE__ >= 5 && def && def.nightmare) prebakeRot();   // the rotten pumpkin (Release 5), baked now, not on first sight
   if (G.world !== bgWorld) buildBg(G.world);
   initBoard(def ? def.pattern : Math.floor(Math.random() * PATTERNS.length), def ? def.graves : 2);
@@ -281,6 +297,8 @@ export function placeMine(lane, p = 0.93){   // owner: a mine goes on any tile o
   SFX.tool('mine'); G.aim = null; updateHud(true);
   return true;
 }
+/** A castle entry (Release 8 adds its kind, clock and clip: engine/keep.js newCastle; lower builds keep the plain wall). */
+function castleEntry(lane, p, kind, hp){ return __RELEASE__ >= 8 ? newCastle(lane, p, kind, hp) : { lane, p, hp, maxHp:hp, flash:0, dead:false }; }
 /** Castle walls at level start: n distinct random lanes, mid-field. */
 /** Puddles (world 4): n distinct random lanes, mid-field. Crawlers and divers use them. */
 export function placePuddles(n){
@@ -307,6 +325,7 @@ export function gust(dir, only){
   for (const r of rows) for (const c of cols){
     const cell = grid[r][c]; if (!cell || cell.fly) continue;
     if (__RELEASE__ >= 4 && cell.pinned > 0) continue;   // pinned by a Hayrick: the wind cannot move it
+    if (__RELEASE__ >= 8 && cell.net) continue;   // netted: the wind cannot move it either (Release 8)
     let nr = r, nc = c;
     while (true){
       const tr = nr + dr, tc = nc + dc;
@@ -348,7 +367,7 @@ function startFires(def){
 }
 export function raiseCastles(n, hp){
   const lanes = shuffle([...Array(COLS).keys()]).slice(0, n);
-  for (const lane of lanes) G.castles.push({ lane, p:rnd(0.4, 0.72), hp, maxHp:hp, flash:0, dead:false });
+  for (const lane of lanes) G.castles.push(castleEntry(lane, rnd(0.4, 0.72), 'wall', hp));
 }
 /** Bomb: first press arms it (tap the field next), second press or a tap elsewhere cancels. */
 export function useBomb(){
@@ -419,7 +438,7 @@ export function update(dt){
           for (const o of g.monsters.slice()) if (!o.dead && !o.hidden && o.rise <= 0 && Math.abs(o.lane - w.lane) <= 1 && Math.abs(mY(o) - castleY(w)) < CS * 1.2){ o.lastHit = 7; damage(o, POWER[i] / 2, '#ff9a3a', true); }
           for (const w2 of g.castles) if (w2 !== w && !w2.dead && Math.abs(w2.lane - w.lane) === 1 && Math.abs(castleY(w2) - castleY(w)) < CS * 1.2) damageCastle(w2, POWER[i] / 2);
         }
-        if (pr.type !== 4){ pr.dead = true; pr.hit.add(w); }
+        if (pr.type !== 4 || (__RELEASE__ >= 8 && w.kind === 'tower')){ pr.dead = true; pr.hit.add(w); }   // Grey pierces a castle wall, but an Archer Tower stops every colour (Release 8)
       }
       if (pr.dead) continue;
       const targets = g.monsters.filter(m => !m.dead && !(m.rise > 0) && !m.hidden && !pr.hit.has(m) && Math.abs(pr.x - m.x) < m.hw).sort((a, b) => b.p - a.p);
@@ -459,6 +478,8 @@ export function update(dt){
   }
   g.projs = g.projs.filter(p => !p.dead);
   if (__RELEASE__ >= 4 && g.fires) updateFires(dt);
+  if (__RELEASE__ >= 8) updateNets(dt);   // nets in flight land (engine/nets.js)
+  if (__RELEASE__ >= 8 && G.shieldCarry) carryCheck();   // a continued night: red nets nobody came back for turn ordinary (engine/keep.js)
   if (__RELEASE__ >= 7 && g.roots && g.roots.length) updateRoots(dt);   // the Treant's roots: their age, and the fence roots squeezing (engine/witchwood.js)
   if (__RELEASE__ >= 7 && g.potions) updatePotions(dt);   // potions on the field: the clock, and monsters drinking what they walk onto (engine/potion.js)
   if (__RELEASE__ >= 5) updatePoison(dt);   // poison fog: the warning, the fog, the rot under it (engine/poison.js)
@@ -482,6 +503,7 @@ export function update(dt){
     if (a.p >= 1){ a.dead = true; if (__RELEASE__ >= 4 && a.fork){ const w = walls[a.lane], amt = w ? Math.min(w.max * a.hit, w.hp - 1) : 0; if (amt > 0) damageWall(a.lane, amt); G.shake = Math.max(G.shake || 0, 0.5); } else damageWall(a.lane, a.dmg); for (let i = 0; i < 8; i++) spark(LANE(a.lane), FENCE_Y - 10, a.water ? '#9fe0f0' : '#d8d0c0', 120); SFX.monsterAct(a.water ? 'water' : 'arrow', 'land'); }   // a Hayrick's fork (Release 4): a third of the fence, never the last 1
   }
   g.arrows = g.arrows.filter(a => !a.dead);
+  if (__RELEASE__ >= 8) updateCastlePieces(dt);   // Gatehouse summons, Archer Tower arrows, crumbling heaps (engine/keep.js)
   for (const w of g.castles) if (w.flash > 0) w.flash -= dt;
   g.castles = g.castles.filter(w => !w.dead);
   if (g.def && g.def.gust){   // wind: 2 s of leaves, then the whole patch shifts one cell
@@ -504,7 +526,8 @@ export function update(dt){
     if (g.gustT <= 0){ gust(g.gustDir, g.gustSet); g.gustDir = null; g.gustSet = null; g.gustT = g.def.gust.every; }
   }
   for (const sc of g.scarecrows){   // monsters in the lane stop to chew the scarecrow
-    for (const m of g.monsters) if (!m.dead && m.lane === sc.lane && m.type !== 'boss' && m.rise <= 0 && m.p >= sc.p - 0.01 && m.p < 0.99){
+    if (__RELEASE__ >= 8) for (const m of g.monsters) if (!m.dead && m.type === 'lancer' && !m.spent && m.lane === sc.lane && m.rise <= 0 && m.p >= sc.p - 0.01 && sc.hp > 0 && lancerHit(m, sc)) break;   // a Storm Lancer's strike lands on a scarecrow in its path, not the fence (Release 8, engine/keep.js)
+    for (const m of g.monsters) if (!m.dead && m.lane === sc.lane && m.type !== 'boss' && m.rise <= 0 && !(__RELEASE__ >= 8 && m.type === 'lancer' && !m.spent) && m.p >= sc.p - 0.01 && m.p < 0.99){
       m.p = Math.min(m.p, sc.p); m.chewing = sc; sc.hp -= m.eat * (m.frozenT > 0 ? 0 : m.slowT > 0 ? 0.5 : 1) * (__RELEASE__ >= 7 && m.drank && m.drank.speed ? POTION_SPEED : 1) * dt;   // a speed potion chews a scarecrow faster too (Release 7)
       if (Math.random() < dt * 4) chunk(sc.x + rnd(-8, 8), sc.y, '#c8b060', 80);
     }
@@ -586,8 +609,9 @@ export function continueState(){
     hk:__RELEASE__ >= 3 ? hkState() : null,   // the Hollow King's phase and his standing form (Release 3)
     jukebox:{ next:g.jbNext || 0, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null },   // next: drop points already used (one per jukebox dropped)   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
     ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0, bossPhase2:living.map(m => !!m.phase2), gourd:g.def.gourd ? gourdSnapshot() : null } : {}),
-    ...(__RELEASE__ >= 5 ? { bossMood:living.map(m => bossSnapshot(m) || (__RELEASE__ >= 7 ? treantSnapshot(m) || fallenHexSnapshot(m) : null)), rot:rotSnapshot(), poison:poisonClock() } : {}),   // a Treant's root clock, the Fallen Hexwitch's marks and standing altar too (Release 7)   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
-    ...(__RELEASE__ >= 7 ? { potions:potionSnapshot(), roots:rootSnapshot() } : {}) };   // the Treant's roots as they stand; the potions on the field, their clock and what the drinkers on the field had drunk (Release 7)
+    ...(__RELEASE__ >= 5 ? { bossMood:living.map(m => bossSnapshot(m) || (__RELEASE__ >= 7 ? treantSnapshot(m) || fallenHexSnapshot(m) : null) || (__RELEASE__ >= 8 ? siegeSnapshot(m) || countSnapshot(m) : null)), rot:rotSnapshot(), poison:poisonClock() } : {}),   // a Treant's root clock, the Fallen Hexwitch's marks and standing altar too (Release 7)   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
+    ...(__RELEASE__ >= 7 ? { potions:potionSnapshot(), roots:rootSnapshot() } : {}),   // the Treant's roots as they stand; the potions on the field, their clock and what the drinkers on the field had drunk (Release 7)
+    ...(__RELEASE__ >= 8 ? { nets:netSnapshot(), shields:shieldSnapshot() } : {}) };   // the nets on the patch and in flight (Release 8)
 }
 /** Start the continued night: fresh walls and patch, only the unbeaten monsters, bosses at their remaining health. */
 export function continueNight(c){
@@ -599,6 +623,8 @@ export function continueNight(c){
   if (__RELEASE__ >= 4 && c.gourd) restoreGourd(c.gourd);   // each gourd stands where it stood, or comes back on the first sprout
   if (__RELEASE__ >= 5 && c.poison != null && G.poison) G.poison.t = c.poison;   // the clock to the next fog carries on; a fog warning or lying at the loss is gone
   if (__RELEASE__ >= 5 && c.rot) restoreRot(c.rot);   // the rotten pumpkins lie where they lay (after the gourds)
+  if (__RELEASE__ >= 8 && c.nets) restoreNets(c.nets);   // the same nets, on the same pumpkins where they still stand (Release 8)
+  if (__RELEASE__ >= 8 && c.nets) restoreShields(c.shields);   // red nets wait for their owner's type to come back, a Bride's veil for the next Bride (engine/keep.js)
   if (__RELEASE__ >= 7 && c.potions) restorePotions(c.potions);   // the same potions stand, the clock carries on, and the drinkers come back with what they drank (Release 7)
   if (__RELEASE__ >= 7 && c.roots) restoreRoots(c.roots);   // the Treant's roots stand where they stood, with their hits left and their age (Release 7)
   if (__RELEASE__ >= 4 && c.bossSpawned && c.bossPhase2) G.bossPhase2 = c.bossPhase2.slice();   // spawner.js puts each returning boss back in its phase

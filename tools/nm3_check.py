@@ -53,7 +53,7 @@ def check_n3_track(browser, url):
     d = page.evaluate("() => { const d = window.__gg.levelFor(1201); return [d.label, d.nightmare, d.worldNo, d.levelNo, d.world, d.gourd]; }")
     ok(d[:4] == ['N3-1', True, 3, 1] and d[5] is True, f'levelFor(1201): label N3-1, nightmare, story world 3, level 1, gourd {d}')
     ok(page.evaluate("(w) => window.__gg.WORLDS[w].name", d[4]) == 'Witchwood: Nightmare', f'its theme {d[4]} is the Witchwood nightmare map')
-    ok(page.evaluate("() => window.__gg.NIGHTMARE_LEVELS.length") == 3, 'NIGHTMARE_LEVELS holds the patch, hollow and witchwood tables')
+    ok(page.evaluate("() => window.__gg.NIGHTMARE_LEVELS.length") >= 3, 'NIGHTMARE_LEVELS holds the patch, hollow and witchwood tables (and later the keep)')
     ok(page.evaluate("() => window.__gg.nmNight(3, 1)") == 1201, 'nmNight(3, 1) = 1201')
     ok(page.evaluate("() => window.__gg.isOpen(1202)") is False, 'N3-2 does not exist yet / stays shut')
     nm3_start(page, 1)
@@ -1779,10 +1779,11 @@ CHECKS.update({'check_n3_zone_budget': check_n3_zone_budget})
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)
-    ap.add_argument('--expect', choices=['on', 'r6', 'r5', 'r4', 'r3', 'r2', 'off'], required=True)
+    ap.add_argument('--expect', choices=['on', 'r7', 'r6', 'r5', 'r4', 'r3', 'r2', 'off'], required=True)
     ap.add_argument('--only', default=None)
     a = ap.parse_args()
     global R7, MODE
+    if a.expect == 'r7': a.expect = 'on'; from nm4_check import check_r8_absent; CHECKS['check_r8_absent'] = check_r8_absent   # a Release 7 build holds everything up to Release 7: these checks run as `on`, plus the Release 8 absence check
     MODE = a.expect; R7 = a.expect == 'on'
     with sync_playwright() as p:
         browser = p.chromium.launch(args=os.environ.get('GG_CHROME_ARGS', '').split())   # e.g. GG_CHROME_ARGS=--disable-gpu when the headless GPU process hangs

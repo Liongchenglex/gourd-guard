@@ -898,7 +898,12 @@ def check_gourd_loadout(browser, url):
     ok('Grave Gourd' in det, f'tapping it shows its card ({det[:60]!r})')
     page.evaluate("() => window.__gg.beginNight(1003)"); time.sleep(0.5)
     hid = page.evaluate("() => { const s = document.querySelector('#loGourdSec'); return [window.__gg.state, !s || s.hidden]; }")
-    ok(hid == ['loadout', True], f'N1-3 (no gourd) shows no Gourds section {hid}')
+    if page.evaluate("() => window.__gg.RELEASE") >= 5:   # Release 5 on, any gourd won goes to any nightmare night (owner 2026-11-09)
+        ok(hid == ['loadout', False], f'N1-3, the Grave won: a Gourds section (every nightmare night offers the gourds won) {hid}')
+        page.evaluate("() => { const g = window.__gg; g.save.gourds = {}; g.save.stars = {}; }")
+        ok(page.evaluate("() => window.__gg.levelFor(1003).gourd") is False, 'N1-3 with no gourd won: not a gourd night')
+    else:
+        ok(hid == ['loadout', True], f'N1-3 (no gourd) shows no Gourds section {hid}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
     # a player who has beaten only world 1 (4 pumpkin types): the picker still opens on a gourd night, and Start works

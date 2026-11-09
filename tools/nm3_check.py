@@ -664,10 +664,10 @@ def check_picker_three_gourds(browser, url):
     set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 17)}, **{1100 + k: 3 for k in range(1, 5)}})
     page.evaluate("() => { const g = window.__gg; g.save.gourds = { grave:true, protector:true, wartling:true }; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.beginNight(1105); }"); time.sleep(0.6)
     u = page.evaluate(gpick())
-    ok([t[0] for t in u['tiles']] == ['grave', 'protector'] and u['slots'] == ['grave', 'protector'], f'N2-5 still offers two gourds, both picked {u["tiles"]}')
+    ok([t[0] for t in u['tiles']] == ALL3 and u['slots'] == ['grave', 'protector'], f'N2-5 offers all three gourds won, the first two picked (any gourd on any nightmare night) {u["tiles"]}')
     page.evaluate("() => { const g = window.__gg; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.beginNight(1005); }"); time.sleep(0.6)
     u = page.evaluate(gpick())
-    ok(u['tiles'] == [['grave', 'true', True]] and u['slots'] == ['grave'] and u['heading'] == 'Gourd · pick 1', f'N1-5 still offers the Grave alone, one locked slot {u["tiles"]}')
+    ok([t[0] for t in u['tiles']] == ALL3 and u['slots'] == ['grave', 'protector'] and u['heading'] == 'Gourds · pick up to 2', f'N1-5 offers all three too {u["tiles"]}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 

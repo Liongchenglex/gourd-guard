@@ -316,10 +316,13 @@ function startPreviewedNight(){
   }
   if (__RELEASE__ >= 7 && def.potions && !(prev && prev.potions)) cards.push({ key:'potions', icon:potionsCard(160), title:'Potions', text:POTION_INTRO });   // the witchwood nightmare's first potions (N3-1)
   if (__RELEASE__ >= 7 && def.brewMarks && def.brewMarks.length && !(prev && prev.brewMarks && prev.brewMarks.length)) cards.push({ key:'brewmarks', icon:'🧪', title:'Brew marks', text:BREW_INTRO });   // the first night with brew marks (N3-6)
-  if (__RELEASE__ >= 4 && def.gourd && !(prev && prev.gourd)) cards.push({ key:'gourd', icon:gourdIcon(160), title:'The Grave Gourd', text:GOURD_INTRO });   // its first night (N1-5)
-  if (__RELEASE__ >= 5 && offeredGourds(def).includes('protector') && !(prev && offeredGourds(prev).includes('protector'))) cards.push({ key:'gourd:protector', icon:gourdIcon(160, 'protector'), title:'The Protector Gourd', text:PROTECTOR_INTRO });   // the first night that offers it (N2-5), once unlocked
-  if (__RELEASE__ >= 7 && offeredGourds(def).includes('wartling') && !(prev && offeredGourds(prev).includes('wartling'))) cards.push({ key:'gourd:wartling', icon:gourdIcon(160, 'wartling'), title:'The Wartling Gourd', text:WARTLING_INTRO });   // the first night that offers it (N3-5), once unlocked
-  if (__RELEASE__ >= 8 && offeredGourds(def).includes('crookneck') && !(prev && offeredGourds(prev).includes('crookneck'))) cards.push({ key:'gourd:crookneck', icon:gourdIcon(160, 'crookneck'), title:'The Crookneck Gourd', text:CROOK_INTRO });   // its first night (N4-3, which gives it)
+  // A gourd's card comes on its own book's first night with it (the level data's gourd fields), not wherever it is merely offered: from Release 5
+  // every nightmare night offers every gourd won (owner 2026-11-09). homeGourd: a night built as a gourd night; homeHas: its `gourds` list names k.
+  const homeGourd = d => !!d && d.gourd && !d.gourdAny, homeHas = (d, k) => !!d && (__RELEASE__ >= 5 ? (d.gourds || []).includes(k) : true) && offeredGourds(d).includes(k);
+  if (__RELEASE__ >= 4 && homeGourd(def) && !homeGourd(prev)) cards.push({ key:'gourd', icon:gourdIcon(160), title:'The Grave Gourd', text:GOURD_INTRO });   // its first night (N1-5)
+  if (__RELEASE__ >= 5 && homeHas(def, 'protector') && !homeHas(prev, 'protector')) cards.push({ key:'gourd:protector', icon:gourdIcon(160, 'protector'), title:'The Protector Gourd', text:PROTECTOR_INTRO });   // the first night that offers it (N2-5), once unlocked
+  if (__RELEASE__ >= 7 && homeHas(def, 'wartling') && !homeHas(prev, 'wartling')) cards.push({ key:'gourd:wartling', icon:gourdIcon(160, 'wartling'), title:'The Wartling Gourd', text:WARTLING_INTRO });   // the first night that offers it (N3-5), once unlocked
+  if (__RELEASE__ >= 8 && homeHas(def, 'crookneck') && !homeHas(prev, 'crookneck')) cards.push({ key:'gourd:crookneck', icon:gourdIcon(160, 'crookneck'), title:'The Crookneck Gourd', text:CROOK_INTRO });   // its first night (N4-3, which gives it)
   if (__RELEASE__ >= 8 && netsOn(def) && !netsOn(prev)) cards.push({ key:'nets', icon:'🕸️', title:'Nets', text:NET_INTRO });   // the keep nightmare's first nets (N4-1)
   if (__RELEASE__ >= 8 && pieceOn(def, 'tower') && !pieceOn(prev, 'tower')) cards.push({ key:'piece:tower', icon:pieceIcon('tower'), title:'Archer Tower', text:TOWER_INTRO });   // N4-5
   if (__RELEASE__ >= 8 && pieceOn(def, 'gate') && !pieceOn(prev, 'gate')) cards.push({ key:'piece:gate', icon:pieceIcon('gate'), title:'Gatehouse', text:GATE_INTRO });   // N4-7

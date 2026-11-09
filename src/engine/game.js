@@ -5,7 +5,7 @@ import { GEAR } from '../data/shop.js';
 import { PATTERNS } from '../data/patterns.js';
 import { NTYPES, PTYPES, POWER, PINK } from '../data/pumpkins.js';
 import { newQuestCounters } from '../data/quests.js';
-import { WORLDS, levelFor, prevLevelFor, progressNight, typesForNight, highestOpen } from '../data/worlds/index.js';
+import { WORLDS, levelFor, prevLevelFor, progressNight, typesForNight, highestOpen, gourdOwned } from '../data/worlds/index.js';
 import { SFX, ensureAudio, musicStart, musicStop } from './audio.js';
 import { MUSIC } from '../data/music.js';
 import { bestLitGroup, bestMove, emptyCells, findCell, initBoard, resolveMatches, smash, spawnSprouts, spawnPumpkin, landingCell, landingNear, flyInto, DIRV } from './board.js';
@@ -121,25 +121,30 @@ export function bakeKeys(def){
  *  `gourds` field, or the Grave Gourd alone (Release 4's nights). A kind not unlocked yet (save.gourds) is not offered; the Grave counts as
  *  unlocked on any gourd night (those nights open only after N1-4, its unlock), so Release 4 plays as before. Release 7 offers more kinds
  *  than slots (N3-5 on: all three), and the player picks two of them (defaultGourds says which start picked); below Release 7 the offer
- *  never outgrows the slots. */
+ *  never outgrows the slots. From Release 5 a nightmare night ignores `gourds` and offers every gourd won (gourdOwned), whichever book it
+ *  came from, and levelFor makes every nightmare night a gourd night once one is won (owner, 2026-11-09). */
 export function offeredGourds(def){
   if (!(__RELEASE__ >= 4) || !def || !def.gourd) return [];
-  const list = (__RELEASE__ >= 5 && def.gourds) || ['grave'];
+  const list = __RELEASE__ >= 5 && def.nightmare ? Object.keys(GOURDS) : (__RELEASE__ >= 5 && def.gourds) || ['grave'];   // Release 5 on: a nightmare night offers every gourd won, whichever book (owner 2026-11-09)
   const lock = __RELEASE__ >= 8 ? def.gourdLock : null;   // Release 8: N4-3 gives the Crookneck it locks, so it is on offer before the save has it
-  const have = list.filter(k => GOURDS[k] && (k === 'grave' || k === lock || (save.gourds && save.gourds[k])));
+  const have = list.filter(k => GOURDS[k] && (k === lock || gourdOwned(k) || (k === 'grave' && !def.gourdAny)));
   return __RELEASE__ >= 7 ? have : have.slice(0, GOURD_SLOTS);
 }
 /** The gourds a night starts with picked, in slot order (Release 7, spec Part 5): the first GOURD_SLOTS of its offer, in unlock order. On a
  *  gourd's tutorial night (`coach` names an offered gourd) whose tutorial has not played, that gourd takes the last slot instead, so the
- *  coach can run (Release 7's Wartling on N3-5; N2-5 offers only two, so nothing changes there). */
+ *  coach can run (COACH_GOURD: the Grave on N1-5, the Protector on N2-5, the Wartling on N3-5; from Release 5, since every nightmare night
+ *  offers every gourd won). */
 export function defaultGourds(def){
   const offer = offeredGourds(def);
   let pick = offer.slice(0, GOURD_SLOTS);
   if (__RELEASE__ >= 7 && offer.length > 1 && Array.isArray(save.lastGourds)) pick = rememberedGourds(offer, save.lastGourds);   // the last night's picks (owner 2026-11-09)
-  if (__RELEASE__ >= 7 && def && def.coach === 'wartling' && !save.seenWartlingCoach && offer.includes('wartling') && !pick.includes('wartling')){ if (pick.length < GOURD_SLOTS) pick.push('wartling'); else pick[pick.length - 1] = 'wartling'; }
+  const tut = def && def.coach ? COACH_GOURD[def.coach] : null;   // a gourd's tutorial night whose tutorial has not played: that gourd starts picked, so the coach can run
+  if (__RELEASE__ >= 5 && tut && !save[tut[1]] && offer.includes(tut[0]) && !pick.includes(tut[0])){ if (pick.length < GOURD_SLOTS) pick.push(tut[0]); else pick[pick.length - 1] = tut[0]; }
   if (__RELEASE__ >= 8 && def && def.gourdLock && offer.includes(def.gourdLock)) return [def.gourdLock, ...pick.filter(k => k !== def.gourdLock), ...offer.filter(k => k !== def.gourdLock && !pick.includes(k))].slice(0, GOURD_SLOTS);   // N4-3: the locked gourd in slot 1, then the remembered (or first other) one
   return pick;
 }
+/** A level's `coach` that teaches a gourd: [the gourd, the save flag set once its tutorial has played]. */
+const COACH_GOURD = { gourd:['grave', 'seenGourdCoach'], protector:['protector', 'seenProtectorCoach'], ...(__RELEASE__ >= 7 ? { wartling:['wartling', 'seenWartlingCoach'] } : {}) };
 /** The picker remembers the gourds last taken on a night with a choice (save.lastGourds, set as Start is pressed; owner 2026-11-09): those this
  *  night offers start picked, in their slots. A remembered gourd this night does not offer leaves its slot to the first offered one not picked
  *  yet (unlock order), so a night never starts with fewer than were taken; an empty pick (none taken) is remembered as empty. */

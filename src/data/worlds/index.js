@@ -1,4 +1,5 @@
 import { expandLevel } from '../levels.js';
+import { GOURDS } from '../gourds.js';
 import { PTYPES, NTYPES } from '../pumpkins.js';
 import { save } from '../../save.js';
 import { GEAR } from '../shop.js';
@@ -83,7 +84,16 @@ const nmWorld = n => Math.floor((n - NM_BASE - 1) / 100) + 1, nmLevel = n => (n 
 const nmData = n => (NIGHTMARE_LEVELS[nmWorld(n) - 1] || [])[nmLevel(n) - 1];
 
 /** Runtime level definition for night n: a story night (1-based global index) or a nightmare night (nmNight). */
-export function levelFor(n){ return expandLevel(isNightmare(n) ? nmData(n) : ALL_LEVELS[n - 1], n); }
+export function levelFor(n){
+  const d = expandLevel(isNightmare(n) ? nmData(n) : ALL_LEVELS[n - 1], n);
+  if (__RELEASE__ >= 5 && d.nightmare && !d.gourd && ownedGourds().length){ d.gourd = true; d.gourdAny = true; }   // gourdAny: made a gourd night by this rule, not by its data   // every nightmare night is a gourd night once a gourd is won (owner 2026-11-09)
+  return d;
+}
+
+/** Has the player won gourd k? save.gourds, or for the Grave Gourd also N1-4 beaten (its unlock night; a save from before save.gourds counted it). */
+export const gourdOwned = k => !!(save.gourds && save.gourds[k]) || (k === 'grave' && !!save.stars[nmNight(1, 4)]);
+/** Every gourd this build has that the player has won, in unlock order (Release 5: any of them may go to any nightmare night, owner 2026-11-09). */
+export const ownedGourds = () => __RELEASE__ >= 4 && GOURDS ? Object.keys(GOURDS).filter(gourdOwned) : [];
 
 /** The level before night n on its own track (for "new this level" cards), or null on story night 1 and on each nightmare world's level 1. */
 export function prevLevelFor(n){ return isNightmare(n) ? (nmLevel(n) > 1 ? levelFor(n - 1) : null) : n > 1 ? levelFor(n - 1) : null; }

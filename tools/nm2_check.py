@@ -790,9 +790,11 @@ def check_picker_two_gourds(browser, url):
     ok(u['label'] == ['Your team', 'Your gourd'] and u['heading'] == 'Gourd · pick 1' and u['title'].endswith('and 1 gourd'), f'and the Release 4 words {[u["label"], u["heading"], u["title"]]}')
     page.click('#bLoGo'); time.sleep(0.5)
     ok(page.evaluate("() => window.__gg.G.gourdKinds") == ['grave'], 'Start: only the Grave Gourd')
-    # N2-1 (no `gourds` field) offers the Grave only, even with the Protector unlocked
+    # N2-1 offers every gourd won (owner 2026-11-09: any gourd on any nightmare night), both picked
     u = hollow_picker(page, ['grave', 'protector'], night=1101)
-    ok(u['tiles'] == [['grave', 'true', True]] and u['slots'] == ['grave'], f'N2-1 offers only the Grave Gourd {u["tiles"]}')
+    ok([t[0] for t in u['tiles']] == ['grave', 'protector'] and u['slots'] == ['grave', 'protector'], f'N2-1 offers both gourds won, both picked {u["tiles"]}')
+    u = hollow_picker(page, ['grave', 'protector'], night=1001)
+    ok([t[0] for t in u['tiles']] == ['grave', 'protector'], f'so does N1-1, before the Grave Gourd\'s own night {u["tiles"]}')
     # the level preview stands the gourds the night will start with
     page.evaluate("() => { const g = window.__gg; g.save.gourds = { grave:true, protector:true }; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.openPreview(1105); }"); time.sleep(0.5)
     r = page.evaluate("() => window.__gg.gourdsOn().map(o => [o.kind, o.r, o.c])")
@@ -805,11 +807,12 @@ def check_picker_two_gourds(browser, url):
 
 
 def check_picker_r4_same(browser, url):
-    """N1-5's picker is Release 4's, even with the Protector unlocked: one gourd tile, one locked slot under "Your gourd", "Gourd · pick 1"."""
+    """N1-5's picker is Release 4's with only the Grave won (from Release 5 a won Protector is offered there too, owner 2026-11-09; with
+    the Grave alone it is one gourd tile, one locked slot under "Your gourd", "Gourd · pick 1")."""
     if MODE not in ('on', 'r4'): return
     page, errors = open_page(browser, url)
     set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 6)}})
-    page.evaluate("() => { const g = window.__gg; g.save.gourds = { grave:true, protector:true }; g.save.perksOff = { pick4:true }; g.save.seenGourdCoach = true; g.beginNight(1005); }"); time.sleep(0.6)
+    page.evaluate("() => { const g = window.__gg; g.save.gourds = g.RELEASE >= 5 ? { grave:true } : { grave:true, protector:true }; g.save.perksOff = { pick4:true }; g.save.seenGourdCoach = true; g.beginNight(1005); }"); time.sleep(0.6)
     u = page.evaluate("""() => { const q = s => document.querySelector(s), vis = e => !!e && e.offsetParent !== null;
       return [window.__gg.state, q('#loTitle').textContent, (q('#loGourdSec h3') || {}).textContent, [...document.querySelectorAll('#loGourds .pick')].map(b => [b.dataset.gourd, b.getAttribute('aria-pressed'), b.classList.contains('must')]),
         [...document.querySelectorAll('#ovLoadout .gslot')].filter(vis).map(b => [b.id, b.dataset.gourd, b.classList.contains('must')]), [...document.querySelectorAll('#ovLoadout .loHead .loLabel')].filter(vis).map(e => e.textContent), q('#bLoGo').disabled]; }""")
@@ -931,7 +934,7 @@ def check_same_gourd_flag(browser, url):
     page.evaluate("() => window.__gg.spawnSprouts()")
     ok(sorted(page.evaluate("() => window.__gg.gourdsOn().map(o => o.id)")) == ['protector', 'protector#2'], 'and it comes back on the next sprout tick')
     # the picker: a night offering one kind opens two slots
-    u = hollow_picker(page, ['grave', 'protector'], night=1101)
+    u = hollow_picker(page, ['grave'], night=1101)   # the Grave alone won: one kind offered
     ok(u['slots'] == ['grave', None] and u['tiles'] == [['grave', 'true', False]] and u['heading'] == 'Gourds · pick up to 2', f'N2-1 (Grave only) opens two slots with the flag on {u["slots"]} {u["heading"]}')
     page.click('#loGourds .pick[data-gourd="grave"]'); time.sleep(0.15)
     ok(page.evaluate(GPICK)['slots'] == ['grave', 'grave'], 'tapping the picked Grave fills the free slot with a second')
@@ -940,7 +943,7 @@ def check_same_gourd_flag(browser, url):
     page.click('#loGourds .pick[data-gourd="grave"]'); time.sleep(0.15); page.click('#bLoGo'); time.sleep(0.5)
     ok(page.evaluate("() => [window.__gg.G.gourdKinds, window.__gg.gourdsOn().map(o => [o.kind, o.r, o.c])]") == [['grave', 'grave'], [['grave', 2, 1], ['grave', 2, 5]]], 'Start: two Graves on the patch')
     page.evaluate("() => window.__gg.setAllowSameGourd(false)")
-    u = hollow_picker(page, ['grave', 'protector'], night=1101)
+    u = hollow_picker(page, ['grave'], night=1101)
     ok(u['slots'] == ['grave'] and u['slotMust'] == [True], f'flag off again: N2-1 is back to one locked slot {u["slots"]}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()

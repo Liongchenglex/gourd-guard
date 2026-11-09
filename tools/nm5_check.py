@@ -33,7 +33,7 @@ def marsh_page(browser, url):
 # ---------- Task 1: the track, the book page, the blood sea ----------
 # Names no lower build may hold. Not listed, because older builds already hold them for story reasons: 'Kraken' and 'Turtle Rider'
 # (comments in ported art, absent from a minified bundle but not from the source) and 'e4d9bd' (the Protector Gourd's shell colour).
-R9_NAMES = ['The Kraken', 'anchorEvery', 'Blood Slime', 'Storm Eel', 'Siren', 'Swan Gourd', 'Fallen Twin Tides', 'Whirlpool', 'Drowned Pirate', 'Bloodlet', 'pirateshot', 'Beat Nightmare 4-4', 'marshN-blood', 'The tide rises!', '#4affd0', 'turtlerider', 'rotshot', 'sirennote', 'hiddensphere']
+R9_NAMES = ['fallentides', 'The Kraken', 'anchorEvery', 'Blood Slime', 'Storm Eel', 'Siren', 'Swan Gourd', 'Fallen Twin Tides', 'Whirlpool', 'Drowned Pirate', 'Bloodlet', 'pirateshot', 'Beat Nightmare 4-4', 'marshN-blood', 'The tide rises!', '#4affd0', 'turtlerider', 'rotshot', 'sirennote', 'hiddensphere']
 
 
 def check_r9_absent(browser, url):
@@ -1424,6 +1424,352 @@ def check_magnet_marsh(browser, url):
 
 CHECKS.update({'check_magnet_marsh': check_magnet_marsh, 'check_kraken': check_kraken, 'check_kraken_level': check_kraken_level, 'check_kraken_form2': check_kraken_form2, 'check_kraken_continue': check_kraken_continue,
                'check_kraken_baked': check_kraken_baked, 'check_kraken_art': check_kraken_art, 'check_kraken_budget': check_kraken_budget})
+
+
+# ---------- Task 9: the Fallen Twin Tides (N5-16) ----------
+FT_UP = """() => { const g = window.__gg, G = g.G; G.monsters.length = 0; G.arrows.length = 0; G.vfx.length = 0; G.whirls = []; G.ftSpear = null; g.walls.forEach(w => { w.hp = w.max = 200; });
+  G.def.boss = 'fallentides'; G.def.bossForm = 1; G.def.bossChest = 'normal'; G.bossSpawned = true; G.bossDead = false;
+  const a = g.spawnMonster('boss'); window.__a = a; window.__b = a.twin; return [a.kind, a.twinKind, a.twin.twinKind, a.hp, a.maxHp, a.lane !== a.twin.lane, a.minion, a.twin.minion]; }"""
+FT_PARK = """() => { [window.__a, window.__b].forEach(m => { m.boltT = m.songT = m.sumT = m.spearT = m.whirlT = 999; m.p = 0.12; m.age = 5; m.sp = 0; }); }"""
+FT_KILL = "([w]) => { const g = window.__gg, m = window[w]; m.lastHit = 0; g.damage(m, 999, '#fff'); }"
+FT_NOISE = "() => window.__gg.G.monsters.filter(m => !m.dead && m.type !== 'boss').length"
+
+
+def ft_page(browser, url, up=True):
+    """The real N5-16 night, paused, an empty patch, every fence at 200: then (up) the twins are spawned and parked at their hold with every clock at 999."""
+    page, errors = open_page(browser, url)
+    nm5_start(page, 16); time.sleep(0.4)
+    page.evaluate("() => { const g = window.__gg, G = g.G; G.spawnTimer = 999; G.sproutT = -999; G.monsters.length = 0; G.projs.length = 0; G.drops.length = 0; G.idle = -1e9; G.hint = null; g.setState('pause'); g.grid.forEach(r => r.fill(null)); G.def.total = 999; G.total = 999; }")
+    r = None
+    if up:
+        r = page.evaluate(FT_UP); page.evaluate(FT_PARK)
+    return page, errors, r
+
+
+def check_fallen_tides(browser, url):
+    """Numbers, the pair, the hold in the tide, and each ability on a forced timer."""
+    if not R9:
+        page, errors = open_page(browser, url)
+        ok(page.evaluate("() => !(window.__gg.TYPES && window.__gg.TYPES.fallentides) && !(window.__gg.BOSS_NAMES && window.__gg.BOSS_NAMES.fallentides) && !(window.__gg.CHARS['fallentides-blood'] || window.__gg.CHARS['fallentides-blue'])"), 'no Fallen Twin Tides below Release 9')
+        page.close(); return
+    page, errors, r = ft_page(browser, url)
+    T = page.evaluate("() => { const T = window.__gg.TYPES.fallentides; return [T.boss, T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.hold, T.window, T.diveAt, T.boltEvery, T.boltDmg, T.songEvery, T.auraHeal, T.spearEvery, T.spearWarn, T.whirlEvery, T.summonEvery, T.summonPool, T.noItems]; }")
+    ok(T == [True, 30, 34, 0.03, 50, 0, 400, 6, 0.12, 12, [0.75, 0.5, 0.25], 6, 3, 14, 1, 12, 1.5, 16, 15, ['bloodslime', 'pirate', 'eel'], True], f'Fallen Twin Tides numbers {T}')
+    ok(page.evaluate("() => window.__gg.BOSS_NAMES.fallentides") == 'The Fallen Twin Tides', 'its name on screen is "The Fallen Twin Tides"')
+    ok(bool(page.evaluate("() => window.__gg.BOSS_INTRO.fallentides && window.__gg.BOSS_INTRO.fallentides['1']")), 'it has a boss intro text')
+    ok(r == ['fallentides', 'blood', 'blue', 30, 30, True, False, False], f'two bosses, blood and blue, 30 health each, distinct lanes, not minions {r}')
+    ok(page.evaluate("() => [window.__a.look, window.__b.look, window.__a.noKnockback, window.__b.noKnockback]") == ['fallentides-blood', 'fallentides-blue', True, True], 'each is drawn from its own registry key and takes no knockback')
+    ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.type === 'boss').length") == 2, 'the pair is on the field')
+    # the hold: they walk into the tide and stop at min(hold, the live shore), never at the wall
+    page.close()
+    for shore, want in ((0.2, 0.12), (0.08, 0.08)):
+        page, errors, _ = ft_page(browser, url, up=False)
+        page.evaluate("([sh]) => { const G = window.__gg.G; G.def.shoreFrac = sh; if (G.tide) G.tide.shore = sh; }", [shore])
+        page.evaluate(FT_UP)
+        page.evaluate("() => { [window.__a, window.__b].forEach(m => { m.boltT = m.songT = m.sumT = m.spearT = m.whirlT = 999; }); }")
+        page.evaluate(STEP, [9, 0.05])
+        h = page.evaluate("() => [window.__a.p, window.__b.p, window.__gg.liveShore(), window.__gg.inWater(window.__a.lane, window.__a.p), window.__gg.inWater(window.__b.lane, window.__b.p)]")
+        ok(abs(h[0] - want) < 0.01 and abs(h[1] - want) < 0.01 and h[3] and h[4], f'with the shore at {h[2]:.2f} both hold in the water at min(0.12, shore) = {want} {h}')
+        page.close()
+    page, errors, r = ft_page(browser, url)
+    # bolts: every 6 s down its own lane, 3 damage, a blood bolt and a water bolt
+    page.evaluate("() => { window.__a.boltT = 6; window.__b.boltT = 6; }")
+    page.evaluate(STEP, [5.5, 0.05])
+    ok(page.evaluate("() => window.__gg.G.arrows.length") == 0, 'no bolt in the first 5.5 s')
+    page.evaluate(STEP, [1, 0.05])
+    ar = page.evaluate("() => window.__gg.G.arrows.map(a => [a.fb, a.dmg, a.lane === (a.fb === 'blood' ? window.__a : window.__b).lane]).sort()")
+    ok(ar == [['blood', 3, True], ['water', 3, True]], f'at 6 s the blood twin throws a blood bolt and the blue twin a water bolt, 3 damage, down their own lanes {ar}')
+    w0 = page.evaluate("() => window.__gg.walls[window.__a.lane].hp"); page.evaluate(STEP, [3, 0.05])
+    ok(w0 - page.evaluate("() => window.__gg.walls[window.__a.lane].hp") == 3, 'and a bolt takes 3 off its fence')
+    # the song: eyes red (skill clip), a free row warned for 1.5 s then hidden 6 s
+    page.evaluate("() => { const g = window.__gg; g.G.arrows.length = 0; g.G.hidden.fill(0); g.G.hideWarn.fill(0); window.__a.songT = 14; }")
+    page.evaluate(STEP, [13.5, 0.05])
+    ok(page.evaluate("() => window.__gg.G.hideWarn.every(x => x === 0) && window.__gg.G.hidden.every(x => x === 0)"), 'no row warned before 14 s')
+    page.evaluate(STEP, [1, 0.05])
+    s = page.evaluate("() => [window.__gg.G.hideWarn.filter(x => x > 0).length, window.__a.anim && window.__a.anim.clip, +window.__a.songT.toFixed(1)]")
+    ok(s[0] == 1 and s[1] == 'skill' and 13 <= s[2] <= 14, f'at 14 s it sings (skill clip) and one row is warned, the clock restarts {s}')
+    page.evaluate(STEP, [1.6, 0.05])
+    ok(page.evaluate("() => window.__gg.G.hidden.filter(x => x > 0).length") == 1, 'the row is hidden once the warning ends')
+    page.evaluate(STEP, [6.2, 0.05])
+    ok(page.evaluate("() => window.__gg.G.hidden.filter(x => x > 0).length") == 0, 'and shows again after 6 s')
+    # the summon: one of the pool every 15 s, as an extra
+    page.evaluate("() => { window.__a.sumT = 15; window.__a.songT = 999; window.__gg.G.spawned = 5; }")
+    page.evaluate(STEP, [14.5, 0.05])
+    ok(page.evaluate(FT_NOISE) == 0, 'no summon before 15 s')
+    page.evaluate(STEP, [1, 0.05])
+    sm = page.evaluate("() => window.__gg.G.monsters.filter(m => !m.dead && m.type !== 'boss').map(m => [m.type, m.minion])")
+    ok(len(sm) == 1 and sm[0][0] in ('bloodslime', 'pirate', 'eel') and sm[0][1] is True and page.evaluate("() => window.__gg.G.spawned") == 5, f'at 15 s one of bloodslime, pirate or eel, an extra that is not counted in the night {sm}')
+    # a Magnet never pulls a twin
+    mp = page.evaluate("() => window.__gg.magnetPullable ? [window.__gg.magnetPullable(window.__a), window.__gg.magnetPullable(window.__b)] : null")
+    ok(mp is None or mp == [False, False], f'a Magnet hit never moves a twin {mp}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_ft_window(browser, url):
+    """Killed together: the other has 12 s; else the fallen twin rises at full health, and the rule repeats."""
+    if not R9: return
+    page, errors, r = ft_page(browser, url)
+    c0 = page.evaluate("() => window.__gg.save.chests.length")
+    page.evaluate(FT_KILL, ['__a'])
+    d = page.evaluate("() => [window.__a.dead, window.__a.hp, +window.__a.rise.toFixed(1), window.__a.trueDeath, window.__gg.G.bossDead]")
+    ok(d == [False, 0, 12, False, False], f'blood falls: it is down, not dead, 12 s on the clock {d}')
+    page.evaluate("() => { const g = window.__gg, a = window.__a; a.lastHit = 0; g.damage(a, 5, '#fff'); }")
+    ok(page.evaluate("() => window.__a.hp") == 0, 'a down twin takes no damage')
+    page.evaluate(STEP, [11, 0.05])
+    ok(page.evaluate("() => [window.__a.dead, window.__a.rise > 0]") == [False, True], 'still down at 11 s')
+    page.evaluate(FT_KILL, ['__b']); time.sleep(0.2)
+    d = page.evaluate("() => [window.__a.dead, window.__b.dead, window.__gg.G.bossDead, window.__gg.save.chests.slice(%d).map(c => c.kind)]" % c0)
+    ok(d == [True, True, True, ['normal']], f'blue falls at 11 s: both die, the fight ends, one normal chest {d}')
+    page.close()
+    page, errors, r = ft_page(browser, url)
+    page.evaluate(FT_KILL, ['__a']); page.evaluate(STEP, [12.5, 0.05])
+    d = page.evaluate("() => [window.__a.dead, window.__a.hp, window.__a.rise, window.__b.dead, window.__b.hp, window.__gg.G.bossDead]")
+    ok(d == [False, 30, 0, False, 30, False], f'12.5 s later blood is back at 30 health and the fight goes on {d}')
+    page.evaluate(FT_PARK)
+    # the rule repeats, from either twin
+    page.evaluate(FT_KILL, ['__b']); page.evaluate(STEP, [11.5, 0.05])
+    ok(page.evaluate("() => [window.__b.dead, window.__b.rise > 0]") == [False, True], 'the rule starts over: blue down, still down at 11.5 s')
+    page.evaluate(FT_KILL, ['__a'])
+    ok(page.evaluate("() => [window.__a.dead, window.__b.dead, window.__gg.G.bossDead]") == [True, True, True], 'blood falls inside blue\'s window: the fight ends')
+    page.close()
+    page, errors, r = ft_page(browser, url)
+    page.evaluate(FT_KILL, ['__a']); page.evaluate(STEP, [12.5, 0.05]); page.evaluate(FT_PARK)
+    page.evaluate(FT_KILL, ['__a']); page.evaluate(STEP, [12.5, 0.05])
+    ok(page.evaluate("() => [window.__a.dead, window.__a.hp, window.__b.dead]") == [False, 30, False], 'a second fall of the same twin starts the window over: it rises again')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_ft_story_twins(browser, url):
+    """The story Twin Tides (world 5's boss, the Hollow King's form) behave exactly as before: 8 s window, no looks, their own atlas."""
+    if not R9: return
+    page, errors, _ = ft_page(browser, url, up=False)
+    page.evaluate("""() => { const g = window.__gg, G = g.G; G.monsters.length = 0; g.walls.forEach(w => { w.hp = w.max = 200; }); G.def.boss = 'twintides'; G.bossSpawned = true; G.bossDead = false;
+      const a = g.spawnMonster('boss'); window.__a = a; window.__b = a.twin; [a, a.twin].forEach(m => { m.boltT = 999; m.p = 0.12; m.age = 5; }); }""")
+    ok(page.evaluate("() => [window.__a.kind, window.__a.look == null, window.__a.twinKind == null, window.__gg.G.monsters.filter(m => m.type === 'boss').length]") == ['twintides', True, True, 2], 'the story pair has no fallen look')
+    page.evaluate(FT_KILL, ['__a']); page.evaluate(STEP, [7, 0.05])
+    ok(page.evaluate("() => [window.__a.dead, window.__a.rise > 0 && window.__a.rise <= 1.1]") == [False, True], 'the first story twin is still down at 7 s (window 8)')
+    page.evaluate(STEP, [1.5, 0.05])
+    ok(page.evaluate("() => [window.__a.dead, window.__a.rise, window.__a.hp, window.__a.maxHp]") == [False, 0, 14, 14], 'it rises at full health after 8 s')
+    page.evaluate(FT_KILL, ['__a']); page.evaluate(STEP, [6, 0.05]); page.evaluate(FT_KILL, ['__b'])
+    ok(page.evaluate("() => [window.__a.dead, window.__b.dead, window.__gg.G.bossDead]") == [True, True, True], 'the second inside the window ends it')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_ft_dive(browser, url):
+    """At 75%, 50% and 25% of its own health a twin dives and rises at a water spot in another lane; a down twin or a diving one takes nothing."""
+    if not R9: return
+    page, errors, r = ft_page(browser, url)
+    page.evaluate("() => { window.__a.hp = 23; }"); page.evaluate(STEP, [0.5, 0.05])
+    ok(page.evaluate("() => [window.__a.diveT, window.__a.ftDone]") == [0, 0], 'at 23 of 30 it does not dive yet')
+    lane0 = page.evaluate("() => window.__a.lane")
+    page.evaluate("() => { window.__a.hp = 22; }"); page.evaluate(STEP, [0.1, 0.05])
+    d = page.evaluate("() => [window.__a.diveT > 0, window.__a.hidden, window.__a.ftDone]")
+    ok(d == [True, True, 1], f'at 22 (75%) it dives: untargetable, mark 1 passed {d}')
+    page.evaluate("() => { const g = window.__gg, a = window.__a; a.lastHit = 0; g.damage(a, 3, '#fff'); }")
+    ok(page.evaluate("() => window.__a.hp") == 22, 'a diving twin takes no damage')
+    page.evaluate(STEP, [1.6, 0.05])
+    d = page.evaluate("() => { const a = window.__a, g = window.__gg; return [a.lane !== %d, a.lane !== window.__b.lane, g.inWater(a.lane, a.p), a.hidden, a.diveT, a.p > 0]; }" % lane0)
+    ok(d == [True, True, True, False, 0, True], f'it rises in another lane, in the water, targetable again {d}')
+    lane1 = page.evaluate("() => window.__a.lane")
+    page.evaluate("() => { window.__a.hp = 15; window.__a.boltT = window.__a.songT = window.__a.sumT = 999; }"); page.evaluate(STEP, [2, 0.05])
+    d = page.evaluate("() => { const a = window.__a, g = window.__gg; return [a.ftDone, a.lane !== %d, g.inWater(a.lane, a.p)]; }" % lane1)
+    ok(d == [2, True, True], f'at 15 (50%) it dives again and rises elsewhere in the water {d}')
+    page.evaluate("() => { window.__a.hp = 7; }"); page.evaluate(STEP, [2, 0.05])
+    ok(page.evaluate("() => [window.__a.ftDone, window.__gg.inWater(window.__a.lane, window.__a.p), window.__a.dead]") == [3, True, False], 'at 7 (25%) a third dive')
+    # healed past a mark: it can dive again; the story rule "one mark, one dive" holds while it only falls
+    page.evaluate("() => { window.__a.hp = 30; }"); page.evaluate(STEP, [0.1, 0.05])
+    ok(page.evaluate("() => window.__a.ftDone") == 0, 'back at full health its marks start over')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_ft_aura(browser, url):
+    """The blood twin's 3x3 aura heals it 1 per monster that spawns in or steps into it, whirlpool arrivals included, up to its full health."""
+    if not R9: return
+    page, errors, r = ft_page(browser, url)
+    page.evaluate("() => { const g = window.__gg, a = window.__a; a.hp = 24; a.lane = 3; a.x = a.tx = g.LANE(3); window.__b.lane = 0; window.__b.x = window.__b.tx = g.LANE(0); }")
+    page.evaluate("() => { const g = window.__gg, a = window.__a; for (const l of [2, 3, 4]){ const o = g.spawnMonster('ghoul', l, true, a.p); o.sp = 0; o.age = 5; } }")
+    page.evaluate(STEP, [0.1, 0.05])
+    ok(page.evaluate("() => window.__a.hp") == 27, 'three ghouls spawned in its aura heal it 3')
+    page.evaluate(STEP, [0.5, 0.05])
+    ok(page.evaluate("() => window.__a.hp") == 27, 'and standing there they heal it no more')
+    page.evaluate("() => { const g = window.__gg, a = window.__a; const o = g.spawnMonster('ghoul', 6, true, a.p); o.sp = 0; o.age = 5; }"); page.evaluate(STEP, [0.1, 0.05])
+    ok(page.evaluate("() => window.__a.hp") == 27, 'a ghoul two lanes away does not count')
+    page.evaluate("() => { const g = window.__gg, a = window.__a; const o = g.spawnMonster('ghoul', 2, true, a.p - 0.3); o.sp = 0; o.age = 5; window.__o = o; }"); page.evaluate(STEP, [0.1, 0.05])
+    ok(page.evaluate("() => window.__a.hp") == 27, 'a ghoul far above does not count')
+    page.evaluate("() => { window.__o.p = window.__a.p; }"); page.evaluate(STEP, [0.1, 0.05])
+    ok(page.evaluate("() => window.__a.hp") == 28, 'but stepping into the aura heals it 1')
+    # a whirlpool arrival counts
+    page.evaluate("""() => { const g = window.__gg, a = window.__a; g.G.whirls = []; g.addWhirlPair({ lane:6, p:0.06 }, { lane:3, p:a.p });
+      const o = g.spawnMonster('ghoul', 6, true, 0.03); o.sp = 0.05; o.age = 5; window.__w = o; }""")
+    page.evaluate(STEP, [1.5, 0.05])
+    d = page.evaluate("() => [window.__w.lane, window.__a.hp]")
+    ok(d == [3, 29], f'a ghoul thrown out of a whirlpool into the aura heals it 1 {d}')
+    # never past full health
+    page.evaluate("() => { const g = window.__gg, a = window.__a; a.hp = 29.5; for (const l of [2, 3, 4]){ const o = g.spawnMonster('ghoul', l, true, a.p); o.sp = 0; o.age = 5; } }"); page.evaluate(STEP, [0.1, 0.05])
+    ok(page.evaluate("() => window.__a.hp") == 30, 'it heals up to its full health and no further')
+    # the blue twin has no aura
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.hp = 20; const o = g.spawnMonster('ghoul', b.lane, true, b.p); o.sp = 0; o.age = 5; }"); page.evaluate(STEP, [0.2, 0.05])
+    ok(page.evaluate("() => window.__b.hp") == 20, 'the blue twin is not healed by monsters')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_ft_spear(browser, url):
+    """The blue twin's water spear: a column warned for 1.5 s, then every pumpkin in it goes; its gourd survives; sprouts refill it."""
+    if not R9: return
+    page, errors, r = ft_page(browser, url)
+    page.evaluate("() => { const g = window.__gg; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) g.grid[r][c] = g.newCell((r + c * 2) % 5); g.grid[2][2] = g.newGourd('grave'); window.__b.spearT = 12; }")
+    page.evaluate(STEP, [11.5, 0.05])
+    ok(page.evaluate("() => window.__gg.G.ftSpear") is None, 'no column is warned before 12 s')
+    page.evaluate(STEP, [0.6, 0.05])
+    w = page.evaluate("() => { const f = window.__gg.G.ftSpear; return f ? [f.c >= 0 && f.c < 7, +f.warn.toFixed(2)] : null; }")
+    ok(w is not None and w[0] and 1.3 <= w[1] <= 1.5, f'at 12 s a column is warned for 1.5 s {w}')
+    page.evaluate("() => { window.__gg.G.ftSpear.c = 2; }")
+    page.evaluate(STEP, [1.2, 0.05])
+    ok(page.evaluate("() => window.__gg.grid.every(r => r[2] != null)"), 'the column still stands during the warning')
+    page.evaluate(STEP, [0.5, 0.05])
+    col = page.evaluate("() => window.__gg.grid.map((r, i) => [r[2] == null, !!(r[2] && r[2].gourd), r[1] != null, r[3] != null])")
+    ok(all(c[2] and c[3] for c in col) and [c[0] for c in col] == [True, True, False, True, True] and col[2][1], f'then the spear clears that column but for its gourd, and only it {col}')
+    ok(page.evaluate("() => window.__gg.G.ftSpear") is None or page.evaluate("() => window.__gg.G.ftSpear.strike") >= 0, 'the strike flash runs out')
+    page.evaluate(STEP, [1, 0.05])
+    ok(page.evaluate("() => window.__gg.G.ftSpear") is None, 'and the spear is gone after its flash')
+    ok(page.evaluate("() => +window.__b.spearT.toFixed(1)") > 7, "the blue twin's spear clock restarted at 12 s")
+    # a down blue twin cancels a spear in the air
+    page.evaluate("() => { window.__gg.G.ftSpear = { c:4, warn:1, strike:0 }; }"); page.evaluate(FT_KILL, ['__b'])
+    ok(page.evaluate("() => window.__gg.G.ftSpear") is None, 'when the blue twin goes down its warning is cancelled')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_ft_whirl(browser, url):
+    """Every 16 s the blue twin opens a whirlpool pair at two water spots; never a fifth pair."""
+    if not R9: return
+    page, errors, r = ft_page(browser, url)
+    page.evaluate("() => { window.__b.whirlT = 16; }")
+    page.evaluate(STEP, [15.5, 0.05])
+    ok(page.evaluate("() => window.__gg.G.whirls.length") == 0, 'no whirlpool before 16 s')
+    page.evaluate(STEP, [1, 0.05])
+    w = page.evaluate("() => { const g = window.__gg; return [g.G.whirls.length, g.G.whirls.every(w => g.inWater(w.a.lane, w.a.p) && g.inWater(w.b.lane, w.b.p)), window.__b.anim && window.__b.anim.clip]; }")
+    ok(w == [1, True, 'skill'], f'at 16 s one pair opens, both ends in the water, on the skill clip {w}')
+    for i in range(5):
+        page.evaluate("() => { window.__b.whirlT = 0.01; }"); page.evaluate(STEP, [0.3, 0.05])
+    ok(page.evaluate("() => window.__gg.G.whirls.length") == page.evaluate("() => window.__gg.WHIRL_MAX"), 'the pairs stop at the cap (4), never a fifth')
+    ok(page.evaluate("() => window.__gg.G.whirls.length") == 4, 'WHIRL_MAX is 4')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fallen_tides_continue(browser, url):
+    """A continued night: each twin's health, marks and the window it is down for survive, and the whirlpools stay."""
+    if not R9: return
+    page, errors, r = ft_page(browser, url)
+    page.evaluate("() => { const g = window.__gg; window.__a.hp = 12; }"); page.evaluate(STEP, [2.5, 0.05])
+    page.evaluate("() => { const g = window.__gg; g.addWhirlPair({ lane:1, p:0.05 }, { lane:5, p:0.07 }); g.addWhirlPair({ lane:2, p:0.04 }, { lane:4, p:0.08 }); }")
+    page.evaluate(FT_KILL, ['__b']); page.evaluate(STEP, [3, 0.05])
+    page.evaluate("() => { const a = window.__a; a.boltT = 4; a.songT = 7; a.sumT = 9; }")
+    before = page.evaluate("() => { const a = window.__a, b = window.__b; return [a.hp, a.ftDone, +b.rise.toFixed(1), window.__gg.G.whirls.length, a.lane, +a.p.toFixed(3), +a.boltT.toFixed(2), +a.songT.toFixed(2), +a.sumT.toFixed(2)]; }")
+    page.evaluate("() => { const g = window.__gg; g.setState('play'); const c = g.continueState(); g.continueNight(c); g.setState('pause'); }")
+    page.evaluate(STEP, [0.3, 0.05])
+    after = page.evaluate("""() => { const g = window.__gg, bs = g.G.monsters.filter(m => m.type === 'boss' && !m.dead); const a = bs.find(m => m.twinKind === 'blood'), b = bs.find(m => m.twinKind === 'blue');
+      return a && b ? [a.hp, a.ftDone, +b.rise.toFixed(1), g.G.whirls.length, a.lane, +a.p.toFixed(3), +a.boltT.toFixed(2), +a.songT.toFixed(2), +a.sumT.toFixed(2), b.hp] : null; }""")
+    ok(before[:2] == [12, 2] and before[3] == 2, f'(before: blood at 12 health, two dives, two whirlpools {before})')
+    ok(after is not None and after[0] == before[0] and after[1] == before[1], f'the blood twin returns with its health and marks {before} -> {after}')
+    ok(after is not None and abs(after[2] - (before[2] - 0.3)) < 0.2 and after[9] == 0, f'the blue twin is still down with its window running {after}')
+    ok(after is not None and after[3] == 2 and after[4] == before[4] and abs(after[5] - before[5]) < 0.002, f'the whirlpools and its spot stay {after}')
+    ok(after is not None and all(abs(after[i] - (before[i] - 0.3)) < 0.12 for i in (6, 7, 8)), f'and its clocks run on from where they were {after}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fallen_tides_baked(browser, url):
+    """Both twins and the minions they call are baked when N5-16 starts; both twins together under 12 MB at bake scale 2.5."""
+    if not R9: return
+    page, errors = open_page(browser, url)
+    C = page.evaluate("() => { const C = window.__gg.CHARS; const x = C['fallentides-blood'], y = C['fallentides-blue']; return x && y ? [Object.keys(x.clips).sort(), Object.keys(y.clips).sort(), x.maxK, y.maxK] : null; }")
+    ok(C is not None and C[0] == ['bolt', 'collapse', 'skill', 'walk'] and C[1] == C[0] and C[2] and C[3], f'each twin bakes walk, bolt, skill and collapse, with maxK capped {C}')
+    page.evaluate("() => window.__gg.setBakeScale(2.5)")
+    t0 = time.time(); nm5_start(page, 16); dt = time.time() - t0
+    ok(page.evaluate("() => ['fallentides-blood', 'fallentides-blue', 'bloodslime', 'bloodblob', 'pirate', 'eel', 'stormbolt'].every(k => window.__gg.isBaked(k))"), 'starting N5-16 bakes both twins and the Blood Slime, Bloodlet, Pirate and Storm Eel they can summon')
+    mb = page.evaluate("() => (window.__gg.atlasBytes('fallentides-blood') + window.__gg.atlasBytes('fallentides-blue')) / 1e6")
+    ok(0 < mb < 12, f"both twins' frames take {mb:.1f} MB at bake scale 2.5 (limit 12)")
+    ok(dt < 4, f'the night opens in {dt:.1f} s')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fallen_tides_level(browser, url):
+    if not R9: return
+    page, errors = open_page(browser, url)
+    d = page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[4][15]; return L ? [L.boss, L.bossChest, L.level, L.name] : null; }")
+    ok(d is not None and d[:3] == ['fallentides', 'normal', 16], f'N5-16 is the Fallen Twin Tides night with one normal chest {d}')
+    ok(page.evaluate("() => window.__gg.FALLEN.length") == 5 and page.evaluate("() => window.__gg.FALLEN[4].key") == 'fallentides', 'FALLEN[4] is the Fallen Twin Tides')
+    ok(bool(page.evaluate("() => window.__gg.BESTIARY.fallentides")), 'it has a bestiary entry')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fallen_tides_art(browser, url):
+    """A strip of both twins saved for the owner, and an in-game frame: a spear warning, a whirl pair, a hidden row, both twins up."""
+    if not R9: return
+    import base64
+    os.makedirs(SWSHOTS, exist_ok=True)
+    page, errors = open_page(browser, url)
+    strip = page.evaluate("""() => { const g = window.__gg; const rows = []; for (const k of ['fallentides-blood', 'fallentides-blue']) for (const c of ['walk', 'bolt', 'skill', 'collapse']) rows.push([k, c]);
+      const A = rows.map(([k, c]) => g.atlas(k).clips[c]), W = Math.max(...A.map(a => a.c.width)), H = A.reduce((s, a) => s + a.fh + 4, 0), c = document.createElement('canvas'); c.width = W; c.height = H;
+      const x = c.getContext('2d'); x.fillStyle = '#2a0810'; x.fillRect(0, 0, W, H); let y = 0; for (const a of A){ x.drawImage(a.c, 0, y); y += a.fh + 4; } return c.toDataURL(); }""")
+    with open(os.path.join(SWSHOTS, 'fallentides.png'), 'wb') as f: f.write(base64.b64decode(strip.split(',')[1]))
+    page.close()
+    page, errors, r = ft_page(browser, url)
+    page.evaluate("""() => { const g = window.__gg, G = g.G; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) g.grid[r][c] = g.newCell((r + c * 2) % 5);
+      window.__a.lane = 1; window.__a.x = window.__a.tx = g.LANE(1); window.__b.lane = 5; window.__b.x = window.__b.tx = g.LANE(5); window.__a.hp = 27; window.__b.hp = 24;
+      G.ftSpear = { c:3, warn:5, strike:0 }; g.hideRow(1, 0, 60); g.addWhirlPair({ lane:3, p:0.06 }, { lane:6, p:0.1 }); g.addWhirlPair({ lane:0, p:0.05 }, { lane:4, p:0.08 });
+      G.arrows.push({ lane:1, p:0.3, sp:0, dmg:3, dead:false, water:true, fb:'blood' }, { lane:5, p:0.4, sp:0, dmg:3, dead:false, water:true, fb:'water' });
+      const o = g.spawnMonster('ghoul', 2, true, 0.13); o.sp = 0; o.age = 5; const p = g.spawnMonster('pirate', 4, true, 0.3); p.age = 5; p.sp = 0; }""")
+    page.evaluate("() => { window.__gg.setState('play'); window.__gg.G.spawnTimer = 999; window.__gg.G.sproutT = -999; }")
+    page.evaluate(FT_PARK)
+    page.evaluate("() => { window.__gg.G.arrows.forEach(a => { a.sp = 0; }); window.__gg.G.ftSpear.warn = 5; }")
+    time.sleep(0.6)
+    page.evaluate("() => { window.__gg.setState('pause'); window.__gg.G.ftSpear.warn = 5; }"); time.sleep(0.4)
+    page.evaluate("() => document.querySelectorAll('.overlay, [id^=ov]').forEach(e => { e.style.display = 'none'; })")
+    page.screenshot(path=os.path.join(SWSHOTS, 'fallentides_night.png'))
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fallen_tides_budget(browser, url):
+    """Both twins, the aura, bolts in flight and the spear's warning and strike add no fill/stroke over 20 frames beside Divers and water balls (all baked and blitted)."""
+    if not R9: return
+    page, errors, r = ft_page(browser, url, up=False)
+    probe = """() => new Promise(res => { const g = window.__gg, c = g.ctx, f = c.fill, s = c.stroke, n = { fill:0, stroke:0 }; let fr = 0;
+      c.fill = function(...a){ n.fill++; return f.apply(this, a); }; c.stroke = function(...a){ n.stroke++; return s.apply(this, a); };
+      const tick = () => { if (++fr < 20) requestAnimationFrame(tick); else { delete c.fill; delete c.stroke; res(n); } }; requestAnimationFrame(tick); })"""
+    page.evaluate("() => { window.__gg.setState('play'); window.__gg.G.spawnTimer = 999; window.__gg.G.sproutT = -999; }")
+    page.evaluate("""() => { const g = window.__gg; for (let i = 0; i < 6; i++){ const e = g.spawnMonster('diver', i, true, 0.1); e.age = 5; e.hidden = false; e.upT = 99; e.sp = 0; }
+      for (let i = 0; i < 4; i++) g.G.arrows.push({ lane:i, p:0.5, sp:0, dmg:2, dead:false, water:true }); }""")
+    page.evaluate("() => new Promise(r => setTimeout(r, 400))")
+    page.evaluate(probe); base = page.evaluate(probe)
+    page.evaluate("() => { const g = window.__gg; g.G.monsters.length = 0; g.G.arrows.length = 0; }")
+    page.evaluate(FT_UP); page.evaluate(FT_PARK)
+    page.evaluate("""() => { const g = window.__gg, G = g.G; G.ftSpear = { c:3, warn:99, strike:0 };
+      for (let i = 0; i < 4; i++) G.arrows.push({ lane:i, p:0.5, sp:0, dmg:3, dead:false, water:true, fb:i % 2 ? 'blood' : 'water' }); }""")
+    page.evaluate("() => new Promise(r => setTimeout(r, 400))")
+    page.evaluate(probe); n1 = page.evaluate(probe)
+    page.evaluate("() => { window.__gg.G.ftSpear = { c:3, warn:0, strike:99 }; }")
+    page.evaluate("() => new Promise(r => setTimeout(r, 200))")
+    n2 = page.evaluate(probe)
+    ok(n1['fill'] <= base['fill'] + 20 and n1['stroke'] <= base['stroke'] + 20, f'the twins, aura, bolts and the spear warning add no fill/stroke over 20 frames (old {base}, new {n1})')
+    ok(n2['fill'] <= base['fill'] + 20 and n2['stroke'] <= base['stroke'] + 20, f'nor does the strike (old {base}, new {n2})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_fallen_tides': check_fallen_tides, 'check_ft_window': check_ft_window, 'check_ft_story_twins': check_ft_story_twins, 'check_ft_dive': check_ft_dive, 'check_ft_aura': check_ft_aura,
+               'check_ft_spear': check_ft_spear, 'check_ft_whirl': check_ft_whirl, 'check_fallen_tides_continue': check_fallen_tides_continue, 'check_fallen_tides_baked': check_fallen_tides_baked,
+               'check_fallen_tides_level': check_fallen_tides_level, 'check_fallen_tides_art': check_fallen_tides_art, 'check_fallen_tides_budget': check_fallen_tides_budget})
 
 
 def main():

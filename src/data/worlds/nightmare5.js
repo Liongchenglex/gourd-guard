@@ -21,4 +21,10 @@ export default __RELEASE__ >= 9 ? [
   // N5-5: the Swan Gourd's night (owner: given and taught here; locked in slot 1 as the Crookneck is on N4-3). Its monsters and pacing are a stand-in too.
   L({ level: 5, name:'The Black Swan', pattern:0, total:16, interval:3.3, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL5(), gourdLock:'swan', coach:'swan', puddles:2, shoreFrac:0.2, tideMarks:[{ at:0.5, to:0.3 }],
     pool:[['drownedGhoul', 10], ['tideImp', 5]], quests:[['noTools'], ['wallMin', 55]] }),
+  // PLACEHOLDERS (Task 9): N5-6 to N5-15 stand in so N5-16 sits at its table index; Task 10 replaces them with the real nights.
+  ...Array.from({ length:10 }, (_, i) => L({ level:6 + i, name:'The Red Tide ' + (6 + i), pattern:0, total:16, interval:3.3, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL5(), puddles:2, shoreFrac:0.2, tideMarks:[{ at:0.5, to:0.3 }],
+    pool:[['drownedGhoul', 10], ['tideImp', 5]], quests:[['noTools'], ['wallMin', 55]] })),
+  // N5-16: the Fallen Twin Tides (Task 9; engine/marsh.js updateFallenTides). One normal chest. Its pool and pacing are a stand-in until Task 10.
+  L({ level:16, name:'The Fallen Twin Tides', pattern:0, total:22, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL5(), puddles:2, shoreFrac:0.2, tideMarks:[{ at:0.5, to:0.3 }], boss:'fallentides', bossChest:'normal',
+    pool:[['drownedGhoul', 10], ['tideImp', 5]], quests:[['noTools'], ['wallMin', 55]] }),
 ] : [];

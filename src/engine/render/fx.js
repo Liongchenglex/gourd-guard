@@ -712,6 +712,42 @@ export function countSpearSprite(k){ k = bakeK(k); return bake(`fcspear:${k}`, F
 }); }
 export function prebakeCountFx(k){ countWarnSprite(k); countBoltSprite(k); countSpearSprite(k); }
 
+// ---------- the Fallen Twin Tides (Release 9): the water spear's column warning and strike, the blood bolt and the water bolt; each baked once ----------
+// The column sprites are baked in fixed drawing units and stretched onto the patch at draw time (render/draw.js drawTidesSpear), as the Fallen Count's lightning; the bolts
+// are small blobs blitted at the arrow (drawArrows). Keyed by the bake scale K, so a resize that changes K bakes them once more.
+export const FT_COL = { w:100, h:500 }, FT_STRIKE = { w:160, h:620 }, FT_BOLT = { w:44, h:76 };
+/** A patch column under the water spear's warning: a pale aqua wash with deep-blue dashed edges and chevrons pointing down. */
+export function tidesWarnSprite(k){ k = bakeK(k); return bake(`ftwarn:${k}`, FT_COL.w, FT_COL.h, 0, 0, k, g => {
+  const { w, h } = FT_COL;
+  const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, 'rgba(120,230,255,.6)'); gr.addColorStop(.18, 'rgba(90,200,240,.22)'); gr.addColorStop(.82, 'rgba(90,200,240,.22)'); gr.addColorStop(1, 'rgba(120,230,255,.6)');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(20,70,160,.9)'; g.lineWidth = 3; g.setLineDash([14, 10]); g.strokeRect(2, 2, w - 4, h - 4); g.setLineDash([]);
+  g.strokeStyle = 'rgba(230,250,255,.8)'; g.lineWidth = 5; g.lineCap = 'round'; g.lineJoin = 'round';
+  for (let y = 40; y < h - 20; y += 90){ g.beginPath(); g.moveTo(w * .3, y); g.lineTo(w * .5, y + 22); g.lineTo(w * .7, y); g.stroke(); }
+}); }
+/** The spear itself: a column of water with a bright core, a spear point at its foot and droplets thrown off its sides. */
+export function tidesSpearSprite(k){ k = bakeK(k); return bake(`ftspear:${k}`, FT_STRIKE.w, FT_STRIKE.h, 0, 0, k, g => {
+  const { w, h } = FT_STRIKE, R = rng(41), cx = w / 2, body = (hw) => { g.beginPath(); g.moveTo(cx - hw, 0); g.lineTo(cx - hw * 1.05, h - 90); g.lineTo(cx, h - 4); g.lineTo(cx + hw * 1.05, h - 90); g.lineTo(cx + hw, 0); g.closePath(); };
+  g.save(); g.shadowColor = '#7af0ff'; g.shadowBlur = 26; body(30); g.fillStyle = 'rgba(70,170,230,.55)'; g.fill(); g.restore();
+  body(22); let gr = g.createLinearGradient(cx - 22, 0, cx + 22, 0); gr.addColorStop(0, 'rgba(30,110,190,.85)'); gr.addColorStop(.5, 'rgba(150,230,255,.92)'); gr.addColorStop(1, 'rgba(30,110,190,.85)'); g.fillStyle = gr; g.fill();
+  body(7); g.fillStyle = 'rgba(245,253,255,.95)'; g.fill();
+  g.strokeStyle = 'rgba(235,252,255,.7)'; g.lineWidth = 2.5; g.lineCap = 'round';
+  for (let i = 0; i < 5; i++){ const y = 40 + i * 110; g.beginPath(); g.moveTo(cx - 24, y); g.quadraticCurveTo(cx, y + 14, cx + 24, y); g.stroke(); }   // swirling bands down the column
+  g.fillStyle = 'rgba(200,244,255,.9)';
+  for (let i = 0; i < 26; i++){ const y = R() * (h - 60), side = R() < .5 ? -1 : 1, x = cx + side * (30 + R() * 40), r = 2 + R() * 3.5; g.beginPath(); g.ellipse(x, y, r, r * 1.3, 0, 0, TAU); g.fill(); }
+}); }
+/** A bolt thrown by a twin: `blood` (a dark crimson glob trailing blood) or `water` (a deep-blue glob trailing spray), point down. Drawn centred on the arrow. */
+export function tidesBoltSprite(k, kind){ k = bakeK(k); const blood = kind === 'blood'; return bake(`ftbolt:${kind}:${k}`, FT_BOLT.w, FT_BOLT.h, FT_BOLT.w / 2, FT_BOLT.h - 22, k, g => {
+  const cx = 0, cy = 0, c0 = blood ? ['#ff9a9a', '#d01828', '#5a0410'] : ['#e8fbff', '#4aa8e8', '#103a7a'], trail = blood ? 'rgba(200,16,40,' : 'rgba(110,200,240,', glow = blood ? '#ff2030' : '#7af0ff';
+  for (let i = 1; i <= 3; i++){ g.fillStyle = trail + (0.6 - i * .15) + ')'; g.beginPath(); g.ellipse(cx + (i % 2 ? 3 : -3), cy - 12 - i * 12, 4.5 - i * .8, 5.5 - i * .8, 0, 0, TAU); g.fill(); }
+  g.save(); g.shadowColor = glow; g.shadowBlur = 10;
+  const gr = g.createRadialGradient(cx - 4, cy - 4, 2, cx, cy, 14); gr.addColorStop(0, c0[0]); gr.addColorStop(.4, c0[1]); gr.addColorStop(1, c0[2]);
+  g.fillStyle = gr; g.beginPath(); g.moveTo(cx, cy + 15); g.bezierCurveTo(cx + 15, cy + 2, cx + 12, cy - 12, cx, cy - 13); g.bezierCurveTo(cx - 12, cy - 12, cx - 15, cy + 2, cx, cy + 15); g.fill(); g.restore();
+  g.strokeStyle = blood ? 'rgba(60,2,10,.8)' : 'rgba(10,40,100,.7)'; g.lineWidth = 1.5; g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.75)'; g.beginPath(); g.ellipse(cx - 4, cy - 5, 3.5, 2.2, -.6, 0, TAU); g.fill();
+}); }
+export function prebakeTidesFx(k){ tidesWarnSprite(k); tidesSpearSprite(k); tidesBoltSprite(k, 'blood'); tidesBoltSprite(k, 'water'); }
+
 // ---------- Whirlpools (Release 9): one baked spiral per colour and canvas scale, spun and pulsed when blitted ----------
 const WHIRL_R = CS * 0.46;
 /** A whirlpool disc in `col`: a dark core, three curling arms and a bright rim. Baked once per colour and scale; never drawn live. */

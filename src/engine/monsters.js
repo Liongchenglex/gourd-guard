@@ -8,7 +8,7 @@ import { glueStep } from './glue.js';
 import { magnetSlide } from './magnet.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
 import { updateHollowMonster, reapLanes, initHollowMonster, initLamplighter, updateLamplighter, initFallenPolt, updateFallenPolt } from './hollow.js';
-import { initMarshMonster, updateMarshMonster, marshStop, growBlob, updateKraken } from './marsh.js';
+import { initMarshMonster, updateMarshMonster, marshStop, growBlob, updateKraken, initFallenPair, updateFallenTides, tidesHold } from './marsh.js';
 import { newCastle, initKeepMonster, updateKeepMonster, keepStop, keepParked, keepSpeed, lancerHit, keepTick, updateSiege, updateFallenCount } from './keep.js';
 import { initWitchwoodMonster, updateWitchwoodMonster, toadStop, tongueFree, initTreant, updateTreant, initFallenHex, updateFallenHex } from './witchwood.js';
 import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike, initFallenGK, updateFallenGK } from './nightmare.js';
@@ -61,11 +61,12 @@ let monsterIds = 0;
 export function spawnMonster(key, lane, minion, p, formArg){
   const { type, kind, T, variant } = resolveMonster(key);
   const mod = variant ? MODS[variant.mod] : null;
-  if (type === 'boss' && kind === 'twintides' && !minion){   // the twins spawn as a pair on the sea row
+  if (type === 'boss' && (kind === 'twintides' || (__RELEASE__ >= 9 && kind === 'fallentides')) && !minion){   // the twins spawn as a pair on the sea row (the Fallen Twin Tides too: blood and blue)
     const taken = G.monsters.filter(o => o.type === 'boss' && !o.dead).map(o => o.lane);   // a second pair takes other lanes
     const lanes = shuffle([...Array(COLS).keys()].filter(l => !taken.includes(l))).slice(0, 2);
     const a = spawnMonster('boss', lanes[0], true, p), b = spawnMonster('boss', lanes[1], true, p);
     a.minion = b.minion = false; a.twin = b; b.twin = a;
+    if (__RELEASE__ >= 9 && kind === 'fallentides') initFallenPair(a, b);   // blood and blue, their looks and clocks (engine/marsh.js)
     return a;
   }
   let puddle = null;
@@ -385,6 +386,7 @@ export function updateMonster(m, dt){
         if (__RELEASE__ >= 3 && m.kind === 'hollowking'){ updateHollowKing(m, dt); if (m.p >= m.hold) sp = 0; break; }
         if (__RELEASE__ >= 4 && m.kind === 'strawlord'){ updateStrawlord(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // stops exactly at hold, never past it
         if (__RELEASE__ >= 8 && m.kind === 'fallencount'){ sp = updateFallenCount(m, dt) || m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the Fallen Count (engine/keep.js): walks like the story Count, still in his trance and stun; stops exactly at hold
+        if (__RELEASE__ >= 9 && m.kind === 'fallentides'){ const h = tidesHold(m); sp = updateFallenTides(m, dt) || m.p >= h ? 0 : dt > 0 ? Math.min(sp, (h - m.p) / dt) : 0; break; }   // a Fallen twin (engine/marsh.js): walks to its hold in the tide, stands still while it dives
         if (__RELEASE__ >= 9 && m.kind === 'kraken'){ updateKraken(m, dt); sp = 0; break; }   // the Kraken (engine/marsh.js): its head dives and rises, its tentacles throw anchors; it never walks
         if (__RELEASE__ >= 8 && m.kind === 'siegetower'){ updateSiege(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the Siege Tower (engine/keep.js); stops exactly at hold
         if (__RELEASE__ >= 5 && m.kind === 'lamplighter'){ updateLamplighter(m, dt); sp = m.p >= m.hold ? 0 : dt > 0 ? Math.min(sp, (m.hold - m.p) / dt) : 0; break; }   // the Lamplighter's moods (engine/hollow.js); stops exactly at hold

@@ -21,7 +21,7 @@ import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
 import { reaperFalls, cometBreaks, fpAfterHit, fpReaperHit } from './hollow.js';
 import { witchwoodFalls, fhGate, fhAfterHit } from './witchwood.js';
-import { splitBlood, releaseImp, krakenGuard, krakenFalls } from './marsh.js';
+import { splitBlood, releaseImp, krakenGuard, krakenFalls, tidesGuard, tidesDown, tidesFalls } from './marsh.js';
 import { shieldedNow, shieldPuff, keepFalls, pieceFalls, knockArcher, archersGuard, siegeFalls, countGate, fcCross, countFalls } from './keep.js';
 import { inWartSquare, inSwanSquare, isProtected } from './gourd.js';
 import { ROTTEN, ROT_FX, hitRule } from './rot.js';
@@ -90,7 +90,7 @@ export function damage(m, amt, color, small, big){
   if (m.dead) return;
   if (__RELEASE__ >= 8 && shieldedNow(m)){ shieldPuff(m); return; }   // the one shield door (engine/keep.js): red nets, a Bride's veil, the Fallen Count's clamp; every damage source comes through here
   if (__RELEASE__ >= 8 && archersGuard(m)) return;   // a Siege Tower with archers up: only a pumpkin's own hit gets past them, and that knocks one off instead (knockArcher, hitMonsterNow)
-  if (__RELEASE__ >= 9 && krakenGuard(m)) return;   // the Kraken's head under the water takes nothing (engine/marsh.js)
+  if (__RELEASE__ >= 9 && (krakenGuard(m) || tidesGuard(m))) return;   // the Kraken's head under the water, a Fallen twin diving or down: nothing hurts them (engine/marsh.js)
   if (m.type === 'jukebox' && m.lastHit === -1){ m.flash = 0.1; addFloat('Pumpkins only', m.x, mY(m) - m.r - 14, '#ffd35a', 15, 0.7); return; }   // tools never hurt the jukebox (owner)
   if (__RELEASE__ >= 5 && m.rotOnly && !rotDmg){ blockedPuff(m); return; }   // only rot can hurt it (Release 5): every other damage (splash, lightning, burn, mines, tools) is refused
   if (m.shield){   // shield knight marching: the hit bounces off
@@ -204,6 +204,18 @@ export function kill(m){
     }
     m.trueDeath = true;
   }
+  if (__RELEASE__ >= 9 && m.type === 'boss' && m.kind === 'fallentides' && !m.trueDeath){   // the Fallen twins: killed together within `window` s, or the fallen one rises at full health
+    const other = m.twin, win = TYPES.fallentides.window;
+    if (other && !other.dead && other.rise > 0){ m.trueDeath = true; other.trueDeath = true; other.rise = 0; kill(other); kill(m); return; }
+    if (other && !other.dead){
+      tidesDown(m);
+      m.hp = 0; m.rise = win; m.eating = false; m.anim = { clip:'collapse', t:0, dur:0.5 };
+      addFloat(`Down! ${win}s to fell the other`, m.x, mY(m) - m.r - 34, m.twinKind === 'blood' ? '#ff8a8a' : '#9fe0f0', 18, 1.6);
+      for (let i = 0; i < 14; i++) chunk(m.x, mY(m), m.twinKind === 'blood' ? '#8a1020' : '#163058', 200); SFX.bossSfx('fallentides', 'down');
+      return;
+    }
+    m.trueDeath = true;
+  }
   if (m.type !== 'boss' && m.type !== 'jukebox' && !m.trueDeath && G.hexZones && G.hexZones.length && inHexZone(m)){   // inside a hex zone: it rises again
     m.hp = 0; m.rise = TYPES.hexwitch.zoneRise; m.eating = false; m.kb = 0; m.burnLeft = 0;
     addFloat('Hexed: it will rise', m.x, mY(m) - m.r - 30, '#d09bff', 16, 1);
@@ -228,6 +240,7 @@ export function kill(m){
   if (__RELEASE__ >= 5 && m.type === 'reaper') reaperFalls(m);   // a crow bursts out where the Reaper fell (engine/hollow.js)
   if (__RELEASE__ >= 7) witchwoodFalls(m);   // the Flask Bearer's potion, the Cauldron Toad's burst (engine/witchwood.js)
   if (__RELEASE__ >= 8) countFalls(m);   // the Fallen Count's nets, bolt, spears and castle pieces go with him (engine/keep.js)
+  if (__RELEASE__ >= 9) tidesFalls(m);   // a Fallen twin's water spear goes with it (engine/marsh.js)
   if (__RELEASE__ >= 9) krakenFalls(m);   // the Kraken's tentacles and anchors go with its head (engine/marsh.js)
   if (__RELEASE__ >= 8) siegeFalls(m);   // the Siege Tower's own nets go with it (engine/keep.js)
   if (__RELEASE__ >= 8) keepFalls(m);   // a Glutton's red nets turn ordinary, a Bride's veil comes off (engine/keep.js)
@@ -279,13 +292,13 @@ export function kill(m){
       for (let c = 0; c < nc; c++) addChest(ck, itemOf);
       if (nc > 1) addFloat(`${nc} chests!`, m.x, mY(m) - m.r - 100, '#ffd35a', 22, 2.2);
       addFloat(ck === 'boss' ? 'Boss chest!' : 'Treasure chest!', m.x, mY(m) - m.r - 70, '#ffd35a', 22, 2); if (G.vfx) G.vfx.push({ kind:'loot', item:ck === 'boss' ? 'bossChest' : 'chest', x:m.x, y:mY(m) - 20, t:0, dur:1.8 }); }
-    const groupDown = m.kind !== 'twintides' || (m.twin && m.twin.dead);   // a whole boss is down (both of a Twin Tides pair)
+    const groupDown = !(m.kind === 'twintides' || (__RELEASE__ >= 9 && m.kind === 'fallentides')) || (m.twin && m.twin.dead);   // a whole boss is down (both of a Twin Tides pair)
     if (twinAlive && groupDown && G.def && G.def.boss2){
       G.shake = 1; SFX.bossSfx(m.kind, 'die');
       if (m.kind === 'twintides') banner('One pair falls!', 'One pair left. Monsters keep coming until it falls.', 2.4); else banner(`${BOSS_NAMES[m.kind]} falls!`, 'One boss left. Monsters keep coming until it falls.', 2.4);
       if (G.def.frenzy && G.def.frenzyAfterBoss && !G.jukebox && !G.jukeboxDone) dropJukebox();   // 6-16: the first pair down drops the jukebox
     }
-    if (!twinAlive){ G.bossDead = true; G.shake = 1.2; banner(`${BOSS_NAMES[m.kind]} ${m.kind === 'twintides' ? 'fall' : 'falls'}!`, G.mode === 'endless' ? 'The night goes on…' : 'Finish the stragglers and grab the pumpkins it dropped!', 2.4); SFX.bossSfx(m.kind, 'die'); }
+    if (!twinAlive){ G.bossDead = true; G.shake = 1.2; banner(`${BOSS_NAMES[m.kind]} ${m.kind === 'twintides' || (__RELEASE__ >= 9 && m.kind === 'fallentides') ? 'fall' : 'falls'}!`, G.mode === 'endless' ? 'The night goes on…' : 'Finish the stragglers and grab the pumpkins it dropped!', 2.4); SFX.bossSfx(m.kind, 'die'); }
   }
 }
 

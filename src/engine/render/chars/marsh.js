@@ -13,6 +13,7 @@
 import { E, PL, RR, S, SM, SO, ell, mix, pal, rgba, rng } from '../paint.js';
 import { TAU } from '../../util.js';
 import { TYPES } from '../../../data/monsters.js';
+import { FALLENTIDES } from './fallentides.js';
 
 
 // ---------- palettes ----------
@@ -1239,6 +1240,7 @@ const KRAKENART = (() => {
 // ---------- registry (format of ./index.js) ----------
 const C = (n, fps, key, once = false) => ({ n, fps, once, pose:t => ({ [key]:t }) });
 export const MARSH = {
+  ...FALLENTIDES,   // the Fallen Twin Tides, N5-16's boss: one registry key per twin (fallentides.js)
   // r 23 like the Splitter Slime's family (scale .64, dy -11)
   bloodslime: { draw:bloodslime, scale:.64, dy:-11, box:{ x:-64, y:-46, w:128, h:106 }, clips:{ walk:C(8, 9, 'walk'), chew:C(4, 8, 'chew') }, still:{} },
   bloodblob: { draw:bloodlet, scale:.64, dy:-11, box:{ x:-32, y:-6, w:64, h:64 }, clips:{ walk:C(8, 12, 'walk'), chew:C(4, 8, 'chew') }, still:{} },

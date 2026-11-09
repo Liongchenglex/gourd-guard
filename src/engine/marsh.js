@@ -30,6 +30,17 @@
 //    lane; while its fence is down the anchor is held (as the Diver's bolt). The head's fall takes every tentacle and anchor with it (krakenFalls). A continued night keeps the
 //    head's health, whether it is up, where and for how long (krakenSnapshot / restoreKraken); the tentacles come back fresh.
 
+//  - The Fallen Twin Tides (`boss` kind `fallentides`, N5-16): two bosses, `twinKind` 'blood' and 'blue', spawned as a pair in distinct lanes (monsters.js, initFallenPair) and drawn
+//    as `fallentides-blood` / `fallentides-blue` (m.look). Each walks to its hold, min(`hold`, the live shore) (tidesHold), never reaches the wall and is never knocked back.
+//    Dive: at each `diveAt` mark of its own health (ftDone counts the marks passed, and falls back when it is healed past one) it sinks (m.diveT, untargetable: m.hidden and
+//    tidesGuard), moves to a random water spot in another lane (waterSpot) and rises there, holding where it rose (m.stayP). Killed together (combat.js kill): the first to fall is
+//    down `window` s (m.rise, untargetable, the story twins' mechanism); the other falling inside it ends the fight, else the first rises at full health and the rule starts over.
+//    Both throw a bolt down their own lane every `boltEvery` s (`boltDmg`, a G.arrows entry with `fb` 'blood' | 'water': baked sprites, render/fx.js). The blood twin: sings every
+//    `songEvery` s (the skill clip: eyes red) and hideRow()s a random free row; a 3x3 aura (its lane +-1, +-1.5 tiles) heals it `auraHeal` for each monster that spawns in or steps
+//    into it (m.ftIn marks a monster already counted), whirlpool arrivals and its own summons included; one of `summonPool` every `summonEvery` s, as an extra (a minion). The blue
+//    twin: every `spearEvery` s a random patch column is warned `spearWarn` s (G.ftSpear) and then every pumpkin in it but gourds and gliding sprouts goes; every `whirlEvery` s
+//    (the skill clip: eyes blue) it opens a whirlpool pair at two random water spots, never past WHIRL_MAX. A continued night keeps each twin's health, marks, clocks, window and
+//    spot (tidesSnapshot / restoreTides); the whirlpools come back with the night's whirl list.
 import { TYPES, SLIME_CAP } from '../data/monsters.js';
 import { PTYPES } from '../data/pumpkins.js';
 import { SFX } from './audio.js';
@@ -37,8 +48,8 @@ import { addFloat, chunk, ring, spark } from './combat.js';
 import { resolveMatches } from './board.js';
 import { isProtected } from './gourd.js';
 import { ROTTEN, rotCell } from './rot.js';
-import { liveShore, inWater } from './tide.js';
-import { mS, mY, spawnMonster } from './monsters.js';
+import { liveShore, inWater, addWhirlPair } from './tide.js';
+import { TILE_P, mS, mY, spawnMonster } from './monsters.js';
 import { COLS, CS, FENCE_Y, G, GY, LANE, ROWS, gest, grid, walls } from './state.js';
 import { rnd, shuffle } from './util.js';
 
@@ -289,6 +300,154 @@ function tentacleAnchor(m){
   const T = TYPES.tentacle;
   G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:T.anchorSp, dmg:T.anchorDmg, dead:false, anchor:true });
   SFX.monsterAct('tentacle', 'throw');
+}
+
+
+// ---------- the Fallen Twin Tides (N5-16's boss) ----------
+export const isTides = m => m.type === 'boss' && m.kind === 'fallentides';
+const TIDES_DIVE = 1.4, TIDES_SINK = 0.5, TIDES_SKILL = 1.5, TIDES_BOLT = 0.6, SPEAR_FLASH = 0.35, AURA_LANES = 1, AURA_TILES = 1.5;
+export const TIDES_STRIKE = SPEAR_FLASH;
+
+/** monsters.js, a fresh pair: the blood twin and the blue twin, each with every clock full (a continued night restores them after this, restoreTides). */
+export function initFallenPair(a, b){
+  const T = TYPES.fallentides;
+  [a, b].forEach((m, i) => {
+    m.twinKind = i ? 'blue' : 'blood'; m.look = 'fallentides-' + m.twinKind; m.noKnockback = true; m.ftDone = 0; m.diveT = 0; m.stayP = null; m.ftIn = false;
+    m.boltT = T.boltEvery; m.songT = T.songEvery; m.sumT = T.summonEvery; m.spearT = T.spearEvery; m.whirlT = T.whirlEvery;
+  });
+}
+/** Where a twin holds: min(`hold`, the live shore), or the spot it last rose at. */
+export const tidesHold = m => m.stayP != null ? m.stayP : Math.max(0.03, Math.min(TYPES.fallentides.hold, liveShore()));
+/** A random spot in the water (a lane and a p for which inWater is true), not in the lanes listed, or null when there is none. */
+function waterSpot(not){
+  const sh = liveShore();
+  for (let i = 0; i < 40; i++){
+    const lane = Math.floor(Math.random() * COLS); if (not && not.includes(lane)) continue;
+    const pools = (G.puddles || []).filter(pd => pd.lane === lane);
+    let p;
+    if (sh > 0.05 && (!pools.length || Math.random() < 0.7)) p = rnd(0.02, sh - 0.02);
+    else if (pools.length) p = pools[Math.floor(Math.random() * pools.length)].p;
+    else continue;
+    if (inWater(lane, p)) return { lane, p };
+  }
+  return null;
+}
+const ftWall = lane => !!(walls[lane] && walls[lane].hp > 0);
+function tidesBolt(m){
+  if (!ftWall(m.lane)) return;   // its fence is down: the bolt is held
+  const T = TYPES.fallentides, blood = m.twinKind === 'blood';
+  G.arrows.push({ lane:m.lane, p:m.p + 0.03, sp:T.boltSp, dmg:T.boltDmg, dead:false, water:true, fb:blood ? 'blood' : 'water' });
+  for (let i = 0; i < 10; i++) spark(m.x, mY(m) - 20, blood ? '#ff3a40' : '#9fe0f0', 140);
+  m.anim = { clip:'bolt', t:0, dur:TIDES_BOLT }; SFX.bossSfx('fallentides', 'bolt');
+}
+/** The blood twin's aura: +auraHeal for each monster that is new in its 3x3 (its lane +-1, +-1.5 tiles): spawned there, walked in, summoned or thrown in by a whirlpool. */
+function tidesAura(m){
+  const T = TYPES.fallentides, reach = AURA_TILES * TILE_P(); let n = 0;
+  for (const o of G.monsters){
+    if (o === m || o.dead || o.type === 'boss' || o.type === 'jukebox' || o.type === 'sack') continue;
+    const inside = !(o.rise > 0) && Math.abs(o.lane - m.lane) <= AURA_LANES && Math.abs(o.p - m.p) <= reach;
+    if (inside && !o.ftIn && m.hp < m.maxHp){ m.hp = Math.min(m.maxHp, m.hp + T.auraHeal); n++; }
+    o.ftIn = inside;   // a monster that is in has been counted whether or not it healed (at full health nothing is owed)
+  }
+  if (n){ addFloat('+' + n, m.x, mY(m) - m.r * mS(m) - 30, '#ff6a6a', 15, 0.8); ring(m.x, mY(m), 40, 'rgba(255,90,90,.7)'); SFX.bossSfx('fallentides', 'heal'); }
+}
+function tidesSummon(m){
+  const T = TYPES.fallentides, kind = T.summonPool[Math.floor(Math.random() * T.summonPool.length)];
+  let o;
+  if (kind === 'eel'){ const sp = waterSpot(); if (!sp) return; o = spawnMonster('eel', sp.lane, true, sp.p); }   // an eel lurks in the water
+  else o = spawnMonster(kind, Math.floor(Math.random() * COLS), true, Math.max(0, m.p));
+  ring(m.x, mY(m), 50, 'rgba(200,30,60,.8)'); for (let i = 0; i < 10; i++) spark(m.x, mY(m) - 10, '#ff5a5a', 120);
+  m.anim = { clip:'bolt', t:0, dur:TIDES_BOLT }; SFX.bossSfx('fallentides', 'summon');
+  return o;
+}
+function tidesSing(m){
+  const free = []; for (let r = 0; r < ROWS; r++) if (!(G.hidden && G.hidden[r] > 0) && !(G.hideWarn && G.hideWarn[r] > 0)) free.push(r);
+  if (free.length) hideRow(free[Math.floor(Math.random() * free.length)]);
+  m.anim = { clip:'skill', t:0, dur:TIDES_SKILL }; SFX.bossSfx('fallentides', 'sing');
+  addFloat('The blood twin sings', m.x, mY(m) - m.r * mS(m) - 30, '#ff6a6a', 16, 1.1);
+}
+function tidesWhirl(m){
+  m.anim = { clip:'skill', t:0, dur:TIDES_SKILL };
+  const a = waterSpot(), b = waterSpot();
+  if (a && b && addWhirlPair(a, b)){ addFloat('A whirlpool opens', m.x, mY(m) - m.r * mS(m) - 30, '#7af0ff', 16, 1.1); SFX.bossSfx('fallentides', 'whirl'); }
+}
+function spearColumn(c){
+  const x = LANE(c);
+  for (let r = 0; r < ROWS; r++){
+    const cell = grid[r][c]; if (!cell || cell.fly || cell.gourd) continue;   // a gourd is spared; a sprout still gliding in is skipped, as the Fallen Count's bolt
+    grid[r][c] = null;
+    const y = GY + r * CS + CS / 2;
+    for (let i = 0; i < 8; i++) chunk(x, y, '#4aa8d8', 200);
+    spark(x, y, '#e8fbff', 140);
+  }
+  resolveMatches();
+  G.shake = Math.max(G.shake || 0, 0.7); SFX.bossSfx('fallentides', 'spear');
+}
+/** The water spear's warning and strike (the blue twin runs it, so it stands still while the twin is down or diving). */
+function spearFx(dt){
+  const b = G.ftSpear; if (!b) return;
+  if (b.warn > 0){ if ((b.warn -= dt) > 0) return; b.warn = 0; b.strike = SPEAR_FLASH; spearColumn(b.c); }
+  else if ((b.strike -= dt) <= 0) G.ftSpear = null;
+}
+function startDive(m){
+  m.diveT = TIDES_DIVE; m.diveMoved = false; m.hidden = true; m.anim = { clip:'collapse', t:0, dur:TIDES_SINK };
+  for (let i = 0; i < 14; i++) spark(m.x, mY(m), m.twinKind === 'blood' ? '#ff3a40' : '#7af0ff', 130); ring(m.x, mY(m) + 10, 46, 'rgba(255,200,200,.7)');
+  addFloat('Dives!', m.x, mY(m) - m.r * mS(m) - 30, '#9fe0f0', 16, 1); SFX.bossSfx('fallentides', 'dive');
+}
+function surface(m){
+  const o = m.twin, sp = waterSpot(o && !o.dead ? [m.lane, o.lane] : [m.lane]) || waterSpot([m.lane]);
+  if (sp){ m.lane = sp.lane; m.x = m.tx = LANE(sp.lane); m.p = sp.p; m.stayP = sp.p; }
+  m.diveMoved = true; m.age = 0; m.ftIn = false;
+  for (let i = 0; i < 14; i++) spark(m.x, mY(m), m.twinKind === 'blood' ? '#ff3a40' : '#7af0ff', 130); ring(m.x, mY(m) + 10, 46, 'rgba(255,200,200,.7)');
+  SFX.bossSfx('fallentides', 'rise');
+}
+const marksPast = m => TYPES.fallentides.diveAt.filter(a => m.hp <= m.maxHp * a + 1e-6).length;
+/** One frame of a twin (monsters.js, the boss branch). True while it must stand still (diving). */
+export function updateFallenTides(m, dt){
+  const T = TYPES.fallentides, blue = m.twinKind === 'blue';
+  m.x = m.tx + Math.sin(m.ph * 1.4) * 3; m.noKnockback = true;
+  if (m.diveT > 0){
+    m.diveT -= dt;
+    if (!m.diveMoved && m.diveT <= 0.5) surface(m);
+    if (m.diveT <= 0){ m.diveT = 0; m.hidden = false; m.flash = 0.15; }
+    return true;
+  }
+  const want = marksPast(m);
+  if (want < m.ftDone) m.ftDone = want;   // healed past a mark: it can dive again
+  if (want > m.ftDone){ m.ftDone = want; startDive(m); return true; }
+  if (m.p < tidesHold(m) - 0.005) return false;   // still arriving: no skills yet
+  if ((m.boltT -= dt) <= 0){ m.boltT = T.boltEvery; tidesBolt(m); }
+  if (blue){
+    spearFx(dt);
+    if ((m.spearT -= dt) <= 0){
+      m.spearT = T.spearEvery;
+      if (!G.ftSpear){ G.ftSpear = { c:Math.floor(Math.random() * COLS), warn:T.spearWarn, strike:0 }; m.anim = { clip:'bolt', t:0, dur:TIDES_BOLT }; SFX.bossSfx('fallentides', 'warn'); }
+    }
+    if ((m.whirlT -= dt) <= 0){ m.whirlT = T.whirlEvery; tidesWhirl(m); }
+  } else {
+    tidesAura(m);
+    if ((m.songT -= dt) <= 0){ m.songT = T.songEvery; tidesSing(m); }
+    if ((m.sumT -= dt) <= 0){ m.sumT = T.summonEvery; tidesSummon(m); }
+  }
+  return false;
+}
+/** damage() (combat.js): a twin that is diving or down takes nothing. True when refused. */
+export const tidesGuard = m => isTides(m) && (m.diveT > 0 || m.rise > 0);
+/** kill() (combat.js), a twin down alone: its pending spear is cancelled (it was the blue twin's). */
+export function tidesDown(m){
+  if (!isTides(m)) return;
+  m.diveT = 0; m.hidden = false;
+  if (m.twinKind === 'blue') G.ftSpear = null;
+}
+/** kill() (combat.js), a twin truly dead: the spear goes with it. */
+export function tidesFalls(m){ if (isTides(m)) G.ftSpear = null; }
+/** What a continued night keeps of a twin: marks, clocks, the window it is down for and where it stands. (Health comes with every boss.) */
+export const tidesSnapshot = m => isTides(m) ? { ftDone:m.ftDone, boltT:m.boltT, songT:m.songT, sumT:m.sumT, spearT:m.spearT, whirlT:m.whirlT, rise:m.rise > 0 ? m.rise : 0, lane:m.lane, p:m.p, stayP:m.stayP } : null;
+export function restoreTides(m, s){
+  if (!s || !isTides(m) || s.ftDone == null) return;
+  m.ftDone = s.ftDone; m.boltT = s.boltT; m.songT = s.songT; m.sumT = s.sumT; m.spearT = s.spearT; m.whirlT = s.whirlT; m.stayP = s.stayP != null ? s.stayP : null;
+  m.lane = s.lane; m.x = m.tx = LANE(s.lane); m.p = s.p; m.age = 5; m.diveT = 0; m.hidden = false;
+  if (s.rise > 0){ m.hp = 0; m.rise = s.rise; }
 }
 
 

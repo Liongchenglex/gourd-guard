@@ -13,7 +13,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite, magSparkSprite } from './tools.js';
-import { drawBlackRing, castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, whirlSprite, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR, pirateAimSprite, pirateReticleSprite, pirateShotSprite, hiddenSphereSprite, hiddenWarnSprite } from './fx.js';
+import { drawBlackRing, castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, whirlSprite, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR, pirateAimSprite, pirateReticleSprite, pirateShotSprite, hiddenSphereSprite, hiddenWarnSprite, tidesWarnSprite, tidesSpearSprite, tidesBoltSprite } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -29,6 +29,7 @@ import { drawPin, drawFlyingFork } from './pin.js';
 import { drawNetOver, drawNetFlight } from './nets.js';
 import { pieceFrame, pieceClip } from './castlepieces.js';
 import { CRUMBLE_DUR, CRUMBLE_LINGER, SPEAR_FLY, BOLT_FLASH } from '../keep.js';
+import { TIDES_STRIKE } from '../marsh.js';
 import { NET_FLY } from '../../data/rules.js';
 import { drawGourdCell, drawGourdGlow } from './gourd.js';
 import { ROTTEN, ROT_FX } from '../rot.js';
@@ -71,6 +72,7 @@ export function render(){
   for (const m of g.monsters) if (m.type === 'bulwark' && !m.dead && m.p > 0) drawBulwarkZone(m, t);
   if (__RELEASE__ >= 5) for (const m of g.monsters) if (m.type === 'rotdoctor' && !m.dead && m.p > 0) drawRotZone(m, t);
   if (__RELEASE__ >= 8) for (const m of g.monsters) if (m.type === 'marshal' && m.rallying && !m.dead) drawRallyZone(m, t);   // the Storm Marshal's rally square, while his sword is up (one baked sprite)
+  if (__RELEASE__ >= 9) for (const m of g.monsters) if (m.twinKind === 'blood' && !m.dead && !(m.rise > 0) && !(m.diveT > 0) && m.p > 0) drawBloodAura(m, t);   // the blood twin's 3x3 healing aura (one baked sprite)
   if (__RELEASE__ >= 5) for (const m of g.monsters) if (m.type === 'boss' && m.kind === 'fallenpoltergeist' && !m.dead) drawFallenPoltFx(m, t);   // its black fogs and its reaper glow, under the monsters
   drawHexZones(t);
   const ms = g.monsters.slice().sort((a, b) => a.p - b.p);
@@ -81,7 +83,7 @@ export function render(){
   const fogCols = (mapDef && mapDef.fogCols) || [];
   const fogOn = (bands.length || fogCols.length) && !(g.fogClear > 0);
   for (const m of ms){
-    if (m.hidden && m.type !== 'diver' && !(__RELEASE__ >= 9 && m.type === 'eel')) continue;                       // wraith: invisible (a submerged diver still shows ripples)
+    if (m.hidden && m.type !== 'diver' && !(__RELEASE__ >= 9 && (m.type === 'eel' || m.diveT > 0))) continue;   // (a diving Fallen twin is drawn sinking into the water)                       // wraith: invisible (a submerged diver still shows ripples)
     if ((m.type === 'sack' || m.type === 'jukebox') && fogOn) continue;   // drawn over the fog below: the ad-summoned Loot Sack must never hide
     if (fogOn && m.type !== 'boss' && m.p > -0.02 && (bands.some(([a, b]) => m.p >= a && m.p <= b) || fogCols.includes(m.lane))) continue;   // inside a fog bank (bosses glow through)
     if (__RELEASE__ >= 7 && m.type === 'triptych' && m.reflecting && !m.eating) drawTriptychBarrier(m, t);   // its three-lane barrier, behind it (one baked sprite)
@@ -112,6 +114,7 @@ export function render(){
   updatePaintPull(t);   // marks borrowed pumpkins so drawGrid lights them
   drawGrid(t);
   if (__RELEASE__ >= 9) drawHiddenRows(t);   // rows the Siren is about to hide: a baked red wash (Release 9)
+  if (__RELEASE__ >= 9 && G.ftSpear) drawTidesSpear(t);   // the blue twin's water spear over a patch column: the warning, then the spear (baked)
   if (__RELEASE__ >= 8 && G.fcBolt) drawCountBolt(t);   // the Fallen Count's lightning over a patch column: the warning, then the bolt (baked)
   if (__RELEASE__ >= 8 && G.netsFlying) for (const f of G.netsFlying) drawNetFlight(ctx, f.x, f.y, LANE(f.c), GY + f.r * CS + CS / 2, 1 - f.t / NET_FLY, f.kind, f.r + f.c);   // nets in flight
   if (__RELEASE__ >= 5 && G.poison && (G.poison.warn || G.poison.on)) drawPoison(G.poison, t);   // poison fog and its arrows, over the pumpkins (Release 5)
@@ -474,6 +477,19 @@ function drawCountBolt(t){
   else { const sp = countBoltSprite(K), bw = CS * 1.6, bh = h + CS * 1.5; ctx.globalAlpha = Math.max(0, b.strike / BOLT_FLASH); ctx.drawImage(sp.c, LANE(b.c) - bw / 2, GY - CS * 1.5, bw, bh); }
   ctx.restore();
 }
+/** The blood twin's healing aura (Release 9): the Marshal's crimson 3x3 square, a little dimmer. */
+function drawBloodAura(m, t){
+  const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
+  drawRallyZoneFx(ctx, x, y, w, h, t, K, 0.7);
+}
+/** The blue twin's water spear (Release 9): a pulsing baked wash on the warned column, then the baked spear fading over it. */
+function drawTidesSpear(t){
+  const b = G.ftSpear, x = LANE(b.c) - CS / 2, h = ROWS * CS;
+  ctx.save();
+  if (b.warn > 0){ const sp = tidesWarnSprite(K); ctx.globalAlpha = 0.55 + 0.35 * Math.sin(t * 14); ctx.drawImage(sp.c, x, GY, CS, h); }
+  else { const sp = tidesSpearSprite(K), bw = CS * 1.6, bh = h + CS * 1.5; ctx.globalAlpha = Math.max(0, b.strike / TIDES_STRIKE); ctx.drawImage(sp.c, LANE(b.c) - bw / 2, GY - CS * 1.5, bw, bh); }
+  ctx.restore();
+}
 /** The Fallen Count's blood spears flying down his lane to the fence (Release 8). */
 function drawCountSpears(){
   const sp = countSpearSprite(K), s = CS / 70;
@@ -488,6 +504,7 @@ export function drawArrows(t){
     if (a.mirror){ const sz = CS * 0.5; ctx.drawImage(sprites[a.vis][0], x - sz / 2, y - sz / 2, sz, sz); continue; }   // a reflected pumpkin
     if (__RELEASE__ >= 9 && a.zap){ ctx.save(); ctx.translate(x, y); ctx.scale(1.4, 1.4); drawChar(ctx, {}, 'stormbolt', null, ['fly', Math.floor(t * 14) % 6]); ctx.restore(); continue; }   // a Storm Eel's bolt: a baked frame (render/chars/marsh.js)
     if (__RELEASE__ >= 9 && a.anchor){ ctx.save(); ctx.translate(x, y); ctx.scale(1.1, 1.1); drawChar(ctx, {}, 'anchor', null, ['spin', Math.floor(t * 12) % 8]); ctx.restore(); continue; }   // a Kraken tentacle's anchor: a baked spinning frame (render/chars/marsh.js)
+    if (__RELEASE__ >= 9 && a.fb){ const sp = tidesBoltSprite(K, a.fb); ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h); continue; }   // a Fallen twin's bolt: a baked blood or water glob
     if (a.water){   // divers and Twin Tides hurl water balls: a wobbling blue blob with a highlight and a spray of droplets behind it
       const r = 11 + Math.sin(t * 18 + a.lane) * 1.5, ry = 11 - Math.sin(t * 18 + a.lane) * 1.5;
       for (let i = 1; i <= 3; i++){ ctx.fillStyle = `rgba(120,190,235,${0.5 - i * 0.12})`; ctx.beginPath(); ctx.arc(x + Math.sin(t * 25 + i * 2.1) * 5, y - 12 - i * 8, 4 - i * 0.7, 0, Math.PI * 2); ctx.fill(); }

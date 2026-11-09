@@ -33,12 +33,12 @@ import { prebakePotions } from './render/potion.js';
 import { prebakeWeather } from './render/weather.js';
 import { prebakeCastlePieces } from './render/castlepieces.js';
 import { updateNets, netSnapshot, restoreNets } from './nets.js';
-import { initHidden, updateHidden, hiddenSnapshot, restoreHidden, krakenSnapshot } from './marsh.js';
+import { initHidden, updateHidden, hiddenSnapshot, restoreHidden, krakenSnapshot, tidesSnapshot } from './marsh.js';
 import { initTide, updateTide, tideSnapshot, restoreTide, initWhirls, whirlSnapshot, restoreWhirls } from './tide.js';
 import { prebakeTide } from './render/tide.js';
 import { lancerHit, shieldSnapshot, restoreShields, carryCheck, newCastle, updateCastlePieces, siegeSnapshot, countSnapshot } from './keep.js';
 import { prebakeNets } from './render/nets.js';
-import { prebakeCountFx, prebakePirateFx, prebakeHiddenFx, prebakeBlackRing } from './render/fx.js';
+import { prebakeCountFx, prebakePirateFx, prebakeHiddenFx, prebakeBlackRing, prebakeTidesFx } from './render/fx.js';
 import { K } from './render/canvas.js';
 import { prebakeTongue, prebakeBarrier, prebakeCroneZone, prebakeFallenHex } from './render/witchwood.js';
 import { startCoach, coachHolds, coachUpdate } from './coach.js';
@@ -113,7 +113,8 @@ export function bakeKeys(def){
   const kinds = [...def.pool.map(([k]) => k), def.boss].filter(Boolean), also = [...kinds.flatMap(k => (__RELEASE__ >= 4 && ALSO_BAKE[k]) || []), ...(__RELEASE__ >= 7 && def.brewMarks && def.brewMarks.length ? ['crow'] : [])];   // a brew mark's swoop of crows (Release 7)
   return [...def.pool.map(([k]) => poolKey(k, VARIANTS)), ...also,
     ...(__RELEASE__ >= 4 && def.nightmare ? [...kinds, ...also].map(k => BURNS_TO[k]).filter(Boolean) : []),
-    ...(def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []),
+    ...(__RELEASE__ >= 9 && def.boss === 'fallentides' ? ['fallentides-blood', 'fallentides-blue'] : def.boss ? [atlasKey(def.boss, def.bossForm === 2 ? 'form2' : null)] : []),   // the Fallen Twin Tides: one atlas a twin (Release 9)
+    ...(def.boss2 ? [atlasKey(def.boss2, def.bossForm === 2 ? 'form2' : null)] : []), ...(def.frenzy ? ['jukebox'] : []),
     ...(__RELEASE__ >= 3 && def.boss === 'hollowking' ? ['hollowking|' + TYPES.hollowking.forms[0]] : []),
     ...(__RELEASE__ >= 8 ? [...(def.gatePool || []).map(k => poolKey(k, VARIANTS)), ...((def.castlesLayout || []).some(e => e[2] === 'tower') ? ['archer'] : [])] : []), 'ghoul'];   // Release 8: what a Gatehouse sends out, the archer a fallen Archer Tower drops
 }
@@ -200,9 +201,10 @@ export function startGame(mode, n, loadout, gourds){
   if (__RELEASE__ >= 7 && def && (def.boss === 'fallenhexwitch' || def.boss2 === 'fallenhexwitch')) prebakeFallenHex();   // her altar's crack states and her 5x5 zone (Release 7), only on her night
   if (__RELEASE__ >= 7 && def && def.nightmare) prebakePotions();   // the three bottles, their icons and the drink puffs (Release 7), baked now
   if (__RELEASE__ >= 8 && def && def.nightmare) prebakeNets();   // the rope net, the crimson one and the net in flight, baked now
-  if (__RELEASE__ >= 9 && def && bakeKeys(def).some(k => k.split('|')[0] === 'siren')) prebakeHiddenFx(K);   // the hidden-row sphere and warning (render/fx.js), baked before she can sing
-  if (__RELEASE__ >= 9 && def && bakeKeys(def).some(k => k.split('|')[0] === 'pirate')) prebakePirateFx(K);   // a Pirate's aim line, reticle and shot (render/fx.js), baked before he can aim
+  if (__RELEASE__ >= 9 && def && (bakeKeys(def).some(k => k.split('|')[0] === 'siren') || def.boss === 'fallentides')) prebakeHiddenFx(K);   // the hidden-row sphere and warning (render/fx.js), baked before she can sing
+  if (__RELEASE__ >= 9 && def && (bakeKeys(def).some(k => k.split('|')[0] === 'pirate') || def.boss === 'fallentides')) prebakePirateFx(K);   // a Pirate's aim line, reticle and shot (render/fx.js), baked before he can aim
   if (__RELEASE__ >= 9 && def && def.nightmare) prebakeBlackRing(K);   // the Swan Gourd's black-hole ring (render/fx.js): any nightmare night may take the Swan, so baked now
+  if (__RELEASE__ >= 9 && def && def.boss === 'fallentides') prebakeTidesFx(K);   // the water spear's warning and strike, the blood and water bolts, baked now (render/fx.js)
   if (__RELEASE__ >= 8 && def && def.boss === 'fallencount') prebakeCountFx(K);   // his lightning warning, bolt and blood spear, baked now (render/fx.js)
   if (__RELEASE__ >= 8 && def && (def.boss === 'fallencount' || (def.castlesLayout || []).some(e => e[2] === 'gate' || e[2] === 'tower'))) prebakeCastlePieces();   // the Gatehouse's and the Archer Tower's frames, baked now (render/castlepieces.js)
   if (__RELEASE__ >= 8 && def) prebakeWeather();   // fresh weather timers every night; the Keep storm's rain and bolts baked now (Release 8, render/weather.js)
@@ -231,7 +233,7 @@ export function startGame(mode, n, loadout, gourds){
     if (def.fog.length && !(prev && prev.fog.length)) parts.push('Fog hides part of the field. A Lantern clears it.');
     if (def.boss2 === def.boss) parts.push(`Two pairs of ${BOSS_NAMES[def.boss].replace(/^The /, '')} wait in this night. Each pair rises again on its own. Monsters keep coming until all fall.`);
     else if (def.boss2) parts.push(`${BOSS_NAMES[def.boss]} and ${BOSS_NAMES[def.boss2]} wait in this night. Monsters keep coming until both fall.`);
-    else if (def.boss) parts.push(def.boss === 'twintides' ? `${BOSS_NAMES[def.boss]} wait in this night. Monsters keep coming until both fall.` : `${BOSS_NAMES[def.boss]} waits in this night. Monsters keep coming until it falls.`);
+    else if (def.boss) parts.push(def.boss === 'twintides' || (__RELEASE__ >= 9 && def.boss === 'fallentides') ? `${BOSS_NAMES[def.boss]} wait in this night. Monsters keep coming until both fall.` : `${BOSS_NAMES[def.boss]} waits in this night. Monsters keep coming until it falls.`);
     if (def.graves && def.graves > (prev ? prev.graves : 0)) parts.push(n === 3 ? 'Graves now appear in your patch. They block slides.' : 'One more grave in the patch.');
     if (n === 1) parts.push('Swipe a pumpkin to slide it. Bunch 3 of a color.');
     banner(def.nightmare ? nightmareTitle(def) : `Night ${def.label}`, parts.length ? parts.join(' ') : WORLDS[G.world].name, parts.length > 1 ? 4.2 : 3); SFX.levelStart();
@@ -641,7 +643,7 @@ export function continueState(){
     hk:__RELEASE__ >= 3 ? hkState() : null,   // the Hollow King's phase and his standing form (Release 3)
     jukebox:{ next:g.jbNext || 0, hp:g.jukebox && !g.jukebox.dead ? Math.max(1, Math.ceil(g.jukebox.hp)) : null },   // next: drop points already used (one per jukebox dropped)   // Frenzy: a fallen jukebox stays fallen, a standing one keeps its health
     ...(__RELEASE__ >= 4 ? { fires:(g.fires || []).map(f => [f.lane, f.p]), fmNext:g.fmNext || 0, bossPhase2:living.map(m => !!m.phase2), gourd:g.def.gourd ? gourdSnapshot() : null } : {}),
-    ...(__RELEASE__ >= 5 ? { bossMood:living.map(m => bossSnapshot(m) || (__RELEASE__ >= 7 ? treantSnapshot(m) || fallenHexSnapshot(m) : null) || (__RELEASE__ >= 8 ? siegeSnapshot(m) || countSnapshot(m) : null) || (__RELEASE__ >= 9 ? krakenSnapshot(m) : null)), rot:rotSnapshot(), poison:poisonClock() } : {}),   // a Treant's root clock, the Fallen Hexwitch's marks and standing altar too (Release 7)   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
+    ...(__RELEASE__ >= 5 ? { bossMood:living.map(m => bossSnapshot(m) || (__RELEASE__ >= 7 ? treantSnapshot(m) || fallenHexSnapshot(m) : null) || (__RELEASE__ >= 8 ? siegeSnapshot(m) || countSnapshot(m) : null) || (__RELEASE__ >= 9 ? krakenSnapshot(m) || tidesSnapshot(m) : null)), rot:rotSnapshot(), poison:poisonClock() } : {}),   // a Treant's root clock, the Fallen Hexwitch's marks and standing altar too (Release 7)   // the rotten cells (Release 5)   // the burning tiles and the fire marks already passed, whether each boss is in phase 2 (a Strawlord torn off its post), and each gourd's kind and cell or that it is due back (Release 4; a list since Release 5)
     ...(__RELEASE__ >= 7 ? { potions:potionSnapshot(), roots:rootSnapshot() } : {}),   // the Treant's roots as they stand; the potions on the field, their clock and what the drinkers on the field had drunk (Release 7)
     ...(__RELEASE__ >= 8 ? { nets:netSnapshot(), shields:shieldSnapshot() } : {}),   // the nets on the patch and in flight (Release 8)
     ...(__RELEASE__ >= 9 ? { tide:tideSnapshot(), whirls:whirlSnapshot(), hidden:hiddenSnapshot() } : {}) };   // the blood tide's marks passed and the shore reached, the rows hidden and their time left (Release 9)

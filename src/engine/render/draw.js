@@ -13,7 +13,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite, magSparkSprite } from './tools.js';
-import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, whirlSprite, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR, pirateAimSprite, pirateReticleSprite, pirateShotSprite, hiddenSphereSprite, hiddenWarnSprite } from './fx.js';
+import { drawBlackRing, castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, whirlSprite, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR, pirateAimSprite, pirateReticleSprite, pirateShotSprite, hiddenSphereSprite, hiddenWarnSprite } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -718,7 +718,7 @@ function drawCrowDives(){
   }
 }
 
-function drawVfx(){
+export function drawVfx(){
   if (!G.vfx) return;
   for (const v of G.vfx){
     if (v.t < 0) continue;   // a delayed effect
@@ -739,6 +739,7 @@ function drawVfx(){
       drawChar(ctx, v.m, key, ['#ffffff', 0.3]); ctx.restore();
     } else if (v.kind === 'bolt') drawBolt(ctx, v);
     else if (v.kind === 'blast') drawBlast(ctx, v);
+    else if (__RELEASE__ >= 9 && v.kind === 'blackring') drawBlackRing(ctx, v, K);   // the Swan Gourd's ring: one baked sprite
     else if (v.kind === 'hexbolt') drawHexBolt(ctx, v);
     else if (__MAGNET__ && v.kind === 'magpull') drawMagPull(v);
     else if (__RELEASE__ >= 9 && v.kind === 'pirateshot') drawPirateShot(v);

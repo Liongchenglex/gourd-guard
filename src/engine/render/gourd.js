@@ -11,6 +11,8 @@
 // ribs and a curly stem), with the toy face; its 3×3 glow is violet with a wart at each corner.
 // The Crookneck Gourd (Release 8, spec Part 5): the archive's Crookneck (lime #b9cf3c, a fat bumpy base whose neck curls over like a
 // shepherd's crook, the stem hanging from the tip), with the toy face; its 3×3 glow is lime with a little crook at each corner.
+// The Swan Gourd (Release 9, spec Part 5): the same swan in marsh-night black with violet stripes and a dark halo ward; its 3×3 glow is violet with
+// a little black hole at each corner.
 // Only called from code gated on `__RELEASE__ >= 4`; every Protector branch is gated on `>= 5`, every Wartling branch on `>= 7` and every
 // Crookneck branch on `>= 8`, so lower builds carry none of their art.
 
@@ -54,9 +56,12 @@ const protShape = () => ({
     b:{ x:0, y:.38, r:.68 }, hl:[-.34, .1], top:[.6,-.76], stem:.9, face:{ x:0, y:.46, s:.9 } },
 })[PROTECTOR_SHAPE];
 const protHue = () => protShape().hue;
+// The Swan Gourd (Release 9, Nightmare Drowned Marsh): the same swan silhouette in marsh-night black (the cream swan is the Protector's), violet
+// stripes, and a dark halo with a violet rim behind it, its black-hole ward. Same painter, other colours.
+const swanShape = () => ({ ...protShape(), hue:'#3b3552', stripe:'#a58ce8' });
 /** The Protector at the origin, as the archive's drawGourd paints its shape: shadow, neck and head, body, stripes, stem and the toy face. */
-function paintProtector(g){
-  const sh = protShape(), c = pal(sh.hue), STEM = pal('#6e4c2a'), body = sh.body(), b = { x:sh.b.x * R, y:sh.b.y * R, r:sh.b.r * R };
+function paintProtector(g, sh = protShape()){
+  const c = pal(sh.hue), STEM = pal('#6e4c2a'), body = sh.body(), b = { x:sh.b.x * R, y:sh.b.y * R, r:sh.b.r * R };
   S.shadow(g, 0, R * .86, R * .86, R * .2);
   if (sh.neck){ S.tube(g, SO(P(sh.neck)), c, R * .17); S.part(g, E(R * .56, -R * .86, R * .12, R * .13), c, { x:R * .56, y:-R * .86, r:R * .13 }, { flat:true }); }
   S.part(g, body, c, b, { mat:'pumpkin', hx:sh.hl[0] * R, hy:sh.hl[1] * R });
@@ -72,9 +77,11 @@ function paintProtector(g){
   S.stroke(g, g2 => { g2.beginPath(); g2.moveTo(x - R * .16 * f.s, ey + R * .32 * f.s); g2.quadraticCurveTo(x, ey + R * .45 * f.s, x + R * .16 * f.s, ey + R * .32 * f.s); }, c, 2.4 * s);
 }
 /** The ward behind the Protector: the archive's halo (a soft disc in the gourd's glow colour), baked once, blitted with a pulsing alpha. */
-function paintWard(g){
-  const col = glowCol('protector'), cy = -R * .2, rr = R * 1.15;
-  const gr = g.createRadialGradient(0, cy, 0, 0, cy, rr); gr.addColorStop(0, rgba(col, .55)); gr.addColorStop(1, rgba(col, 0));
+function paintWard(g, kind = 'protector'){
+  const col = glowCol(kind), cy = -R * .2, rr = R * 1.15;
+  const gr = g.createRadialGradient(0, cy, 0, 0, cy, rr);
+  if (__RELEASE__ >= 9 && kind === 'swan'){ gr.addColorStop(0, 'rgba(8,4,18,.7)'); gr.addColorStop(.62, rgba(col, .3)); gr.addColorStop(.9, rgba(col, .5)); gr.addColorStop(1, rgba(col, 0)); }   // a dark core with a violet rim
+  else { gr.addColorStop(0, rgba(col, .55)); gr.addColorStop(1, rgba(col, 0)); }
   g.fillStyle = gr; g.beginPath(); g.arc(0, cy, rr, 0, Math.PI * 2); g.fill();
 }
 
@@ -129,23 +136,23 @@ function paintCrookneck(g){
   S.stroke(g, g2 => { g2.beginPath(); g2.moveTo(x - R * .16 * f.s, ey + R * .32 * f.s); g2.quadraticCurveTo(x, ey + R * .45 * f.s, x + R * .16 * f.s, ey + R * .32 * f.s); }, c, 2.4 * s);
 }
 
-const hueOf = kind => __RELEASE__ >= 5 && kind === 'protector' ? protHue() : __RELEASE__ >= 7 && kind === 'wartling' ? wartShape().hue : __RELEASE__ >= 8 && kind === 'crookneck' ? crookShape().hue : GOURD_HUE;
+const hueOf = kind => __RELEASE__ >= 9 && kind === 'swan' ? swanShape().hue : __RELEASE__ >= 5 && kind === 'protector' ? protHue() : __RELEASE__ >= 7 && kind === 'wartling' ? wartShape().hue : __RELEASE__ >= 8 && kind === 'crookneck' ? crookShape().hue : GOURD_HUE;
 const glowCol = kind => mix(hueOf(kind), '#fff6d0', .35);   // the archive's glowOf
 const kOf = () => Math.min(2.5, Math.max(0.5, K || 1));
 const bodies = {}, glows = {};
-let ward = null;
+const wards = {};
 function bodySprite(kind = 'grave'){
   const k = kOf(), have = bodies[kind]; if (have && have.k === k) return have;
   const c = document.createElement('canvas'); c.width = Math.ceil(BOX.w * k); c.height = Math.ceil(BOX.h * k);
   const g = c.getContext('2d'); g.scale(k, k); g.translate(BOX.ox, BOX.oy);
-  if (__RELEASE__ >= 5 && kind === 'protector') paintProtector(g); else if (__RELEASE__ >= 7 && kind === 'wartling') paintWartling(g); else if (__RELEASE__ >= 8 && kind === 'crookneck') paintCrookneck(g); else paintGourd(g);
+  if (__RELEASE__ >= 9 && kind === 'swan') paintProtector(g, swanShape()); else if (__RELEASE__ >= 5 && kind === 'protector') paintProtector(g); else if (__RELEASE__ >= 7 && kind === 'wartling') paintWartling(g); else if (__RELEASE__ >= 8 && kind === 'crookneck') paintCrookneck(g); else paintGourd(g);
   return (bodies[kind] = { c, k });
 }
-function wardSprite(){
-  const k = kOf(); if (ward && ward.k === k) return ward;
+function wardSprite(kind = 'protector'){
+  const k = kOf(), have = wards[kind]; if (have && have.k === k) return have;
   const c = document.createElement('canvas'); c.width = Math.ceil(BOX.w * k); c.height = Math.ceil(BOX.h * k);
-  const g = c.getContext('2d'); g.scale(k, k); g.translate(BOX.ox, BOX.oy); paintWard(g);
-  return (ward = { c, k });
+  const g = c.getContext('2d'); g.scale(k, k); g.translate(BOX.ox, BOX.oy); paintWard(g, kind);
+  return (wards[kind] = { c, k });
 }
 /** The 3×3 square: a soft fill per cell and one glowing rim in the gourd's colour, baked once per kind (the shadowBlur runs at bake time
  *  only); the Protector's adds shield corners. */
@@ -158,6 +165,9 @@ function glowSprite(kind = 'grave'){
   if (__RELEASE__ >= 5 && kind === 'protector'){   // shield corners
     g.lineWidth = 4; g.strokeStyle = rgba(col, .95); const L = CS * .42, m = 4;
     for (const [x, y, dx, dy] of [[m, m, 1, 1], [S3 - m, m, -1, 1], [m, S3 - m, 1, -1], [S3 - m, S3 - m, -1, -1]]){ g.beginPath(); g.moveTo(x, y + dy * L); g.lineTo(x, y); g.lineTo(x + dx * L, y); g.stroke(); }
+  }
+  if (__RELEASE__ >= 9 && kind === 'swan'){   // a little black hole at each corner: a dark disc in a violet rim
+    for (const [x, y] of [[13, 13], [S3 - 13, 13], [13, S3 - 13], [S3 - 13, S3 - 13]]){ g.fillStyle = 'rgba(8,4,18,.9)'; g.beginPath(); g.arc(x, y, 7, 0, Math.PI * 2); g.fill(); g.lineWidth = 2.5; g.strokeStyle = rgba(col, .95); g.stroke(); }
   }
   if (__RELEASE__ >= 7 && kind === 'wartling'){   // a little wart at each corner and mid-edge
     g.fillStyle = rgba(col, .95);
@@ -173,14 +183,14 @@ function glowSprite(kind = 'grave'){
   return (glows[kind] = { c, k });
 }
 /** Bake them now (night start), not on first sight. */
-export function prebakeGourd(){ bodySprite(); glowSprite(); if (__RELEASE__ >= 5){ bodySprite('protector'); glowSprite('protector'); wardSprite(); } if (__RELEASE__ >= 7){ bodySprite('wartling'); glowSprite('wartling'); } if (__RELEASE__ >= 8){ bodySprite('crookneck'); glowSprite('crookneck'); } }
+export function prebakeGourd(){ bodySprite(); glowSprite(); if (__RELEASE__ >= 5){ bodySprite('protector'); glowSprite('protector'); wardSprite(); } if (__RELEASE__ >= 7){ bodySprite('wartling'); glowSprite('wartling'); } if (__RELEASE__ >= 8){ bodySprite('crookneck'); glowSprite('crookneck'); } if (__RELEASE__ >= 9){ bodySprite('swan'); glowSprite('swan'); wardSprite('swan'); } }
 
 /** A gourd in its cell: (x, y) is the cell centre with the slide offsets already in; s the pop/grow scale; ph its own idle phase. The
  *  Protector's ward is blitted behind it with a pulsing alpha. */
 export function drawGourdCell(ctx, x, y, s, t, ph, kind = 'grave'){
   const sp = bodySprite(kind), br = Math.sin(t * 2.1 + ph), rot = Math.sin(t * 1.3 + ph * 1.7) * .035;
   ctx.save(); ctx.translate(x, y - LIFT + FOOT * s);
-  if (__RELEASE__ >= 5 && kind === 'protector'){ ctx.save(); ctx.globalAlpha = 0.45 + 0.25 * Math.sin(t * 2.4 + ph); ctx.scale(s, s); ctx.drawImage(wardSprite().c, -BOX.ox, -BOX.oy - FOOT, BOX.w, BOX.h); ctx.restore(); }
+  if ((__RELEASE__ >= 5 && kind === 'protector') || (__RELEASE__ >= 9 && kind === 'swan')){ ctx.save(); ctx.globalAlpha = 0.45 + 0.25 * Math.sin(t * 2.4 + ph); ctx.scale(s, s); ctx.drawImage(wardSprite(kind).c, -BOX.ox, -BOX.oy - FOOT, BOX.w, BOX.h); ctx.restore(); }
   ctx.rotate(rot); ctx.scale(s * (1 + br * .02), s * (1 - br * .025));   // breathes and sways on its foot, as a pumpkin does
   ctx.drawImage(sp.c, -BOX.ox, -BOX.oy - FOOT, BOX.w, BOX.h);
   ctx.restore();
@@ -195,7 +205,7 @@ export function drawGourdGlow(ctx, t){
     const x0 = LANE(c0) - CS * 1.5 + cell.ox, y0 = GY + (r0 - 1) * CS + cell.oy;
     const ax = Math.max(x0, GX), ay = Math.max(y0, GY), bx = Math.min(x0 + CS * 3, GX + COLS * CS), by = Math.min(y0 + CS * 3, GY + ROWS * CS);
     if (bx <= ax || by <= ay) continue;
-    ctx.globalAlpha = (0.55 + 0.35 * Math.sin(t * 2 + (kind === 'grave' ? 0 : kind === 'protector' ? 1.6 : kind === 'crookneck' ? 2.4 : 0.8))) * Math.min(1, cell.grow * 1.5);
+    ctx.globalAlpha = (0.55 + 0.35 * Math.sin(t * 2 + (kind === 'grave' ? 0 : kind === 'protector' ? 1.6 : kind === 'crookneck' ? 2.4 : __RELEASE__ >= 9 && kind === 'swan' ? 3.1 : 0.8))) * Math.min(1, cell.grow * 1.5);
     ctx.drawImage(sp.c, (ax - x0) * k, (ay - y0) * k, (bx - ax) * k, (by - ay) * k, ax, ay, bx - ax, by - ay);
   }
   ctx.globalAlpha = 1;
@@ -206,7 +216,7 @@ export function gourdIcon(px = 96, kind = 'grave'){
   const sp = bodySprite(kind), c = document.createElement('canvas'); c.width = c.height = px;
   const g = c.getContext('2d'), span = 2.5 * R, f = px / span;   // the gourd spans about 1.45 R above its origin to its .9 R foot, 2 R wide
   g.scale(f, f); g.translate(span / 2, 1.5 * R);
-  if (__RELEASE__ >= 5 && kind === 'protector') g.drawImage(wardSprite().c, -BOX.ox, -BOX.oy, BOX.w, BOX.h);
+  if ((__RELEASE__ >= 5 && kind === 'protector') || (__RELEASE__ >= 9 && kind === 'swan')) g.drawImage(wardSprite(kind).c, -BOX.ox, -BOX.oy, BOX.w, BOX.h);
   g.drawImage(sp.c, -BOX.ox, -BOX.oy, BOX.w, BOX.h);
   return c;
 }

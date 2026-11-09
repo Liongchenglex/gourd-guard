@@ -891,6 +891,312 @@ CHECKS.update({'check_siren': check_siren, 'check_hidden_play': check_hidden_pla
                'check_hidden_continue': check_hidden_continue, 'check_hidden_budget': check_hidden_budget})
 
 
+# ---------- Task 7: the Swan Gourd, the five-gourd picker, the N5-5 tutorial ----------
+R9_NAMES += ['Black-hole splash', 'seenSwanCoach']   # the Swan's role line and its coach flag
+SWSHOTS = '/private/tmp/claude-501/-Users-liongchenglex-AI-Projects-gourd-guard/a8c35601-34ce-46bc-bbf6-44770d21f8f8/scratchpad'
+ALL5 = ['grave', 'protector', 'wartling', 'crookneck', 'swan']
+SW_GATE = {'grave': True, 'protector': True, 'wartling': True, 'crookneck': True, 'swan': True}
+
+
+def swan_night(page, kinds=('swan',), k=1):
+    """A quiet N5-k night with the given gourds standing (slot order), every gourd won and every gourd coach seen; the Swan alone stands at (2, 3)."""
+    from nm3_check import GQ
+    page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true, crookneck:true, swan:true }; s.seenGourdCoach = true; s.seenProtectorCoach = true; s.seenWartlingCoach = true; s.seenCrookneckCoach = true; s.seenSwanCoach = true; s.lv.green = 1; s.lv.ice = 1; s.lv.black = 1; }")
+    page.evaluate("([n, lo, gk]) => window.__gg.startGame('story', n, lo, gk)", [1400 + k, [0, 1, 2, 3, 4], list(kinds)]); time.sleep(0.3)
+    page.evaluate(GQ)
+
+
+# A synthetic hit from a Swan square (or not): the pumpkin pr hits monster m (ghoul A) with the ring flag as launched.
+SW_HIT = """([t, swan, lv]) => { const g = window.__gg, a = window.__A; const pr = { type:t, vis:t, lv:lv || 1, size:1, lane:a.lane, x:a.x, y:0, hit:new Set(), grp:{ spawned:true, small:false, kills:0 }, guar:false, trail:[], ...(swan ? { swan:true } : {}) };
+  g.hitMonster(pr, a); return g.G.vfx.filter(v => v.kind === 'blackring').length; }"""
+SW_PAIR = """([typeB, hpB]) => { const g = window.__gg, G = g.G; G.monsters.length = 0; G.vfx.length = 0;
+  const A = g.spawnMonster('ghoul', 4, true, 0.5); A.sp = 0; A.hp = A.maxHp = 50; const B = g.spawnMonster(typeB, 3, true, 0.5); B.sp = 0; B.hp = B.maxHp = hpB;
+  window.__A = A; window.__B = B; return [A.p, B.p]; }"""
+
+
+def check_swan_splash(browser, url):
+    if not R9: return
+    page, errors = open_page(browser, url)
+    swan_night(page)
+    sq = page.evaluate("() => { const g = window.__gg; return [g.inSwanSquare(2, 3), g.inSwanSquare(1, 2), g.inSwanSquare(3, 4), g.inSwanSquare(2, 1), g.inSwanSquare(0, 3), g.inSwanSquare(4, 4), g.isProtected(2, 3), g.inWartSquare(2, 3)]; }")
+    ok(sq == [True, True, True, False, False, False, False, False], f'inSwanSquare: the Swan cell and its 3x3 only; it protects nothing and doubles nothing {sq}')
+    ok(page.evaluate("() => window.__gg.SWAN_HIT") == -5, 'SWAN_HIT is -5')
+    page.evaluate(SW_PAIR, ['ghoul', 50])
+    n = page.evaluate(SW_HIT, [0, True, 1])
+    d = page.evaluate("() => [window.__A.hp, window.__B.hp, window.__B.lastHit]")
+    ok(n == 1 and d == [49, 49, -5], f'a Green hit from the square: A takes only Green\'s 1, B beside it takes 1 and keeps lastHit -5, one ring {n} {d}')
+    page.evaluate(SW_PAIR, ['ghoul', 50])
+    n = page.evaluate(SW_HIT, [0, False, 1])
+    d = page.evaluate("() => [window.__A.hp, window.__B.hp]")
+    ok(n == 0 and d == [49, 50], f'a Green hit from outside the square: no ring, B untouched {n} {d}')
+    # B two lanes away is out of Black's splash reach
+    page.evaluate(SW_PAIR, ['ghoul', 50]); page.evaluate("() => { window.__B.lane = 2; window.__B.x = window.__gg.LANE(2); }")
+    page.evaluate(SW_HIT, [0, True, 1])
+    ok(page.evaluate("() => window.__B.hp") == 50, 'a monster two lanes off is out of reach')
+    # a real launch: the pumpkins of a bunch in the square carry swan, one outside does not
+    page.evaluate("() => { const g = window.__gg; for (const r of [1, 2, 3]) if (r !== 2 || true) g.grid[r][4] = g.newCell(0); g.resolveMatches(); g.launchGroup(g.grid[1][4]); }")
+    ok(page.evaluate("() => window.__gg.G.projs.map(p => [p.lane, !!p.swan])") == [[4, True]] * 3, 'a bunch launched from the Swan square: every pumpkin carries swan')
+    page.evaluate("() => { const g = window.__gg; g.G.projs.length = 0; for (const r of [2, 3, 4]) g.grid[r][0] = g.newCell(0); g.resolveMatches(); g.launchGroup(g.grid[2][0]); }")
+    ok(page.evaluate("() => window.__gg.G.projs.every(p => !p.swan)") is True, 'a bunch launched outside carries none')
+    # end to end: three Green hits up a column from the square: B takes 3, A takes 3
+    page.evaluate("() => { const g = window.__gg; g.G.projs.length = 0; g.grid.forEach(row => row.forEach((c, i) => { if (c && !c.gourd) row[i] = null; })); }")
+    page.evaluate(SW_PAIR, ['ghoul', 50])
+    page.evaluate("() => { const g = window.__gg; for (const r of [1, 2, 3]) g.grid[r][4] = g.newCell(0); g.resolveMatches(); g.launchGroup(g.grid[1][4]); }")
+    page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 40; i++) g.update(0.05); }")
+    d = page.evaluate("() => [window.__A.hp, window.__B.hp]")
+    ok(d == [47, 47], f'three flown Green hits: A takes 3, B takes 3 from the rings {d}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_swan_gates(browser, url):
+    """From the square, beside the hit, the ring kills at 1 hp what only a colour, Ice or Fire could: and it stays dead."""
+    if not R9: return
+    page, errors = open_page(browser, url)
+    swan_night(page)
+    for typeB, setup in [('mummy', ''), ('firemummy', ''), ('hayrickBurning', ''), ('huskerCharred', ''), ('chameleon', 'B.colourLock = 2;'), ('rchameleon', 'B.colourImmune = 0;')]:
+        page.evaluate(SW_PAIR, [typeB, 1]); page.evaluate("(s) => { const B = window.__B; B.hp = 1; B.maxHp = Math.max(B.maxHp, 1); " + setup + " }", setup)
+        page.evaluate(SW_HIT, [0, True, 1])
+        page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 40; i++) g.update(0.05); }")
+        r = page.evaluate("() => [window.__B.dead, window.__B.rise, window.__B.type]")
+        ok(r[0] is True and not r[1], f'{typeB}: dies to the ring at 1 hp and stays dead {r}')
+        page.evaluate(SW_PAIR, [typeB, 1]); page.evaluate("(s) => { const B = window.__B; B.hp = 1; " + setup + " }", setup)   # the control: the same Green hit with no ring does not kill it
+        page.evaluate(SW_HIT, [0, False, 1])
+        ok(page.evaluate("() => window.__B.dead") is False, f'{typeB}: without the ring the Green hit does not kill it')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_swan_shields(browser, url):
+    """Red nets, a veil, a Siege Tower's archers and a rotOnly monster still refuse the ring."""
+    if not R9: return
+    page, errors = open_page(browser, url)
+    swan_night(page)
+    SAME = "() => [window.__B.hp, window.__B.dead]"
+    page.evaluate(SW_PAIR, ['glutton', 6]); page.evaluate("() => { const g = window.__gg, B = window.__B; B.netT = 1e9; const c = g.newCell(1); c.net = 'red'; c.netBy = B.id; g.grid[0][0] = c; }")
+    ok(page.evaluate("() => window.__gg.shieldedNow(window.__B)") is True, 'a Glutton with a red net is shielded')
+    page.evaluate(SW_HIT, [0, True, 1]); ok(page.evaluate(SAME) == [6, False], f'a red-netted Glutton takes nothing from the ring {page.evaluate(SAME)}')
+    page.evaluate(SW_PAIR, ['knight', 6]); page.evaluate("() => { const g = window.__gg, G = g.G, B = window.__B; const R = g.spawnMonster('bride', 2, true, 0.5); R.sp = 0; B.veilBy = R.id; R.veil = B; window.__R = R; }")
+    ok(page.evaluate("() => window.__gg.veiledNow(window.__B)") is True, 'a monster beside a Bride is veiled')
+    page.evaluate(SW_HIT, [0, True, 1]); ok(page.evaluate(SAME) == [6, False], f'a veiled monster takes nothing from the ring {page.evaluate(SAME)}')
+    page.evaluate(SW_PAIR, ['ghoul', 6])
+    page.evaluate("([t, swan, lv]) => { const g = window.__gg, a = window.__A; window.__B.rotOnly = true; const pr = { type:t, vis:t, lv, size:1, lane:a.lane, x:a.x, y:0, hit:new Set(), grp:{ spawned:true, small:false, kills:0 }, guar:false, trail:[], swan }; g.hitMonster(pr, a); }", [0, True, 1])   # one call: the frame's pre-pass clears rotOnly
+    ok(page.evaluate(SAME) == [6, False], f'a rotOnly monster takes nothing from the ring {page.evaluate(SAME)}')
+    page.evaluate("""() => { const g = window.__gg, G = g.G; G.monsters.length = 0; G.vfx.length = 0; G.def.boss = 'siegetower'; G.def.bossForm = 1; G.bossSpawned = true; G.bossDead = false;
+      const B = g.spawnMonster('boss'); B.sp = 0; B.p = 0.5; B.lane = 3; B.x = g.LANE(3); window.__B = B; const A = g.spawnMonster('ghoul', 4, true, 0.5); A.sp = 0; A.hp = A.maxHp = 50; window.__A = A; }""")
+    h0 = page.evaluate("() => [window.__B.hp, window.__B.archers]")
+    page.evaluate(SW_HIT, [0, True, 1]); h1 = page.evaluate("() => [window.__B.hp, window.__B.archers]")
+    ok(h0[1] > 0 and h1 == h0, f'a Siege Tower with archers up takes nothing and loses no archer to the ring {h0} {h1}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_swan_black(browser, url):
+    """A Black from the square: the neighbour takes Black's splash and the ring's 1 more."""
+    if not R9: return
+    page, errors = open_page(browser, url)
+    swan_night(page)
+    page.evaluate(SW_PAIR, ['ghoul', 50]); page.evaluate(SW_HIT, [7, False, 1])
+    plain = page.evaluate("() => 50 - window.__B.hp")
+    page.evaluate(SW_PAIR, ['ghoul', 50]); n = page.evaluate(SW_HIT, [7, True, 1])
+    both = page.evaluate("() => 50 - window.__B.hp")
+    ok(plain == 0.5 and both == 1.5 and n == 1, f'Black alone splashes 0.5; from the Swan square 0.5 + 1 = 1.5, one ring ({plain}, {both}, {n})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_swan_break(browser, url):
+    """Breaking the Swan: every empty cell of its 3x3 sprouts a Rainbow, a grave there stays, the Swan is due back on the next sprout."""
+    if not R9: return
+    page, errors = open_page(browser, url)
+    swan_night(page)
+    page.evaluate("""() => { const g = window.__gg, p = g.gourdPos('swan');
+      for (let a = p.r - 1; a <= p.r + 1; a++) for (let b = p.c - 1; b <= p.c + 1; b++) if (a !== p.r || b !== p.c) g.grid[a][b] = g.newCell(1 + (a + b) % 3);
+      g.grid[1][2] = null; g.grid[1][4] = null; g.grid[3][2] = null; g.grid[2][2] = null; g.grid[3][4] = null; g.graves[3][4] = 1; }""")
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos('swan'); g.destroyGourd(g.grid[p.r][p.c]); }")
+    r = page.evaluate("() => { const g = window.__gg, out = []; for (let a = 1; a <= 3; a++) for (let b = 2; b <= 4; b++){ const c = g.grid[a][b]; out.push([a, b, c ? (c.c === g.RAINBOW ? 'R' : 'p') : '-', !!g.graves[a][b]]); } return out; }")
+    rain = [(a, b) for a, b, k, _ in r if k == 'R']
+    ok(sorted(rain) == [(1, 2), (1, 4), (2, 2), (3, 2)] and [x for x in r if x[0] == 3 and x[1] == 4][0][3] is True and [x for x in r if x[0] == 3 and x[1] == 4][0][2] != 'R',
+       f'four empty cells became Rainbows; the grave cell stayed {r}')
+    ok(page.evaluate("() => [window.__gg.gourdPos('swan'), !!window.__gg.G.gourdDueOf.swan]") == [None, True], 'the Swan is due back')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def swan_picker(page, owned, night, seen=True):
+    from nm3_check import gpick
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 17)}, **{1100 + k: 3 for k in range(1, 17)}, **{1200 + k: 3 for k in range(1, 17)}, **{1300 + k: 3 for k in range(1, 5)}, **{1400 + k: 3 for k in range(1, 5)}})
+    page.evaluate("([gs, n, seen]) => { const g = window.__gg; g.save.gourds = gs; g.save.perksOff = { pick4:true }; g.save.seenGourdCoach = true; g.save.seenProtectorCoach = true; g.save.seenWartlingCoach = true; g.save.seenCrookneckCoach = true; g.save.seenSwanCoach = seen; document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); g.beginNight(n); }",
+                  [{k: True for k in owned}, night, seen]); time.sleep(0.6)
+    return page.evaluate(gpick())
+
+
+def check_picker_five_gourds(browser, url):
+    """Five gourds, two slots, nothing overflowing at 360 px. N5-5 locks the Swan in slot 1. Once the Swan is won an N4 night offers it too."""
+    if not R9: return
+    os.makedirs(SWSHOTS, exist_ok=True)
+    page = browser.new_page(viewport={'width': 360, 'height': 740}); errors = []
+    page.on('pageerror', lambda e: errors.append(str(e)))
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    u = swan_picker(page, ALL5, 1405, seen=False)
+    ok(u['state'] == 'loadout' and [t[0] for t in u['tiles']] == ALL5, f'N5-5: five gourd tiles in unlock order {u["tiles"]}')
+    ok(u['slots'] == ['swan', 'grave'] and len(u['slotSize']) == 2, f'two slots; the Swan locked in slot 1, then the first other gourd {u["slots"]}')
+    ok([t[2] for t in u['tiles']] == [False, False, False, False, True] and u['slotMust'][0] is True, f'the Swan tile and slot 1 are locked {[t[2] for t in u["tiles"]]} {u["slotMust"]}')
+    ok(u['heading'] == 'Gourds · pick up to 2' and u['headFits'] and u['cardFits'] and all(w >= 44 and h >= 44 for w, h in u['slotSize']), f'heading, 44 px slots, header and card fit {u["heading"]} {u["slotSize"]}')
+    ov = page.evaluate("() => { const s = document.querySelector('#loScroll'), d = document.documentElement; return [d.scrollWidth, innerWidth, s.scrollWidth, s.clientWidth, document.querySelector('#loGourds').scrollWidth, document.querySelector('#loGourds').clientWidth, [...document.querySelectorAll('#loGourds .pick')].every(b => b.getBoundingClientRect().right <= innerWidth + 0.5 && b.getBoundingClientRect().left >= -0.5)]; }")
+    ok(ov[0] <= ov[1] and ov[2] <= ov[3] and ov[4] <= ov[5] and ov[6], f'no horizontal overflow at 360 px {ov}')
+    page.click('#loGourds .pick[data-gourd="swan"]'); time.sleep(0.2)
+    det = page.evaluate("() => document.querySelector('#loDetail').textContent")
+    ok('Swan Gourd' in det and 'Black-hole splash' in det or 'black' in det.lower(), f'tapping the Swan shows its card {det[:80]!r}')
+    page.click('#loGourds .pick[data-gourd="crookneck"]'); time.sleep(0.2)
+    from nm3_check import gpick
+    v = page.evaluate(gpick())
+    ok(v['slots'][0] == 'swan' and v['slots'][1] == 'crookneck', f'a tile tapped with both slots full replaces slot 2, never the locked slot 1 {v["slots"]}')
+    page.screenshot(path=os.path.join(SWSHOTS, 'picker5.png'))
+    # an N4 night: the Swan is offered once won; not before
+    u = swan_picker(page, ALL5, 1305)
+    ok([t[0] for t in u['tiles']] == ALL5 and not any(t[2] for t in u['tiles']), f'N4-5 offers five gourds once the Swan is won, none locked {u["tiles"]}')
+    u = swan_picker(page, ALL5[:4], 1305)
+    ok([t[0] for t in u['tiles']] == ALL5[:4], f'N4-5 without the Swan offers four {u["tiles"]}')
+    u = swan_picker(page, ALL5, 1005)
+    ok('swan' in [t[0] for t in u['tiles']], f'N1-5 offers the Swan too once won {u["tiles"]}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_swan_unlock(browser, url):
+    if not R9: return
+    page, errors = open_page(browser, url)
+    d = page.evaluate("() => { const t = window.__gg.NIGHTMARE_LEVELS[4]; return [t[3] && t[3].unlockGourds, t[4] && t[4].coach, t[4] && t[4].gourds, t[4] && t[4].gourdLock]; }")
+    ok(d[0] == ['swan'] and d[1] == 'swan' and d[2] and 'swan' in d[2] and d[3] == 'swan', f'N5-4 unlocks the Swan; N5-5 is its tutorial with the Swan locked (data) {d}')
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 5)}, **{1300 + k: 3 for k in range(1, 5)}})
+    page.evaluate("() => { window.__gg.save.gourds = { grave:true }; }")
+    nm5_start(page, 3); page.evaluate("() => window.__gg.endGame(true)"); time.sleep(1.8)
+    ok(not page.evaluate("() => !!window.__gg.save.gourds.swan"), 'winning N5-3 does not unlock it')
+    nm5_start(page, 4); page.evaluate("() => window.__gg.endGame(true)"); time.sleep(1.8)
+    ok(page.evaluate("() => window.__gg.save.gourds.swan") is True, 'winning N5-4 sets save.gourds.swan')
+    ok(page.evaluate("() => JSON.parse(localStorage.getItem('gourdguard.v1')).gourds.swan") is True, 'and it is saved')
+    ok(page.evaluate("() => window.__gg.GOURDS.swan && [window.__gg.GOURDS.swan.name, window.__gg.GOURDS.swan.role]") == ['Swan Gourd', 'Black-hole splash'], 'GOURDS.swan: name and role')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_swan_intro(browser, url):
+    """The Swan Gourd's intro card comes on N5-5 (its home night), not on N4-5 or N1-5, which merely offer it once won."""
+    if not R9: return
+    from nm3_check import n3_intro_titles
+    page, errors = open_page(browser, url)
+    set_stars(page, {**story_done(100), **{1000 + k: 3 for k in range(1, 17)}, **{1100 + k: 3 for k in range(1, 17)}, **{1200 + k: 3 for k in range(1, 17)}, **{1300 + k: 3 for k in range(1, 17)}, **{1400 + k: 3 for k in range(1, 5)}})
+    page.evaluate("() => { const s = window.__gg.save; s.seenIntro = {}; s.gourds = { grave:true, protector:true, wartling:true, crookneck:true, swan:true }; s.perksOff = { pick4:true }; }")
+    ok('The Swan Gourd' not in n3_intro_titles(page, 1305), 'N4-5 shows no Swan card')
+    page.evaluate("() => { document.querySelectorAll('.ov').forEach(o => o.classList.remove('show')); window.__gg.setState('menu'); }")
+    t5 = n3_intro_titles(page, 1405)
+    ok('The Swan Gourd' in t5, f'N5-5 shows the Swan Gourd intro card {t5}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_swan_coach(browser, url):
+    """The Swan tutorial on N5-5 (coach:'swan'): slide it; launch a bunch from its square at two ghouls side by side and watch the ring hurt the
+    one beside the hit; hold it until it breaks (Rainbows around); Nice."""
+    if not R9: return
+    STEP = "(s) => { const g = window.__gg; for (let i = 0; i < Math.round(s / 0.05); i++) g.update(0.05); return g.G.coach ? g.G.coach.step : null; }"
+    TIP = "() => document.querySelector('#coachTip').textContent"
+    SP = "() => { const p = window.__gg.gourdPos('swan'); return p && [p.r, p.c]; }"
+    page, errors = open_page(browser, url)
+    page.evaluate("() => { const s = window.__gg.save; s.gourds = { grave:true, protector:true, wartling:true, crookneck:true, swan:true }; s.seenGourdCoach = true; s.seenProtectorCoach = true; s.seenWartlingCoach = true; s.seenCrookneckCoach = true; s.seenSwanCoach = false; s.lv.green = 1; }")
+    # the default pick on N5-5 with the tutorial unseen: the Swan (locked, slot 1)
+    ok(page.evaluate("() => { const g = window.__gg; return g.defaultGourds(g.levelFor(1405)); }")[0] == 'swan', 'N5-5 starts with the Swan picked, slot 1')
+    page.evaluate("() => { window.__gg.save.lastGourds = ['grave', 'protector']; }")
+    ok('swan' in page.evaluate("() => { const g = window.__gg; return g.defaultGourds(g.levelFor(1405)); }"), 'with another pair remembered the Swan still starts picked')
+    page.evaluate("(lo) => window.__gg.startGame('story', 1405, lo, ['grave', 'swan'])", [0, 1, 2, 3, 4]); time.sleep(0.3)
+    d = page.evaluate("() => { const g = window.__gg; return [g.G.coach && g.G.coach.kind, g.G.coach && g.G.coach.step, g.coachHolds(), g.gourdsOn().map(o => [o.kind, o.r, o.c]), g.grid.flat().filter(x => x && !x.gourd).length]; }")
+    ok(d[:3] == ['swan', 'sslide', True] and d[4] == 0, f'N5-5 with the tutorial unseen starts the Swan script on a clear patch {d}')
+    ok('Swan Gourd' in page.evaluate(TIP), f'the tip names it {page.evaluate(TIP)[:60]!r}')
+    ok(page.evaluate(STEP, 2) == 'sslide' and page.evaluate("() => [window.__gg.G.monsters.length, window.__gg.G.spawned]") == [0, 0], 'it waits for the slide: no monsters')
+    mv = page.evaluate("() => { const c = window.__gg.G.coach; return c.move && [c.move.dir, c.move.ref.gourd]; }")
+    ok(mv and mv[1] == 'swan', f'the hand slides the Swan {mv}')
+    page.evaluate("() => { const g = window.__gg, c = g.G.coach; g.slideOne(c.move.ref, c.move.dir); }")
+    ok(page.evaluate(STEP, 0.4) == 'slaunch', 'slid: the launch step')
+    d = page.evaluate("() => { const g = window.__gg, lit = g.bestLitGroup(), m = g.G.monsters.filter(m => !m.dead); return [!!lit, m.length, m.map(x => x.lane), m[0] && m[0].hp]; }")
+    ok(d[0] and d[1] == 2 and abs(d[2][0] - d[2][1]) == 1 and d[3] >= 10, f'a lit bunch and two tough ghouls in neighbouring lanes {d}')
+    ok('splash' in page.evaluate(TIP).lower(), f'the tip names the splash {page.evaluate(TIP)[:60]!r}')
+    ok(page.evaluate(STEP, 2) == 'slaunch', 'it waits for the launch')
+    hp0 = page.evaluate("() => window.__gg.G.monsters.map(m => m.hp)")
+    page.evaluate("() => { const g = window.__gg; g.launchGroup(g.bestLitGroup()); }")
+    ok(page.evaluate("() => window.__gg.G.projs.every(p => p.swan)") is True, 'the launched pumpkins carry swan')
+    st = page.evaluate(STEP, 2)
+    hp1 = page.evaluate("() => window.__gg.G.monsters.map(m => m.hp)")
+    ok(st == 'shold' and all(b < a for a, b in zip(hp0, hp1)), f'both ghouls hurt (the one beside the hit by the ring), then the hold step ({hp0} -> {hp1}, {st})')
+    ok('hold' in page.evaluate(TIP).lower() and 'rainbow' in page.evaluate(TIP).lower(), f'the hold tip names the Rainbows {page.evaluate(TIP)[:70]!r}')
+    ok(page.evaluate(STEP, 3) == 'shold', 'it waits for the break')
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos('swan'); g.destroyGourd(g.grid[p.r][p.c]); }")
+    ok(page.evaluate(STEP, 0.1) == 'praise' and 'Nice' in page.evaluate(TIP), f'Nice {page.evaluate(TIP)[:50]!r}')
+    ok(page.evaluate("() => window.__gg.coachHolds()") is False, 'the praise step lets the night carry on')
+    page.evaluate(STEP, 4)
+    ok(page.evaluate("() => [window.__gg.G.coach, window.__gg.save.seenSwanCoach]") == [None, True], 'the script ends and seenSwanCoach is set')
+    page.evaluate("(lo) => window.__gg.startGame('story', 1405, lo, ['grave', 'swan'])", [0, 1, 2, 3, 4]); time.sleep(0.2)
+    ok(page.evaluate("() => [window.__gg.G.coach, window.__gg.coachHolds()]") == [None, False], 'a player who has seen it gets a plain N5-5')
+    page.evaluate("() => { window.__gg.save.seenSwanCoach = false; }")
+    page.evaluate("(lo) => window.__gg.startGame('story', 1405, lo, ['grave', 'protector'])", [0, 1, 2, 3, 4]); time.sleep(0.2)
+    ok(page.evaluate("() => [window.__gg.G.coach, window.__gg.save.seenSwanCoach]") == [None, False], 'N5-5 without the Swan: no script, still unseen')
+    page.evaluate("(lo) => window.__gg.startGame('story', 1405, lo, ['swan'])", [0, 1, 2, 3, 4]); time.sleep(0.2)
+    page.evaluate("() => { const g = window.__gg, p = g.gourdPos('swan'); g.destroyGourd(g.grid[p.r][p.c]); }")
+    ok(page.evaluate(STEP, 0.1) == 'sback', 'breaking it early jumps to the respawn step')
+    st = page.evaluate(STEP, 4)
+    ok(st in ('slaunch', 'shold') and page.evaluate(SP) is not None, f'it grows back, then the lesson goes on {st}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_swan_art(browser, url):
+    """The Swan's baked art: a picker icon, a strip saved for the owner, drawing adds no painter calls per frame; and a black-ring frame."""
+    if not R9: return
+    import base64
+    os.makedirs(SWSHOTS, exist_ok=True)
+    page, errors = open_page(browser, url)
+    swan_night(page, ('grave', 'swan'))
+    px = page.evaluate("() => { const c = window.__gg.gourdIcon(96, 'swan'), d = c.getContext('2d').getImageData(0, 0, 96, 96).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200) n++; return n; }")
+    ok(px > 1500, f'the Swan icon is a solid gourd {px}')
+    ok(page.evaluate("() => window.__gg.gourdIcon(96, 'swan').toDataURL()") != page.evaluate("() => window.__gg.gourdIcon(96, 'protector').toDataURL()"), 'the Swan does not look like the Protector')
+    strip = page.evaluate("""() => { const g = window.__gg, W = 96 * 5, c = document.createElement('canvas'); c.width = W; c.height = 120; const x = c.getContext('2d');
+      x.fillStyle = '#2a1e30'; x.fillRect(0, 0, W, 120);
+      ['grave', 'protector', 'wartling', 'crookneck', 'swan'].forEach((k, i) => x.drawImage(g.gourdIcon(96, k), i * 96, 12, 96, 96)); return c.toDataURL(); }""")
+    with open(os.path.join(SWSHOTS, 'swan.png'), 'wb') as f: f.write(base64.b64decode(strip.split(',')[1]))
+    # a black-ring frame: a hit from the square mid-ring on the patch
+    page.evaluate(SW_PAIR, ['ghoul', 50]); page.evaluate(SW_HIT, [0, True, 1])
+    page.evaluate("() => { const g = window.__gg; g.G.vfx.forEach(v => { if (v.kind === 'blackring') v.t = 0.12; }); g.setState('pause'); }"); time.sleep(0.4)
+    page.evaluate("() => document.querySelectorAll('.overlay, [id^=ov]').forEach(e => { e.style.display = 'none'; })")
+    page.screenshot(path=os.path.join(SWSHOTS, 'swanring.png'))
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_ring_budget(browser, url):
+    """Ten black rings at once add at most 10 drawImage and no fill/stroke (baked, blitted)."""
+    if not R9: return
+    page, errors = open_page(browser, url)
+    swan_night(page)
+    probe = """() => { const g = window.__gg, c = g.ctx, d = c.drawImage, f = c.fill, s = c.stroke, n = { img:0, fill:0, stroke:0 };
+      c.drawImage = function(...a){ n.img++; return d.apply(this, a); }; c.fill = function(...a){ n.fill++; return f.apply(this, a); }; c.stroke = function(...a){ n.stroke++; return s.apply(this, a); };
+      try { g.drawVfx(); } finally { delete c.drawImage; delete c.fill; delete c.stroke; } return n; }"""
+    page.evaluate("() => { window.__gg.G.vfx.length = 0; }")
+    page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 10; i++) g.G.vfx.push({ kind:'blackring', x:60 + i * 30, y:300, t:0.1, dur:0.5 }); }")
+    page.evaluate(probe)   # the first call bakes
+    n = page.evaluate(probe)
+    page.evaluate("() => { window.__gg.G.vfx.length = 0; }")
+    z = page.evaluate(probe)
+    ok(n['img'] - z['img'] == 10 and n['fill'] == z['fill'] and n['stroke'] == z['stroke'], f'ten rings add 10 drawImage and no fill/stroke (empty {z}, ten {n})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_swan_splash': check_swan_splash, 'check_swan_gates': check_swan_gates, 'check_swan_shields': check_swan_shields, 'check_swan_black': check_swan_black,
+               'check_swan_break': check_swan_break, 'check_picker_five_gourds': check_picker_five_gourds, 'check_swan_unlock': check_swan_unlock, 'check_swan_intro': check_swan_intro,
+               'check_swan_coach': check_swan_coach, 'check_swan_art': check_swan_art, 'check_ring_budget': check_ring_budget})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', required=True)

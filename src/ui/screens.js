@@ -3,7 +3,7 @@ import { SPAWN_STEPS } from '../data/patterns.js';
 import { NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, prevLevelFor, firstNightOf, typesForNight, gearUnlockNightOf, NIGHTMARE_LEVELS, NM_BOOK_LEVELS, nmNight, nmGateText } from '../data/worlds/index.js';
-import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO, PROTECTOR_INTRO, WARTLING_INTRO, POISON_INTRO, ROT_INTRO, POTION_INTRO, BREW_INTRO, CROOK_INTRO, NET_INTRO, TOWER_INTRO, GATE_INTRO } from '../data/monsters.js';
+import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO, PROTECTOR_INTRO, WARTLING_INTRO, POISON_INTRO, ROT_INTRO, POTION_INTRO, BREW_INTRO, CROOK_INTRO, SWAN_INTRO, NET_INTRO, TOWER_INTRO, GATE_INTRO } from '../data/monsters.js';
 import { hasFire, nightmareTitle } from '../data/levels.js';
 import { monsterIcon } from '../engine/render/monsters.js';
 import { prebakeAsync } from '../engine/render/anim.js';
@@ -323,6 +323,7 @@ function startPreviewedNight(){
   if (__RELEASE__ >= 5 && homeHas(def, 'protector') && !homeHas(prev, 'protector')) cards.push({ key:'gourd:protector', icon:gourdIcon(160, 'protector'), title:'The Protector Gourd', text:PROTECTOR_INTRO });   // the first night that offers it (N2-5), once unlocked
   if (__RELEASE__ >= 7 && homeHas(def, 'wartling') && !homeHas(prev, 'wartling')) cards.push({ key:'gourd:wartling', icon:gourdIcon(160, 'wartling'), title:'The Wartling Gourd', text:WARTLING_INTRO });   // the first night that offers it (N3-5), once unlocked
   if (__RELEASE__ >= 8 && homeHas(def, 'crookneck') && !homeHas(prev, 'crookneck')) cards.push({ key:'gourd:crookneck', icon:gourdIcon(160, 'crookneck'), title:'The Crookneck Gourd', text:CROOK_INTRO });   // its first night (N4-3, which gives it)
+  if (__RELEASE__ >= 9 && homeHas(def, 'swan') && !homeHas(prev, 'swan')) cards.push({ key:'gourd:swan', icon:gourdIcon(160, 'swan'), title:'The Swan Gourd', text:SWAN_INTRO });   // its first night (N5-5, which gives it)
   if (__RELEASE__ >= 8 && netsOn(def) && !netsOn(prev)) cards.push({ key:'nets', icon:'🕸️', title:'Nets', text:NET_INTRO });   // the keep nightmare's first nets (N4-1)
   if (__RELEASE__ >= 8 && pieceOn(def, 'tower') && !pieceOn(prev, 'tower')) cards.push({ key:'piece:tower', icon:pieceIcon('tower'), title:'Archer Tower', text:TOWER_INTRO });   // N4-5
   if (__RELEASE__ >= 8 && pieceOn(def, 'gate') && !pieceOn(prev, 'gate')) cards.push({ key:'piece:gate', icon:pieceIcon('gate'), title:'Gatehouse', text:GATE_INTRO });   // N4-7

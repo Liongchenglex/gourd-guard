@@ -790,3 +790,26 @@ export function hiddenWarnSprite(k){
   });
 }
 export function prebakeHiddenFx(k){ hiddenSphereSprite(k); hiddenWarnSprite(k); }
+
+// ---------- The Swan Gourd's black-hole ring (Release 9) ----------
+/** A ring of marsh-dark with a faint violet rim and a thin violet glint inside, 100 units across, centred on its origin. Baked once per canvas
+ *  scale; draw it scaled from 0.3 to 1.6 CS across and faded over its 0.5 s, one drawImage. */
+export const BLACK_RING_D = 100;
+export function blackRingSprite(k){
+  const D = BLACK_RING_D, R = D / 2 - 3;
+  return bake('blackring:' + bakeK(k).toFixed(2), D, D, D / 2, D / 2, bakeK(k), g => {
+    const gr = g.createRadialGradient(0, 0, R * .2, 0, 0, R);
+    gr.addColorStop(0, 'rgba(6,2,14,0)'); gr.addColorStop(.55, 'rgba(6,2,14,.55)'); gr.addColorStop(.86, 'rgba(10,4,22,.9)'); gr.addColorStop(1, 'rgba(10,4,22,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.fill();
+    g.strokeStyle = 'rgba(176,150,230,.5)'; g.lineWidth = 2.5; g.beginPath(); g.arc(0, 0, R * .95, 0, TAU); g.stroke();
+    g.strokeStyle = 'rgba(214,196,255,.35)'; g.lineWidth = 1.2; g.beginPath(); g.arc(0, 0, R * .78, 0, TAU); g.stroke();
+  });
+}
+/** One black ring at its moment: grows from 0.3 to 1.6 CS across while it fades (the first blit also bakes the sprite, which a night start does too). */
+export function drawBlackRing(g, v, k){
+  const p = Math.min(1, v.t / v.dur), sp = blackRingSprite(k), d = CS * (.3 + 1.3 * (1 - (1 - p) * (1 - p)));
+  g.globalAlpha = (1 - p) * (p < .12 ? p / .12 : 1) * .95;
+  g.drawImage(sp.c, v.x - d / 2, v.y - d / 2, d, d);
+  g.globalAlpha = 1;
+}
+export const prebakeBlackRing = k => { blackRingSprite(k); };

@@ -67,7 +67,7 @@
  * @property {boolean} [gourd]         the Grave Gourd stands on the patch this night (Release 4; src/engine/gourd.js): it starts in cell (2, 3), and one
  *   slot of every sprout tick fills the empty cells of its 3×3
  * @property {string} [coach]        a tutorial script the coach plays the first time this level is played (Release 4: 'gourd' on N1-5, src/engine/coach.js;
- *   Release 5: 'protector' on N2-5; Release 7: 'wartling' on N3-5; Release 8: 'crookneck' on N4-3)
+ *   Release 5: 'protector' on N2-5; Release 7: 'wartling' on N3-5; Release 8: 'crookneck' on N4-3; Release 9: 'swan' on N5-5)
  * @property {string[]} [gourds]     the gourds a `gourd:true` night offers in the picker, in slot order (Release 5; `GOURD_SLOTS` at most below Release 7;
  *   Release 7 may offer more, and the player picks two; each only once unlocked in save.gourds; the Grave Gourd counts as unlocked on any gourd
  *   night). Without it the night offers the Grave Gourd alone

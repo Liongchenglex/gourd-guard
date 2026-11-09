@@ -38,7 +38,7 @@ import { initTide, updateTide, tideSnapshot, restoreTide, initWhirls, whirlSnaps
 import { prebakeTide } from './render/tide.js';
 import { lancerHit, shieldSnapshot, restoreShields, carryCheck, newCastle, updateCastlePieces, siegeSnapshot, countSnapshot } from './keep.js';
 import { prebakeNets } from './render/nets.js';
-import { prebakeCountFx, prebakePirateFx, prebakeHiddenFx } from './render/fx.js';
+import { prebakeCountFx, prebakePirateFx, prebakeHiddenFx, prebakeBlackRing } from './render/fx.js';
 import { K } from './render/canvas.js';
 import { prebakeTongue, prebakeBarrier, prebakeCroneZone, prebakeFallenHex } from './render/witchwood.js';
 import { startCoach, coachHolds, coachUpdate } from './coach.js';
@@ -145,7 +145,7 @@ export function defaultGourds(def){
   return pick;
 }
 /** A level's `coach` that teaches a gourd: [the gourd, the save flag set once its tutorial has played]. */
-const COACH_GOURD = { gourd:['grave', 'seenGourdCoach'], protector:['protector', 'seenProtectorCoach'], ...(__RELEASE__ >= 7 ? { wartling:['wartling', 'seenWartlingCoach'] } : {}) };
+const COACH_GOURD = { gourd:['grave', 'seenGourdCoach'], protector:['protector', 'seenProtectorCoach'], ...(__RELEASE__ >= 7 ? { wartling:['wartling', 'seenWartlingCoach'] } : {}), ...(__RELEASE__ >= 9 ? { swan:['swan', 'seenSwanCoach'] } : {}) };
 /** The picker remembers the gourds last taken on a night with a choice (save.lastGourds, set as Start is pressed; owner 2026-11-09): those this
  *  night offers start picked, in their slots. A remembered gourd this night does not offer leaves its slot to the first offered one not picked
  *  yet (unlock order), so a night never starts with fewer than were taken; an empty pick (none taken) is remembered as empty. */
@@ -202,6 +202,7 @@ export function startGame(mode, n, loadout, gourds){
   if (__RELEASE__ >= 8 && def && def.nightmare) prebakeNets();   // the rope net, the crimson one and the net in flight, baked now
   if (__RELEASE__ >= 9 && def && bakeKeys(def).some(k => k.split('|')[0] === 'siren')) prebakeHiddenFx(K);   // the hidden-row sphere and warning (render/fx.js), baked before she can sing
   if (__RELEASE__ >= 9 && def && bakeKeys(def).some(k => k.split('|')[0] === 'pirate')) prebakePirateFx(K);   // a Pirate's aim line, reticle and shot (render/fx.js), baked before he can aim
+  if (__RELEASE__ >= 9 && def && def.nightmare) prebakeBlackRing(K);   // the Swan Gourd's black-hole ring (render/fx.js): any nightmare night may take the Swan, so baked now
   if (__RELEASE__ >= 8 && def && def.boss === 'fallencount') prebakeCountFx(K);   // his lightning warning, bolt and blood spear, baked now (render/fx.js)
   if (__RELEASE__ >= 8 && def && (def.boss === 'fallencount' || (def.castlesLayout || []).some(e => e[2] === 'gate' || e[2] === 'tower'))) prebakeCastlePieces();   // the Gatehouse's and the Archer Tower's frames, baked now (render/castlepieces.js)
   if (__RELEASE__ >= 8 && def) prebakeWeather();   // fresh weather timers every night; the Keep storm's rain and bolts baked now (Release 8, render/weather.js)

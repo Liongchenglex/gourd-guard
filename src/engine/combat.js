@@ -10,7 +10,7 @@ import { TILE_P, mS, mY, spMulNow, spawnMonster, inHexZone, stripHusk } from './
 import { CS, FIELD_BOT, FIELD_TOP, G, GY, LANE, W, grid, COLS, walls, FENCE_Y } from './state.js';
 import { TAU, clamp, fmt, rnd } from './util.js';
 import { lvOf, save, persist } from '../save.js';
-import { KILL_REWARD, PROTECT_HEAL, ROT_DMG, ROT_HEAL, WART_DMG } from '../data/rules.js';
+import { KILL_REWARD, PROTECT_HEAL, ROT_DMG, ROT_HEAL, SWAN_HIT, SWAN_SPLASH_DMG, WART_DMG } from '../data/rules.js';
 import { SACK, BOSS_SEED, ENDLESS_BOSS_SEED, CHEST_KILL_CHANCE } from '../data/economy.js';
 import { addChest, addSeeds, grant, toolSet } from './loot.js';
 import { GEAR } from '../data/shop.js';
@@ -23,7 +23,7 @@ import { reaperFalls, cometBreaks, fpAfterHit, fpReaperHit } from './hollow.js';
 import { witchwoodFalls, fhGate, fhAfterHit } from './witchwood.js';
 import { splitBlood, releaseImp } from './marsh.js';
 import { shieldedNow, shieldPuff, keepFalls, pieceFalls, knockArcher, archersGuard, siegeFalls, countGate, fcCross, countFalls } from './keep.js';
-import { inWartSquare, isProtected } from './gourd.js';
+import { inWartSquare, inSwanSquare, isProtected } from './gourd.js';
 import { ROTTEN, ROT_FX, hitRule } from './rot.js';
 
 /** Release 5: a pumpkin launched from (r, c) inside a Protector Gourd's 3×3 mends its column's fence by PROTECT_HEAL (never above full) and
@@ -62,7 +62,8 @@ export function launchGroup(ref){
     const x = LANE(c), y = GY + r * CS + CS / 2 + cell.oy;
     const ward = __RELEASE__ >= 5 && wardLaunch(r, c);   // from a Protector Gourd's square (Release 5)
     const wart = __RELEASE__ >= 7 && inWartSquare(r, c);   // from a Wartling Gourd's square (Release 7): double damage
-    G.projs.push({ x, y, vy:-900, type, vis:cell.c, lv, guar, ...(__RELEASE__ >= 8 ? { small:setSmall } : {}), lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}), ...(wart ? { wart:true } : {}) });
+    const swan = __RELEASE__ >= 9 && inSwanSquare(r, c);   // from a Swan Gourd's square (Release 9): every hit bursts a black-hole ring
+    G.projs.push({ x, y, vy:-900, type, vis:cell.c, lv, guar, ...(__RELEASE__ >= 8 ? { small:setSmall } : {}), lane:c, hitWalls:new Set(), grp:bunch, size:cell.c === BROWN ? brownSize(cell) : 1, rot:Math.random() * TAU, spin:rnd(8, 12) * (Math.random() < 0.5 ? -1 : 1), hit:new Set(), trail:[], r:16, dead:false, ...(ward ? { ward:true } : {}), ...(wart ? { wart:true } : {}), ...(swan ? { swan:true } : {}) });
     grid[r][c] = null;
   };
   for (const { grp:gp, own, pulled } of sets){
@@ -208,13 +209,13 @@ export function kill(m){
     for (let i = 0; i < 10; i++) spark(m.x, mY(m), '#d09bff', 160); SFX.knock();
     return;
   }
-  if (ICE_ONLY.has(m.type) && m.lastHit !== 2){   // not Ice: it collapses and rises again later
+  if (ICE_ONLY.has(m.type) && m.lastHit !== 2 && !(__RELEASE__ >= 9 && m.lastHit === SWAN_HIT)){   // not Ice: it collapses and rises again later
     m.hp = 0; m.rise = TYPES[m.type].rise; m.eating = false; m.kb = 0; m.burnLeft = 0;
     addFloat('Down… still burning', m.x, mY(m) - m.r - 30, '#ff8a3a', 16, 1);
     for (let i = 0; i < 10; i++) chunk(m.x, mY(m), '#ff8a3a', 160); SFX.knock();
     return;
   }
-  if (m.type === 'mummy' && m.lastHit !== 3){   // not Fire: it collapses and rises again later
+  if (m.type === 'mummy' && m.lastHit !== 3 && !(__RELEASE__ >= 9 && m.lastHit === SWAN_HIT)){   // not Fire: it collapses and rises again later
     m.hp = 0; m.rise = TYPES.mummy.rise; m.eating = false; m.kb = 0; m.burnLeft = 0;
     addFloat('Down… not out', m.x, mY(m) - m.r - 30, '#d8cfb0', 16, 1);
     for (let i = 0; i < 10; i++) chunk(m.x, mY(m), '#d8cfb0', 160);
@@ -355,12 +356,23 @@ function hitMonsterNow(pr, m){
     for (const o of G.monsters.slice()) if (o !== m && !o.dead && !o.hidden && o.rise <= 0 && !(__RELEASE__ >= 5 && o.rotOnly) && Math.abs(o.lane - m.lane) <= 1 && Math.abs(mY(o) - y) < reach){ o.lastHit = 7; o.lastHitLv = pr.lv; damage(o, POWER[i] * frac, '#ff9a3a', true); SFX.extra('splash'); if (i >= 4 && !o.dead) knockback(o); }
     for (const w of G.castles) if (!w.dead && Math.abs(w.lane - m.lane) <= 1 && Math.abs(castleY(w) - y) < reach) damageCastle(w, POWER[i] * frac);
   }
+  if (__RELEASE__ >= 9 && pr.swan) swanSplash(pr, m, y);   // from a Swan Gourd's square: a black-hole ring beside the hit, past every colour, Ice and Fire rule
   if (__RELEASE__ >= 3 && pr.type === BEIGE) layGlue(m.lane, m.p, pr.lv);   // Beige: every hit leaves glue where it lands (owner, 2026-11-03; was kills only)
   if (kb && !m.dead) knockback(m);
   if (m.dead && pr.type === 5 && Math.random() < SPAWN_P[i]) purpleSpawn(m, y, i);   // Purple: extra spawn per kill
   SFX.pumpkinHit(pr.type, pr.size, pr.vis === RAINBOW);   // pumpkin layer
   if (m.type === 'boss') SFX.bossSfx(m.kind, 'hit'); else SFX.monsterHit(m.type);   // monster layer
   if (pr.type === 4 && pr.hit.size > 1){ G.q.pierce++; SFX.extra('pierce'); }
+}
+
+/** The Swan Gourd's black-hole ring (Release 9): a hit from its square hurts every monster Black's blast would reach at this pumpkin's level
+ *  (the lanes either side, SPLASH_ROWS tall), except the one hit, for SWAN_SPLASH_DMG, tagged lastHit SWAN_HIT: that lifts the colour lock, the
+ *  reverse chameleon's immunity, and the Ice-only and Fire-only rules (a burning form dies for good, it burns into nothing). The shield door,
+ *  a Siege Tower's archers, `m.shield` and rot-only monsters still refuse it (damage() asks them first). One baked ring is pushed as a vfx. */
+function swanSplash(pr, m, y){
+  const i = pr.lv - 1, reach = SPLASH_ROWS[i] === 3 ? CS * 1.6 : CS * 0.7;
+  if (G.vfx) G.vfx.push({ kind:'blackring', x:pr.x, y, t:0, dur:0.5 });
+  for (const o of G.monsters.slice()) if (o !== m && !o.dead && !o.hidden && o.rise <= 0 && !o.rotOnly && Math.abs(o.lane - m.lane) <= 1 && Math.abs(mY(o) - y) < reach){ o.lastHit = SWAN_HIT; o.lastHitLv = pr.lv; o.lastHitAlt = -1; damage(o, SWAN_SPLASH_DMG, '#b8a0f0', true); }
 }
 
 // ---------- Rotten pumpkins and blocked hits (Release 5; rules in engine/rot.js) ----------

@@ -10,7 +10,7 @@ export const COMPANIONS = { hauler:['gargoyle'], slime:['blob'], vampire:['bat']
 
 /** The boss at the end of each nightmare book (Release 4), listed last in its nightmare bestiary. Once its fight is built (N1-16, the Fallen
  *  Gravekeeper, 2026-11-05) the level lists it like any boss; until then this entry holds its place (an entry may give `icon` [type, form] to draw). */
-export const FALLEN = __RELEASE__ >= 4 ? [{ key:'fallengravekeeper' }, ...(__RELEASE__ >= 5 ? [{ key:'fallenpoltergeist' }] : []), ...(__RELEASE__ >= 7 ? [{ key:'fallenhexwitch' }] : []), ...(__RELEASE__ >= 8 ? [{ key:'fallencount' }] : [])] : [];   // one per nightmare book, by world index (Release 5: the hollow book's, N2-16; Release 7: the witchwood's, N3-16; Release 8: the keep's, FALLEN[3], N4-16)
+export const FALLEN = __RELEASE__ >= 4 ? [{ key:'fallengravekeeper' }, ...(__RELEASE__ >= 5 ? [{ key:'fallenpoltergeist' }] : []), ...(__RELEASE__ >= 7 ? [{ key:'fallenhexwitch' }] : []) /* FALLEN[2]: a stand-in for Release 7's own line (r7's level task adds it); reconcile when r7's levels land */, ...(__RELEASE__ >= 8 ? [{ key:'fallencount' }] : [])] : [];   // one per nightmare book, by world index (Release 5: the hollow book's, N2-16; Release 7: the witchwood's, N3-16; Release 8: the keep's, FALLEN[3], N4-16)
 // The Keep nightmare's castle pieces (the Gatehouse, the Archer Tower) are castle walls, not monsters: like world 4's castle walls they have no bestiary entry (their intro cards explain them).
 
 export const BESTIARY = {

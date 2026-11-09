@@ -7,6 +7,7 @@
 // 'tower' (an Archer Tower); their health is a multiple of `castles.hp`. Every gatePool monster is also in the level pool, so the preview, the
 // bestiary and the night-start bake all know it.
 // Each level sets spawnGap and spawnBurst itself, so the story rule SPAWN_LATE_FROM never decides nightmare pacing.
+// Every night has a net source: a cart (most nights), a Glutton or a netting boss.
 // Gourds: the Grave, Protector and Wartling Gourds are on offer from N4-1 (pick two); N4-3 gives the Crookneck (locked into slot 1, its tutorial),
 // and from N4-4 it is a free pick of the four.
 // New monsters, each introduced where it first walks in: the Lobber Cart (N4-1), the Storm Lancer (N4-2), the Storm Marshal (N4-4, out of the
@@ -50,11 +51,11 @@ export default __RELEASE__ >= 8 ? [
   // N4-7 Gatehouse: one Gatehouse mid-lane sending out Shield Knights and Vampires, one at a time, until it is broken.
   L({ level: 7, name:'Gatehouse', pattern:1, total:18, interval:3.3, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL4(),
     castles:{ n:1, hp:12 }, castlesLayout:[W(3, 0.3, 'gate')], gatePool:['knight', 'vampire'],
-    pool:[['cryptGhoul', 8], ['knight', 5], ['keepImp', 4], ['vampire', 3], ['lancer', 2]],
+    pool:[['cryptGhoul', 8], ['knight', 5], ['keepImp', 4], ['vampire', 3], ['lancer', 2], ['lobbercart', 2]], caps:{ lobbercart:1 },
     quests:[['castlesAll'], ['wallAvg', 55]] }),
   // N4-8 Bat Bride: her veil goes over Bulwarks and Marshals; kill the Bride first.
   L({ level: 8, name:'Bat Bride', pattern:2, total:20, interval:3.2, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL4(),
-    pool:[['cryptGhoul', 7], ['bride', 5], ['bulwark', 4], ['marshal', 3], ['knight', 3]], intro:['bride'],
+    pool:[['cryptGhoul', 7], ['bride', 5], ['bulwark', 4], ['marshal', 3], ['knight', 3], ['lobbercart', 2]], caps:{ lobbercart:1 }, intro:['bride'],
     quests:[['bunch5', 2], ['wallMin', 50]] }),
   // N4-9 Glutton and Bride: a veiled Glutton needs its red nets gone and the Bride dead.
   L({ level: 9, name:'Glutton and Bride', pattern:3, total:20, interval:3.1, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL4(),
@@ -63,7 +64,7 @@ export default __RELEASE__ >= 8 ? [
   // N4-10 Marshal rush: Marshals boosting the crowds two Gatehouses send out.
   L({ level:10, name:'Marshal rush', pattern:4, total:18, interval:3.3, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL4(),
     castles:{ n:2, hp:12 }, castlesLayout:[W(1, 0.3, 'gate'), W(5, 0.3, 'gate')], gatePool:['cryptGhoul', 'keepImp', 'knight'],
-    pool:[['marshal', 9], ['cryptGhoul', 8], ['keepImp', 5], ['knight', 4]],
+    pool:[['marshal', 9], ['cryptGhoul', 8], ['keepImp', 5], ['knight', 4], ['lobbercart', 2]], caps:{ lobbercart:1 },
     quests:[['oneLaunch', 4], ['wallMin', 45]] }),
   // N4-11 The tower line: a full row of Archer Towers across the field (a lower castle health: seven of them shoot), carts parked behind it.
   L({ level:11, name:'The tower line', pattern:0, total:20, interval:3.2, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL4(),
@@ -78,11 +79,12 @@ export default __RELEASE__ >= 8 ? [
   L({ level:13, name:'Siege Tower 2', pattern:2, total:20, interval:3.1, spMul:0.95, spawnGap:1, spawnBurst:0.12, boss:'siegetower', bossForm:2, bossChest:'normal', gourds:ALL4(),
     pool:[['cryptGhoul', 7], ['knight', 4], ['glutton', 3], ['bride', 3], ['vampire', 2]],
     quests:[['wallMin', 40], ['bunch5', 2]] }),
-  // N4-14 Fortress: two rows of castle walls; the front row holds a Gatehouse and two Archer Towers on the flanks, the back row two more towers.
+  // N4-14 Fortress: two rows of castle walls (p counts down the field, so 0.58 is the front row, nearer the fence): the back row (0.32) holds a
+  // Gatehouse with Archer Towers on the flanks, the front row (0.58) a second Gatehouse between two towers.
   L({ level:14, name:'Fortress', pattern:3, total:22, interval:3.2, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL4(),
     castles:{ n:14, hp:10 }, gatePool:['knight', 'bulwark', 'vampire'],
-    castlesLayout:[...ROW(0.32, ['tower', 'wall', 'wall', 'gate', 'wall', 'wall', 'tower']), ...ROW(0.58, ['wall', 'wall', 'tower', 'wall', 'tower', 'wall', 'wall'])],
-    pool:[['cryptGhoul', 6], ['knight', 5], ['bulwark', 3], ['vampire', 3], ['archer', 3], ['marshal', 2]],
+    castlesLayout:[...ROW(0.32, ['tower', 'wall', 'wall', 'gate', 'wall', 'wall', 'tower']), ...ROW(0.58, ['wall', 'wall', 'tower', 'gate', 'tower', 'wall', 'wall'])],
+    pool:[['cryptGhoul', 6], ['knight', 5], ['bulwark', 3], ['vampire', 3], ['archer', 3], ['marshal', 2], ['lobbercart', 2]], caps:{ lobbercart:1 },
     quests:[['oneLaunch', 3], ['wallMin', 40]] }),
   // N4-15 The gauntlet: every new monster, an Archer Tower and a Gatehouse, a longer night.
   L({ level:15, name:'The gauntlet', pattern:4, total:26, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL4(),

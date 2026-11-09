@@ -39,7 +39,7 @@ def check_r8_absent(browser, url):
     js = bundle_js()
     for s in R8_NAMES:
         ok(s not in js, f"{s!r} not in the bundle")
-    ok('Glutton and Bride' not in js and 'Beat Nightmare 3-4' not in js, "the N4-1 name and the gate text are not in the bundle")   # ('Crumbling Keep: Nightmare' is the archived scene's name, in since Release 4)
+    ok('Glutton and Bride' not in js and 'Beat Nightmare 3-4' not in js, "an N4 level name (N4-9 'Glutton and Bride') and the N4 gate text ('Beat Nightmare 3-4') are not in the bundle")   # ('Crumbling Keep: Nightmare' is the archived scene's name, in since Release 4)
 
 
 def check_n4_track(browser, url):
@@ -1891,7 +1891,10 @@ def check_n4_levels(browser, url):
     ok(tw == list(range(7)) and len({e[1] for e in L[10]['layout']}) == 1 and 'lobbercart' in L[10]['pool'], f"N4-11: a full row of Archer Towers, carts behind {L[10]['layout']}")
     ok(set(L[11]['pool']) == {'lancer', 'lobbercart'}, f"N4-12: Lancers and carts only {L[11]['pool']}")
     rows = {round(e[1], 2) for e in L[13]['layout']}
-    ok(len(rows) == 2 and {'gate', 'tower'} <= kinds_of(L[13]), f"N4-14: two rows of walls, Gatehouses and Towers {L[13]['layout']}")
+    ok(len(rows) == 2 and sum(1 for e in L[13]['layout'] if e[2:] == ['gate']) == 2 and sum(1 for e in L[13]['layout'] if e[2:] == ['tower']) >= 2, f"N4-14: two rows of walls, two Gatehouses and Towers {L[13]['layout']}")
+    NETTERS = {'lobbercart', 'glutton'}
+    bare = [k + 1 for k, d in enumerate(L) if not (NETTERS & set(d['pool']) or d['boss'] in ('siegetower', 'fallencount'))]
+    ok(not bare, f'every night has a net source: a netter in its pool or a netting boss {bare}')
     ok(L[0]['caps'] and L[0]['caps'].get('lobbercart') == 1 and 'lobbercart' in L[0]['pool'] and {'knight', 'vampire'} <= set(L[0]['pool']), f"N4-1: one cart with Shield Knights and Vampires {L[0]['pool']} {L[0]['caps']}")
     ok(L[2]['caps'] and L[2]['caps'].get('lobbercart') == 2, f"N4-3: two carts so the gourd matters {L[2]['caps']}")
     ok(all(not d['caps'] or d['caps'].get('lobbercart', 99) <= 3 for d in L), 'never more than three carts parked on a night')

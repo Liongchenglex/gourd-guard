@@ -1281,8 +1281,8 @@ export const MARSH = {
       if (m.upT != null && m.upT > 0 && m.upT < dd) return ['dive', Math.min(clips.dive.n - 1, Math.floor((1 - m.upT / dd) * clips.dive.n))];
       return ['idle', Math.floor(m.ph * clips.idle.fps) % clips.idle.n];
     } },
-  // r 20: it rises for its first 0.6 s, throws on the engine's m.anim, sways between.
-  tentacle: { draw:KRAKENART.tentacle, scale:.55, dy:-8, box:{ x:-75, y:-120, w:150, h:182 }, maxK:2, still:{ sway:0 },
+  // r 20 hit radius, drawn 1.4x the archive's .55 (owner phone: too small in the sea): it rises for its first 0.6 s, throws on the engine's m.anim, sways between.
+  tentacle: { draw:KRAKENART.tentacle, scale:.77, dy:-11, box:{ x:-75, y:-120, w:150, h:182 }, maxK:1.5, still:{ sway:0 },
     clips:{ rise:C(6, 10, 'rise', true), sway:C(8, 7, 'sway'), throw:C(8, 12, 'throw', true) },
     frame(m, clips){
       if (m.anim) return null;

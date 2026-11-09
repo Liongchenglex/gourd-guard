@@ -1405,7 +1405,24 @@ def check_kraken_budget(browser, url):
     page.close()
 
 
-CHECKS.update({'check_kraken': check_kraken, 'check_kraken_level': check_kraken_level, 'check_kraken_form2': check_kraken_form2, 'check_kraken_continue': check_kraken_continue,
+def check_magnet_marsh(browser, url):
+    """A Magnet hit pulls an ordinary ghoul but moves neither a Kraken tentacle nor a Siren (they never walk and must stay in the tide)."""
+    if not R9: return
+    from mag_check import mag_page
+    page, errors = mag_page(browser, url)
+    r = page.evaluate("""() => { const g = window.__gg, h = window.__mg, p = h.row(3), a = h.ghoul(3, p);
+      const tn = g.spawnMonster('tentacle', 1, true, p), si = g.spawnMonster('siren', 5, true, p); si.p = p; tn.p = p;
+      const gh = h.ghoul(4, p), all = [tn, si, gh], before = all.map(m => [m.lane, m.p]);
+      const pred = [g.magnetPullable(tn), g.magnetPullable(si), g.magnetPullable(gh)];
+      h.hit(5, a);
+      return new Promise(res => setTimeout(() => res({ pred, moved:all.map((m, k) => m.lane !== before[k][0] || Math.abs(m.p - before[k][1]) > 1e-6) }), 600)); }""")
+    ok(r['pred'] == [False, False, True], f'a tentacle and a Siren are never pullable, a ghoul is {r}')
+    ok(r['moved'] == [False, False, True], f'a level-5 hit moves the ghoul and neither of them {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_magnet_marsh': check_magnet_marsh, 'check_kraken': check_kraken, 'check_kraken_level': check_kraken_level, 'check_kraken_form2': check_kraken_form2, 'check_kraken_continue': check_kraken_continue,
                'check_kraken_baked': check_kraken_baked, 'check_kraken_art': check_kraken_art, 'check_kraken_budget': check_kraken_budget})
 
 

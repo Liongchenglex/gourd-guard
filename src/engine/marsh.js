@@ -208,7 +208,6 @@ export function marshStop(m){
 
 // ---------- the Kraken (mini boss) and its Tentacles ----------
 const TENT_THROW = 8 / 12, TENT_LEAD = TENT_THROW * 0.55;   // the throw clip (8 frames at 12 fps); the anchor leaves the tip 0.55 of the way through (render/chars/marsh.js)
-const KR_SURFACE = 8 / 9, KR_DIVE = 8 / 9;   // the head's surface and dive clips (8 frames at 9 fps)
 export const isKraken = m => m.type === 'boss' && m.kind === 'kraken';
 
 /** A freshly spawned Kraken: the head is down (m.hidden), and its first set of tentacles rises on its first frame (needSet; a continued night replaces this, restoreKraken). */
@@ -219,7 +218,7 @@ export function initKraken(m){
 function tideP(){ const sh = liveShore(); return rnd(0.03, Math.max(0.045, sh > 0.075 ? sh - 0.03 : 0.07)); }
 const tentacleCount = m => m.form === 2 ? TYPES.kraken.form2.tentacles : TYPES.kraken.tentacles;
 /** Raise one tentacle in `lane` (or a free lane: not one that another living tentacle of this Kraken holds). */
-function raiseTentacle(m, lane){
+function raiseTentacle(lane){
   const t = spawnMonster('tentacle', lane, true, tideP()); t.age = 0; t.flash = 0.2;
   for (let i = 0; i < 8; i++) spark(t.x, mY(t) + 6, '#e8707a', 100);
   SFX.monsterAct('tentacle', 'rise');
@@ -233,7 +232,7 @@ function freeLanes(m){
 function raiseSet(m){
   m.slots = [];
   const lanes = shuffle([...Array(COLS).keys()]);
-  for (let i = 0; i < tentacleCount(m); i++) m.slots.push({ mon:raiseTentacle(m, lanes[i % COLS]), t:0 });
+  for (let i = 0; i < tentacleCount(m); i++) m.slots.push({ mon:raiseTentacle(lanes[i % COLS]), t:0 });
   m.needSet = false;
 }
 function riseHead(m){
@@ -260,7 +259,7 @@ export function updateKraken(m, dt){
       if (sl.mon && (sl.mon.dead || !G.monsters.includes(sl.mon))){ sl.mon = null; sl.t = T.regrow; }   // it fell: its own clock starts
       if (!sl.mon){
         sl.t -= dt;
-        if (sl.t <= 0){ const f = freeLanes(m); sl.mon = raiseTentacle(m, f[0] != null ? f[0] : Math.floor(Math.random() * COLS)); sl.t = 0; }
+        if (sl.t <= 0){ const f = freeLanes(m); sl.mon = raiseTentacle(f[0] != null ? f[0] : Math.floor(Math.random() * COLS)); sl.t = 0; }
         else down++;
       }
     });

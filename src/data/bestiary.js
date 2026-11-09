@@ -7,7 +7,8 @@ export const COMPANIONS = { hauler:['gargoyle'], slime:['blob'], vampire:['bat']
   ...(__RELEASE__ >= 4 ? { hayrick:['hayrickBurning'], husker:['huskerBare', 'huskerBurning', 'huskerCharred'], strawlord:['crow'], casketjack:['coffin'] } : {}),   // Release 4: burning forms, the Strawlord's crows (met first on N1-4), Casket Jack's Fallen Casket
   ...(__RELEASE__ >= 5 ? { reaper:['crow'], fogwalker2:['brute'] } : {}),   // Release 5: the crow out of a fallen Reaper, Fogwalker 2's Mossbacks (a world 1 monster, new to the hollow's books)
   ...(__RELEASE__ >= 7 ? { ashcrone:['crow'] } : {}),   // Release 7: the four crows the Ash Crone arrives with (new to the witchwood books)
-  ...(__RELEASE__ >= 8 ? { siegetower:['marshal'] } : {}) };   // Release 8: the Storm Marshal first walks down the Siege Tower's ramp (N4-4)
+  ...(__RELEASE__ >= 8 ? { siegetower:['marshal'] } : {}),
+  ...(__RELEASE__ >= 9 ? { bloodslime:['bloodblob'] } : {}) };   // Release 9: the Bloodlets a fallen Blood Slime leaves   // Release 8: the Storm Marshal first walks down the Siege Tower's ramp (N4-4)
 
 /** The boss at the end of each nightmare book (Release 4), listed last in its nightmare bestiary. Once its fight is built (N1-16, the Fallen
  *  Gravekeeper, 2026-11-05) the level lists it like any boss; until then this entry holds its place (an entry may give `icon` [type, form] to draw). */
@@ -105,6 +106,11 @@ export const BESTIARY = {
     glutton:    { lore:'A guest who came to the Count\u2019s feast and never left the table. It still has its napkin.', ability:'Throws red nets onto your pumpkins, two at a time, and takes no damage while any of its red nets is on the patch. Launch the netted pumpkins or break a Crookneck Gourd, then strike.' },
     bride:      { lore:'Married to the Count on the night of the first storm. She has kept her veil, and lends it to whoever needs it most.', ability:'Drapes a red veil over the nearest monster in her lane or one beside it; nothing hurts it until she falls. When it is gone she veils the next.' },
     fallencount:{ lore:'The Vampire Count, fallen to the storm he waited for. The rain runs red where he walks, and his keep rebuilds itself around him.', ability:'Never reaches the wall. Throws red nets that shield him, heals in a trance for every netted pumpkin, hurls a blood spear at his fence, calls lightning down a column of your patch, summons Lancers and Brides, and raises an Archer Tower and a Gatehouse.' },
+  } : {}),
+  ...(__RELEASE__ >= 9 ? {   // the nightmare Drowned Marsh (Release 9), in first-met order
+    bloodslime: { lore:'Whatever seeps out of the wreck when the moon goes red. It remembers every sailor it has swallowed, and keeps their bones.', ability:'Four health. Kill it and three Bloodlets crawl out; each swells back into a full Blood Slime after six seconds, for ever, so kill them fast. Frozen Bloodlets do not swell. At most twelve slimes and Bloodlets at once.' },
+    bloodblob:  { lore:'Half a slime, a third of a slime, a slime in the making. It is always in a hurry to grow up.', ability:'One health, quick. It swells for six seconds and becomes a Blood Slime again unless you get it first.' },
+    pirate:     { lore:'He sank with his ship and kept his flintlock. The powder has never been dry since, and he has never missed.', ability:'Four health. Stops once or twice on the way down, aims for a second and shoots the highest pumpkin in his column. Never a gourd. Kill him before he stops.' },
   } : {}),
   twintides:  { lore:'Two serpents hatched from one egg on the night the village drowned. They finish each other’s sentences.', ability:'Never reach the wall. Both must die within a short window or the fallen one rises again.' },
 };

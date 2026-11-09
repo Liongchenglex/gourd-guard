@@ -8,6 +8,7 @@ import { glueStep } from './glue.js';
 import { magnetSlide } from './magnet.js';
 import { initHollowKing, updateHollowKing } from './hollowking.js';
 import { updateHollowMonster, reapLanes, initHollowMonster, initLamplighter, updateLamplighter, initFallenPolt, updateFallenPolt } from './hollow.js';
+import { initMarshMonster, updateMarshMonster, marshStop } from './marsh.js';
 import { newCastle, initKeepMonster, updateKeepMonster, keepStop, keepParked, keepSpeed, lancerHit, keepTick, updateSiege, updateFallenCount } from './keep.js';
 import { initWitchwoodMonster, updateWitchwoodMonster, toadStop, tongueFree, initTreant, updateTreant, initFallenHex, updateFallenHex } from './witchwood.js';
 import { updateNightmareMonster, initStrawlord, updateStrawlord, crowStrike, initFallenGK, updateFallenGK } from './nightmare.js';
@@ -130,6 +131,7 @@ export function spawnMonster(key, lane, minion, p, formArg){
   if (__RELEASE__ >= 7 && type === 'boss' && kind === 'fallenhexwitch') initFallenHex(m);   // the witchwood nightmare's boss, N3-16 (engine/witchwood.js)
   if (__RELEASE__ >= 8) m.id = ++monsterIds;   // a stable id: the nets a monster throws and the Bride's veil are told apart by it (engine/nets.js, engine/keep.js)
   if (__RELEASE__ >= 8) initKeepMonster(m);   // Nightmare Crumbling Keep's monsters (engine/keep.js; after the id: a Glutton throws its red nets at once)
+  if (__RELEASE__ >= 9) initMarshMonster(m);   // Nightmare Drowned Marsh's monsters: a Bloodlet's regrow clock, a Pirate's stop points (engine/marsh.js)
   G.monsters.push(m);
   return m;
 }
@@ -438,7 +440,7 @@ export function updateMonster(m, dt){
         }
         break;
       }
-      default: if (!(__RELEASE__ >= 4 && updateNightmareMonster(m, dt)) && !(__RELEASE__ >= 5 && updateHollowMonster(m, dt)) && !(__RELEASE__ >= 7 && updateWitchwoodMonster(m, dt)) && !(__RELEASE__ >= 8 && updateKeepMonster(m, dt))) m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
+      default: if (!(__RELEASE__ >= 4 && updateNightmareMonster(m, dt)) && !(__RELEASE__ >= 5 && updateHollowMonster(m, dt)) && !(__RELEASE__ >= 7 && updateWitchwoodMonster(m, dt)) && !(__RELEASE__ >= 8 && updateKeepMonster(m, dt)) && !(__RELEASE__ >= 9 && updateMarshMonster(m, dt))) m.x = m.tx + Math.sin(m.ph * 1.6) * 2;
     }
   }
   if (__RELEASE__ >= 4 && m.rush > 0) sp *= TYPES.rooster.rushMul;
@@ -446,6 +448,7 @@ export function updateMonster(m, dt){
   if (__RELEASE__ >= 8) sp *= keepSpeed(m);   // a Storm Lancer's charge and a Storm Marshal's rally, on top of Ice (engine/keep.js)
   let np = Math.min(m.p + sp * dt, aheadLimit(m));
   if (__RELEASE__ >= 8) np = Math.min(np, keepStop(m));   // a Lobber Cart parks at its spot and never goes on to chew (engine/keep.js)
+  if (__RELEASE__ >= 9) np = Math.min(np, marshStop(m));   // a Drowned Pirate stops at his next shooting point and while he aims (engine/marsh.js)
   if (__RELEASE__ >= 7 && m.type === 'toad') np = Math.min(np, toadStop(m));   // the Cauldron Toad stops at its tongue hold while its fence stands (engine/witchwood.js)
   if (m.chewing && !m.chewing.dead) np = Math.min(np, m.chewing.p);   // held at a scarecrow
   const pPrev = m.p;

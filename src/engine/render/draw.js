@@ -13,7 +13,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite, magSparkSprite } from './tools.js';
-import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, whirlSprite, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR } from './fx.js';
+import { castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, whirlSprite, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR, pirateAimSprite, pirateReticleSprite, pirateShotSprite } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -87,6 +87,7 @@ export function render(){
     if (__RELEASE__ >= 7 && m.type === 'triptych' && m.reflecting && !m.eating) drawTriptychBarrier(m, t);   // its three-lane barrier, behind it (one baked sprite)
     drawMonster(m, t);
   }
+  if (__RELEASE__ >= 9) drawPirateAims(t);   // a Pirate's aim line and reticle (baked sprites)
   drawVfx();
   drawTails(t);
   drawCastles(t);
@@ -296,6 +297,26 @@ export function drawPuddles(t){
     }
   }
   ctx.globalAlpha = 1;
+}
+/** Pirates that are aiming (Release 9): a baked dashed line from the Pirate down his column to the doomed pumpkin and a baked reticle on it, pulsing. Blits only. */
+export function drawPirateAims(t){
+  const ln = pirateAimSprite(K), ret = pirateReticleSprite(K);
+  for (const m of G.monsters){
+    if (m.type !== 'pirate' || !m.aiming || m.dead || m.aimRow < 0) continue;
+    const x = LANE(m.lane), y0 = mY(m) + m.r * 0.5, y1 = GY + m.aimRow * CS + CS / 2, len = y1 - y0;
+    if (len <= 4) continue;
+    const u = 1 - m.aimT / TYPES.pirate.aim;   // 0..1 across the aim: it brightens and pulses faster
+    ctx.save(); ctx.globalAlpha = 0.45 + 0.4 * u + 0.15 * Math.sin(t * (10 + 14 * u));
+    ctx.drawImage(ln.c, x - ln.ox, y0, ln.w, len);
+    const k = 1.15 - 0.3 * u; ctx.translate(x, y1); ctx.scale(k, k); ctx.rotate(u * 1.4);
+    ctx.drawImage(ret.c, -ret.ox, -ret.oy, ret.w, ret.h);
+    ctx.restore();
+  }
+}
+/** Pirate shots in flight (Release 9, vfx kind 'pirateshot'): one baked ball and tail each. */
+function drawPirateShot(v){
+  const sp = pirateShotSprite(K), p = Math.min(1, v.t / v.dur);
+  ctx.drawImage(sp.c, v.x - sp.ox, v.y0 + (v.y1 - v.y0) * p - sp.oy, sp.w, sp.h);
 }
 /** Whirlpool pairs (Release 9): each end is one baked spiral blitted spinning, with a pulsing alpha. Two drawImage a pair, no paths (perf rule). */
 export function drawWhirls(t){
@@ -699,6 +720,7 @@ function drawVfx(){
     else if (v.kind === 'blast') drawBlast(ctx, v);
     else if (v.kind === 'hexbolt') drawHexBolt(ctx, v);
     else if (__MAGNET__ && v.kind === 'magpull') drawMagPull(v);
+    else if (__RELEASE__ >= 9 && v.kind === 'pirateshot') drawPirateShot(v);
     else if (v.kind === 'sigil') drawSigil(ctx, v);
     else if (__RELEASE__ >= 7 && v.kind === 'potiondrink') drawPotionFx(v);   // a monster drinks a potion (Release 7)
     else if (__RELEASE__ >= 4 && (v.kind === 'firehiss' || v.kind === 'fireflare' || v.kind === 'firewave')) drawFireFx(v);   // Ice puts a fire out / a pumpkin burns up in one / the Fallen Gravekeeper's smash   // Ice puts a fire out / a pumpkin burns up in one

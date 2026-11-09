@@ -730,3 +730,35 @@ export function whirlSprite(col, k){
     g.strokeStyle = rgba(col, .8); g.lineWidth = 2; g.beginPath(); g.arc(0, 0, R * .96, 0, TAU); g.stroke();
   });
 }
+
+// ---------- The Drowned Pirate's aim (Release 9): a dashed red line down his column to the target and a reticle on it, and the shot itself ----------
+/** The aim line: a dashed beam 8 px wide and AIM_LEN tall, drawn stretched to the real length. Baked once per canvas scale. */
+export const AIM_LEN = 64;
+export function pirateAimSprite(k){
+  return bake('pirateaim:' + bakeK(k).toFixed(2), 10, AIM_LEN, 5, 0, bakeK(k), g => {
+    g.lineCap = 'round';
+    g.strokeStyle = 'rgba(255,60,60,.35)'; g.lineWidth = 8; g.beginPath(); g.moveTo(0, 2); g.lineTo(0, AIM_LEN - 2); g.stroke();
+    g.strokeStyle = '#ff5a5a'; g.lineWidth = 2.6; g.setLineDash([7, 6]); g.beginPath(); g.moveTo(0, 2); g.lineTo(0, AIM_LEN - 2); g.stroke();
+    g.strokeStyle = '#ffd0c8'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, 2); g.lineTo(0, AIM_LEN - 2); g.stroke();
+  });
+}
+/** The reticle on the doomed pumpkin: a ring with four ticks. 52 px, centred. */
+export function pirateReticleSprite(k){
+  return bake('pirateret:' + bakeK(k).toFixed(2), 52, 52, 26, 26, bakeK(k), g => {
+    g.lineCap = 'round';
+    g.strokeStyle = 'rgba(255,60,60,.4)'; g.lineWidth = 7; g.beginPath(); g.arc(0, 0, 17, 0, TAU); g.stroke();
+    g.strokeStyle = '#ff4a4a'; g.lineWidth = 3; g.beginPath(); g.arc(0, 0, 17, 0, TAU); g.stroke();
+    g.lineWidth = 3; for (let i = 0; i < 4; i++){ const a = i * TAU / 4; g.beginPath(); g.moveTo(Math.cos(a) * 10, Math.sin(a) * 10); g.lineTo(Math.cos(a) * 24, Math.sin(a) * 24); g.stroke(); }
+    g.fillStyle = '#ffe0d8'; g.beginPath(); g.arc(0, 0, 2.4, 0, TAU); g.fill();
+  });
+}
+/** The shot: a glowing lead ball with a short tail up the lane, point down. 14 x 40, the ball at the foot of the tail. */
+export function pirateShotSprite(k){
+  return bake('pirateshot:' + bakeK(k).toFixed(2), 14, 40, 7, 34, bakeK(k), g => {
+    const tail = g.createLinearGradient(0, -34, 0, 0); tail.addColorStop(0, 'rgba(255,200,120,0)'); tail.addColorStop(1, 'rgba(255,210,120,.9)');
+    g.fillStyle = tail; g.beginPath(); g.moveTo(-3, -34); g.lineTo(3, -34); g.lineTo(4.5, 0); g.lineTo(-4.5, 0); g.closePath(); g.fill();
+    g.shadowColor = '#ffb040'; g.shadowBlur = 8; g.fillStyle = '#3a3640'; g.beginPath(); g.arc(0, 0, 5.5, 0, TAU); g.fill(); g.shadowBlur = 0;
+    g.fillStyle = 'rgba(255,255,255,.6)'; g.beginPath(); g.arc(-1.6, -1.8, 1.7, 0, TAU); g.fill();
+  });
+}
+export function prebakePirateFx(k){ pirateAimSprite(k); pirateReticleSprite(k); pirateShotSprite(k); }

@@ -33,7 +33,7 @@ def marsh_page(browser, url):
 # ---------- Task 1: the track, the book page, the blood sea ----------
 # Names no lower build may hold. Not listed, because older builds already hold them for story reasons: 'Kraken' and 'Turtle Rider'
 # (comments in ported art, absent from a minified bundle but not from the source) and 'e4d9bd' (the Protector Gourd's shell colour).
-R9_NAMES = ['Blood Slime', 'Storm Eel', 'Siren', 'Swan Gourd', 'Fallen Twin Tides', 'Whirlpool', 'Beat Nightmare 4-4', 'marshN-blood', 'The tide rises!', '#4affd0']
+R9_NAMES = ['Blood Slime', 'Storm Eel', 'Siren', 'Swan Gourd', 'Fallen Twin Tides', 'Whirlpool', 'Drowned Pirate', 'Bloodlet', 'pirateshot', 'Beat Nightmare 4-4', 'marshN-blood', 'The tide rises!', '#4affd0']
 
 
 def check_r9_absent(browser, url):
@@ -403,6 +403,174 @@ def check_whirl_budget(browser, url):
 CHECKS = {'check_r9_absent': check_r9_absent, 'check_n5_track': check_n5_track, 'check_n5_blood_sea': check_n5_blood_sea, 'check_n5_book': check_n5_book,
           'check_tide_marks': check_tide_marks, 'check_tide_live_shore': check_tide_live_shore, 'check_tide_limits': check_tide_limits, 'check_tide_swallow_diver': check_tide_swallow_diver,
           'check_tide_swallow_walker': check_tide_swallow_walker, 'check_tide_boss_total': check_tide_boss_total, 'check_tide_continue': check_tide_continue, 'check_tide_budget': check_tide_budget, 'check_story_shore_unchanged': check_story_shore_unchanged, 'check_whirl_move': check_whirl_move, 'check_whirl_never': check_whirl_never, 'check_whirl_edges': check_whirl_edges, 'check_whirl_place': check_whirl_place, 'check_whirl_continue': check_whirl_continue, 'check_whirl_budget': check_whirl_budget}
+
+
+# ---------- Task 4: the Blood Slime and the Pirate ----------
+STEP = "([s, dt]) => { const g = window.__gg; for (let t = 0; t < s - 1e-9; t += dt) g.update(dt); }"
+ALIVE = "() => window.__gg.G.monsters.filter(m => !m.dead && (m.type === 'bloodslime' || m.type === 'bloodblob')).length"
+BLOBS = "() => window.__gg.G.monsters.filter(m => !m.dead && m.type === 'bloodblob').length"
+SLIMES = "() => window.__gg.G.monsters.filter(m => !m.dead && m.type === 'bloodslime').map(m => m.hp)"
+
+
+def slime_page(browser, url):
+    """marsh_page with an empty patch, for the Blood Slime and Pirate checks."""
+    page, errors = marsh_page(browser, url)
+    page.evaluate("() => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); g.G.def.total = 999; g.G.total = 999; }")
+    return page, errors
+
+
+def check_bloodslime(browser, url):
+    if not R9: return
+    page, errors = slime_page(browser, url)
+    T = page.evaluate("() => { const T = window.__gg.TYPES; return [T.bloodslime.hp, T.bloodslime.splits, T.bloodblob.hp, T.bloodblob.regrow]; }")
+    ok(T == [4, 3, 1, 6], f'Blood Slime 4 hp splits 3, blob 1 hp regrows in 6 s {T}')
+    page.evaluate("() => { const g = window.__gg, m = g.spawnMonster('bloodslime', 2, true, 0.25); window.__s = m; g.kill(m); }")
+    ok(page.evaluate(BLOBS) == 3, f'a kill makes 3 blobs ({page.evaluate(BLOBS)})')
+    ok(page.evaluate("() => window.__gg.G.monsters.filter(m => !m.dead && m.type === 'bloodblob').every(m => m.hp === 1)"), 'each blob has 1 hp')
+    page.evaluate(STEP, [3, 0.05])
+    sw = page.evaluate("() => window.__gg.G.monsters.filter(m => !m.dead && m.type === 'bloodblob').map(m => m.swell)")
+    ok(all(1.3 < x < 1.45 for x in sw), f'a Bloodlet swells as it grows (x{sw[0]:.2f} at 3 s of 6)')
+    page.evaluate("() => { const g = window.__gg, b = g.G.monsters.find(m => !m.dead && m.type === 'bloodblob'); b.hp = 0; g.kill(b); }")
+    ok(page.evaluate(BLOBS) == 2 and page.evaluate(ALIVE) == 2, 'a blob killed at 3 s is gone and splits no more')
+    page.evaluate(STEP, [2.8, 0.05])
+    ok(page.evaluate(BLOBS) == 2, 'at 5.8 s the two blobs are still blobs')
+    page.evaluate(STEP, [0.6, 0.05])
+    ok(page.evaluate(BLOBS) == 0 and page.evaluate(SLIMES) == [4, 4], f'after 6 s each is a 4-hp Blood Slime {page.evaluate(SLIMES)}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_slime_cap(browser, url):
+    if not R9: return
+    page, errors = slime_page(browser, url)
+    SP = "(n) => { const g = window.__gg; window.__v = []; for (let i = 0; i < n; i++) window.__v.push(g.spawnMonster('bloodslime', i % 5, true, 0.2 + 0.05 * Math.floor(i / 5))); }"
+    KILL = "() => { const g = window.__gg, m = window.__v[0]; m.hp = 0; g.kill(m); }"
+    page.evaluate(SP, 12); page.evaluate(KILL)
+    ok(page.evaluate(ALIVE) == 12 and page.evaluate(BLOBS) == 1, f'with 11 alive a split makes 1 blob ({page.evaluate(BLOBS)}, {page.evaluate(ALIVE)} alive)')
+    page.evaluate("() => { const G = window.__gg.G; G.monsters.length = 0; }")
+    page.evaluate(SP, 13); page.evaluate(KILL)
+    ok(page.evaluate(ALIVE) == 12 and page.evaluate(BLOBS) == 0, f'with 12 alive a split makes none ({page.evaluate(BLOBS)} blobs, {page.evaluate(ALIVE)} alive)')
+    page.evaluate("() => { const G = window.__gg.G; G.monsters.length = 0; }")
+    page.evaluate(SP, 10)
+    peak = page.evaluate("() => { const g = window.__gg; let peak = 0; for (const m of window.__v){ m.hp = 0; g.kill(m); peak = Math.max(peak, g.G.monsters.filter(o => !o.dead && (o.type === 'bloodslime' || o.type === 'bloodblob')).length); } return peak; }")
+    ok(peak <= 12 and page.evaluate(ALIVE) == 12, f'ten simultaneous splits never exceed 12 (peak {peak}, now {page.evaluate(ALIVE)})')
+    page.evaluate(STEP, [7, 0.05])
+    ok(page.evaluate(ALIVE) <= 12, f'regrowth keeps the cap ({page.evaluate(ALIVE)})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_slime_win(browser, url):
+    if not R9: return
+    page, errors = slime_page(browser, url)
+    page.evaluate("() => { const g = window.__gg, G = g.G; G.def.boss = null; G.spawned = G.def.total; const m = g.spawnMonster('bloodslime', 2, true, 0.25); g.kill(m); }")
+    page.evaluate(STEP, [1, 0.05])
+    ok(page.evaluate("() => window.__gg.G.over") is False, 'the spawn total is reached, but the night goes on while a blob stands')
+    page.evaluate(STEP, [6.5, 0.05])
+    ok(page.evaluate("() => window.__gg.G.over") is False and page.evaluate(SLIMES) == [4, 4, 4], 'the blobs regrew: still not won')
+    page.evaluate("() => { const g = window.__gg; for (const m of g.G.monsters.filter(o => !o.dead)){ m.hp = 0; g.kill(m); } }")
+    page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 4; i++) for (const m of g.G.monsters.filter(o => !o.dead && o.type === 'bloodblob')){ m.hp = 0; g.kill(m); } }")
+    page.evaluate(STEP, [0.2, 0.05])
+    ok(page.evaluate("() => window.__gg.G.over") is True, 'the night ends once the last blob dies')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_slime_frozen(browser, url):
+    if not R9: return
+    page, errors = slime_page(browser, url)
+    page.evaluate("() => { const g = window.__gg, m = g.spawnMonster('bloodslime', 2, true, 0.25); g.kill(m); window.__b = g.G.monsters.find(o => !o.dead && o.type === 'bloodblob'); window.__g0 = window.__b.growT || 0; window.__b.frozenT = 30; }")
+    page.evaluate(STEP, [8, 0.05])
+    r = page.evaluate("() => [window.__b.type, window.__b.dead, window.__b.growT || 0, window.__g0]")
+    ok(r[0] == 'bloodblob' and not r[1] and abs(r[2] - r[3]) < 1e-9, f'a frozen blob does not regrow for 8 s {r}')
+    page.evaluate("() => { window.__b.frozenT = 0; }")
+    page.evaluate(STEP, [6.2, 0.05])
+    ok(page.evaluate("() => window.__b.dead") is True, 'unfrozen, it regrows after its 6 s')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+PIR = """(o) => { const g = window.__gg; g.grid.forEach(r => r.fill(null));
+  for (const [r, c, gourd] of o.cells) g.grid[r][c] = gourd ? g.newGourd('grave') : g.newCell(0);
+  const m = g.spawnMonster('pirate', 2, true, 0.1); if (o.stops) m.stops = o.stops.slice(); window.__p = m; return m.stops.slice(); }"""
+CELL = "([r, c]) => { const x = window.__gg.grid[r][c]; return !x ? 'none' : x.gourd ? 'gourd' : 'pumpkin'; }"
+
+
+def pirate_to_stop(page):
+    """Step the night in 0.05 s ticks until the Pirate begins to aim (so the aim has just begun when this returns)."""
+    return page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 4000 && !window.__p.aiming; i++) g.update(0.05); return !!window.__p.aiming; }")
+
+
+def check_pirate(browser, url):
+    if not R9: return
+    page, errors = slime_page(browser, url)
+    stops = [page.evaluate(PIR, {'cells': []}) for _ in range(30)]
+    ok(all(1 <= len(s) <= 2 and all(0.3 <= x <= 0.6 for x in s) for s in stops) and {len(s) for s in stops} == {1, 2}, 'he picks one or two stop points in [0.3, 0.6]')
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; }")
+    # the top pumpkin of his column is shot, after 1 s of aim; the one below stays
+    page.evaluate(PIR, {'cells': [(1, 2), (3, 2), (1, 4)], 'stops': [0.35]})
+    ok(pirate_to_stop(page), 'he stops and aims')
+    p0 = page.evaluate("() => window.__p.p")
+    ok(0.3 <= p0 <= 0.4, f'at his stop point {p0:.3f}')
+    page.evaluate(STEP, [0.9, 0.05])
+    ok(page.evaluate("() => window.__p.aiming") and page.evaluate(CELL, [1, 2]) == 'pumpkin', 'after 0.9 s he is still aiming and nothing is destroyed')
+    ok(abs(page.evaluate("() => window.__p.p") - p0) < 0.005, 'he stands still while he aims')
+    page.evaluate(STEP, [0.2, 0.05])
+    c = [page.evaluate(CELL, [1, 2]), page.evaluate(CELL, [3, 2]), page.evaluate(CELL, [1, 4])]
+    ok(c == ['none', 'pumpkin', 'pumpkin'], f'the top pumpkin in his column is destroyed, the rest stay {c}')
+    page.evaluate(STEP, [3, 0.05])
+    ok(page.evaluate("() => window.__p.p") > p0 + 0.05, 'then he walks on')
+    # a gourd at the top is skipped
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; }")
+    page.evaluate(PIR, {'cells': [(0, 2, True), (2, 2), (4, 2)], 'stops': [0.35]})
+    pirate_to_stop(page); page.evaluate(STEP, [1.1, 0.05])
+    c = [page.evaluate(CELL, [0, 2]), page.evaluate(CELL, [2, 2]), page.evaluate(CELL, [4, 2])]
+    ok(c == ['gourd', 'none', 'pumpkin'], f'a gourd at the top is skipped for the next pumpkin {c}')
+    # an empty column: no shot, he walks on
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; }")
+    page.evaluate(PIR, {'cells': [(1, 3)], 'stops': [0.35]})
+    page.evaluate(STEP, [8, 0.05])
+    ok(page.evaluate("() => [window.__p.aiming, window.__p.p > 0.4]") == [False, True] and page.evaluate(CELL, [1, 3]) == 'pumpkin', 'an empty column means no shot: he walks on')
+    ok(page.evaluate("() => { const G = window.__gg.G; return G.projs.length + G.drops.length; }") >= 0, 'no leftovers')
+    # two shots
+    page.evaluate("() => { window.__gg.G.monsters.length = 0; }")
+    page.evaluate(PIR, {'cells': [(1, 2), (2, 2), (3, 2)], 'stops': [0.33, 0.5]})
+    page.evaluate(STEP, [14, 0.05])
+    n = sum(page.evaluate(CELL, [r, 2]) == 'pumpkin' for r in (1, 2, 3))
+    ok(n == 1, f'two shots destroy two pumpkins in his column ({3 - n})')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_slime_budget(browser, url):
+    if not R9: return
+    page, errors = slime_page(browser, url)
+    probe = """() => new Promise(res => { const g = window.__gg, c = g.ctx, f = c.fill, s = c.stroke, n = { fill:0, stroke:0 }; let fr = 0;
+      c.fill = function(...a){ n.fill++; return f.apply(this, a); }; c.stroke = function(...a){ n.stroke++; return s.apply(this, a); };
+      const tick = () => { if (++fr < 20) requestAnimationFrame(tick); else { delete c.fill; delete c.stroke; res(n); } }; requestAnimationFrame(tick); })"""
+    page.evaluate("() => { window.__gg.setState('play'); window.__gg.G.spawnTimer = 999; window.__gg.G.sproutT = -999; }")
+    page.evaluate(probe)   # warm
+    base = page.evaluate(probe)
+    page.evaluate("() => { const g = window.__gg; for (let i = 0; i < 6; i++) g.spawnMonster('bloodslime', i % 5, true, 0.3 + 0.1 * Math.floor(i / 5)); for (let i = 0; i < 6; i++) g.spawnMonster('bloodblob', (i + 2) % 5, true, 0.2 + 0.1 * Math.floor(i / 5)); g.G.monsters.forEach(m => { m.sp = 0; m.age = 5; }); }")
+    page.evaluate("() => new Promise(r => setTimeout(r, 400))")
+    ok(page.evaluate(ALIVE) == 12, 'twelve slimes and blobs stand')
+    page.evaluate(probe)
+    n = page.evaluate(probe)
+    ok(n['fill'] <= base['fill'] + 20 and n['stroke'] <= base['stroke'] + 20, f'12 slimes and blobs add no fill/stroke over 20 frames (empty {base}, crowded {n})')
+    page.evaluate("() => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); g.grid[1][2] = g.newCell(0); const m = g.spawnMonster('pirate', 2, true, 0.3); m.stops = [0.3]; m.age = 5; window.__p = m; for (let i = 0; i < 40 && !m.aiming; i++) g.update(0.05); }")
+    ok(page.evaluate("() => window.__p.aiming") is True, 'a Pirate aims')
+    aim = """() => { const g = window.__gg, c = g.ctx, d = c.drawImage, f = c.fill, s = c.stroke, n = { img:0, fill:0, stroke:0 };
+      c.drawImage = function(...a){ n.img++; return d.apply(this, a); }; c.fill = function(...a){ n.fill++; return f.apply(this, a); }; c.stroke = function(...a){ n.stroke++; return s.apply(this, a); };
+      try { g.drawPirateAims(1.1); } finally { delete c.drawImage; delete c.fill; delete c.stroke; } return n; }"""
+    page.evaluate(aim)
+    n = page.evaluate(aim)
+    ok(n['img'] == 2 and n['fill'] == 0 and n['stroke'] == 0, f'the aim line and reticle are two blits and no paths {n}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_bloodslime': check_bloodslime, 'check_slime_cap': check_slime_cap, 'check_slime_win': check_slime_win, 'check_slime_frozen': check_slime_frozen,
+               'check_pirate': check_pirate, 'check_slime_budget': check_slime_budget})
 
 
 def main():

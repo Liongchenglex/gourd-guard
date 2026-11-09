@@ -18,7 +18,7 @@ import { charIcon, drawChar } from './anim.js';
 import { clamp, TAU } from '../util.js';
 
 export function drawMonster(m, t){
-  let y = mY(m); const s = mS(m) * (__RELEASE__ >= 7 && m.drank ? bulkyScale(m) : 1);   // bulky potions: drawn bigger (Release 7)
+  let y = mY(m); const s = mS(m) * (__RELEASE__ >= 7 && m.drank ? bulkyScale(m) : 1) * (__RELEASE__ >= 9 && m.swell ? m.swell : 1);   // bulky potions: drawn bigger (Release 7)
   if (m.eating && m.frozenT <= 0) y += Math.sin(m.ph * 14) * 2.5;
   const fade = m.demo ? 1 : Math.min(1, m.age / 0.5);
   const blue = m.slowT > 0 || m.frozenT > 0;

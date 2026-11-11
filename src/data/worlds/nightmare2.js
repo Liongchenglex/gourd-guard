@@ -79,8 +79,8 @@ export default __RELEASE__ >= 5 ? [
     quests:[['noTools'], ['wallMin', 40]] }),
   // N2-16 The Fallen Poltergeist: the book's boss (spec Part 8; owner 2026-11-11): it vanishes and swaps, lays black fog, turns reaper three times (each one
   // reshuffles the patch) and lights cursed lanterns at the fences. Steady poison fog (every 10 s) so there is always rot for its reaper phases and its black
-  // fog. Fogwalkers 2, Reapers, Poltergeists 2, Wisp Riders 2 and both Plague Doctors walk in meanwhile (owner: exactly these). One normal chest.
+  // fog. Fogwalkers 2, Reapers, Poltergeists 2, Wisp Riders 2 and Plague Doctors walk in meanwhile (owner: exactly these; Plague Doctor 2 removed 2026-11-11, too hard). One normal chest.
   Gd({ level:16, name:'The Fallen Poltergeist', pattern:0, total:22, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.12, boss:'fallenpoltergeist', bossChest:'normal', gourds:BOTH(),
-    pool:[['fogwalker2', 3], ['reaper', 4], ['minipolt', 3], ['comet', 4], ['doctor', 3], ['rotdoctor', 3]], poison:FOG(10),
+    pool:[['fogwalker2', 3], ['reaper', 4], ['minipolt', 3], ['comet', 4], ['doctor', 3]], poison:FOG(10),
     quests:[['wallMin', 40], ['noTools']] }),
 ] : [];

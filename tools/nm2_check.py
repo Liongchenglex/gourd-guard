@@ -1859,7 +1859,7 @@ def check_n2_levels(browser, url):
     ok(L[3]['boss'] == 'lamplighter' and L[3]['bossForm'] == 1 and L[3]['bossChest'] == 'normal' and L[3]['unlockGourds'] == ['protector'], f"N2-4: the Lamplighter, a normal chest, unlocks the Protector {L[3]['boss'], L[3]['bossChest'], L[3]['unlockGourds']}")
     ok(L[12]['boss'] == 'lamplighter' and L[12]['bossForm'] == 2 and L[12]['bossChest'] == 'normal', 'N2-13: the Lamplighter in form 2 with a normal chest')
     ok(L[15]['boss'] == 'fallenpoltergeist' and L[15]['bossChest'] == 'normal', 'N2-16: the Fallen Poltergeist with a normal chest')
-    ok(set(L[15]['pool']) == {'fogwalker2', 'reaper', 'minipolt', 'comet', 'doctor', 'rotdoctor'} and len(L[15]['pool']) == 6, f"N2-16 walks exactly Fogwalkers 2, Reapers, Poltergeists 2, Wisp Riders 2, Plague Doctors and Plague Doctors 2 (owner 2026-11-11) {L[15]['pool']}")
+    ok(set(L[15]['pool']) == {'fogwalker2', 'reaper', 'minipolt', 'comet', 'doctor'} and len(L[15]['pool']) == 5, f"N2-16 walks exactly Fogwalkers 2, Reapers, Poltergeists 2, Wisp Riders 2 and Plague Doctors, no Plague Doctor 2 (owner 2026-11-11) {L[15]['pool']}")
     ok([k + 1 for k, d in enumerate(L) if d['boss']] == [4, 13, 16], 'bosses on N2-4, N2-13 and N2-16 only')
     ok(L[4]['coach'] == 'protector' and [k + 1 for k, d in enumerate(L) if d['coach']] == [5], 'N2-5 keeps the Protector tutorial (the only coach)')
     P = [d['poison'] for d in L]

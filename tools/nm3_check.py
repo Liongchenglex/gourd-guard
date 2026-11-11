@@ -1296,7 +1296,7 @@ def check_fallen_hex(browser, url):
     the last 1) then a glide of 1-2 lanes; altars at 75/50/25% (one at a time, a hit past two marks raises the second when the first falls)."""
     if not R7: return
     page, errors = open_page(browser, url)
-    ok(page.evaluate(FH_T) == [True, 45, 34, 0.03, 50, 0, 400, 6, 0.28, 12, 10, 8, [2, 3], 6, [1, 3], 10, 0.5, [1, 2], [0.75, 0.5, 0.25], 8, 16, True], f'Fallen Hexwitch data {page.evaluate(FH_T)}')
+    ok(page.evaluate(FH_T) == [True, 45, 34, 0.03, 50, 0, 400, 6, 0.28, 12, 8, 8, [2, 3], 6, [1, 3], 10, 0.5, [1, 2], [0.75, 0.5, 0.25], 8, 16, True], f'Fallen Hexwitch data {page.evaluate(FH_T)}')
     ok(page.evaluate("() => window.__gg.BOSS_NAMES.fallenhexwitch") == 'The Fallen Hexwitch', 'her name on screen is "The Fallen Hexwitch"')
     intro = page.evaluate("() => (window.__gg.BOSS_INTRO.fallenhexwitch || {})[1] || ''")
     ok('altar' in intro.lower() and 'potion' in intro.lower(), f'she has a boss intro text {intro[:60]!r}')
@@ -1313,7 +1313,7 @@ def check_fallen_hex(browser, url):
     page.evaluate("() => { const G = window.__gg.G; G.hexZones.push({ shape:'box', lane:0, p:0.5, t:8 }); window.__b.zoneT = 0.05; }")
     ok(gwait(page, f"() => ({OWNZ})().length >= 1", 1) is not None, 'she raises an undead zone though an Ash Crone zone stands')
     z = page.evaluate(OWNZ)
-    ok(len(z) == 1 and z[0][0] == 'box54' and 9.5 < z[0][3] <= 10 and 2 <= z[0][1] <= 4, f'one 5x4 zone (box54) lasting 10 s, all on the field {z}')
+    ok(len(z) == 1 and z[0][0] == 'box54' and 7.5 < z[0][3] <= 8 and 2 <= z[0][1] <= 4, f'one 5x4 zone (box54) lasting 8 s (owner 2026-11-11), all on the field {z}')
     tp = page.evaluate("() => window.__gg.TILE_P()")
     ok(2 * tp - 1e-9 <= z[0][2] <= 1 - 2 * tp + 1e-9, f'its 4 tiles lie wholly on the field (p {z[0][2]}, tile {tp:.3f})')
     ok(page.evaluate("() => window.__b.zoneT") > 11, 'her zone clock restarts at 12 s')
@@ -1530,7 +1530,7 @@ def check_fallen_hex_baked(browser, url):
     ok(not page.evaluate("() => window.__gg.isBaked('hexwitch')"), 'the story Hexwitch atlas is not baked for her')
     fb = page.evaluate("() => window.__gg.fhBaked()")
     ok(fb[0] >= 3 and fb[1] >= 1 and fb[2] >= 4, f'the altar\'s crack states, her 5x4 zone and her black crow\'s 4 frames are baked at night start {fb}')
-    ok(all(page.evaluate(f"() => window.__gg.isBaked('{k}')") for k in ('root', 'ashcrone', 'covenwitch', 'witch')), 'and the roots, Ash Crone, Blood Coven Witch and Witch she summons')
+    ok(all(page.evaluate(f"() => window.__gg.isBaked('{k}')") for k in ('root', 'covenwitch', 'witch')), 'and the roots, Blood Coven Witch and Witch she summons')
     mb = page.evaluate("() => window.__gg.atlasBytes('fallenhexwitch') / 1e6")
     ok(mb < 12, f'her frames take {mb:.1f} MB at bake scale 2.5 (limit 12)')
     ok(dt < 3, f'the night opens in {dt:.1f} s')
@@ -1621,8 +1621,8 @@ def check_fh_summons(browser, url):
     r = page.evaluate("""() => { const g = window.__gg, G = g.G, b = window.__b, ms = G.monsters.filter(m => m.fromHex && !m.dead);
       return [ms.map(m => m.type).sort(), ms.every(m => m.minion), new Set(ms.map(m => m.lane)).size, ms.every(m => Math.abs(m.p - b.p) < 0.06),
         G.roots.map(r => [r.lane, r.by]), G.spawned - window.__sp0, +b.summonT.toFixed(1)]; }""")
-    ok(r[0] == ['ashcrone', 'covenwitch', 'witch'] and r[1], f'one Ash Crone, one Blood Coven Witch and one Witch, extras {r[:2]}')
-    ok(r[2] == 3 and r[3], f'spread over three lanes, at her height {r[2:4]}')
+    ok(r[0] == ['covenwitch', 'witch'] and r[1], f'one Blood Coven Witch and one Witch, no Ash Crone (owner 2026-11-11), extras {r[:2]}')
+    ok(r[2] == 2 and r[3], f'in two lanes, at her height {r[2:4]}')
     ok(len(r[4]) == 2 and len({l for l, _ in r[4]}) == 2 and all(l != 3 and by == 'fallenhex' for l, by in r[4]), f"two of the Treant's roots in two lanes other than hers, hers {r[4]}")
     ok(r[5] == 0, f'they do not count toward the night ({r[5]})')
     ok(15 <= r[6] <= 16, f'her summon clock restarts at 16 s ({r[6]})')

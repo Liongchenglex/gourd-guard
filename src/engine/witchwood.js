@@ -428,11 +428,11 @@ function updateHexCrows(dt){
   }
   if (landed) G.fhCrows = cs.filter(c => !c.done);
 }
-/** Her summons: two of the Treant's roots and one Ash Crone, one Blood Coven Witch and one Witch as extras, spread over three lanes at her height. */
+/** Her summons: two of the Treant's roots and one Blood Coven Witch and one Witch as extras, in two lanes at her height (owner 2026-11-11: no Ash Crone, too many undead zones). */
 function fhSummon(m){
   raiseRootsIn(2, m.lane, 'fallenhex');
-  const lanes = shuffle([...Array(COLS).keys()]).slice(0, 3), p = Math.max(0, m.p - 0.02);
-  ['ashcrone', 'covenwitch', 'witch'].forEach((t, i) => { const o = spawnMonster(t, lanes[i], true, p); o.fromHex = true; spark(o.x, mY(o) - 10, '#ff2a3a', 120); });
+  const lanes = shuffle([...Array(COLS).keys()]).slice(0, 2), p = Math.max(0, m.p - 0.02);
+  ['covenwitch', 'witch'].forEach((t, i) => { const o = spawnMonster(t, lanes[i], true, p); o.fromHex = true; spark(o.x, mY(o) - 10, '#ff2a3a', 120); });
   bloodSparks(m.x, mY(m) - 20, 12, 150); ring(m.x, mY(m), 50, 'rgba(255,42,58,.8)');
   addFloat('Her coven!', m.x, mY(m) - m.r - 30, '#ff8a80', 18, 1.2);
   m.anim = { clip:'hex', t:0, dur:6 / 11 };

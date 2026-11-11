@@ -19,7 +19,7 @@ import { banner } from '../ui/hud.js';
 import { dropJukebox, jukeboxPoints } from './spawner.js';
 import { lightFire } from './fire.js';
 import { dropCoffin } from './nightmare.js';
-import { reaperFalls, cometBreaks, fpAfterHit, fpReaperHit } from './hollow.js';
+import { reaperFalls, cometBreaks, fpAfterHit, fpReaperHit, fpGate, fpFalls } from './hollow.js';
 import { witchwoodFalls, fhGate, fhAfterHit } from './witchwood.js';
 import { splitBlood, releaseImp, krakenGuard, krakenFalls, tidesGuard, tidesDown, tidesFalls } from './marsh.js';
 import { shieldedNow, shieldPuff, keepFalls, pieceFalls, knockArcher, archersGuard, siegeFalls, countGate, fcCross, countFalls } from './keep.js';
@@ -124,7 +124,8 @@ export function damage(m, amt, color, small, big){
   }
   if (__RELEASE__ >= 3 && m.kind === 'hollowking' && !m.hkClone){ amt = hkGate(m, amt); if (amt <= 0) return; }   // immune while his form stands
   if (__RELEASE__ >= 7 && m.kind === 'fallenhexwitch'){ amt = fhGate(m, amt); if (amt <= 0) return; }   // the Fallen Hexwitch: immune while her altar stands, never past her next mark (engine/witchwood.js)
-  if (__RELEASE__ >= 8 && m.kind === 'fallencount'){ amt = countGate(m, amt); if (amt <= 0) return; }   // a hit stops at his next blood-net mark (engine/keep.js)
+  if (__RELEASE__ >= 8 && m.kind === 'fallencount'){ amt = countGate(m, amt); if (amt <= 0) return; }
+  if (__RELEASE__ >= 5 && m.kind === 'fallenpoltergeist'){ amt = fpGate(m, amt); if (amt <= 0) return; }   // never past its next reaper mark: no phase is skipped (engine/hollow.js)   // a hit stops at his next blood-net mark (engine/keep.js)
   m.hp -= amt; m.flash = 0.1;
   addFloat(fmt(amt), m.x + rnd(-8, 8), mY(m) - m.r * mS(m) - 14, color || '#fff', small ? 16 : big ? 30 : 23, big ? 1 : 0.8);   // big: a Wartling hit (Release 7)
   if (m.hp <= 0.001) kill(m);
@@ -238,6 +239,7 @@ export function kill(m){
   m.dead = true;
   if (__RELEASE__ >= 4 && m.type === 'rooster') lightFire(m.lane, m.p);   // a Cinder Rooster leaves a fire tile where it falls, whatever killed it
   if (__RELEASE__ >= 5 && m.type === 'reaper') reaperFalls(m);   // a crow bursts out where the Reaper fell (engine/hollow.js)
+  if (__RELEASE__ >= 5) fpFalls(m);   // the Fallen Poltergeist's cursed lanterns go with it (engine/hollow.js)
   if (__RELEASE__ >= 7) witchwoodFalls(m);   // the Flask Bearer's potion, the Cauldron Toad's burst (engine/witchwood.js)
   if (__RELEASE__ >= 8) countFalls(m);   // the Fallen Count's nets, bolt, spears and castle pieces go with him (engine/keep.js)
   if (__RELEASE__ >= 9) tidesFalls(m);   // a Fallen twin's water spear goes with it (engine/marsh.js)

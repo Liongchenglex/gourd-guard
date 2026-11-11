@@ -1473,11 +1473,12 @@ FGRID = """() => { const g = window.__gg; return g.grid.map(row => row.map(x => 
 FPROT = "() => [0, 1, 2, 3, 4].map(r => [0, 1, 2, 3, 4, 5, 6].map(c => window.__gg.isProtected(r, c)))"
 # A game-time log of the boss from now (window.__fe): lane changes ['lane', t, lane, teleport clip seen], black fog count changes ['fog', t, n],
 # swap clips starting ['swap', t]; t in game seconds since the log started, sampled every 10 ms. Highest p in window.__fmaxP.
-FLOG = """() => { const G = window.__gg.G, b = window.__b, t0 = G.t; window.__fe = []; window.__fmaxP = 0; let lane = b.lane, nf = (b.fogs || []).length, sw = false; clearInterval(window.__fi);
+FLOG = """() => { const G = window.__gg.G, b = window.__b, t0 = G.t; window.__fe = []; window.__fmaxP = 0; let lane = b.lane, nf = (b.fogs || []).length, sw = false; window.__fgs = null; clearInterval(window.__fi);
   window.__fi = setInterval(() => { const g = window.__gg, B = window.__b, t = g.G.t - t0; window.__fmaxP = Math.max(window.__fmaxP, B.p); g.G.spawnTimer = 999;
     if (B.lane !== lane){ lane = B.lane; window.__fe.push(['lane', t, lane, (g.G.vfx || []).some(v => v.kind === 'clip' && v.key === 'fallenpoltergeist' && v.clip === 'teleport')]); }
     const n = (B.fogs || []).length; if (n !== nf){ window.__fe.push(['fog', t, n]); nf = n; }
-    const s = !!(B.anim && B.anim.clip === 'swap'); if (s && !sw) window.__fe.push(['swap', t]); sw = s; }, 10); }"""
+    const s = !!(B.anim && B.anim.clip === 'swap'); if (s && !sw) window.__fe.push(['swap', t]); sw = s;
+    const gs = g.grid.map(row => row.map(x => x ? (x.tag == null ? 'g' : x.tag) : '-').join(',')).join('/'); if (gs !== window.__fgs){ if (window.__fgs != null) window.__fe.push(['grid', t]); window.__fgs = gs; } }, 10); }"""
 # One pumpkin of type t on monster `who` (-1: the boss): [rotOnly, hp change, the float it showed, rotten hits still needed in a reaper phase]
 FHIT = f"""([t, who]) => {{ const g = window.__gg, m = who < 0 ? window.__b : window.__ms[who], n0 = g.G.floats.length, h0 = m.hp; g.hitMonster(({HIT_PR})(t, m.lane), m);
   const f = g.G.floats.slice(n0).map(x => x.text).find(x => typeof x === 'string') || null; return [!!m.rotOnly, +(m.hp - h0).toFixed(2), f, m.reaper || 0]; }}"""
@@ -1508,16 +1509,17 @@ def shuffled_ok(before, after, prot, label):
 
 
 def check_fallen_polt(browser, url):
-    """N2-16: data and level; vanish every 6 s (teleport clip), swap 3 every 8 s (protection-aware, colours kept), a black fog 3x3 for 8 s around a
-    random monster (rot-only inside); shuffles at 66% and 33%; reaper phases at 50% and 20% (rot-only until 3 rotten hits); one normal chest."""
+    """N2-16 (owner 2026-11-11): data and level; it vanishes every 6 s (teleport clip) and swaps 3 pumpkins as it does (protection-aware, colours kept;
+    no separate swap clock); a black fog 3x3 for 8 s around a random monster (rot-only inside); reaper phases at 75%, 50% and 25% (a hit never carries
+    it past the next mark), each one reshuffling the whole patch and rot-only until 3 rotten hits; one normal chest."""
     if not R5: return
     page, errors = open_page(browser, url)
-    T = page.evaluate("""() => { const T = window.__gg.TYPES.fallenpoltergeist; return T ? [T.boss, T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.hold, T.vanishEvery, T.swapEvery, T.swapN,
-      T.zoneEvery, T.zoneFor, T.shuffleAt, T.reaperAt, T.reaperHits, T.noItems] : null; }""")
-    ok(T == [True, 45, 34, 0.03, 50, 0, 400, 6, 0.25, 6, 8, 3, 12, 8, [0.66, 0.33], [0.5, 0.2], 3, True], f'Fallen Poltergeist data {T}')
+    T = page.evaluate("""() => { const T = window.__gg.TYPES.fallenpoltergeist; return T ? [T.boss, T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.hold, T.vanishEvery, T.swapEvery === undefined, T.swapN,
+      T.zoneEvery, T.zoneFor, T.shuffleAt === undefined, T.reaperAt, T.reaperHits, T.lanternEvery, T.lanternN, T.lanternHp, T.lanternFor, T.lanternHit, T.noItems] : null; }""")
+    ok(T == [True, 45, 34, 0.03, 50, 0, 400, 6, 0.25, 6, True, 3, 12, 8, True, [0.75, 0.5, 0.25], 3, 20, 3, 3, 10, 0.5, True], f'Fallen Poltergeist data {T}')
     ok(page.evaluate("() => window.__gg.BOSS_NAMES.fallenpoltergeist") == 'The Fallen Poltergeist', 'its name on screen is "The Fallen Poltergeist"')
     intro = page.evaluate("() => (window.__gg.BOSS_INTRO.fallenpoltergeist || {})[1] || ''")
-    ok('rotten' in intro.lower() and 'shuffle' in intro.lower(), f'it has a boss intro text {intro[:60]!r}')
+    ok('rotten' in intro.lower() and 'shuffle' in intro.lower() and 'lantern' in intro.lower(), f'it has a boss intro text {intro[:60]!r}')
     L = page.evaluate("() => [13, 14, 15].map(i => { const d = window.__gg.NIGHTMARE_LEVELS[1][i]; return d && [d.level, d.name, d.boss, d.bossChest, !!d.gourd, d.gourds, !!d.poison]; })")
     ok(L[0] is not None and L[0][0] == 14 and L[1] is not None and L[1][0] == 15, f'placeholder nights N2-14 and N2-15 exist {L[:2]}')
     ok(L[2] == [16, 'The Fallen Poltergeist', 'fallenpoltergeist', 'normal', True, ['grave', 'protector'], True], f'N2-16: the Fallen Poltergeist, a normal chest, both gourds, steady poison {L[2]}')
@@ -1531,15 +1533,16 @@ def check_fallen_polt(browser, url):
         page.close(); return
     prot = page.evaluate(FPROT)
     ok(sum(map(sum, prot)) == 9, f'a Protector stands with its 3x3 ({sum(map(sum, prot))} cells)')
-    # three still ghouls; then force all three clocks and log in game time
+    ok(page.evaluate("() => window.__b.shufDone === undefined && window.__gg.TYPES.fallenpoltergeist.swapEvery === undefined"), 'no separate swap clock and no shuffle marks any more')
+    # three still ghouls; then force the vanish and fog clocks and log in game time (lane changes and patch changes)
     for spec in ([1, 0.5, 50], [2, 0.5, 50], [5, 0.5, 50]): page.evaluate(STILL, ['ghoul'] + spec)
-    g0 = page.evaluate(f"() => {{ const b = window.__b; b.tpT = b.swapT = b.zoneT = 0.1; ({FLOG})(); return ({FGRID})(); }}")
-    ok(wait_for(page, "() => window.__fe.some(e => e[0] === 'swap')", 20), 'it swaps')
+    g0 = page.evaluate(f"() => {{ const b = window.__b; b.tpT = b.zoneT = 0.1; b.lanT = 999; ({FLOG})(); return ({FGRID})(); }}")
+    ok(wait_for(page, "() => window.__fe.some(e => e[0] === 'lane')", 20), 'it vanishes')
     time.sleep(0.15)
     g1 = page.evaluate(FGRID)
     cells = [(r, c) for r in range(5) for c in range(7)]
     moved = [(r, c) for r, c in cells if g0[r][c] != g1[r][c]]
-    ok(len(moved) == 3 and sorted(g0[r][c][0] for r, c in moved) == sorted(g1[r][c][0] for r, c in moved), f'a swap trades 3 pumpkins among their own cells {moved}')
+    ok(len(moved) == 3 and sorted(g0[r][c][0] for r, c in moved) == sorted(g1[r][c][0] for r, c in moved), f'its vanish swaps 3 pumpkins among their own cells {moved}')
     col0 = {g0[r][c][0]: g0[r][c][1] for r, c in cells if g0[r][c]}; col1 = {g1[r][c][0]: g1[r][c][1] for r, c in cells if g1[r][c]}
     ok(col0 == col1 and not any(prot[r][c] for r, c in moved) and all(not str(g0[r][c][0]).startswith('G:') for r, c in moved), f'colours unchanged, never a gourd or a protected cell {moved}')
     # the black fog: rot-only inside its 3x3 (lanes +-1, 1.5 tiles) around one of the ghouls; the boss itself is not in it
@@ -1557,12 +1560,13 @@ def check_fallen_polt(browser, url):
         ok(r[0] and r[1] == 0 and r[2] == 'Blocked', f'a normal pumpkin is blocked on a monster in the black fog {r}')
         r = page.evaluate(FHIT, [R, ins])
         ok(r[1] == -1.5, f'a rotten pumpkin hurts it (1.5) {r}')
-    # the rest of the timers: vanish again at 6 s; swap again and the fog gone at 8 s
-    ok(wait_for(page, "() => window.__fe.filter(e => e[0] === 'swap').length >= 2 && window.__fe.filter(e => e[0] === 'fog').length >= 2", 40), 'a second swap and the fog lifting')
+    # the rest of the timers: vanish (and swap) again at 6 s; the fog gone at 8 s; the patch changes only when it vanishes
+    ok(wait_for(page, "() => window.__fe.filter(e => e[0] === 'lane').length >= 2 && window.__fe.filter(e => e[0] === 'fog').length >= 2", 40), 'a second vanish and the fog lifting')
+    time.sleep(0.3)
     fe = page.evaluate("() => window.__fe")
-    lanes = [e for e in fe if e[0] == 'lane']; swaps = [e[1] for e in fe if e[0] == 'swap']; fogs = [(e[2], e[1]) for e in fe if e[0] == 'fog']
+    lanes = [e for e in fe if e[0] == 'lane']; grids = [e[1] for e in fe if e[0] == 'grid']; fogs = [(e[2], e[1]) for e in fe if e[0] == 'fog']
     ok(len(lanes) >= 2 and abs(lanes[0][1] - 0.1) < 0.4 and abs(lanes[1][1] - 6.1) < 0.4 and all(e[3] for e in lanes[:2]), f'it vanishes into another lane every 6 s, with its teleport clip {lanes}')
-    ok(len(swaps) == 2 and abs(swaps[0] - 0.1) < 0.4 and abs(swaps[1] - 8.1) < 0.4, f'it swaps every 8 s {swaps}')
+    ok(len(grids) == len(lanes) and all(abs(gt - e[1]) < 0.06 for gt, e in zip(grids, lanes)), f'and the patch is swapped exactly when it vanishes, never between {grids} {[e[1] for e in lanes]}')
     ok(len(fogs) == 2 and fogs[0][0] == 1 and abs(fogs[0][1] - 0.1) < 0.4 and fogs[1][0] == 0 and abs(fogs[1][1] - 8.1) < 0.4, f'its black fog lies 8 s {fogs}')
     time.sleep(0.1)
     ok(page.evaluate("() => window.__ms.every(m => !m.rotOnly)"), 'once the fog lifts nobody is rot-only')
@@ -1573,50 +1577,36 @@ def check_fallen_polt(browser, url):
         out.push([n, bad]); }}
       return out; }}""")
     ok(all(x == [3, 0] for x in sw), f'20 more swaps: 3 pumpkins each, never in or out of the Protector square, never a gourd {sw}')
-    # the shuffle at 66%: 45 -> 29
+    # reaper phase 1 at 75%: a 16-damage hit at full health stops at the mark (33.75 of 45), the phase starts and the patch reshuffles
     page.evaluate("() => { window.__ms.forEach(m => m.dead = true); window.__gg.G.monsters = window.__gg.G.monsters.filter(m => !m.dead); }")
-    page.evaluate(FPATCH)
-    s0 = page.evaluate(f"() => {{ const g = window.__gg, b = window.__b; b.tpT = b.swapT = b.zoneT = 999; const s = ({FGRID})(); b.lastHit = 0; g.damage(b, 16, '#fff'); return s; }}")
-    time.sleep(0.3)
-    s1, done = page.evaluate(f"() => [({FGRID})(), [window.__b.shufDone, window.__b.reapDone, window.__b.hp]]")
-    ok(done == [1, 0, 29], f'at 66% health (29 of 45) one shuffle, no reaper phase yet {done}')
-    shuffled_ok(s0, s1, prot, 'the 66% shuffle')
-    s2 = page.evaluate(f"() => {{ const g = window.__gg, b = window.__b; g.grid.forEach(row => row.forEach(x => {{ if (x){{ x.fly = 0; x.ox = x.oy = 0; }} }})); const s = ({FGRID})(); b.lastHit = 0; g.damage(b, 5, '#fff'); return s; }}")
-    time.sleep(0.3)
-    s3, done = page.evaluate(f"() => [({FGRID})(), [window.__b.shufDone, window.__b.reapDone, window.__b.hp]]")
-    ok(done == [1, 0, 24] and s2 == s3, f'between the marks (53%) no shuffle {done}')
-    # the reaper phase at 50%: 24 -> 22
-    r = page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 2, '#fff'); return [b.hp, !!b.rotOnly, b.reaper, b.reapDone, b.anim && b.anim.clip]; }")
-    ok(r == [22, True, 3, 1, 'recolour'], f'at 50% health its reaper phase starts at once: rot-only, 3 rotten hits to go, the recolour clip {r}')
     R = page.evaluate("() => window.__gg.ROTTEN")
-    r = page.evaluate(FHIT, [0, -1])
-    ok(r[0] and r[1] == 0 and r[2] == 'Blocked' and r[3] == 3, f'reaper phase: a normal pumpkin is blocked {r}')
-    ok(page.evaluate("() => { const g = window.__gg, b = window.__b, h = b.hp; b.lastHit = 0; g.damage(b, 1, '#fff'); return b.hp - h; }") == 0, 'reaper phase: plain damage (burn, splash, tools) does nothing')
-    time.sleep(0.3)
-    ok(page.evaluate("() => !!window.__b.rotOnly") is True, 'it stays rot-only from frame to frame')
-    hits = [page.evaluate(FHIT, [R, -1]) for _ in range(3)]
-    ok([h[1] for h in hits] == [-1.5, -1.5, -1.5] and [h[3] for h in hits] == [2, 1, 0], f'3 rotten pumpkins hurt it 1.5 each and end the phase {hits}')
-    time.sleep(0.2)
-    r1 = page.evaluate(FHIT, [0, -1]); r2 = page.evaluate(FHIT, [R, -1])
-    ok(not r1[0] and r1[1] < 0, f'back to normal: a normal pumpkin hurts it {r1}')
-    ok(not r2[0] and r2[1] == 0.5, f'back to normal: a rotten pumpkin heals it (0.5) {r2}')
-    # the shuffle at 33% (to 14 of 45)
-    page.evaluate(FPATCH)
-    s0 = page.evaluate(f"() => {{ const g = window.__gg, b = window.__b; const s = ({FGRID})(); b.lastHit = 0; g.damage(b, b.hp - 14, '#fff'); return s; }}")
-    time.sleep(0.3)
-    s1, done = page.evaluate(f"() => [({FGRID})(), [window.__b.shufDone, window.__b.reapDone, window.__b.reaper]]")
-    ok(done == [2, 1, 0], f'at 33% health the second shuffle {done}')
-    shuffled_ok(s0, s1, prot, 'the 33% shuffle')
-    # the reaper phase at 20% (to 8.5 of 45), then never again
-    r = page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, b.hp - 8.5, '#fff'); return [!!b.rotOnly, b.reaper, b.reapDone]; }")
-    ok(r == [True, 3, 2], f'at 20% health the second reaper phase {r}')
-    hits = [page.evaluate(FHIT, [R, -1]) for _ in range(3)]
-    ok([h[3] for h in hits] == [2, 1, 0], f'3 rotten hits end it {hits}')
-    time.sleep(0.2)
-    r = page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 1, '#fff'); return [b.hp, !!b.rotOnly, b.reaper, b.shufDone, b.reapDone]; }")
-    ok(r == [3, False, 0, 2, 2], f'no third phase or shuffle {r}')
+    LAND = "() => window.__gg.grid.forEach(row => row.forEach(x => { if (x){ x.fly = 0; x.ox = x.oy = 0; } }))"
+    for k, (mark, hit) in enumerate(((33.75, 16), (22.5, 20), (11.25, 20)), 1):
+        page.evaluate(FPATCH)
+        s0 = page.evaluate(f"([a]) => {{ const g = window.__gg, b = window.__b; b.tpT = b.zoneT = b.lanT = 999; const s = ({FGRID})(); b.lastHit = 0; g.damage(b, a, '#fff'); return s; }}", [hit])
+        r = page.evaluate("() => { const b = window.__b; return [b.hp, !!b.rotOnly, b.reaper, b.reapDone, b.anim && b.anim.clip]; }")
+        ok(r[:4] == [mark, True, 3, k], f'phase {k}: a {hit}-damage hit stops at the {[75, 50, 25][k - 1]}% mark ({mark}) and its reaper phase starts at once, 3 rotten hits to go {r}')
+        time.sleep(0.3)
+        s1 = page.evaluate(FGRID)
+        shuffled_ok(s0, s1, prot, f'entering phase {k} reshuffles the whole patch')
+        page.evaluate(LAND)
+        r = page.evaluate(FHIT, [0, -1])
+        ok(r[0] and r[1] == 0 and r[2] == 'Blocked' and r[3] == 3, f'phase {k}: a normal pumpkin is blocked {r}')
+        ok(page.evaluate("() => { const g = window.__gg, b = window.__b, h = b.hp; b.lastHit = 0; g.damage(b, 1, '#fff'); return b.hp - h; }") == 0, f'phase {k}: plain damage (burn, splash, tools) does nothing')
+        hits = [page.evaluate(FHIT, [R, -1]) for _ in range(3)]
+        ok([h[1] for h in hits] == [-1.5, -1.5, -1.5] and [h[3] for h in hits] == [2, 1, 0], f'phase {k}: 3 rotten pumpkins hurt it 1.5 each, the badge counting ×3 → ×2 → ×1, and end the phase {hits}')
+        time.sleep(0.2)
+        r2 = page.evaluate(FHIT, [R, -1])
+        ok(not r2[0] and r2[1] == 0.5, f'phase {k}: back to normal, a rotten pumpkin heals it (0.5) {r2}')
+    r = page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 1, '#fff'); return [b.hp, !!b.rotOnly, b.reaper, b.reapDone]; }")
+    ok(r == [6.25, False, 0, 3], f'past the last mark there is no fourth phase {r}')
     mp, hold = page.evaluate("() => [window.__fmaxP, window.__b.hold]")
     ok(mp <= hold + 1e-9, f'it never walks past hold (max p {mp:.4f}, hold {hold})')
+    # a fresh one hit for its whole health at once: it stops at 75%, so no phase is ever skipped
+    b = fp_up(page)
+    r = page.evaluate("() => { const g = window.__gg, b = window.__b; b.tpT = b.zoneT = b.lanT = 999; b.lastHit = 0; g.damage(b, 999, '#fff'); return [b.dead, b.hp, b.reaper, b.reapDone]; }")
+    ok(r == [False, 33.75, 3, 1], f'a 999 hit at full health stops at the 75% mark and starts the first phase {r}')
+    page.evaluate("() => { const b = window.__b; b.reaper = 0; b.rotOnly = false; b.reapDone = 3; }")
     # one normal chest
     c0 = page.evaluate("() => window.__gg.save.chests.length")
     page.evaluate("() => { clearInterval(window.__fi); clearInterval(window.__li); const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 99, '#fff'); }"); time.sleep(0.3)
@@ -1628,27 +1618,26 @@ def check_fallen_polt(browser, url):
 
 def check_fallen_polt_continue(browser, url):
     """A continued night brings it back with its health, its marks spent and a reaper phase in progress with the rotten hits it still needs
-    (controller ruling: losing gives no free pass); a boss healed back above a spent mark does not replay it; an older snapshot without the
-    marks falls back to counting them from its health."""
+    (controller ruling: losing gives no free pass), without a second reshuffle; a boss healed back above a spent mark does not replay it; an
+    older snapshot without the marks falls back to counting them from its health."""
     if not R5: return
     page, errors = open_page(browser, url)
     R = page.evaluate("() => window.__gg.ROTTEN")
     CONT = f"""() => {{ clearInterval(window.__li); clearInterval(window.__fi); const g = window.__gg, c = g.continueState(); window.__snap = JSON.parse(JSON.stringify(c.bossMood)); g.continueNight(c); }}"""
-    BACK = f"() => {{ const b = {LBOSS}; if (b) window.__b = b; return b ? [b.kind, b.hp, b.shufDone, b.reapDone, b.reaper, !!b.rotOnly, (b.fogs || []).length] : null; }}"
+    BACK = f"() => {{ const b = {LBOSS}; if (b) window.__b = b; return b ? [b.kind, b.hp, b.reapDone, b.reaper, !!b.rotOnly, (b.fogs || []).length, !!b.shufPend] : null; }}"
     # 1. lost mid-phase, two rotten hits still needed
     b = fp_up(page)
     if b is None:
         ok(False, 'the Fallen Poltergeist arrived'); page.close(); return
-    page.evaluate("() => { const g = window.__gg, b = window.__b; b.tpT = b.swapT = b.zoneT = 999; b.lastHit = 0; g.damage(b, 16, '#fff'); }")   # 29: the 66% shuffle
+    before = page.evaluate("() => { const g = window.__gg, b = window.__b; b.tpT = b.zoneT = b.lanT = 999; b.lastHit = 0; g.damage(b, 16, '#fff'); return [b.hp, b.reapDone, b.reaper]; }")   # 33.75: in its first reaper phase
     time.sleep(0.3)
-    before = page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 7, '#fff'); return [b.hp, b.shufDone, b.reapDone, b.reaper]; }")   # 22: in its first reaper phase
     h = page.evaluate(FHIT, [R, -1])
-    ok(before == [22, 1, 1, 3] and h[3] == 2 and h[1] == -1.5, f'it is in its first reaper phase and one rotten hit leaves 2 to go {before} {h}')
+    ok(before == [33.75, 1, 3] and h[3] == 2 and h[1] == -1.5, f'it is in its first reaper phase and one rotten hit leaves 2 to go {before} {h}')
     page.evaluate(CONT); time.sleep(0.8)
     snap = page.evaluate("() => window.__snap")
-    ok(snap == [{'reaper': 2, 'shufDone': 1, 'reapDone': 1}], f'the snapshot holds its reaper phase and marks spent {snap}')
+    ok(snap == [{'reaper': 2, 'reapDone': 1}], f'the snapshot holds its reaper phase and marks spent {snap}')
     after = page.evaluate(BACK)
-    ok(after == ['fallenpoltergeist', 21, 1, 1, 2, True, 0], f'it comes back with 21 health, its marks spent, still reaper with 2 rotten hits to go, rot-only {after}')
+    ok(after == ['fallenpoltergeist', 33, 1, 2, True, 0, False], f'it comes back with 33 health, its marks spent, still reaper with 2 rotten hits to go, rot-only, no second reshuffle {after}')
     r = page.evaluate(FHIT, [0, -1])
     ok(r[0] and r[1] == 0 and r[2] == 'Blocked' and r[3] == 2, f'after the continue a normal pumpkin is still blocked {r}')
     hits = [page.evaluate(FHIT, [R, -1]) for _ in range(2)]
@@ -1656,48 +1645,147 @@ def check_fallen_polt_continue(browser, url):
     time.sleep(0.2)
     r = page.evaluate(FHIT, [R, -1])
     ok(not r[0] and r[1] == 0.5, f'then it is back to normal: a rotten pumpkin heals it {r}')
-    # 2. healed back above both spent marks, then continued: no shuffle and no reaper phase replays
+    # 2. healed back above the spent mark, then continued: the 75% phase does not replay; the next mark down (50%) starts phase 2
     b = fp_up(page)
-    page.evaluate("() => { const g = window.__gg, b = window.__b; b.tpT = b.swapT = b.zoneT = 999; b.lastHit = 0; g.damage(b, 16, '#fff'); }"); time.sleep(0.3)
-    page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 7, '#fff'); }")
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.tpT = b.zoneT = b.lanT = 999; b.lastHit = 0; g.damage(b, 16, '#fff'); }"); time.sleep(0.3)
     for _ in range(3): page.evaluate(FHIT, [R, -1])
     time.sleep(0.2)
-    healed = page.evaluate("() => { const b = window.__b; b.hp = 40; return [b.hp, b.shufDone, b.reapDone, b.reaper]; }")   # rotten pumpkins healed it back to 40 of 45
-    ok(healed == [40, 1, 1, 0], f'(it spent the 66% shuffle and the 50% phase, then was healed to 40) {healed}')
+    healed = page.evaluate("() => { const b = window.__b; b.hp = 40; return [b.hp, b.reapDone, b.reaper]; }")   # rotten pumpkins healed it back to 40 of 45
+    ok(healed == [40, 1, 0], f'(it spent the 75% phase, then was healed to 40) {healed}')
     page.evaluate(CONT); time.sleep(0.8)
     after = page.evaluate(BACK)
-    ok(after == ['fallenpoltergeist', 40, 1, 1, 0, False, 0], f'it comes back with 40 health and both marks still spent {after}')
-    page.evaluate(f"() => {{ const b = window.__b; b.tpT = b.swapT = b.zoneT = 999; window.__shuf = 0; clearInterval(window.__si); window.__si = setInterval(() => {{ const B = {LBOSS}; if (B && B.anim && B.anim.clip === 'swap') window.__shuf++; }}, 10); }}")
-    r = page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 20, '#fff'); return [b.hp, b.reaper, b.reapDone]; }")   # 20: below 66% and 50%, above 33%
-    time.sleep(0.5)
-    r2 = page.evaluate("() => { const b = window.__b; return [b.shufDone, b.reapDone, b.reaper, !!b.rotOnly, window.__shuf]; }")
-    ok(r == [20, 0, 1] and r2 == [1, 1, 0, False, 0], f'hurt below 66% and 50% again: no shuffle replayed, no reaper phase replayed {r} {r2}')
-    r = page.evaluate("() => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, 6, '#fff'); return [b.hp]; }")   # 14: past 33%
-    time.sleep(0.3)
-    r2 = page.evaluate("() => { clearInterval(window.__si); const b = window.__b; return [b.shufDone, window.__shuf > 0]; }")
-    ok(r == [14] and r2 == [2, True], f'the next mark down (33%) still shuffles {r} {r2}')
+    ok(after == ['fallenpoltergeist', 40, 1, 0, False, 0, False], f'it comes back with 40 health and the mark still spent {after}')
+    r = page.evaluate("() => { const g = window.__gg, b = window.__b; b.tpT = b.zoneT = b.lanT = 999; b.lastHit = 0; g.damage(b, 20, '#fff'); return [b.hp, b.reaper, b.reapDone]; }")
+    ok(r == [22.5, 3, 2], f'hurt below 75% again: no replay; the hit stops at 50% and starts the second phase {r}')
     # 3. an older snapshot (no marks in it): they are counted from its health on its first frame
     b = fp_up(page)
-    page.evaluate("() => { const g = window.__gg, b = window.__b; b.tpT = b.swapT = b.zoneT = 999; b.lastHit = 0; g.damage(b, 16, '#fff'); }"); time.sleep(0.3)
+    page.evaluate("() => { const b = window.__b; b.tpT = b.zoneT = b.lanT = 999; b.hp = 30; b.reapDone = 1; b.reaper = 0; }"); time.sleep(0.3)
     page.evaluate("() => { clearInterval(window.__li); clearInterval(window.__fi); const g = window.__gg, c = g.continueState(); c.bossMood = [null]; g.continueNight(c); }"); time.sleep(0.8)
     after = page.evaluate(BACK)
-    ok(after == ['fallenpoltergeist', 29, 1, 0, 0, False, 0], f'an old snapshot without its marks: they are counted from its 29 health (the 66% shuffle spent) {after}')
+    ok(after == ['fallenpoltergeist', 30, 1, 0, False, 0, False], f'an old snapshot without its marks: they are counted from its 30 health (the 75% phase spent) {after}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
 
 def check_fallen_polt_cross(browser, url):
-    """The rotten hit that crosses a reaper mark (the boss rot-only in a Plague Doctor 2's square) starts the phase but does not count toward it."""
+    """The rotten hit that reaches a reaper mark (the boss rot-only in a Plague Doctor 2's square) stops there, starts the phase and does not count toward it."""
     if not R5: return
     page, errors = open_page(browser, url)
     b = fp_up(page)
     if b is None:
         ok(False, 'the Fallen Poltergeist arrived'); page.close(); return
     R = page.evaluate("() => window.__gg.ROTTEN")
-    page.evaluate("() => { const g = window.__gg, b = window.__b; b.tpT = b.swapT = b.zoneT = 999; b.lastHit = 0; g.damage(b, 21.5, '#fff'); }"); time.sleep(0.3)   # 23.5: past the 66% shuffle, just above 50%
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.tpT = b.zoneT = b.lanT = 999; b.lastHit = 0; g.damage(b, 10.5, '#fff'); }"); time.sleep(0.3)   # 34.5: just above 75%
     r = page.evaluate(f"([t]) => {{ const b = window.__b, h = b.hp, d = [b.reaper, b.reapDone]; b.rotOnly = true; return [h, d, ({FHIT})([t, -1])]; }}", [R])
-    ok(r[0] == 23.5 and r[1] == [0, 0], f'(23.5 health, no phase yet) {r[:2]}')
-    ok(r[2][1] == -1.5 and r[2][3] == 3, f'the rotten hit that crosses 50% starts the phase with all 3 rotten hits still to go {r[2]}')
+    ok(r[0] == 34.5 and r[1] == [0, 0], f'(34.5 health, no phase yet) {r[:2]}')
+    ok(r[2][1] == -0.75 and r[2][3] == 3, f'the rotten hit that reaches 75% stops there (0.75 of its 1.5) and starts the phase with all 3 rotten hits still to go {r[2]}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+LANT = "() => (window.__gg.G.lanterns || []).map(o => [o.lane, +o.hp.toFixed(2), +o.t.toFixed(2)])"
+STEP2 = "([n, dt]) => { const g = window.__gg; for (let i = 0; i < n; i++) g.update(dt); }"
+# A pumpkin of type t at level lv flying up `lane` from below the fence (the real flight path in game.js).
+FLY = """([t, lane, lv]) => { const g = window.__gg, G = g.G; const pr = { x:g.LANE(lane), y:g.fieldY(1) + 90, vy:-900, type:t, vis:Math.max(t, 0), lv, guar:false, lane, hitWalls:new Set(),
+  grp:{ spawned:false, small:false, kills:0 }, size:1, rot:0, spin:9, hit:new Set(), trail:[], r:16, dead:false }; G.projs.push(pr); window.__pf = pr; }"""
+
+
+def lantern_up(page):
+    """N2-16, the boss parked at its hold with every clock far off, the game paused (stepped by hand), every fence at 40."""
+    b = fp_up(page)
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.p = b.hold; b.tpT = b.zoneT = b.lanT = 999; g.setState('pause'); clearInterval(window.__li); g.G.lanterns = []; for (const w of g.walls){ w.max = 40; w.hp = 40; } }")
+    return b
+
+
+def check_fp_lanterns(browser, url):
+    """Owner 2026-11-11: every 20 s three cursed lanterns (3 health, 10 s countdown) light at the fences of three distinct lanes, standing fences first;
+    a pumpkin flying up the lane hits the lantern first (its hit power off it; a rotten one splats); unbroken in time it takes half its fence's full
+    health, never the last 1; they go when the Poltergeist falls."""
+    if not R5: return
+    page, errors = open_page(browser, url)
+    b = lantern_up(page)
+    if b is None:
+        ok(False, 'the Fallen Poltergeist arrived'); page.close(); return
+    page.evaluate("() => { const g = window.__gg; g.walls[0].hp = 0; g.walls[6].hp = 0; g.walls[3].hp = 0; g.walls[5].hp = 0; window.__b.lanT = 20; }")
+    page.evaluate(STEP2, [195, 0.1])
+    ok(page.evaluate(LANT) == [], 'no lanterns before 20 s')
+    page.evaluate(STEP2, [6, 0.1])
+    L = page.evaluate(LANT)
+    ok(len(L) == 3 and len({l for l, _, _ in L}) == 3, f'at 20 s three lanterns in three distinct lanes {L}')
+    ok(sorted(l for l, _, _ in L) == [1, 2, 4], f'standing fences first: the three lanes whose fence is up {L}')
+    ok(all(h == 3 and 9.3 <= t <= 10 for _, h, t in L), f'each with 3 health and a 10 s countdown {L}')
+    ok(19 <= page.evaluate("() => window.__b.lanT") <= 20, 'its lantern clock restarts at 20 s')
+    page.evaluate("() => { const g = window.__gg; for (const w of g.walls) w.hp = 40; g.G.lanterns = []; window.__b.lanT = 0.05; }"); page.evaluate(STEP2, [1, 0.1])
+    L = page.evaluate(LANT)
+    ok(len(L) == 3, f'with every fence up, three random lanes {L}')
+    la, lb, lc = [l for l, _, _ in L]
+    # a pumpkin up a lantern's lane hits the lantern first, before a ghoul at the fence; a level-1 pumpkin takes 1, a rotten one nothing
+    j = page.evaluate(STILL, ['ghoul', la, 0.97, 50])
+    page.evaluate(FLY, [0, la, 1]); page.evaluate(STEP2, [20, 0.02])
+    r = page.evaluate(f"() => [({LANT})().find(o => o[0] === {la}), window.__pf.dead, window.__ms[{j}].hp]")
+    ok(r[0] is not None and r[0][1] == 2 and r[1] and r[2] == 50, f'a pumpkin up its lane hits the lantern first (3 -> 2), the ghoul behind it untouched {r}')
+    R = page.evaluate("() => window.__gg.ROTTEN")
+    page.evaluate(FLY, [R, la, 1]); page.evaluate(STEP2, [20, 0.02])
+    r = page.evaluate(f"() => [({LANT})().find(o => o[0] === {la}), window.__pf.dead]")
+    ok(r[0] is not None and r[0][1] == 2 and r[1], f'a rotten pumpkin splats on it and does nothing {r}')
+    page.evaluate(FLY, [0, la, 5]); page.evaluate(STEP2, [20, 0.02])
+    ok(all(o[0] != la for o in page.evaluate(LANT)), 'a strong pumpkin breaks it')
+    page.evaluate(f"() => {{ window.__ms[{j}].dead = true; }}")
+    # tools and area damage leave lanterns alone
+    page.evaluate(f"() => {{ const g = window.__gg; Object.assign(g.save, {{ bomb:5, fw:5 }}); g.dropBomb(g.LANE({lb}), g.fieldY(0.98)); g.useFirework(); }}"); page.evaluate(STEP2, [10, 0.02])
+    ok(page.evaluate(f"() => ({LANT})().find(o => o[0] === {lb})[1]") == 3, 'a bomb or a firework never touches a lantern')
+    # unbroken: at zero it takes half its fence's full health, never the last 1; the broken lantern's fence is untouched
+    page.evaluate(f"() => {{ const g = window.__gg; g.walls[{lc}].hp = 5; }}")
+    page.evaluate(STEP2, [110, 0.1])
+    w = page.evaluate("() => window.__gg.walls.map(w => +w.hp.toFixed(2))")
+    ok(w[lb] == 20 and w[lc] == 1 and w[la] == 40, f'at the end of its countdown a lantern takes half its fence (40 -> 20), a fence on 5 is left on 1, the broken one\'s fence is untouched {w}')
+    ok(page.evaluate(LANT) == [], 'and the lanterns are gone')
+    # they go when it falls
+    page.evaluate("() => { const g = window.__gg; for (const w of g.walls) w.hp = 40; window.__b.lanT = 0.05; }"); page.evaluate(STEP2, [1, 0.1])
+    ok(len(page.evaluate(LANT)) == 3, '(three lanterns lit again)')
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.reapDone = 3; b.reaper = 0; b.rotOnly = false; b.lastHit = 0; g.damage(b, 999, '#fff'); }")
+    ok(page.evaluate(LANT) == [] and page.evaluate("() => window.__gg.G.bossDead"), 'its lanterns go when it falls')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fp_continue_lanterns(browser, url):
+    """A continued night drops the lanterns; its lantern clock starts full."""
+    if not R5: return
+    page, errors = open_page(browser, url)
+    b = lantern_up(page)
+    if b is None:
+        ok(False, 'the Fallen Poltergeist arrived'); page.close(); return
+    page.evaluate("() => { window.__b.lanT = 0.05; }"); page.evaluate(STEP2, [1, 0.1])
+    ok(len(page.evaluate(LANT)) == 3, '(three lanterns lit)')
+    page.evaluate("() => { const g = window.__gg; g.setState('play'); g.continueNight(g.continueState()); }"); time.sleep(0.8)
+    r = page.evaluate(f"() => {{ const b = {LBOSS}; return [({LANT})(), b ? b.lanT : null]; }}")
+    ok(r[0] == [] and r[1] is not None and r[1] > 18, f'a continued night drops them, its lantern clock full {r}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fp_budget(browser, url):
+    """The cursed lanterns, their countdown plates and the reaper badge are baked: two drawImage a lantern and one for the badge, no fill, stroke,
+    gradient or shadowBlur."""
+    if not R5: return
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script("""(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+      for (const k of ['drawImage', 'fill', 'stroke', 'fillText', 'createRadialGradient', 'createLinearGradient']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; }
+      const d = Object.getOwnPropertyDescriptor(P, 'shadowBlur'); Object.defineProperty(P, 'shadowBlur', { get(){ return d.get.call(this); }, set(v){ if (window.__ccOn && v && this.canvas && this.canvas.id === 'cv') window.__cc.shadowBlur = (window.__cc.shadowBlur || 0) + 1; d.set.call(this, v); } }); })();""")
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    b = lantern_up(page)
+    if b is None:
+        ok(False, 'the Fallen Poltergeist arrived'); page.close(); return
+    page.evaluate("() => { const G = window.__gg.G; G.floats.length = 0; G.parts.length = 0; G.idle = -1e9; G.hint = null; }")
+    count = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 20) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 20, (c.fill || 0) / 20, (c.stroke || 0) / 20, ((c.createRadialGradient || 0) + (c.createLinearGradient || 0)) / 20, c.shadowBlur || 0, (c.fillText || 0) / 20]); } }; requestAnimationFrame(tick); })"
+    time.sleep(0.4); base = page.evaluate(count)
+    page.evaluate("() => { const G = window.__gg.G, b = window.__b; G.lanterns = [{ lane:1, hp:3, t:9.5, age:1 }, { lane:3, hp:2, t:5.2, age:1 }, { lane:5, hp:1, t:1.4, age:1 }]; b.reaper = 2; G.floats.length = 0; G.parts.length = 0; }")
+    time.sleep(0.3); lit = page.evaluate(count)
+    ok(abs(lit[0] - base[0] - 8) < 0.3, f'three lanterns with their countdowns (6), the ×2 badge (1) and the reaper glow it already had (1) add 8 drawImage a frame ({base[0]:.1f} -> {lit[0]:.1f})')
+    ok(lit[1] <= base[1] + 0.1 and lit[2] <= base[2] + 0.1 and lit[3] <= base[3] + 0.1 and lit[4] == 0 and lit[5] <= base[5] + 0.1, f'and no fill, stroke, gradient, shadowBlur or fillText {base} -> {lit}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
 
@@ -1719,7 +1807,8 @@ def check_fallen_polt_baked(browser, url):
 
 
 CHECKS.update({'check_fallen_polt': check_fallen_polt, 'check_fallen_polt_continue': check_fallen_polt_continue, 'check_fallen_polt_cross': check_fallen_polt_cross,
-               'check_fallen_polt_baked': check_fallen_polt_baked})
+               'check_fallen_polt_baked': check_fallen_polt_baked,
+               'check_fp_lanterns': check_fp_lanterns, 'check_fp_continue_lanterns': check_fp_continue_lanterns, 'check_fp_budget': check_fp_budget})
 
 
 # ---------- Task 10: the real levels N2-1 to N2-16, intro cards, the nightmare bestiary ----------
@@ -1760,6 +1849,7 @@ def check_n2_levels(browser, url):
     ok(L[3]['boss'] == 'lamplighter' and L[3]['bossForm'] == 1 and L[3]['bossChest'] == 'normal' and L[3]['unlockGourds'] == ['protector'], f"N2-4: the Lamplighter, a normal chest, unlocks the Protector {L[3]['boss'], L[3]['bossChest'], L[3]['unlockGourds']}")
     ok(L[12]['boss'] == 'lamplighter' and L[12]['bossForm'] == 2 and L[12]['bossChest'] == 'normal', 'N2-13: the Lamplighter in form 2 with a normal chest')
     ok(L[15]['boss'] == 'fallenpoltergeist' and L[15]['bossChest'] == 'normal', 'N2-16: the Fallen Poltergeist with a normal chest')
+    ok(set(L[15]['pool']) == {'fogwalker2', 'reaper', 'minipolt', 'comet', 'doctor', 'rotdoctor'} and len(L[15]['pool']) == 6, f"N2-16 walks exactly Fogwalkers 2, Reapers, Poltergeists 2, Wisp Riders 2, Plague Doctors and Plague Doctors 2 (owner 2026-11-11) {L[15]['pool']}")
     ok([k + 1 for k, d in enumerate(L) if d['boss']] == [4, 13, 16], 'bosses on N2-4, N2-13 and N2-16 only')
     ok(L[4]['coach'] == 'protector' and [k + 1 for k, d in enumerate(L) if d['coach']] == [5], 'N2-5 keeps the Protector tutorial (the only coach)')
     P = [d['poison'] for d in L]

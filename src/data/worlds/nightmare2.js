@@ -77,9 +77,10 @@ export default __RELEASE__ >= 5 ? [
   Gd({ level:15, name:'The Long Night', pattern:4, total:26, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:BOTH(),
     pool:[['bogGhoul', 5], ['reaper', 4], ['comet', 4], ['rotdoctor', 3], ['fogwalker2', 3], ['minipolt', 3], ['crow', 3], ['wraith', 2]], poison:FOG(12, 2),
     quests:[['noTools'], ['wallMin', 40]] }),
-  // N2-16 The Fallen Poltergeist: the book's boss (spec Part 8): it vanishes, swaps, lays black fog, shuffles the patch and turns reaper. Steady poison fog
-  // (every 10 s) so there is always rot for its reaper phases and its black fog. Reapers and Wisp Riders 2 walk in meanwhile. One normal chest.
+  // N2-16 The Fallen Poltergeist: the book's boss (spec Part 8; owner 2026-11-11): it vanishes and swaps, lays black fog, turns reaper three times (each one
+  // reshuffles the patch) and lights cursed lanterns at the fences. Steady poison fog (every 10 s) so there is always rot for its reaper phases and its black
+  // fog. Fogwalkers 2, Reapers, Poltergeists 2, Wisp Riders 2 and both Plague Doctors walk in meanwhile (owner: exactly these). One normal chest.
   Gd({ level:16, name:'The Fallen Poltergeist', pattern:0, total:22, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.12, boss:'fallenpoltergeist', bossChest:'normal', gourds:BOTH(),
-    pool:[['bogGhoul', 7], ['wraith', 4], ['reaper', 3], ['comet', 3]], poison:FOG(10),
+    pool:[['fogwalker2', 3], ['reaper', 4], ['minipolt', 3], ['comet', 4], ['doctor', 3], ['rotdoctor', 3]], poison:FOG(10),
     quests:[['wallMin', 40], ['noTools']] }),
 ] : [];

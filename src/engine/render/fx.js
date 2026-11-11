@@ -693,6 +693,35 @@ export function veilSprite(k){ k = bakeK(k); return bake(`veil:${k}`, 124, 112, 
 }); }
 
 
+// ---------- the Fallen Poltergeist (Release 5, owner 2026-11-11): the cursed lantern, its countdown digits, the reaper badge ----------
+export const FP_LANTERN = { w:44, h:64 };
+/** A cursed lantern at a fence: a black iron cage with a ghostly green flame and a soft glow, its foot at y = 0. */
+export function fpLanternSprite(k){ k = bakeK(k); return bake(`fplantern:${k}`, FP_LANTERN.w, FP_LANTERN.h, FP_LANTERN.w / 2, FP_LANTERN.h, k, g => {
+  let gr = g.createRadialGradient(0, -26, 2, 0, -26, 22); gr.addColorStop(0, 'rgba(182,255,140,.75)'); gr.addColorStop(1, 'rgba(60,160,60,0)');
+  g.fillStyle = gr; g.beginPath(); g.ellipse(0, -26, 22, 22, 0, 0, TAU); g.fill();
+  gr = g.createLinearGradient(0, -40, 0, -10); gr.addColorStop(0, '#e8ffd0'); gr.addColorStop(.5, '#8cff5c'); gr.addColorStop(1, '#2a7a30');
+  g.fillStyle = gr; g.beginPath(); g.moveTo(0, -42); g.quadraticCurveTo(9, -28, 6, -16); g.quadraticCurveTo(0, -10, -6, -16); g.quadraticCurveTo(-9, -28, 0, -42); g.fill();   // the flame
+  g.strokeStyle = '#141a16'; g.lineWidth = 3; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(-11, -44); g.lineTo(11, -44); g.lineTo(13, -8); g.lineTo(-13, -8); g.closePath(); g.stroke();   // the cage
+  g.beginPath(); g.moveTo(0, -44); g.lineTo(0, -8); g.moveTo(-12, -26); g.lineTo(12, -26); g.stroke();
+  g.fillStyle = '#141a16'; g.beginPath(); g.moveTo(-15, -8); g.lineTo(15, -8); g.lineTo(11, 0); g.lineTo(-11, 0); g.closePath(); g.fill();   // the foot
+  g.beginPath(); g.moveTo(-9, -44); g.lineTo(0, -52); g.lineTo(9, -44); g.closePath(); g.fill();   // the cap
+  g.lineWidth = 2.4; g.beginPath(); g.arc(0, -55, 4, 0, TAU); g.stroke();   // the ring
+}); }
+/** Its countdown, one baked digit plate per second left (1..10). */
+export function fpCountSprite(k, n){ k = bakeK(k); return bake(`fpcount:${n}:${k}`, 34, 26, 17, 13, k, g => {
+  g.fillStyle = 'rgba(10,24,12,.88)'; g.beginPath(); g.arc(-6, 0, 11, Math.PI / 2, Math.PI * 1.5); g.arc(6, 0, 11, -Math.PI / 2, Math.PI / 2); g.closePath(); g.fill();   // a pill
+  g.strokeStyle = n <= 3 ? '#ff6a5a' : '#8cff5c'; g.lineWidth = 2; g.stroke();
+  g.fillStyle = n <= 3 ? '#ffd0c8' : '#e8ffd0'; g.font = 'bold 16px Fredoka, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(n), 0, 1);
+}); }
+/** Its reaper badge: the rotten pumpkins still needed (×1..×3). */
+export function fpBadgeSprite(k, n){ k = bakeK(k); return bake(`fpbadge:${n}:${k}`, 40, 40, 20, 20, k, g => {
+  g.fillStyle = 'rgba(12,30,14,.92)'; g.beginPath(); g.arc(0, 0, 17, 0, TAU); g.fill();
+  g.strokeStyle = '#8cff5c'; g.lineWidth = 3; g.stroke();
+  g.fillStyle = '#e8ffd0'; g.font = 'bold 17px Fredoka, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('\u00d7' + n, 0, 1);
+}); }
+export function prebakeFallenPoltFx(k){ fpLanternSprite(k); for (let n = 1; n <= 10; n++) fpCountSprite(k, n); for (let n = 1; n <= 3; n++) fpBadgeSprite(k, n); }
+
 // ---------- the Fallen Count (Release 8): the lightning column warning, the bolt, the blood spear; each baked once, one drawImage a frame ----------
 // Baked in fixed drawing units and stretched onto the patch at draw time (render/draw.js drawCountBolt / drawCountSpears), so a change of tile size
 // needs no new art; like every prop here they are keyed by the bake scale K, so a resize that changes K bakes them once more.

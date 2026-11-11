@@ -38,7 +38,7 @@ import { initTide, updateTide, tideSnapshot, restoreTide, initWhirls, whirlSnaps
 import { prebakeTide } from './render/tide.js';
 import { lancerHit, shieldSnapshot, restoreShields, carryCheck, newCastle, updateCastlePieces, siegeSnapshot, countSnapshot } from './keep.js';
 import { prebakeNets } from './render/nets.js';
-import { prebakeCountFx, prebakePirateFx, prebakeHiddenFx, prebakeBlackRing, prebakeTidesFx } from './render/fx.js';
+import { prebakeFallenPoltFx, prebakeCountFx, prebakePirateFx, prebakeHiddenFx, prebakeBlackRing, prebakeTidesFx } from './render/fx.js';
 import { K } from './render/canvas.js';
 import { prebakeTongue, prebakeBarrier, prebakeCroneZone, prebakeFallenHex } from './render/witchwood.js';
 import { startCoach, coachHolds, coachUpdate } from './coach.js';
@@ -50,7 +50,7 @@ import { GOURDS, GOURD_SLOTS, ALLOW_SAME_GOURD } from '../data/gourds.js';
 import { prebakeGourd } from './render/gourd.js';
 import { ROTTEN, ROT_FX, clearHitFlags, rotSnapshot, restoreRot } from './rot.js';
 import { prebakeRot } from './render/rot.js';
-import { markRotZones, markMoods, markFallenPolt, bossSnapshot } from './hollow.js';
+import { markRotZones, markMoods, markFallenPolt, bossSnapshot, lanternAhead, hitLantern } from './hollow.js';
 import { updatePoison, poisonClock } from './poison.js';
 import { prebakePoison } from './render/poison.js';
 
@@ -205,6 +205,7 @@ export function startGame(mode, n, loadout, gourds){
   if (__RELEASE__ >= 9 && def && (bakeKeys(def).some(k => k.split('|')[0] === 'pirate') || def.boss === 'fallentides')) prebakePirateFx(K);   // a Pirate's aim line, reticle and shot (render/fx.js), baked before he can aim
   if (__RELEASE__ >= 9 && def && def.nightmare) prebakeBlackRing(K);   // the Swan Gourd's black-hole ring (render/fx.js): any nightmare night may take the Swan, so baked now
   if (__RELEASE__ >= 9 && def && def.boss === 'fallentides') prebakeTidesFx(K);   // the water spear's warning and strike, the bolts, the dive spears, the blood sphere and its badges, the hydro pump, baked now (render/fx.js)
+  if (__RELEASE__ >= 5 && def && def.boss === 'fallenpoltergeist') prebakeFallenPoltFx(K);   // its cursed lantern, the countdown digits and the reaper badges, baked now (render/fx.js)
   if (__RELEASE__ >= 8 && def && def.boss === 'fallencount') prebakeCountFx(K);   // his lightning warning, bolt and blood spear, baked now (render/fx.js)
   if (__RELEASE__ >= 8 && def && (def.boss === 'fallencount' || (def.castlesLayout || []).some(e => e[2] === 'gate' || e[2] === 'tower'))) prebakeCastlePieces();   // the Gatehouse's and the Archer Tower's frames, baked now (render/castlepieces.js)
   if (__RELEASE__ >= 8 && def) prebakeWeather();   // fresh weather timers every night; the Keep storm's rain and bolts baked now (Release 8, render/weather.js)
@@ -468,6 +469,7 @@ export function update(dt){
         if (pr.type !== 4 || (__RELEASE__ >= 8 && w.kind === 'tower')){ pr.dead = true; pr.hit.add(w); }   // Grey pierces a castle wall, but an Archer Tower stops every colour (Release 8)
       }
       if (pr.dead) continue;
+      if (__RELEASE__ >= 5 && g.lanterns && g.lanterns.length){ const ln = lanternAhead(pr); if (ln){ hitLantern(pr, ln, pr.type === ROTTEN); continue; } }   // the Fallen Poltergeist's cursed lantern at the fence: met before anything else in its lane (engine/hollow.js)
       const targets = g.monsters.filter(m => !m.dead && !(m.rise > 0) && !m.hidden && !pr.hit.has(m) && Math.abs(pr.x - m.x) < m.hw).sort((a, b) => b.p - a.p);
       if (__RELEASE__ >= 4 && g.fires && g.fires.length){   // fire tiles (Release 4): the first fire it reaches, unless a monster stands in front of it
         const f = fireAhead(pr, targets);

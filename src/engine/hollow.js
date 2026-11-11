@@ -26,12 +26,14 @@
 import { TYPES } from '../data/monsters.js';
 import { SFX } from './audio.js';
 import { resolveMatches } from './board.js';
-import { addFloat, ring, spark } from './combat.js';
+import { addFloat, chunk, pumpkinPower, ring, spark } from './combat.js';
 import { isProtected } from './gourd.js';
 import { mS, mY, spMulNow, spawnMonster, TILE_P } from './monsters.js';
 import { ROTTEN, rotCell } from './rot.js';
 import { poisonNow } from './poison.js';
-import { COLS, G, GY, CS, LANE, ROWS, W, gest, graves, grid } from './state.js';
+import { COLS, G, GY, CS, FENCE_Y, FIELD_BOT, FIELD_TOP, LANE, ROWS, W, gest, graves, grid, walls } from './state.js';
+import { damageWall } from './walls.js';
+import { WART_DMG } from '../data/rules.js';
 import { rnd, shuffle } from './util.js';
 import { banner } from '../ui/hud.js';
 
@@ -243,7 +245,7 @@ export const isFallenPolt = m => m.type === 'boss' && m.kind === 'fallenpolterge
 /** Set up a freshly spawned Fallen Poltergeist: every clock full, no fog, not in a reaper phase; its spent marks are counted on its first frame. */
 export function initFallenPolt(m){
   const T = TYPES.fallenpoltergeist;
-  m.tpT = T.vanishEvery; m.swapT = T.swapEvery; m.zoneT = T.zoneEvery; m.fogs = []; m.reaper = 0; m.shufDone = null; m.reapDone = null;
+  m.tpT = T.vanishEvery; m.zoneT = T.zoneEvery; m.lanT = T.lanternEvery; m.fogs = []; m.reaper = 0; m.reapDone = null; m.shufPend = false;
 }
 /** Frame start (game.js update, after markMoods): its reaper phase, and every monster inside one of its black fogs, rot-only for this frame. */
 export function markFallenPolt(){
@@ -260,22 +262,22 @@ export function markFallenPolt(){
   }
 }
 /** What a continued night keeps of it: its marks spent and the rotten hits a reaper phase in progress still needs. */
-export const fpSnapshot = m => isFallenPolt(m) ? { reaper:m.reaper || 0, shufDone:m.shufDone, reapDone:m.reapDone } : null;
+export const fpSnapshot = m => isFallenPolt(m) ? { reaper:m.reaper || 0, reapDone:m.reapDone } : null;
 export function restoreFallenPolt(m, s){
-  if (!s || !isFallenPolt(m) || s.shufDone == null || s.reapDone == null) return;   // an older snapshot (or a boss with no frame yet): fpMarks counts them from its health
-  m.shufDone = s.shufDone; m.reapDone = s.reapDone; m.reaper = Math.max(0, s.reaper | 0);
+  if (!s || !isFallenPolt(m) || s.reapDone == null) return;   // an older snapshot (or a boss with no frame yet): fpMarks counts them from its health
+  m.reapDone = s.reapDone; m.reaper = Math.max(0, s.reaper | 0);   // a phase in progress comes back without a second reshuffle
 }
 /** Each living boss's own state for a continued night (continueState().bossMood): a Lamplighter's mood and clocks, a Fallen Poltergeist's marks. */
 export const bossSnapshot = m => lampSnapshot(m) || fpSnapshot(m);
 export function restoreBoss(m, s){ restoreLamp(m, s); restoreFallenPolt(m, s); }
-const fpMarks = m => {   // lazily, on its first frame (a fresh boss, or an older snapshot): the shuffles and reaper phases its health is already past
-  if (m.shufDone != null) return;
-  const T = TYPES.fallenpoltergeist;
-  m.shufDone = T.shuffleAt.filter(a => m.hp <= m.maxHp * a).length; m.reapDone = T.reaperAt.filter(a => m.hp <= m.maxHp * a).length;
+const fpMarks = m => {   // lazily, on its first frame (a fresh boss, or an older snapshot): the reaper phases its health is already past
+  if (m.reapDone != null) return;
+  m.reapDone = TYPES.fallenpoltergeist.reaperAt.filter(a => m.hp <= m.maxHp * a).length;
 };
 const fogPuff = (x, y, n = 14) => { for (let i = 0; i < n; i++) spark(x, y, i % 3 ? FP_FOG : FP_BLIGHT, 150); ring(x, y, 40, 'rgba(140,255,92,.55)'); };
 function enterReaper(m){
   m.reapDone++; m.reaper = TYPES.fallenpoltergeist.reaperHits; m.rotOnly = true;   // at once: the rest of this frame's hits meet the phase
+  m.shufPend = true;   // entering the phase reshuffles the whole patch (owner 2026-11-11), on its next frame, out of the hit being resolved
   m.anim = { clip:'recolour', t:0, dur:6 / 9 }; m.flash = 0.18;
   const y = mY(m) - 40;
   for (let i = 0; i < 18; i++) spark(m.x, y, i % 2 ? FP_BLIGHT : '#1b3620', 180);
@@ -283,6 +285,15 @@ function enterReaper(m){
   addFloat('Reaper! Only rotten pumpkins hurt it', sayX(m.x), mY(m) - m.r - 70, '#b6f06a', 17, 1.8);
   G.shake = Math.max(G.shake || 0, 0.4);
   SFX.bossSfx('fallenpoltergeist', 'reaper');
+}
+/** combat.js damage(), before the hit lands: never past its next reaper mark (owner 2026-11-11: three phases, none skipped by a big hit, as the Fallen
+ *  Hexwitch's altars); at a mark with no phase running, the phase starts now and this hit does nothing. */
+export function fpGate(m, amt){
+  const A = TYPES.fallenpoltergeist.reaperAt; fpMarks(m);
+  if (m.reapDone >= A.length) return amt;
+  const mark = m.maxHp * A[m.reapDone];
+  if (m.hp <= mark + 1e-6){ if (!(m.reaper > 0)) enterReaper(m); return 0; }
+  return Math.min(amt, m.hp - mark);
 }
 /** After any hit that hurt it (combat.js damage): a reaper mark crossed starts its phase there and then. */
 export function fpAfterHit(m){
@@ -293,7 +304,7 @@ export function fpAfterHit(m){
 export function fpReaperHit(m){
   if (!(m.reaper > 0) || m.dead) return;
   m.reaper--;
-  if (m.reaper > 0){ addFloat(`×${m.reaper} more`, m.x, mY(m) - m.r - 34, '#b6f06a', 16, 0.8); return; }
+  if (m.reaper > 0){ ring(m.x, mY(m) - m.r * mS(m) * 2.1, 22, 'rgba(182,240,106,.9)'); return; }   // the ×n badge over it counts down (render/draw.js)
   m.rotOnly = false;   // back to normal now (a Plague Doctor 2's square or a black fog would mark it again next frame)
   for (let i = 0; i < 14; i++) spark(m.x, mY(m) - 30, i % 2 ? '#d8ffb0' : FP_FOG, 160);
   addFloat('The reaper fades', sayX(m.x), mY(m) - m.r - 40, '#d8ffb0', 18, 1.3);
@@ -306,7 +317,7 @@ function fpMovable(r, c){
 }
 const flyFrom = (cell, r0, c0, r1, c1) => { cell.fly = 0.55; cell.ox = LANE(c0) - LANE(c1); cell.oy = (r0 - r1) * CS; };   // it glides from its old cell; landing resolves the bunches (game.js)
 /** Its swap: swapN (fewer when fewer can move, none below two) pumpkins outside any Protector square trade places in a ring, colours kept. */
-export function fpSwap(m){
+export function fpSwap(m, quiet){
   const cells = [];
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (fpMovable(r, c)) cells.push([r, c]);
   const k = Math.min(TYPES.fallenpoltergeist.swapN, cells.length);
@@ -317,7 +328,7 @@ export function fpSwap(m){
     grid[r1][c1] = cell; flyFrom(cell, r0, c0, r1, c1);
     fogPuff(LANE(c1), GY + r1 * CS + CS / 2, 6);
   }
-  m.anim = { clip:'swap', t:0, dur:6 / 10 };
+  if (!quiet) m.anim = { clip:'swap', t:0, dur:6 / 10 };   // on a vanish (quiet) the arrival keeps its teleport clip
   addFloat('Swapped!', m.x, mY(m) - m.r - 30, '#b6f06a', 16, 0.9);
   SFX.bossSfx('fallenpoltergeist', 'swap');
   return true;
@@ -361,6 +372,7 @@ function fpVanish(m){
   m.lane = opts[Math.floor(Math.random() * opts.length)]; m.x = m.tx = LANE(m.lane); m.age = 0;   // age 0: the arrival plays the teleport clip in reverse (anim.js)
   fogPuff(m.x, mY(m) - 20);
   SFX.bossSfx('fallenpoltergeist', 'vanish');
+  fpSwap(m, true);   // every vanish rearranges the patch: its swap rides along (owner 2026-11-11; the separate swap clock is gone)
 }
 /** One frame of the Fallen Poltergeist. */
 export function updateFallenPolt(m, dt){
@@ -368,11 +380,74 @@ export function updateFallenPolt(m, dt){
   m.x = m.tx + Math.sin(m.ph * 1.2) * 4;
   fpMarks(m);
   for (let i = m.fogs.length - 1; i >= 0; i--) if ((m.fogs[i].t -= dt) <= 0) m.fogs.splice(i, 1);   // in place: no allocation while a fog lies
-  if (m.shufDone < T.shuffleAt.length && m.hp <= m.maxHp * T.shuffleAt[m.shufDone]){ m.shufDone++; fpShuffle(m); }
-  fpAfterHit(m);   // a phase due that no hit started (one hit past both marks: the second waits for the first to end)
+  fpAfterHit(m);
+  if (m.shufPend){ m.shufPend = false; fpShuffle(m); }   // a reaper phase began: the whole patch reshuffles
+  updateLanterns(dt);   // a phase due that no hit started (one hit past both marks: the second waits for the first to end)
   if (m.reaper > 0 && (m.reapPulse = (m.reapPulse || 0) - dt) <= 0){ m.reapPulse = 0.7; ring(m.x, mY(m) - 30, 46, 'rgba(140,255,92,.6)'); }   // a poison pulse while it is reaper
   if (m.p <= 0.05) return;
   if ((m.tpT -= dt) <= 0){ m.tpT = T.vanishEvery; fpVanish(m); }
-  if ((m.swapT -= dt) <= 0){ m.swapT = T.swapEvery; fpSwap(m); }
+  if ((m.lanT -= dt) <= 0){ m.lanT = T.lanternEvery; fpLanterns(m); }
   if ((m.zoneT -= dt) <= 0){ if (fpZone(m)) m.zoneT = T.zoneEvery; else m.zoneT = 0; }
 }
+
+// ---------- the Fallen Poltergeist's cursed lanterns (owner 2026-11-11) ----------
+// Every `lanternEvery` s (once it is on the field) `lanternN` cursed lanterns light at the fences of as many distinct lanes, lanes whose fence stands
+// first (G.lanterns: { lane, hp, t, age }). Each has `lanternHp` health and a `lanternFor` s countdown. A pumpkin flying up its lane meets it first (it
+// stands at the fence, LANTERN_P, in front of any monster): its hit power comes off (doubled from a Wartling square; a rotten one splats, as on the
+// Fallen Hexwitch's altar) and the pumpkin stops there, Grey too. Tools and area damage never touch it (they look at G.monsters only). Unbroken at
+// zero it bursts: that fence loses `lanternHit` of its full health, never its last 1. They go when the Poltergeist falls; a continued night drops
+// them (its lantern clock starts full).
+export const LANTERN_P = 1.02;   // just in front of the fence, as a Treant's fence root
+const LANTERN_R = 16;   // a pumpkin meets a lantern this far below its centre
+export const lanternY = l => FIELD_TOP + LANTERN_P * (FIELD_BOT - FIELD_TOP);
+function fpLanterns(m){
+  const T = TYPES.fallenpoltergeist, up = [], down = [];
+  for (let l = 0; l < COLS; l++) (walls[l] && walls[l].hp > 0 ? up : down).push(l);
+  const lanes = [...shuffle(up), ...shuffle(down)].slice(0, T.lanternN);
+  if (!G.lanterns) G.lanterns = [];
+  for (const lane of lanes){
+    G.lanterns = G.lanterns.filter(o => o.lane !== lane);
+    const o = { lane, hp:T.lanternHp, t:T.lanternFor, age:0 }; G.lanterns.push(o);
+    for (const pr of G.projs || []) if (pr.lane === lane && !pr.dead && pr.y < lanternY(o)) (pr.passed || (pr.passed = new Set())).add(o);   // pumpkins already past it fly on
+    for (let i = 0; i < 8; i++) spark(LANE(lane), lanternY(o) - 10, i % 2 ? FP_BLIGHT : FP_FOG, 120);
+  }
+  if (lanes.length){ addFloat('Cursed lanterns!', m.x, mY(m) - m.r - 30, '#b6f06a', 17, 1.2); m.anim = m.anim || { clip:'recolour', t:0, dur:6 / 9 }; SFX.bossSfx('fallenpoltergeist', 'lantern'); }
+}
+/** The lantern pumpkin pr (flying up its lane) has reached this frame, or null. No allocation. */
+export function lanternAhead(pr){
+  for (const o of G.lanterns) if (o.lane === pr.lane && !pr.hit.has(o) && !(pr.passed && pr.passed.has(o)) && pr.y <= lanternY(o) + pr.r + LANTERN_R) return o;
+  return null;
+}
+/** A pumpkin meets a lantern: its hit power off it; the pumpkin stops either way (a rotten one splats and does nothing). */
+export function hitLantern(pr, o, rotten){
+  pr.dead = true; pr.hit.add(o);
+  const x = LANE(o.lane), y = lanternY(o);
+  if (rotten){ for (let i = 0; i < 6; i++) chunk(x, y, i % 2 ? '#6a7a3a' : '#3a4a1a', 140); SFX.bossSfx('fallenpoltergeist', 'lanternhit'); return; }
+  const dmg = pumpkinPower(pr) * (__RELEASE__ >= 7 && pr.wart ? WART_DMG : 1);
+  o.hp -= dmg;
+  addFloat(Math.round(dmg * 10) / 10 + '', x, y - 40, '#b6f06a', 16, 0.6);
+  if (o.hp <= 0.001){ breakLantern(o, false); SFX.bossSfx('fallenpoltergeist', 'lanternbreak'); }
+  else { for (let i = 0; i < 6; i++) spark(x, y - 10, i % 2 ? FP_BLIGHT : '#e8ffd0', 120); SFX.bossSfx('fallenpoltergeist', 'lanternhit'); }
+}
+function breakLantern(o, burst){
+  const i = G.lanterns.indexOf(o); if (i >= 0) G.lanterns.splice(i, 1);
+  const x = LANE(o.lane), y = lanternY(o);
+  for (let k = 0; k < 14; k++) spark(x, y - 10, k % 3 ? FP_BLIGHT : '#1b3620', burst ? 220 : 170);
+  ring(x, y - 10, burst ? 56 : 40, burst ? 'rgba(140,255,92,.95)' : 'rgba(216,255,176,.9)');
+  if (!burst) for (let k = 0; k < 8; k++) chunk(x, y, k % 2 ? '#3a4a3a' : '#8cff5c', 150);   // glass and green flame
+}
+/** Per frame (from its update): each lantern's countdown; one at zero bursts on its fence. */
+function updateLanterns(dt){
+  const L = G.lanterns; if (!L || !L.length) return;
+  for (let i = L.length - 1; i >= 0; i--){
+    const o = L[i]; o.age += dt;
+    if ((o.t -= dt) > 0) continue;
+    const w = walls[o.lane];
+    if (w && w.hp > 1){ const amt = Math.min(w.max * TYPES.fallenpoltergeist.lanternHit, w.hp - 1); if (amt > 0) damageWall(o.lane, amt); }   // never its last 1
+    breakLantern(o, true); G.shake = Math.max(G.shake || 0, 0.5);
+    for (let k = 0; k < 8; k++) chunk(LANE(o.lane), FENCE_Y - 10, '#6a5040', 180);
+    SFX.bossSfx('fallenpoltergeist', 'lanternburst');
+  }
+}
+/** kill() (combat.js): its lanterns go with it. */
+export function fpFalls(m){ if (isFallenPolt(m)) G.lanterns = []; }

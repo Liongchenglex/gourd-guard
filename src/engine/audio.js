@@ -498,6 +498,10 @@ export const SFX = {
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:fog' : ''): S('hiss', 0.5, { rate: 0.7 }) || noise(0.5, 0.15, 700, 0.8); S('slime', 0.35, { rate: 0.6, delay: 0.1 }); break;
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:reaper' : ''): S('whoosh', 0.6, { rate: 0.6 }) || woosh(false, 0.2); S('darkcast', 0.6, { rate: 0.75, delay: 0.05 }); S('scream', 0.35, { rate: 0.7, delay: 0.2 }); break;
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:reaperend' : ''): S('reverse', 0.45, { rate: 0.9 }) || noise(0.2, 0.15, 900, 0.7); S('glassping', 0.3, { rate: 0.8, delay: 0.05 }); break;
+      case (__RELEASE__ >= 5 ? 'fallenpoltergeist:lantern' : ''): S('ghost', 0.45, { rate: 0.9 }) || tone(520, 0.4, 'sine', 0.05, 700); S('glassping', 0.3, { rate: 0.7, delay: 0.1 }) || tone(1200, 0.2, 'sine', 0.04, 900, 0.1); break;
+      case (__RELEASE__ >= 5 ? 'fallenpoltergeist:lanternhit' : ''): S('glassping', 0.4, { rate: 1.2 }) || tone(1400, 0.08, 'sine', 0.05, 1100); break;
+      case (__RELEASE__ >= 5 ? 'fallenpoltergeist:lanternbreak' : ''): S('glass', 0.5, { rate: 1.1 }) || noise(0.25, 0.25, 4000, 1, 0, 1500); S('hiss', 0.3, { delay: 0.05 }); break;
+      case (__RELEASE__ >= 5 ? 'fallenpoltergeist:lanternburst' : ''): S('boom', 0.45, { rate: 1.3 }) || tone(80, 0.4, 'sine', 0.08, 40); S('hiss', 0.45, { rate: 0.7, delay: 0.05 }) || noise(0.5, 0.15, 700, 1.2, 0.05); break;
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:hit' : ''): S('ghost', 0.55, { rate: 0.8 }) || tone(260, 0.2, 'triangle', 0.07, 180); S('slime', 0.25, { delay: 0.03 }); break;
       case (__RELEASE__ >= 5 ? 'fallenpoltergeist:die' : ''): S('scream', 0.6, { rate: 0.75 }) || tone(600, 1.4, 'sine', 0.1, 120); S('ghostdie', 0.6, { rate: 0.8, delay: 0.4 }); S('hiss', 0.4, { delay: 0.6 }); break;
       // The Kraken (Release 9): a great wet groan as the head breaks the surface, a rush of water as it dives, a heavy slap when it is hit, a roar and a long splash when it falls;

@@ -13,7 +13,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite, magSparkSprite } from './tools.js';
-import { drawBlackRing, castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, whirlSprite, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR, countPuffSprite, FC_PUFF, pirateAimSprite, pirateReticleSprite, pirateShotSprite, hiddenSphereSprite, hiddenWarnSprite, hiddenWashSprite, tidesWarnSprite, tidesSpearSprite, tidesBoltSprite, tidesDiveSpearSprite, tidesSphereSprite, tidesBadgeSprite, tidesPumpWarnSprite, tidesPumpBeamSprite } from './fx.js';
+import { drawBlackRing, castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, whirlSprite, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR, countPuffSprite, FC_PUFF, fpLanternSprite, fpCountSprite, fpBadgeSprite, FP_LANTERN, pirateAimSprite, pirateReticleSprite, pirateShotSprite, hiddenSphereSprite, hiddenWarnSprite, hiddenWashSprite, tidesWarnSprite, tidesSpearSprite, tidesBoltSprite, tidesDiveSpearSprite, tidesSphereSprite, tidesBadgeSprite, tidesPumpWarnSprite, tidesPumpBeamSprite } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -38,6 +38,7 @@ import { drawPotions, drawPotionFx } from './potion.js';
 import { drawWeatherFrame } from './weather.js';
 import { drawRoots, drawAltar, drawHexCrows, undeadZoneSize } from './witchwood.js';
 import { barrierFront } from '../witchwood.js';
+import { lanternY } from '../hollow.js';
 
 // ---------- Render ----------
 
@@ -97,6 +98,7 @@ export function render(){
   if (__RELEASE__ >= 8) drawCrumbles();   // fallen Gatehouses and Archer Towers settling (Release 8)
   drawScarecrows(t);
   drawArrows(t);
+  if (__RELEASE__ >= 5 && ((G.lanterns && G.lanterns.length) || (G.bossSpawned && !G.bossDead))) drawFallenPoltTop();   // the Fallen Poltergeist's cursed lanterns and its reaper badge, over the monsters (baked)
   if (__RELEASE__ >= 7 && G.fhCrows && G.fhCrows.length) drawHexCrows(ctx, G.fhCrows);   // the Fallen Hexwitch's black crows diving to a fence (one baked frame each)
   if (__RELEASE__ >= 8 && G.fcSpears && G.fcSpears.length) drawCountSpears();   // the Fallen Count's blood spears in flight (one baked sprite each)
   if (__RELEASE__ >= 9 && G.ftDiveSpears && G.ftDiveSpears.length) drawDiveSpears();   // the Fallen twins' dive spears in flight (one baked sprite each)
@@ -469,6 +471,17 @@ function drawFallenPoltFx(m, t){
   const w = CS * 3 * 0.98, h = CS * 3;
   for (const f of m.fogs || []){ const el = f.dur - f.t, a = Math.max(0, Math.min(1, el / 0.4, f.t / 0.6)); drawBlackFogZoneFx(ctx, LANE(f.lane) - w / 2, mY(f) - h / 2, w, h, t, K, a); }
   if (m.reaper > 0 && m.p > 0){ const sp = glowSprite(K, '#8cff5c'), r = m.r * 3.2 * mS(m), y = mY(m) - m.r * 0.9; ctx.save(); ctx.globalAlpha = 0.55 + 0.25 * Math.sin(t * 5); ctx.drawImage(sp.c, m.x - r, y - r, r * 2, r * 2); ctx.restore(); }
+}
+/** Over the monsters (Release 5, owner 2026-11-11): each cursed lantern at its fence with its countdown plate, and the ×n badge over a Fallen
+ *  Poltergeist in its reaper phase. Two drawImage a lantern, one for the badge; no allocation. */
+function drawFallenPoltTop(){
+  const L = G.lanterns;
+  if (L && L.length){ const sp = fpLanternSprite(K), s = CS / 70;
+    for (const o of L){ const x = LANE(o.lane), y = lanternY(o), rise = Math.min(1, o.age / 0.3), bob = Math.sin(o.age * 3 + o.lane) * 1.5;
+      ctx.globalAlpha = rise; ctx.drawImage(sp.c, x - FP_LANTERN.w / 2 * s, y - FP_LANTERN.h * s + bob, FP_LANTERN.w * s, FP_LANTERN.h * s);
+      const c = fpCountSprite(K, Math.max(1, Math.min(10, Math.ceil(o.t)))); ctx.drawImage(c.c, x - c.ox, y - FP_LANTERN.h * s - 20 - c.oy, c.w, c.h); ctx.globalAlpha = 1; } }
+  for (const m of G.monsters){ if (m.dead || !(m.reaper > 0) || m.type !== 'boss' || m.kind !== 'fallenpoltergeist') continue;
+    const b = fpBadgeSprite(K, Math.max(1, Math.min(3, m.reaper))); ctx.drawImage(b.c, m.x - b.ox, mY(m) - m.r * mS(m) * 2.1 - b.oy, b.w, b.h); }
 }
 /** Scarecrows (world 5 tool): a post with a straw figure and a health bar. */
 export function drawScarecrows(t){ drawScarecrowsFx(ctx, G.scarecrows || [], t, sc => G.monsters.some(m => !m.dead && m.chewing === sc)); }

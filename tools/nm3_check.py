@@ -1650,7 +1650,7 @@ def check_fh_budget(browser, url):
     page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
     nm3_start(page, 16); time.sleep(3.2)
     page.evaluate(PQ); page.evaluate("() => { const G = window.__gg.G; G.hexZones.length = 0; G.altar = null; G.fhCrows = []; G.parts.length = 0; G.floats.length = 0; }")
-    page.evaluate("() => window.__gg.setState('pause')")
+    page.evaluate("() => { const g = window.__gg; if (g.setState) g.setState('pause'); else if (g.state === 'play') window.dispatchEvent(new KeyboardEvent('keydown', { key:'p' })); }")   # setState is a hook only from Release 8
     count = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 20) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 20, (c.fill || 0) / 20, (c.stroke || 0) / 20, ((c.createRadialGradient || 0) + (c.createLinearGradient || 0)) / 20, c.shadowBlur || 0]); } }; requestAnimationFrame(tick); })"
     time.sleep(0.4); base = page.evaluate(count)
     page.evaluate("() => { window.__gg.G.fhCrows = [{ lane:1, p0:0, t:0.1, kind:'altar' }, { lane:4, p0:0.28, t:0.2, kind:'smash' }]; }")

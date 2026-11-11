@@ -1683,6 +1683,9 @@ def check_fallen_polt_cross(browser, url):
     page.close()
 
 
+# Pause / resume the live loop: setState is a test hook only from Release 8, so a Release 5 build presses P (input.js) instead.
+PAUSE = "() => { const g = window.__gg; if (g.setState) g.setState('pause'); else if (g.state === 'play') window.dispatchEvent(new KeyboardEvent('keydown', { key:'p' })); }"
+PLAY = "() => { const g = window.__gg; if (g.setState) g.setState('play'); else if (g.state === 'pause') window.dispatchEvent(new KeyboardEvent('keydown', { key:'p' })); }"
 LANT = "() => (window.__gg.G.lanterns || []).map(o => [o.lane, +o.hp.toFixed(2), +o.t.toFixed(2)])"
 STEP2 = "([n, dt]) => { const g = window.__gg; for (let i = 0; i < n; i++) g.update(dt); }"
 # A pumpkin of type t at level lv flying up `lane` from below the fence (the real flight path in game.js).
@@ -1693,7 +1696,8 @@ FLY = """([t, lane, lv]) => { const g = window.__gg, G = g.G; const pr = { x:g.L
 def lantern_up(page):
     """N2-16, the boss parked at its hold with every clock far off, the game paused (stepped by hand), every fence at 40."""
     b = fp_up(page)
-    page.evaluate("() => { const g = window.__gg, b = window.__b; b.p = b.hold; b.tpT = b.zoneT = b.lanT = 999; g.setState('pause'); clearInterval(window.__li); g.G.lanterns = []; for (const w of g.walls){ w.max = 40; w.hp = 40; } }")
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.p = b.hold; b.tpT = b.zoneT = b.lanT = 999; clearInterval(window.__li); g.G.lanterns = []; for (const w of g.walls){ w.max = 40; w.hp = 40; } }")
+    page.evaluate(PAUSE); time.sleep(0.1)
     return b
 
 
@@ -1732,8 +1736,9 @@ def check_fp_lanterns(browser, url):
     ok(all(o[0] != la for o in page.evaluate(LANT)), 'a strong pumpkin breaks it')
     page.evaluate(f"() => {{ window.__ms[{j}].dead = true; }}")
     # tools and area damage leave lanterns alone
-    page.evaluate(f"() => {{ const g = window.__gg; Object.assign(g.save, {{ bomb:5, fw:5 }}); g.dropBomb(g.LANE({lb}), g.fieldY(0.98)); g.useFirework(); }}"); page.evaluate(STEP2, [10, 0.02])
-    ok(page.evaluate(f"() => ({LANT})().find(o => o[0] === {lb})[1]") == 3, 'a bomb or a firework never touches a lantern')
+    if page.evaluate("() => !!(window.__gg.dropBomb && window.__gg.useFirework)"):   # tool hooks exist from Release 7's test hooks on
+        page.evaluate(f"() => {{ const g = window.__gg; Object.assign(g.save, {{ bomb:5, fw:5 }}); g.dropBomb(g.LANE({lb}), g.fieldY(0.98)); g.useFirework(); }}"); page.evaluate(STEP2, [10, 0.02])
+        ok(page.evaluate(f"() => ({LANT})().find(o => o[0] === {lb})[1]") == 3, 'a bomb or a firework never touches a lantern')
     # unbroken: at zero it takes half its fence's full health, never the last 1; the broken lantern's fence is untouched
     page.evaluate(f"() => {{ const g = window.__gg; g.walls[{lc}].hp = 5; }}")
     page.evaluate(STEP2, [110, 0.1])
@@ -1758,7 +1763,7 @@ def check_fp_continue_lanterns(browser, url):
         ok(False, 'the Fallen Poltergeist arrived'); page.close(); return
     page.evaluate("() => { window.__b.lanT = 0.05; }"); page.evaluate(STEP2, [1, 0.1])
     ok(len(page.evaluate(LANT)) == 3, '(three lanterns lit)')
-    page.evaluate("() => { const g = window.__gg; g.setState('play'); g.continueNight(g.continueState()); }"); time.sleep(0.8)
+    page.evaluate(PLAY); time.sleep(0.1); page.evaluate("() => { const g = window.__gg; g.continueNight(g.continueState()); }"); time.sleep(0.8)
     r = page.evaluate(f"() => {{ const b = {LBOSS}; return [({LANT})(), b ? b.lanT : null]; }}")
     ok(r[0] == [] and r[1] is not None and r[1] > 18, f'a continued night drops them, its lantern clock full {r}')
     ok(not errors, f'no page errors {errors[:2]}')

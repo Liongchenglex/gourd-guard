@@ -340,10 +340,26 @@ function altar(g, st){
   }
 }
 /** Crack state st (0 whole .. 2 shattered) of the altar, baked at scale k. */
+/** The Fallen Hexwitch's black crow (Release 7, owner 2026-11-11; a vfx, not the Crow monster): a black silhouette diving head first, wings at
+ *  HEXCROW_N flap angles, baked once per frame and bake scale; one drawImage per crow per frame (render/witchwood.js drawHexCrows). */
+export const HEXCROW_N = 4, HEXCROW = { w:64, h:56 };
+export function hexCrowSprite(k, f){ k = bakeK(k); return bake(`hexcrow:${k}:${f}`, HEXCROW.w, HEXCROW.h, HEXCROW.w / 2, HEXCROW.h / 2, k, g => {
+  const up = [-1, -0.35, 0.35, 1][f % HEXCROW_N] * 14;   // wing tips: up, mid, down
+  g.fillStyle = '#0e0b12'; g.strokeStyle = 'rgba(255,42,58,.55)'; g.lineWidth = 1.2; g.lineJoin = 'round';
+  for (const d of [-1, 1]){   // a wing each side, feathered at its trailing edge
+    g.beginPath(); g.moveTo(d * 5, -4); g.quadraticCurveTo(d * 18, -8 + up * .4, d * 30, -6 + up);
+    g.lineTo(d * 26, -1 + up * .8); g.lineTo(d * 22, 1 + up * .6); g.lineTo(d * 17, 3 + up * .4); g.lineTo(d * 11, 4 + up * .2); g.quadraticCurveTo(d * 7, 4, d * 4, 4); g.closePath(); g.fill(); g.stroke();
+  }
+  g.beginPath(); g.ellipse(0, 0, 6.5, 13, 0, 0, TAU); g.fill();   // the body, head down (it dives towards the fence)
+  g.beginPath(); g.moveTo(-5, -11); g.lineTo(0, -22); g.lineTo(5, -11); g.closePath(); g.fill();   // the tail
+  g.beginPath(); g.ellipse(0, 13, 5, 5, 0, 0, TAU); g.fill();   // the head
+  g.fillStyle = '#3a3036'; g.beginPath(); g.moveTo(-2.4, 16); g.lineTo(0, 24); g.lineTo(2.4, 16); g.closePath(); g.fill();   // the beak
+  g.fillStyle = '#ff2a3a'; for (const d of [-1, 1]){ g.beginPath(); g.ellipse(d * 2.4, 13.5, 1.3, 1.3, 0, 0, TAU); g.fill(); }   // her red eyes in it
+}); }
 export function altarSprite(k, st){ k = bakeK(k); return bake(`altar:${k}:${st}`, ALTAR_W + 24, ALTAR_H + 22, ALTAR_W / 2 + 12, ALTAR_H + 12, k, g => altar(g, st)); }
 /** Test hook: [altar frames baked, her zone sizes baked]. */
 export const hexZoneBaked = () => [...propCache.keys()].filter(k => k.startsWith('zone:crone:')).length;   // test hook (Release 7)
-export const fallenHexBaked = () => [[...propCache.keys()].filter(k => k.startsWith('altar:')).length, [...propCache.keys()].filter(k => k.startsWith('zone:undead:')).length];
+export const fallenHexBaked = () => [[...propCache.keys()].filter(k => k.startsWith('altar:')).length, [...propCache.keys()].filter(k => k.startsWith('zone:undead:')).length, [...propCache.keys()].filter(k => k.startsWith('hexcrow:')).length];
 
 const path = (g, pts) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); };
 /** A groove: a dark line with a lit lower-right lip, so cracks read as depth rather than ink. */

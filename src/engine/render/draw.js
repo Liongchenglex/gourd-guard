@@ -36,7 +36,7 @@ import { ROTTEN, ROT_FX } from '../rot.js';
 import { rotSprite } from './rot.js';
 import { drawPotions, drawPotionFx } from './potion.js';
 import { drawWeatherFrame } from './weather.js';
-import { drawRoots, drawAltar, undeadZoneSize } from './witchwood.js';
+import { drawRoots, drawAltar, drawHexCrows, undeadZoneSize } from './witchwood.js';
 import { barrierFront } from '../witchwood.js';
 
 // ---------- Render ----------
@@ -97,6 +97,7 @@ export function render(){
   if (__RELEASE__ >= 8) drawCrumbles();   // fallen Gatehouses and Archer Towers settling (Release 8)
   drawScarecrows(t);
   drawArrows(t);
+  if (__RELEASE__ >= 7 && G.fhCrows && G.fhCrows.length) drawHexCrows(ctx, G.fhCrows);   // the Fallen Hexwitch's black crows diving to a fence (one baked frame each)
   if (__RELEASE__ >= 8 && G.fcSpears && G.fcSpears.length) drawCountSpears();   // the Fallen Count's blood spears in flight (one baked sprite each)
   if (__RELEASE__ >= 9 && G.ftDiveSpears && G.ftDiveSpears.length) drawDiveSpears();   // the Fallen twins' dive spears in flight (one baked sprite each)
   if (bands.length) drawFog(t, bands, g.fogClear > 0);
@@ -439,7 +440,7 @@ export function drawHexZones(t){
   for (const z of G.hexZones || []){
     const a = Math.min(1, z.t / 1.5), pulse = 0.5 + 0.5 * Math.sin(t * 3);
     let x, y, w, h;
-    if (__RELEASE__ >= 7 && z.shape === 'box5'){ [w, h] = undeadZoneSize(); drawUndeadZoneFx(ctx, LANE(z.lane) - w / 2, FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - h / 2, w, h, t, a, K); continue; }   // the Fallen Hexwitch's 5x5 (Release 7): one baked sprite
+    if (__RELEASE__ >= 7 && z.shape === 'box54'){ [w, h] = undeadZoneSize(); drawUndeadZoneFx(ctx, LANE(z.lane) - w / 2, FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - h / 2, w, h, t, a, K); continue; }   // the Fallen Hexwitch's 5x4 (Release 7; owner 2026-11-11): one baked sprite
     if (__RELEASE__ >= 7 && z.src === 'crone'){ w = CS * 3 * 0.98; h = CS * 3; drawCroneZoneFx(ctx, LANE(z.lane) - w / 2, FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - h / 2, w, h, t, a, K); continue; }   // the Ash Crone's 3x3 (Release 7): one baked sprite
     if (z.shape === 'col'){ x = LANE(z.lane) - CS * 0.49; y = FIELD_TOP; w = CS * 0.98; h = FIELD_BOT - FIELD_TOP; }
     else if (z.shape === 'row'){ x = GX; y = FIELD_TOP + z.p * (FIELD_BOT - FIELD_TOP) - CS * 0.5; w = CS * COLS; h = CS; }

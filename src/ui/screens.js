@@ -271,6 +271,7 @@ export function openPreview(n){
   if (__RELEASE__ >= 9 && def.tideMarks && def.tideMarks.length) info.push('The red tide rises as the night goes on.');
   if (__RELEASE__ >= 9 && def.redLines && def.redLines.length) info.push(def.redLines.length > 1 ? 'Cursed lines: a row and a column stay red all night.' : `Cursed line: a ${def.redLines[0].kind === 'col' ? 'column' : 'row'} stays red all night.`);   // the marsh nightmare's cursed lines (owner 2026-11-11)
   if (__RELEASE__ >= 9 && def.whirlpools && def.whirlpools.length) info.push(def.whirlpools.length > 1 ? 'Whirlpools carry monsters between lanes.' : 'A whirlpool pair carries monsters between lanes.');
+  if (__RELEASE__ >= 7 && def.nightmare && def.gust) info.push('The Witchwood wind shifts rows and columns of your patch.');   // N3-11 and N3-16 (Release 7)
   if (__RELEASE__ >= 4 && def.fireMarks && def.fireMarks.length) info.push('Fire marks on the spawn bar light more fire and bring a horde.');
   if (__RELEASE__ >= 4) for (const k of def.unlockGourds) if (GOURDS[k] && !(save.gourds && save.gourds[k])) info.push(`🎁 Reward: the ${GOURDS[k].name}.`);
   if (!def.nightmare && def.levelNo === 10){ const nextName = WORLD_NAMES[def.worldNo]; info.push(`🎁 Reward: levels 11–20${nextName && WORLD_LEVELS[def.worldNo] && WORLD_LEVELS[def.worldNo].length ? ` and World ${def.worldNo + 1}: ${nextName}` : ''}.`); }

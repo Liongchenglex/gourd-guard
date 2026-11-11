@@ -611,11 +611,11 @@ function updateHexwitch(m, dt){
   }
 }
 /** Is a monster inside a Hexwitch zone? (box: 3 lanes × 3 tile heights; col: whole column; row: 3 tile heights across the field;
- *  box5, the Fallen Hexwitch's from Release 7: 5 lanes × 5 tile heights) */
+ *  box54, the Fallen Hexwitch's from Release 7: 5 lanes × 4 tile heights, owner 2026-11-11) */
 export function inHexZone(m){
   for (const z of G.hexZones || []){
     if (z.shape === 'col'){ if (m.lane === z.lane) return true; }
-    else if (__RELEASE__ >= 7 && z.shape === 'box5'){ if (Math.abs(m.lane - z.lane) <= 2 && Math.abs(m.p - z.p) <= 2.5 * TILE_P()) return true; }
+    else if (__RELEASE__ >= 7 && z.shape === 'box54'){ if (Math.abs(m.lane - z.lane) <= 2 && Math.abs(m.p - z.p) <= 2 * TILE_P()) return true; }
     else if (z.shape === 'row'){ if (Math.abs(m.p - z.p) <= 0.5 * TILE_P()) return true; }   // 1 tile tall across all 7 lanes
     else if (Math.abs(m.lane - z.lane) <= 1 && Math.abs(m.p - z.p) <= 1.5 * TILE_P()) return true;
   }

@@ -203,11 +203,18 @@ export function updateTreant(m, dt){
   if (m.p <= 0.05) return;
   if ((m.rootT -= dt) <= 0){ m.rootT += tv(m, 'rootEvery'); summonRoots(m); }
 }
+/** Raise up to n roots in as many lanes other than `except`, each 50/50 between the kinds its lane can still take (the Treant's rule); `by` tags them
+ *  with their maker (the Fallen Hexwitch's, so they sink when she falls). The lanes used. */
+function raiseRootsIn(n, except, by){
+  if (!G.roots) G.roots = [];
+  const kindsFor = l => { const has = k => G.roots.some(r => r.lane === l && !!r.atFence === k); return [...(has(false) ? [] : [false]), ...(has(true) || !(walls[l] && walls[l].hp > 0) ? [] : [true])]; };
+  const lanes = shuffle([...Array(COLS).keys()].filter(l => l !== except && kindsFor(l).length)).slice(0, n);
+  for (const l of lanes){ const ks = kindsFor(l), r = raiseRoot(l, ks[Math.floor(Math.random() * ks.length)]); if (by) r.by = by; }
+  return lanes;
+}
 function summonRoots(m){
   const [a, b] = tv(m, 'rootN'), n = a + Math.floor(Math.random() * (b - a + 1));
-  const kindsFor = l => { const has = k => G.roots.some(r => r.lane === l && !!r.atFence === k); return [...(has(false) ? [] : [false]), ...(has(true) || !(walls[l] && walls[l].hp > 0) ? [] : [true])]; };
-  const lanes = shuffle([...Array(COLS).keys()].filter(l => l !== m.lane && kindsFor(l).length)).slice(0, n);
-  for (const l of lanes){ const ks = kindsFor(l); raiseRoot(l, ks[Math.floor(Math.random() * ks.length)]); }
+  const lanes = raiseRootsIn(n, m.lane);
   m.anim = { clip:'summon', t:0, dur:1 };   // 10 frames at 10 fps
   const y = mY(m);
   for (let i = 0; i < 14; i++) spark(m.x + (i % 2 ? -36 : 36), y + 16, i % 3 ? '#c87aff' : '#5a3a26', 150);   // its hands slam the ground
@@ -266,22 +273,26 @@ export function updateRoots(dt){
   }
 }
 /** What a continued night keeps of the roots: every one as it stands. */
-export const rootSnapshot = () => (G.roots || []).map(r => ({ lane:r.lane, p:r.p, hp:r.hp, t:r.t, atFence:!!r.atFence }));
-export function restoreRoots(list){ G.roots = (list || []).map(r => ({ lane:r.lane, p:r.p, hp:r.hp, t:r.t, atFence:!!r.atFence })); }
+export const rootSnapshot = () => (G.roots || []).map(r => ({ lane:r.lane, p:r.p, hp:r.hp, t:r.t, atFence:!!r.atFence, by:r.by || null }));
+export function restoreRoots(list){ G.roots = (list || []).map(r => ({ lane:r.lane, p:r.p, hp:r.hp, t:r.t, atFence:!!r.atFence, ...(r.by ? { by:r.by } : {}) })); }
 
 // ---------- The Fallen Hexwitch (N3-16, the witchwood nightmare's boss; spec Part 6) ----------
 // Holds at `hold` like the Fallen Gravekeeper (monsters.js stops her exactly there), immune to knockback and freeze like every boss, never drinks.
 // Every number is in TYPES.fallenhexwitch. Her clocks run once she is on the field (p > 0.05); she does not hex (our reading of the spec).
-//  - Undead zone (zoneEvery): a 5x5 box (G.hexZones shape 'box5': lanes +-2, +-2.5 tiles; inHexZone in monsters.js) for zoneLast s, laid wholly on the
+//  - Undead zone (zoneEvery): a 5x4 box (owner 2026-11-11; G.hexZones shape 'box54': lanes +-2, +-2 tiles; inHexZone in monsters.js) for zoneLast s, laid wholly on the
 //    field at a random spot. Her zones carry src 'fallenhex' and she counts only those, so an Ash Crone's 3x3 never stops hers (and the story
 //    Hexwitch's top-up, which counts every zone, never meets hers: they share no night). A second is not laid while hers stands.
 //  - Potions (potionEvery): potionN[0]..potionN[1] on random field tiles (engine/potion.js placeRandomPotions).
 //  - Crows (crowEvery): crows[0]..crows[1] at the top of random lanes (minions), as the Fallen Gravekeeper's.
-//  - Smash (smashEvery): her lane's fence loses smashHit of its full health at once, never its last 1; GLIDE_AFTER s later she glides glide[0]..glide[1]
+//  - Black crows (owner 2026-11-11): the smash and an altar's rise each send a black crow (a baked vfx, not the Crow monster: G.fhCrows) diving down the
+//    lane, from her (smash) or the top (altar), to the fence in CROW_FLY s; the fence damage lands when it arrives. They go when she falls.
+//  - Summons (summonEvery, owner 2026-11-11): 2 of the Treant's roots (G.roots, tagged by:'fallenhex', in lanes other than hers) and one Ash Crone, one
+//    Blood Coven Witch and one Witch as extras (minions), in three distinct random lanes at her height. Her roots sink when she falls.
+//  - Smash (smashEvery): a black crow carries it to her lane's fence, which loses smashHit of its full health, never its last 1; GLIDE_AFTER s later she glides glide[0]..glide[1]
 //    lanes left or right (clamped to the field; never onto the altar's lane when another choice exists, our call: there she would shield it herself),
 //    and every glide brings crows[0]..crows[1] crows with it (owner 2026-11-09).
 //  - The altar (altarAt, three times a fight): when her health reaches a mark an altar rises (G.altar = { lane, p:ALTAR_P, hp:altarHp, t }) in a random
-//    lane other than hers, and that lane's fence drops to 1 health (owner 2026-11-09; a fence already down stays down). While it stands every damage to her is 0 ("No damage" and a dull clink: fhGate, called from damage() in combat.js, so every
+//    lane other than hers, and that lane's fence drops to 1 health as its black crow lands (owner 2026-11-09 / 2026-11-11; a fence already down stays down). While it stands every damage to her is 0 ("No damage" and a dull clink: fhGate, called from damage() in combat.js, so every
 //    source is covered); a hit that would carry her past the next mark stops at it. Only pumpkins hurt the altar (game.js asks altarAhead for every
 //    pumpkin in flight; a monster in front of it in its lane is met first; every pumpkin stops there, Grey too; its hit power, doubled from a Wartling
 //    square; rot splats on it). Tools and area damage only ever look at G.monsters, so they skip it. One altar at a time: health past two marks (a
@@ -290,6 +301,9 @@ export function restoreRoots(list){ G.roots = (list || []).map(r => ({ lane:r.la
 //    health (fallenHexSnapshot / restoreFallenHex, through bossMood in game.js and spawner.js). The altar goes when she falls.
 export const ALTAR_P = 0.15;   // where an altar stands: towards the back of the field, behind her hold
 const ALTAR_R = 20, GLIDE_AFTER = 0.45;   // a pumpkin meets the altar this far below its centre; the smash-to-glide delay
+export const CROW_FLY = 0.45;   // a black crow's dive from its start to the fence (the smash-to-glide delay, so the smash lands as she glides)
+/** A black crow's height on screen (game pixels): from p0 down to the fence (render/witchwood.js drawHexCrows). */
+export const hexCrowY = c => FIELD_TOP + (c.p0 + (1 - c.p0) * Math.min(1, c.t / CROW_FLY)) * (FIELD_BOT - FIELD_TOP);
 const isFallenHex = m => m.type === 'boss' && m.kind === 'fallenhexwitch';
 const FHT = () => TYPES.fallenhexwitch;
 /** An altar's centre on screen (game pixels). */
@@ -299,7 +313,7 @@ const bloodSparks = (x, y, n, spd = 150) => { for (let i = 0; i < n; i++) spark(
 /** Set up a freshly spawned Fallen Hexwitch: every clock full, no glide pending; her marks are counted on her first frame (fhDone). */
 export function initFallenHex(m){
   const T = FHT();
-  m.zoneT = T.zoneEvery; m.potionT = T.potionEvery; m.crowT = T.crowEvery; m.smashT = T.smashEvery; m.glideT = 0; m.altDone = null; m.bx = m.x;
+  m.zoneT = T.zoneEvery; m.potionT = T.potionEvery; m.crowT = T.crowEvery; m.smashT = T.smashEvery; m.summonT = T.summonEvery; m.glideT = 0; m.altDone = null; m.bx = m.x;
 }
 const markOf = (m, i) => m.maxHp * FHT().altarAt[i];
 function fhDone(m){ if (m.altDone == null) m.altDone = FHT().altarAt.filter(a => m.hp <= m.maxHp * a + 1e-6).length; }
@@ -328,7 +342,7 @@ function raiseAltar(m){
   m.altDone++;
   const a = { lane, p:ALTAR_P, hp:FHT().altarHp, t:0 };
   G.altar = a;
-  const w = walls[lane]; if (w && w.hp > 1) damageWall(lane, w.hp - 1);   // the altar's lane: its fence drops to 1 health as it rises (owner 2026-11-09)
+  sendCrow(lane, 0, 'altar');   // the altar's lane: a black crow dives from the top and its fence drops to 1 health as it lands (owner 2026-11-09 / 2026-11-11)
   for (const pr of G.projs || []) if (pr.lane === lane && !pr.dead && pr.y < altarY(a)) (pr.passed || (pr.passed = new Set())).add(a);   // pumpkins already past it fly on
   const x = LANE(lane), y = altarY(a);
   for (let i = 0; i < 16; i++) chunk(x, y + 10, i % 2 ? '#55555c' : '#8a8a92', 180);
@@ -367,9 +381,9 @@ function breakAltar(){
 }
 function fhZone(m){
   if (G.hexZones.some(z => z.src === 'fallenhex')) return;   // hers still stands
-  const T = FHT(), tp = TILE_P(), lo = Math.min(0.5, 2.5 * tp), hi = Math.max(0.5, 1 - 2.5 * tp);
+  const T = FHT(), tp = TILE_P(), lo = Math.min(0.5, 2 * tp), hi = Math.max(0.5, 1 - 2 * tp);
   const lane = Math.min(COLS - 1, 2 + Math.floor(Math.random() * Math.max(1, COLS - 4))), p = lo + Math.random() * (hi - lo);   // wholly on the field
-  G.hexZones.push({ shape:'box5', lane, p, t:T.zoneLast, src:'fallenhex' });
+  G.hexZones.push({ shape:'box54', lane, p, t:T.zoneLast, src:'fallenhex' });
   const y = mY({ p });
   for (let i = 0; i < 18; i++) spark(LANE(lane) + (Math.random() - 0.5) * 120, y + (Math.random() - 0.5) * 120, i % 2 ? '#8a8a92' : '#ff2a3a', 120);
   addFloat('Undead zone!', m.x, mY(m) - m.r - 30, '#ff8a80', 18, 1.2);
@@ -389,13 +403,40 @@ function fhCrows(){
   SFX.bossSfx('fallenhexwitch', 'crows');
 }
 function fhSmash(m){
-  const w = walls[m.lane];
-  if (w){ const amt = Math.min(w.max * FHT().smashHit, w.hp - 1); if (amt > 0) damageWall(m.lane, amt); }
-  bloodSparks(LANE(m.lane), FENCE_Y - 14, 16, 220); ring(LANE(m.lane), FENCE_Y - 10, 44, 'rgba(255,42,58,.8)');
-  for (let i = 0; i < 10; i++) chunk(LANE(m.lane), FENCE_Y - 10, '#6a5040', 200);
+  sendCrow(m.lane, m.p, 'smash');   // a black crow carries the smash down her lane; the fence takes it as the crow lands
   m.anim = { clip:'zone', t:0, dur:6 / 10 }; m.glideT = GLIDE_AFTER;
-  G.shake = Math.max(G.shake || 0, 0.8);
-  SFX.bossSfx('fallenhexwitch', 'smash');
+}
+/** A black crow sets off down `lane` from p0 to the fence: 'smash' (her smash, smashHit of the fence) or 'altar' (the fence drops to 1). */
+function sendCrow(lane, p0, kind){
+  (G.fhCrows || (G.fhCrows = [])).push({ lane, p0, t:0, kind });
+  spark(LANE(lane), FIELD_TOP + p0 * (FIELD_BOT - FIELD_TOP), '#1a1418', 90);
+  SFX.bossSfx('fallenhexwitch', 'crows');
+}
+/** Her crows in flight (one frame): each that reaches its fence lands its damage there and goes. No allocation unless one lands. */
+function updateHexCrows(dt){
+  const cs = G.fhCrows; if (!cs || !cs.length) return;
+  let landed = false;
+  for (const c of cs){
+    c.t += dt; if (c.t < CROW_FLY) continue;
+    c.done = landed = true;
+    const w = walls[c.lane];
+    if (w && w.hp > 1){ const amt = c.kind === 'altar' ? w.hp - 1 : Math.min(w.max * FHT().smashHit, w.hp - 1); if (amt > 0) damageWall(c.lane, amt); }   // never its last 1; a fence down stays down
+    bloodSparks(LANE(c.lane), FENCE_Y - 14, 16, 220); ring(LANE(c.lane), FENCE_Y - 10, 44, 'rgba(255,42,58,.8)');
+    for (let i = 0; i < 10; i++) chunk(LANE(c.lane), FENCE_Y - 10, '#6a5040', 200);
+    G.shake = Math.max(G.shake || 0, c.kind === 'smash' ? 0.8 : 0.5);
+    SFX.bossSfx('fallenhexwitch', 'smash');
+  }
+  if (landed) G.fhCrows = cs.filter(c => !c.done);
+}
+/** Her summons: two of the Treant's roots and one Ash Crone, one Blood Coven Witch and one Witch as extras, spread over three lanes at her height. */
+function fhSummon(m){
+  raiseRootsIn(2, m.lane, 'fallenhex');
+  const lanes = shuffle([...Array(COLS).keys()]).slice(0, 3), p = Math.max(0, m.p - 0.02);
+  ['ashcrone', 'covenwitch', 'witch'].forEach((t, i) => { const o = spawnMonster(t, lanes[i], true, p); o.fromHex = true; spark(o.x, mY(o) - 10, '#ff2a3a', 120); });
+  bloodSparks(m.x, mY(m) - 20, 12, 150); ring(m.x, mY(m), 50, 'rgba(255,42,58,.8)');
+  addFloat('Her coven!', m.x, mY(m) - m.r - 30, '#ff8a80', 18, 1.2);
+  m.anim = { clip:'hex', t:0, dur:6 / 11 };
+  SFX.bossSfx('fallenhexwitch', 'summon');
 }
 function fhGlide(m){
   const [a, b] = FHT().glide, d = a + Math.floor(Math.random() * (b - a + 1));
@@ -414,12 +455,14 @@ export function updateFallenHex(m, dt){
   m.bx += (m.tx - m.bx) * Math.min(1, dt * 5); m.x = m.bx + Math.sin(m.ph * 1.3) * 2;   // a slow hover; a glide eases her across
   fhMarks(m);
   if (G.altar) G.altar.t += dt;
+  updateHexCrows(dt);
   if (m.glideT > 0 && (m.glideT -= dt) <= 0){ m.glideT = 0; fhGlide(m); }
   if (m.p <= 0.05) return;
   if ((m.zoneT -= dt) <= 0){ m.zoneT = T.zoneEvery; fhZone(m); }
   if ((m.potionT -= dt) <= 0){ m.potionT = T.potionEvery; fhPotions(m); }
   if ((m.crowT -= dt) <= 0){ m.crowT = T.crowEvery; fhCrows(); }
   if ((m.smashT -= dt) <= 0){ m.smashT = T.smashEvery; fhSmash(m); }
+  if ((m.summonT -= dt) <= 0){ m.summonT = T.summonEvery; fhSummon(m); }
 }
 /** What a continued night keeps of her: her marks spent and a standing altar (its lane and health). */
 export const fallenHexSnapshot = m => isFallenHex(m) ? { altDone:m.altDone, altar:G.altar ? { lane:G.altar.lane, hp:G.altar.hp } : null } : null;
@@ -433,7 +476,7 @@ export function restoreFallenHex(m, s){
 /** kill() (combat.js), once a Release 7 monster is truly dead: the Flask Bearer's potion, the toad's burst, the Treant's roots sinking, the Fallen Hexwitch's altar. */
 export function witchwoodFalls(m){
   if (isTreant(m)){ for (const r of (G.roots || []).slice()) sinkRoot(r); return; }
-  if (isFallenHex(m)){ G.altar = null; return; }
+  if (isFallenHex(m)){ G.altar = null; G.fhCrows = []; for (const r of (G.roots || []).filter(r => r.by === 'fallenhex')) sinkRoot(r); return; }   // her altar, her crows in flight and her roots go with her
   if (m.type === 'flaskbearer'){
     dropPotionsNear(m.lane, m.p, [POTION_KINDS[Math.floor(Math.random() * POTION_KINDS.length)]]);
     return;

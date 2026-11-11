@@ -1268,7 +1268,7 @@ CHECKS.update({'check_treant': check_treant, 'check_treant_form2': check_treant_
 # ---------- Task 9: the Fallen Hexwitch (N3-16) ----------
 R7_NAMES += ['fallenhexwitch', 'altarHp']   # her key and data keys
 FH_T = """() => { const T = window.__gg.TYPES.fallenhexwitch; return T ? [T.boss, T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.hold, T.zoneEvery, T.zoneLast, T.potionEvery, T.potionN,
-  T.crowEvery, T.crows, T.smashEvery, T.smashHit, T.glide, T.altarAt, T.altarHp, T.noItems] : null; }"""
+  T.crowEvery, T.crows, T.smashEvery, T.smashHit, T.glide, T.altarAt, T.altarHp, T.summonEvery, T.noItems] : null; }"""
 # A pumpkin object (lv 1..5 of `type`) for hitMonster, defined once a page as window.__pr(type, lv, lane).
 PRDEF = """() => { const g = window.__gg; window.__pr = (type, lv, lane) => ({ x:g.LANE(lane), y:g.fieldY(1), vy:-900, type, vis:type, lv, guar:false, lane, hitWalls:new Set(),
   grp:{ spawned:false, small:false, kills:0 }, size:1, rot:0, spin:9, hit:new Set(), trail:[], r:16, dead:false }); }"""
@@ -1284,7 +1284,7 @@ def fh_up(page):
     time.sleep(0.3)
     b = page.evaluate(f"""() => {{ const g = window.__gg, G = g.G, b = {TBOSS}; if (!b) return null;
       G.spawnTimer = 999; G.monsters.splice(0, G.monsters.length, b); b.p = b.hold - 0.01; window.__b = b; G.hexZones.length = 0;
-      if (G.potions) G.potions.length = 0; G.potionT = 1e9; b.zoneT = b.potionT = b.crowT = b.smashT = 1e9;
+      if (G.potions) G.potions.length = 0; G.potionT = 1e9; b.zoneT = b.potionT = b.crowT = b.smashT = b.summonT = 1e9;
       window.__fmaxP = 0; clearInterval(window.__fi); window.__fi = setInterval(() => {{ window.__fmaxP = Math.max(window.__fmaxP, window.__b.p); window.__gg.G.spawnTimer = 999; }}, 10);
       return [b.kind, b.hp, b.maxHp, b.hold, b.lane]; }}""")
     page.evaluate(PRDEF)
@@ -1296,7 +1296,7 @@ def check_fallen_hex(browser, url):
     the last 1) then a glide of 1-2 lanes; altars at 75/50/25% (one at a time, a hit past two marks raises the second when the first falls)."""
     if not R7: return
     page, errors = open_page(browser, url)
-    ok(page.evaluate(FH_T) == [True, 45, 34, 0.03, 50, 0, 400, 6, 0.28, 12, 10, 8, [2, 3], 6, [1, 3], 10, 0.5, [1, 2], [0.75, 0.5, 0.25], 8, True], f'Fallen Hexwitch data {page.evaluate(FH_T)}')
+    ok(page.evaluate(FH_T) == [True, 45, 34, 0.03, 50, 0, 400, 6, 0.28, 12, 10, 8, [2, 3], 6, [1, 3], 10, 0.5, [1, 2], [0.75, 0.5, 0.25], 8, 16, True], f'Fallen Hexwitch data {page.evaluate(FH_T)}')
     ok(page.evaluate("() => window.__gg.BOSS_NAMES.fallenhexwitch") == 'The Fallen Hexwitch', 'her name on screen is "The Fallen Hexwitch"')
     intro = page.evaluate("() => (window.__gg.BOSS_INTRO.fallenhexwitch || {})[1] || ''")
     ok('altar' in intro.lower() and 'potion' in intro.lower(), f'she has a boss intro text {intro[:60]!r}')
@@ -1309,19 +1309,21 @@ def check_fallen_hex(browser, url):
         page.close(); return
     ok(page.evaluate("() => window.__gg.canDrink(window.__b, 'speed')") is False, 'she never drinks a potion')
     ok(page.evaluate("() => window.__b.hexT == null || window.__b.hexT === 0") and not page.evaluate("() => window.__gg.TYPES.fallenhexwitch.hexEvery"), 'she has no hex clock (no hexing)')
-    # the undead zone: a 5x5 box of her own, 10 s; a Crone's 3x3 does not stop hers; a second while hers stands is not laid
+    # the undead zone: a 5x4 box of her own (owner 2026-11-11), 10 s; a Crone's 3x3 does not stop hers; a second while hers stands is not laid
     page.evaluate("() => { const G = window.__gg.G; G.hexZones.push({ shape:'box', lane:0, p:0.5, t:8 }); window.__b.zoneT = 0.05; }")
     ok(gwait(page, f"() => ({OWNZ})().length >= 1", 1) is not None, 'she raises an undead zone though an Ash Crone zone stands')
     z = page.evaluate(OWNZ)
-    ok(len(z) == 1 and z[0][0] == 'box5' and 9.5 < z[0][3] <= 10 and 2 <= z[0][1] <= 4, f'one 5x5 zone (box5) lasting 10 s, all on the field {z}')
+    ok(len(z) == 1 and z[0][0] == 'box54' and 9.5 < z[0][3] <= 10 and 2 <= z[0][1] <= 4, f'one 5x4 zone (box54) lasting 10 s, all on the field {z}')
+    tp = page.evaluate("() => window.__gg.TILE_P()")
+    ok(2 * tp - 1e-9 <= z[0][2] <= 1 - 2 * tp + 1e-9, f'its 4 tiles lie wholly on the field (p {z[0][2]}, tile {tp:.3f})')
     ok(page.evaluate("() => window.__b.zoneT") > 11, 'her zone clock restarts at 12 s')
     ok(mon_b(page, "m.anim && m.anim.clip") == 'hex', 'she plays her hex clip')
     page.evaluate("() => { window.__b.zoneT = 0.05; }"); gsleep(page, 0.3)
     ok(len(page.evaluate(OWNZ)) == 1, 'with her zone standing the next clock lays no second one')
     zl, zp = z[0][1], page.evaluate("() => window.__gg.G.hexZones.find(z => z.src === 'fallenhex').p")
     inz = page.evaluate("""([l, p]) => { const g = window.__gg, G = g.G, tp = g.TILE_P(), crone = G.hexZones.filter(z => z.src !== 'fallenhex'); G.hexZones = G.hexZones.filter(z => z.src === 'fallenhex');
-      const at = (dl, dp) => g.inHexZone({ lane:l + dl, p:p + dp * tp }); const r = [at(0, 0), at(2, 2.4), at(-2, -2.4), at(3, 0), at(-3, 0), at(0, 2.6), at(0, -2.6)]; G.hexZones.push(...crone); return r; }""", [zl, zp])
-    ok(inz == [True, True, True, False, False, False, False], f'inside: lanes +-2 and +-2.5 tiles; outside beyond {inz}')
+      const at = (dl, dp) => g.inHexZone({ lane:l + dl, p:p + dp * tp }); const r = [at(0, 0), at(2, 1.9), at(-2, -1.9), at(3, 0), at(-3, 0), at(0, 2.1), at(0, -2.1)]; G.hexZones.push(...crone); return r; }""", [zl, zp])
+    ok(inz == [True, True, True, False, False, False, False], f'inside: lanes +-2 and +-2 tiles (5 wide, 4 tall); outside beyond {inz}')
     j = page.evaluate(GHOUL, [zl + 1, min(0.9, zp + 0.05), 3, 0])
     page.evaluate("(i) => { const g = window.__gg, m = window.__ms[i]; m.lastHit = 0; g.damage(m, 99); }", j)
     ok(mon(page, j, "[m.dead, m.rise > 3.5]") == [False, True], 'a monster killed inside collapses and rises after 4 s')
@@ -1346,14 +1348,15 @@ def check_fallen_hex(browser, url):
     ok(counts <= {1, 2, 3} and len(counts) >= 2, f'1 to 3 crows each swoop {sorted(counts)}')
     ok(top, 'they come in at the top of the field, as minions')
     page.evaluate(NO_CROWS); page.evaluate("() => { window.__b.crowT = 1e9; }")
-    # the smash: half her lane's full health (never the last 1), then 0.45 s later a glide of 1-2 lanes, clamped to the field
+    # the smash: a black crow carries it (owner 2026-11-11): half her lane's full health as it lands (never the last 1); 0.45 s later a glide of 1-2 lanes, clamped
     page.evaluate("() => { const g = window.__gg, b = window.__b; g.walls.forEach(w => w.hp = w.max); b.lane = 3; b.x = b.tx = g.LANE(3); b.smashT = 0.02; }")
-    gwait(page, "() => window.__gg.walls[3].hp < window.__gg.walls[3].max", 1)
-    w = page.evaluate("() => window.__gg.walls.map(w => [w.hp, w.max])")
-    ok(abs((w[3][1] - w[3][0]) - w[3][1] / 2) < 0.3, f'her lane\'s fence loses half its full health {w[3]}')
-    ok(all(w[i][0] == w[i][1] for i in (0, 1, 2, 4, 5, 6)), f'no other fence is touched {w}')
+    gwait(page, "() => (window.__gg.G.fhCrows || []).length > 0", 1)
     ok(page.evaluate("() => window.__b.lane") == 3 and mon_b(page, "m.anim && m.anim.clip") == 'zone', 'she slams her broom (zone clip) and stays put for now')
-    tg = gwait(page, "() => window.__b.lane !== 3", 1)
+    ok(page.evaluate("() => window.__gg.walls[3].hp === window.__gg.walls[3].max"), 'the fence is untouched while the crow flies')
+    tg = gwait(page, "() => window.__b.lane !== 3", 1); gsleep(page, 0.05)
+    w = page.evaluate("() => window.__gg.walls.map(w => [w.hp, w.max])")
+    ok(abs((w[3][1] - w[3][0]) - w[3][1] / 2) < 0.3, f'her lane\'s fence loses half its full health as the crow lands {w[3]}')
+    ok(all(w[i][0] == w[i][1] for i in (0, 1, 2, 4, 5, 6)), f'no other fence is touched {w}')
     l1 = page.evaluate("() => window.__b.lane")
     ok(tg is not None and 0.3 < tg < 0.6 and 1 <= abs(l1 - 3) <= 2, f'about 0.45 s later she glides 1-2 lanes ({tg}, lane 3 -> {l1})')
     gsleep(page, 0.8)
@@ -1364,6 +1367,7 @@ def check_fallen_hex(browser, url):
         page.evaluate("() => { const g = window.__gg, b = window.__b; g.walls.forEach(w => w.hp = w.max); g.walls[0].hp = 2; b.lane = 0; b.x = b.tx = g.LANE(0); b.smashT = 0.02; }")
         gwait(page, "() => window.__b.lane !== 0", 1.5)
         lanes.add(page.evaluate("() => window.__b.lane"))
+    gsleep(page, 0.15)
     ok(lanes <= {1, 2} and len(lanes) == 2, f'from the edge lane she glides onto the field, 1 or 2 lanes {sorted(lanes)}')
     ok(page.evaluate("() => window.__gg.walls[0].hp") == 1, 'a fence on 2 health is left on 1, never broken by the smash')
     page.evaluate("() => { const g = window.__gg; g.walls.forEach(w => w.hp = w.max); window.__b.smashT = 1e9; }")
@@ -1513,19 +1517,20 @@ def check_fallen_hex_continue(browser, url):
 
 def check_fallen_hex_baked(browser, url):
     """Her frames (walk, hex, zone) are baked when N3-16 starts, under 12 MB at bake scale 2.5, with her crows; the altar's crack states and her
-    5x5 zone are baked then too (not on other nights). An altar and her zone cost a drawImage each a frame and no painting. Strips for the owner."""
+    5x4 zone and her black crow's frames are baked then too (not on other nights). An altar and her zone cost a drawImage each a frame and no painting. Strips for the owner."""
     if not R7: return
     page, errors = open_page(browser, url)
     C = page.evaluate("() => { const C = window.__gg.CHARS; return C.fallenhexwitch ? [Object.keys(C.fallenhexwitch.clips).sort(), !!C.hexwitch] : null; }")
     ok(C is not None and C[0] == ['hex', 'walk', 'zone'] and C[1], f'she has her own entry (walk, hex, zone) beside the story Hexwitch {C and C[0]}')
     page.evaluate("() => window.__gg.setBakeScale(2.5)")
     nm3_start(page, 1)
-    ok(page.evaluate("() => window.__gg.fhBaked()") == [0, 0], f'a night without her bakes no altar and no 5x5 zone {page.evaluate("() => window.__gg.fhBaked()")}')
+    ok(page.evaluate("() => window.__gg.fhBaked()") == [0, 0, 0], f'a night without her bakes no altar, no 5x4 zone and no black crow {page.evaluate("() => window.__gg.fhBaked()")}')
     t0 = time.time(); nm3_start(page, 16); dt = time.time() - t0
     ok(page.evaluate("() => window.__gg.isBaked('fallenhexwitch') && window.__gg.isBaked('crow')"), 'starting N3-16 bakes her and her crows')
     ok(not page.evaluate("() => window.__gg.isBaked('hexwitch')"), 'the story Hexwitch atlas is not baked for her')
     fb = page.evaluate("() => window.__gg.fhBaked()")
-    ok(fb[0] >= 3 and fb[1] >= 1, f'the altar\'s crack states and her 5x5 zone are baked at night start {fb}')
+    ok(fb[0] >= 3 and fb[1] >= 1 and fb[2] >= 4, f'the altar\'s crack states, her 5x4 zone and her black crow\'s 4 frames are baked at night start {fb}')
+    ok(all(page.evaluate(f"() => window.__gg.isBaked('{k}')") for k in ('root', 'ashcrone', 'covenwitch', 'witch')), 'and the roots, Ash Crone, Blood Coven Witch and Witch she summons')
     mb = page.evaluate("() => window.__gg.atlasBytes('fallenhexwitch') / 1e6")
     ok(mb < 12, f'her frames take {mb:.1f} MB at bake scale 2.5 (limit 12)')
     ok(dt < 3, f'the night opens in {dt:.1f} s')
@@ -1537,7 +1542,7 @@ def check_fallen_hex_baked(browser, url):
     with open(os.path.join(SHOTS, 'fallenhex.png'), 'wb') as f: f.write(base64.b64decode(strip.split(',')[1]))
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
-    # the draw budget: an altar and her 5x5 zone add a drawImage or two each and no fill, stroke or gradient
+    # the draw budget: an altar and her 5x4 zone add a drawImage or two each and no fill, stroke or gradient
     page = browser.new_page(viewport={'width': 390, 'height': 844})
     errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
     page.add_init_script("""(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
@@ -1548,7 +1553,7 @@ def check_fallen_hex_baked(browser, url):
     page.evaluate(PQ); page.evaluate("() => { window.__gg.G.hexZones.length = 0; window.__gg.G.altar = null; }")
     count = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 30) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 30, (c.fill || 0) / 30, (c.stroke || 0) / 30, ((c.createRadialGradient || 0) + (c.createLinearGradient || 0)) / 30]); } }; requestAnimationFrame(tick); })"
     time.sleep(0.5); base = page.evaluate(count)
-    page.evaluate("() => { const G = window.__gg.G; G.altar = { lane:1, p:0.15, hp:5, t:2 }; G.hexZones.push({ shape:'box5', lane:4, p:0.55, t:9, src:'fallenhex' }); }")
+    page.evaluate("() => { const G = window.__gg.G; G.altar = { lane:1, p:0.15, hp:5, t:2 }; G.hexZones.push({ shape:'box54', lane:4, p:0.55, t:9, src:'fallenhex' }); }")
     time.sleep(0.6); lit = page.evaluate(count)
     ok(1.5 <= lit[0] - base[0] <= 4.5, f'an altar and her zone add a few drawImage a frame ({base[0]:.1f} -> {lit[0]:.1f})')
     ok(lit[1] <= base[1] + 0.1 and lit[2] <= base[2] + 0.1 and lit[3] <= base[3] + 0.1, f'and no fill, stroke or gradient (fill {base[1]:.1f} -> {lit[1]:.1f}, stroke {base[2]:.1f} -> {lit[2]:.1f}, gradients {base[3]:.1f} -> {lit[3]:.1f})')
@@ -1559,6 +1564,127 @@ def check_fallen_hex_baked(browser, url):
 
 
 CHECKS.update({'check_fallen_hex': check_fallen_hex, 'check_fh_altar_immune': check_fh_altar_immune, 'check_fallen_hex_continue': check_fallen_hex_continue, 'check_fallen_hex_baked': check_fallen_hex_baked})
+
+
+FHC = "() => (window.__gg.G.fhCrows || []).map(c => [c.lane, c.kind, Math.round(c.p0 * 1000) / 1000])"
+
+
+def check_fh_crows(browser, url):
+    """Owner 2026-11-11: an altar's rise and her smash each send a black crow (a vfx, not a Crow monster) down the lane; the fence damage lands
+    when it arrives (about 0.45 s): the altar's drop to 1, the smash's half. Her crows in flight go when she falls."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    b = fh_up(page)
+    if b is None:
+        ok(False, 'the Fallen Hexwitch arrived'); page.close(); return
+    page.evaluate("() => { const g = window.__gg, b = window.__b; g.walls.forEach(w => w.hp = w.max); b.lane = 3; b.x = b.tx = g.LANE(3); b.p = b.hold; b.lastHit = 0; g.damage(b, 12, '#fff'); window.__al = g.G.altar.lane; window.__n0 = g.G.monsters.length; }")
+    al = page.evaluate("() => window.__al")
+    c = page.evaluate(FHC)
+    ok(c == [[al, 'altar', 0]], f'an altar rises and a black crow sets off from the top of its lane {c}')
+    ok(page.evaluate("() => window.__gg.G.monsters.filter(m => m.type === 'crow').length") == 0, 'the black crow is not a Crow monster')
+    ok(page.evaluate(f"() => window.__gg.walls[{al}].hp === window.__gg.walls[{al}].max"), 'the altar lane\'s fence is untouched while it flies')
+    tl = gwait(page, f"() => window.__gg.walls[{al}].hp < window.__gg.walls[{al}].max", 1)
+    ok(tl is not None and 0.35 < tl < 0.6 and page.evaluate(f"() => window.__gg.walls[{al}].hp") == 1, f'it lands about 0.45 s later and that fence drops to 1 ({tl})')
+    ok(page.evaluate(FHC) == [], 'the crow is gone once it lands')
+    # the smash crow, from her height in her lane
+    page.evaluate("() => { const g = window.__gg, b = window.__b; g.G.altar = null; g.walls.forEach(w => w.hp = w.max); b.smashT = 0.02; }")
+    gwait(page, "() => (window.__gg.G.fhCrows || []).length > 0", 1)
+    c = page.evaluate(FHC)
+    ok(len(c) == 1 and c[0][0] == 3 and c[0][1] == 'smash' and abs(c[0][2] - 0.28) < 0.02, f'her smash sends a black crow down her lane from her {c}')
+    ts = gwait(page, "() => window.__gg.walls[3].hp < window.__gg.walls[3].max", 1)
+    w = page.evaluate("() => [window.__gg.walls[3].hp, window.__gg.walls[3].max]")
+    ok(ts is not None and ts < 0.6 and abs(w[1] - w[0] - w[1] / 2) < 0.3, f'the fence loses half its full health as the crow lands ({ts}, {w})')
+    page.evaluate("() => { const g = window.__gg; g.walls.forEach(w => w.hp = w.max); g.walls[2].hp = 1.5; }")
+    page.evaluate("() => { const b = window.__b, g = window.__gg; b.lane = 2; b.x = b.tx = g.LANE(2); b.glideT = 0; b.smashT = 0.02; }"); gsleep(page, 0.7)
+    ok(page.evaluate("() => window.__gg.walls[2].hp") == 1, 'a fence on 1.5 is left on 1, never broken')
+    # crows in flight go when she falls
+    page.evaluate("() => { const b = window.__b; b.glideT = 0; b.smashT = 0.02; }")
+    gwait(page, "() => (window.__gg.G.fhCrows || []).length > 0", 1)
+    page.evaluate("() => { clearInterval(window.__fi); const g = window.__gg, b = window.__b; g.G.altar = null; b.altDone = 3; b.lastHit = 0; g.damage(b, 99999, '#fff'); }"); time.sleep(0.2)
+    ok(page.evaluate(FHC) == [] and page.evaluate("() => window.__gg.G.bossDead"), 'her crows in flight go when she falls')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fh_summons(browser, url):
+    """Owner 2026-11-11: every 16 s she summons 2 of the Treant's roots (in lanes not hers) and one Ash Crone, one Blood Coven Witch and one Witch
+    as extras in three lanes at her height; her roots sink when she falls; a continued night keeps them as hers."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    b = fh_up(page)
+    if b is None:
+        ok(False, 'the Fallen Hexwitch arrived'); page.close(); return
+    page.evaluate("() => { const g = window.__gg, b = window.__b; b.p = b.hold; b.lane = 3; b.x = b.tx = g.LANE(3); g.G.roots = []; b.summonT = 16; window.__sp0 = g.G.spawned; }")
+    gsleep(page, 15.5)
+    ok(page.evaluate("() => window.__gg.G.roots.length") == 0 and not page.evaluate("() => window.__gg.G.monsters.some(m => m.fromHex)"), 'nothing before 16 s')
+    gwait(page, "() => window.__gg.G.monsters.some(m => m.fromHex)", 1.5)
+    r = page.evaluate("""() => { const g = window.__gg, G = g.G, b = window.__b, ms = G.monsters.filter(m => m.fromHex && !m.dead);
+      return [ms.map(m => m.type).sort(), ms.every(m => m.minion), new Set(ms.map(m => m.lane)).size, ms.every(m => Math.abs(m.p - b.p) < 0.06),
+        G.roots.map(r => [r.lane, r.by]), G.spawned - window.__sp0, +b.summonT.toFixed(1)]; }""")
+    ok(r[0] == ['ashcrone', 'covenwitch', 'witch'] and r[1], f'one Ash Crone, one Blood Coven Witch and one Witch, extras {r[:2]}')
+    ok(r[2] == 3 and r[3], f'spread over three lanes, at her height {r[2:4]}')
+    ok(len(r[4]) == 2 and len({l for l, _ in r[4]}) == 2 and all(l != 3 and by == 'fallenhex' for l, by in r[4]), f"two of the Treant's roots in two lanes other than hers, hers {r[4]}")
+    ok(r[5] == 0, f'they do not count toward the night ({r[5]})')
+    ok(15 <= r[6] <= 16, f'her summon clock restarts at 16 s ({r[6]})')
+    ok(page.evaluate("() => window.__gg.TYPES.treant && window.__gg.CHARS.root != null"), "(the roots are the Treant's own: G.roots with its art)")
+    # a continued night keeps her roots as hers; they sink when she falls
+    page.evaluate("() => { clearInterval(window.__fi); const g = window.__gg; g.continueNight(g.continueState()); }"); time.sleep(0.8)
+    rr = page.evaluate("() => window.__gg.G.roots.map(r => r.by)")
+    ok(rr == ['fallenhex', 'fallenhex'], f'a continued night keeps her roots as hers {rr}')
+    page.evaluate(f"() => {{ const g = window.__gg, b = {TBOSS}; window.__b = b; g.G.roots.push({{ lane:0, p:0.5, hp:3, t:0, atFence:false }}); g.G.altar = null; b.altDone = 3; b.lastHit = 0; g.damage(b, 99999, '#fff'); }}"); time.sleep(0.2)
+    rr = page.evaluate("() => window.__gg.G.roots.map(r => r.by || null)")
+    ok(rr == [None], f'when she falls her roots sink, other roots stay {rr}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+def check_fh_budget(browser, url):
+    """Her black crows are baked frames: one drawImage per crow a frame, no fill, stroke, gradient or shadowBlur."""
+    if not R7: return
+    page = browser.new_page(viewport={'width': 390, 'height': 844})
+    errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+    page.add_init_script("""(() => { const P = CanvasRenderingContext2D.prototype; window.__cc = {}; window.__ccOn = false;
+      for (const k of ['drawImage', 'fill', 'stroke', 'fillRect', 'createRadialGradient', 'createLinearGradient']) { const f = P[k]; P[k] = function(...a){ if (window.__ccOn && this.canvas && this.canvas.id === 'cv') window.__cc[k] = (window.__cc[k] || 0) + 1; return f.apply(this, a); }; }
+      const d = Object.getOwnPropertyDescriptor(P, 'shadowBlur'); Object.defineProperty(P, 'shadowBlur', { get(){ return d.get.call(this); }, set(v){ if (window.__ccOn && v && this.canvas && this.canvas.id === 'cv') window.__cc.shadowBlur = (window.__cc.shadowBlur || 0) + 1; d.set.call(this, v); } }); })();""")
+    page.goto(url + ('&test' if '?' in url else '?test')); page.wait_for_function('() => !!window.__gg'); time.sleep(0.5)
+    page.evaluate("() => Object.assign(window.__gg.save, { seenHelp:true, seenFlick:true })")
+    nm3_start(page, 16); time.sleep(3.2)
+    page.evaluate(PQ); page.evaluate("() => { const G = window.__gg.G; G.hexZones.length = 0; G.altar = null; G.fhCrows = []; G.parts.length = 0; G.floats.length = 0; }")
+    page.evaluate("() => window.__gg.setState('pause')")
+    count = "() => new Promise(res => { window.__cc = {}; window.__ccOn = true; let f = 0; const tick = () => { if (++f < 20) requestAnimationFrame(tick); else { window.__ccOn = false; const c = window.__cc; res([(c.drawImage || 0) / 20, (c.fill || 0) / 20, (c.stroke || 0) / 20, ((c.createRadialGradient || 0) + (c.createLinearGradient || 0)) / 20, c.shadowBlur || 0]); } }; requestAnimationFrame(tick); })"
+    time.sleep(0.4); base = page.evaluate(count)
+    page.evaluate("() => { window.__gg.G.fhCrows = [{ lane:1, p0:0, t:0.1, kind:'altar' }, { lane:4, p0:0.28, t:0.2, kind:'smash' }]; }")
+    time.sleep(0.3); two = page.evaluate(count)
+    ok(abs(two[0] - base[0] - 2) < 0.2, f'two black crows add two drawImage a frame ({base[0]:.1f} -> {two[0]:.1f})')
+    ok(two[1] <= base[1] + 0.1 and two[2] <= base[2] + 0.1 and two[3] <= base[3] + 0.1 and two[4] == 0, f'and no fill, stroke, gradient or shadowBlur {base} -> {two}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+
+
+def check_fh_wind(browser, url):
+    """Owner 2026-11-11: N3-16 has the Witchwood wind; a gust shifts pumpkins on the patch while her altar and zone stay where they are."""
+    if not R7: return
+    page, errors = open_page(browser, url)
+    b = fh_up(page)
+    if b is None:
+        ok(False, 'the Fallen Hexwitch arrived'); page.close(); return
+    ok(page.evaluate("() => !!(window.__gg.G.def.gust && window.__gg.G.def.gust.partial)"), 'her night has the Witchwood wind (partial gusts)')
+    page.evaluate("""() => { const g = window.__gg, G = g.G, b = window.__b; b.p = b.hold; b.lastHit = 0; g.damage(b, 12, '#fff'); G.fhCrows = [];
+      G.hexZones.push({ shape:'box54', lane:3, p:0.5, t:30, src:'fallenhex' });
+      g.graves.forEach(r => r.fill(false)); g.grid.forEach(r => r.fill(null)); g.grid[2][0] = g.newCell(0); g.grid[2][0].tag = 'a'; g.grid[0][3] = g.newCell(1); g.grid[0][3].tag = 'b';
+      G.def.gust = { ...G.def.gust, dirs:['right'], partial:false }; G.gustDir = null; G.gustT = 2.05; window.__a0 = JSON.stringify([G.altar.lane, G.altar.p, G.altar.hp]); }""")
+    gwait(page, "() => window.__gg.G.gustT > 5", 4)
+    r = page.evaluate("""() => { const g = window.__gg, G = g.G, at = t => { for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) if (g.grid[r][c] && g.grid[r][c].tag === t) return [r, c]; return null; };
+      return [at('a'), at('b'), JSON.stringify([G.altar.lane, G.altar.p, G.altar.hp]) === window.__a0, G.hexZones.some(z => z.src === 'fallenhex' && z.lane === 3 && z.p === 0.5)]; }""")
+    ok(r[0] == [2, 6] and r[1] == [0, 6], f'a gust to the right blows her night\'s pumpkins along their rows to the edge {r[:2]}')
+    ok(r[2] and r[3], f'her altar and her zone are not moved by the wind {r[2:]}')
+    ok(not errors, f'no page errors {errors[:2]}')
+    page.close()
+
+
+CHECKS.update({'check_fh_crows': check_fh_crows, 'check_fh_summons': check_fh_summons, 'check_fh_budget': check_fh_budget, 'check_fh_wind': check_fh_wind})
 
 
 # ---------- Task 10: the real levels N3-1 to N3-16, intro cards, the nightmare bestiary ----------
@@ -1600,6 +1726,7 @@ def check_n3_levels(browser, url):
     ok(L[3]['boss'] == 'treant' and L[3]['bossForm'] == 1 and L[3]['bossChest'] == 'normal' and L[3]['unlockGourds'] == ['wartling'], f"N3-4: the Treant, a normal chest, unlocks the Wartling {L[3]['boss'], L[3]['bossChest'], L[3]['unlockGourds']}")
     ok(L[12]['boss'] == 'treant' and L[12]['bossForm'] == 2 and L[12]['bossChest'] == 'normal', 'N3-13: the Treant in form 2 with a normal chest')
     ok(L[15]['boss'] == 'fallenhexwitch' and L[15]['bossChest'] == 'normal', 'N3-16: the Fallen Hexwitch with a normal chest')
+    ok(set(L[15]['pool']) == {'toad', 'flaskbearer', 'mirror', 'triptych'} and len(L[15]['pool']) == 4, f"N3-16 walks exactly Cauldron Toads, Flask Bearers, Mirror Sprites and Triptych Sprites (owner 2026-11-11) {L[15]['pool']}")
     ok([k + 1 for k, d in enumerate(L) if d['boss']] == [4, 13, 16], 'bosses on N3-4, N3-13 and N3-16 only')
     ok(L[4]['coach'] == 'wartling' and [k + 1 for k, d in enumerate(L) if d['coach']] == [5], 'N3-5 keeps the Wartling tutorial (the only coach)')
     P = [d['potions'] for d in L]
@@ -1609,7 +1736,8 @@ def check_n3_levels(browser, url):
     ok(bm == [6, 7, 8, 9, 10, 11, 12, 14, 15], f'brew marks on N3-6 to N3-15 except N3-13 {bm}')
     ok(all(d['brewMarks'] == [0.33, 0.66] for d in L if d['brewMarks']), 'two marks at 0.33 and 0.66')
     gust = [k + 1 for k, d in enumerate(L) if d['gust']]
-    ok(gust == [11] and L[10]['gust'].get('partial') is True and L[10]['gust']['every'] > 0, f"N3-11 (Ill Wind): the world 3 patch wind with partial gusts, only there {gust} {L[10]['gust']}")
+    ok(gust == [11, 16] and L[10]['gust'].get('partial') is True and L[10]['gust']['every'] > 0, f"N3-11 (Ill Wind) and N3-16 (owner 2026-11-11): the world 3 patch wind with partial gusts, only there {gust} {L[10]['gust']}")
+    ok(L[15]['gust'] == {'every': 14, 'dirs': ['left', 'right', 'up', 'down'], 'partial': True}, f"N3-16 has the Witchwood wind: partial gusts every 14 s {L[15]['gust']}")
     ok({'flaskbearer'} <= set(L[10]['pool']), f"N3-11 brings Flask Bearers {L[10]['pool']}")
     ok({'chameleon', 'rchameleon', 'witch'} <= set(L[8]['pool']), f"N3-9: Chameleons, Reverse Chameleons and witches {L[8]['pool']}")
     top = lambda d: d['pool'][d['weights'].index(max(d['weights']))]

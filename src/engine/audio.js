@@ -481,6 +481,7 @@ export const SFX = {
       case (__RELEASE__ >= 7 ? 'fallenhexwitch:potions' : ''): S('bubbles', 0.55, { rate: 0.7 }) || noise(0.15, 0.2, 1000, 1, 0, 300); S('glassping', 0.3, { rate: 0.8, delay: 0.15 }); break;
       case (__RELEASE__ >= 7 ? 'fallenhexwitch:crows' : ''): [0, 0.08, 0.16].forEach(d => S('bat', 0.35, { delay: d, rate: 0.75 + d }) || noise(0.05, 0.1, 2500, 1.5, d)); break;
       case (__RELEASE__ >= 7 ? 'fallenhexwitch:smash' : ''): S('woodbreak', 0.6, { rate: 0.8 }) || noise(0.4, 0.3, 300, 0.8); S('roarbig', 0.35, { rate: 1.2, delay: 0.05 }); break;
+      case (__RELEASE__ >= 7 ? 'fallenhexwitch:summon' : ''): S('witch', 0.5, { rate: 0.7 }) || cackle(3, 480, 0, 0.06); S('darkcast', 0.4, { rate: 0.9, delay: 0.1 }) || tone(70, 0.4, 'sine', 0.1, 50); break;
       case (__RELEASE__ >= 7 ? 'fallenhexwitch:glide' : ''): S('whoosh', 0.45, { rate: 0.8 }) || noise(0.2, 0.1, 1200, 1, 0, 500); break;
       case (__RELEASE__ >= 7 ? 'fallenhexwitch:altar' : ''): S('stonebreak', 0.6, { rate: 0.7 }) || noise(0.4, 0.3, 200, 0.8); S('darkcast', 0.55, { rate: 0.7, delay: 0.15 }) || tone(60, 0.6, 'sine', 0.12, 40); break;
       case (__RELEASE__ >= 7 ? 'fallenhexwitch:altarhit' : ''): S('stonebreak', 0.35, { rate: 1.4 }) || noise(0.08, 0.2, 900, 1.2); break;

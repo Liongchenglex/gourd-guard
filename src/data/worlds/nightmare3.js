@@ -77,9 +77,12 @@ export default __RELEASE__ >= 7 ? [
   Gd({ level:15, name:'The Long Night', pattern:4, total:26, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL3(),
     pool:[['woodGhoul', 5], ['flaskbearer', 4], ['ashcrone', 3], ['covenwitch', 3], ['triptych', 3], ['toad', 3], ['broomImp', 3], ['owlBat', 2]], potions:POT(9), brewMarks:BREW(),
     quests:[['noTools'], ['wallMin', 40]] }),
-  // N3-16 The Fallen Hexwitch: the book's boss (spec Part 6): 5x5 undead zones, three altars, potions of her own, crows and fence smashes. The level's
-  // own potions are rare (she summons hers); Flask Bearers and story monsters walk in meanwhile. No brew marks. One normal chest.
+  // N3-16 The Fallen Hexwitch: the book's boss (spec Part 6; owner 2026-11-11): 5x4 undead zones, three altars, potions of her own, crows, black-crow fence
+  // smashes and her coven. The level's own potions are rare (she summons hers); Cauldron Toads, Flask Bearers, Mirror Sprites and Triptych Sprites walk
+  // in meanwhile (owner: exactly these). The Witchwood wind blows (owner 2026-11-11: story world 3's gusts, partial, every 14 s, as world 3's later
+  // levels; it moves pumpkins on the patch, never her altar, potions or zones). No brew marks. One normal chest.
   Gd({ level:16, name:'The Fallen Hexwitch', pattern:0, total:22, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.12, boss:'fallenhexwitch', bossChest:'normal', gourds:ALL3(),
-    pool:[['woodGhoul', 7], ['broomImp', 4], ['flaskbearer', 3], ['owlBat', 3]], potions:POT(12, 1),
+    gust:{ every:14, dirs:['left', 'right', 'up', 'down'], partial:true },
+    pool:[['toad', 5], ['flaskbearer', 5], ['mirror', 6], ['triptych', 4]], potions:POT(12, 1),
     quests:[['wallMin', 40], ['noTools']] }),
 ] : [];

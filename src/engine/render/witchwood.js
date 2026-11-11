@@ -7,9 +7,9 @@ import { K } from './canvas.js';
 import { E, S, pal } from './paint.js';
 import { TOAD_FPS, TOAD_MOUTH, TOAD_N, WITCHWOOD, toadLash } from './chars/witchwood.js';
 import { CS, FENCE_Y, LANE } from '../state.js';
-import { ALTAR_STATES, BARRIER_N, altarSprite, barrierSprite, prebakeHexZone, prebakeUndeadZone } from './fx.js';
+import { ALTAR_STATES, BARRIER_N, HEXCROW, HEXCROW_N, altarSprite, barrierSprite, hexCrowSprite, prebakeHexZone, prebakeUndeadZone } from './fx.js';
 import { drawChar } from './anim.js';
-import { ROOT_RISE, altarY, rootGround, rootScale } from '../witchwood.js';
+import { ROOT_RISE, altarY, rootGround, rootScale, hexCrowY } from '../witchwood.js';
 import { TYPES } from '../../data/monsters.js';
 
 const TW = 8, TH = 32, TIPW = 14, TIPH = 12;   // the tongue strip and its tip, world units
@@ -64,10 +64,16 @@ export function drawRoots(g, roots, fence){
   }
 }
 
-/** The Fallen Hexwitch's undead zone is 5 lanes by 5 tiles (render/draw.js drawHexZones). */
-export const undeadZoneSize = () => [CS * 5 * 0.98, CS * 5];
-/** Her night's field props, baked at the canvas scale when it starts (game.js): the altar's crack states and her 5x5 zone. */
-export function prebakeFallenHex(){ for (let i = 0; i < ALTAR_STATES; i++) altarSprite(K, i); const [w, h] = undeadZoneSize(); prebakeUndeadZone(w, h, K); }
+/** The Fallen Hexwitch's undead zone is 5 lanes by 4 tiles (owner 2026-11-11; G.hexZones shape 'box54'; render/draw.js drawHexZones). */
+export const undeadZoneSize = () => [CS * 5 * 0.98, CS * 4];
+/** Her black crows diving down a lane to its fence (G.fhCrows): one baked frame each, flapping at 12 fps. */
+export function drawHexCrows(g, crows){
+  const s = CS / 70;
+  for (const c of crows){ const sp = hexCrowSprite(K, Math.floor(c.t * 12) % HEXCROW_N), x = LANE(c.lane), y = hexCrowY(c);
+    g.drawImage(sp.c, x - HEXCROW.w / 2 * s, y - HEXCROW.h / 2 * s, HEXCROW.w * s, HEXCROW.h * s); }
+}
+/** Her night's field props, baked at the canvas scale when it starts (game.js): the altar's crack states, her black crow's frames and her 5x4 zone. */
+export function prebakeFallenHex(){ for (let i = 0; i < ALTAR_STATES; i++) altarSprite(K, i); for (let f = 0; f < HEXCROW_N; f++) hexCrowSprite(K, f); const [w, h] = undeadZoneSize(); prebakeUndeadZone(w, h, K); }
 /** The Ash Crone's 3x3 zone (G.hexZones shape 'box'; render/draw.js drawHexZones) is the story Hexwitch's box: bake its backdrop at night start, not on first sight. */
 export const prebakeCroneZone = () => prebakeHexZone(CS * 3 * 0.98, CS * 3, K);
 /** The altar (G.altar): its crack state by health left, rising out of the ground over its first 0.4 s. One drawImage. */

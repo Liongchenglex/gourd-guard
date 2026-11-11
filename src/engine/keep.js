@@ -299,7 +299,8 @@ export function siegeFalls(m){
 }
 
 // ---------- the Fallen Count (N4-16's boss) ----------
-// Numbers in data/monsters.js (`fallencount`). He walks like the Vampire Count to `hold` (monsters.js stops him exactly there) and never changes lane.
+// Numbers in data/monsters.js (`fallencount`). He walks like the Vampire Count to `hold` (monsters.js stops him exactly there); once there he teleports
+// between lanes (owner 2026-11-11, below).
 //  - Blood nets: at each `netAt` mark of his health (1 = the start) he throws `netN` red nets of his own (`throwNet(…, 'red', m.id)`; over the cap or with
 //    nowhere to land they fizzle). While any lies on the patch or is in flight the shield door holds him (countClamped). A hit never carries him past the next
 //    mark: countGate (damage(), combat.js) caps it there, and the hit that reaches it throws the nets at once (fcCross), so the next hit is refused. `fcDone`
@@ -309,8 +310,11 @@ export function siegeFalls(m){
 //  - Blood trance (`tranceT`): he stands still in `m.healing` (the story Count's flag: damage() counts the hits, render picks the clip) and every
 //    `tranceTick` s heals `tranceHeal` per netted pumpkin on the patch (either kind), up to his full health. `tranceHits` hits break it and stun him `tranceStun` s.
 //    A hit the shield door refuses does not count (the door's rule). While he is stunned or in a trance his other clocks stand still.
-//  - Blood spear (`spearT`): flies down his lane (G.fcSpears, SPEAR_FLY s) and his fence loses `spearHit` of its full health, never its last 1.
-//  - Lightning (`boltT`): a random patch column is warned `boltWarn` s (G.fcBolt), then every pumpkin in it goes except netted ones, gourds and gliding sprouts; matches re-resolve.
+//  - Blood spear (`spearT`): three at once (owner 2026-11-11), down his lane and the `spearLanes` either side (two at an edge), flying (G.fcSpears, SPEAR_FLY s)
+//    to each fence, which loses `spearHit` of its full health, never its last 1.
+//  - Teleport (`tpT`, owner 2026-11-11): every `tpEvery` s once he holds (not while stunned or in a trance) he vanishes in a blood mist and appears in a random
+//    other lane at the same height, and brings the lightning: his new lane's patch column is warned `boltWarn` s (G.fcBolt), then every pumpkin in it goes
+//    except netted ones, gourds and gliding sprouts; matches re-resolve. Castle pieces stay where they are; summons follow him.
 //  - Summons (`summonT`): one Storm Lancer in his lane (it charges at once) and one Bat Bride a lane beside, both just ahead of him, as extras (minions).
 //  - Castle pieces (`raiseT`, 0 at the start, so he raises them as he arrives): one Archer Tower and one Gatehouse (newCastle, the level's castle wall health
 //    or the story Count's `wallHp`), each only if none of his stands, in a lane that is not his and holds no other castle, at 0.45-0.7 of the field (the story
@@ -321,13 +325,15 @@ export const isCount = m => m.type === 'boss' && m.kind === 'fallencount';
 /** A freshly spawned Fallen Count: every clock full but the raise, marks not yet known (a continued night restores them after this, restoreCount). */
 export function initFallenCount(m){
   const T = TYPES.fallencount;
-  m.fcDone = null; m.tranceT = T.tranceEvery; m.spearT = T.spearEvery; m.boltT = T.boltEvery; m.summonT = T.summonEvery; m.raiseT = 0; m.healTickT = 0;
+  m.fcDone = null; m.tranceT = T.tranceEvery; m.spearT = T.spearEvery; m.tpT = T.tpEvery; m.summonT = T.summonEvery; m.raiseT = 0; m.healTickT = 0;
 }
 /** What a continued night keeps of him: the marks passed and every clock (the raise clock is restored as 0: his pieces went with the level's castles). */
-export const countSnapshot = m => isCount(m) ? { fcDone:fcMarks(m), tranceT:m.tranceT, spearT:m.spearT, boltT:m.boltT, summonT:m.summonT, raiseT:m.raiseT } : null;
+export const countSnapshot = m => isCount(m) ? { fcDone:fcMarks(m), tranceT:m.tranceT, spearT:m.spearT, tpT:m.tpT, lane:m.lane, summonT:m.summonT, raiseT:m.raiseT } : null;
 export function restoreCount(m, s){
   if (!s || !isCount(m) || s.fcDone == null) return;
-  m.fcDone = s.fcDone; m.tranceT = s.tranceT; m.spearT = s.spearT; m.boltT = s.boltT; m.summonT = s.summonT;
+  m.fcDone = s.fcDone; m.tranceT = s.tranceT; m.spearT = s.spearT; m.summonT = s.summonT;
+  m.tpT = s.tpT != null ? s.tpT : TYPES.fallencount.tpEvery;   // a lightning warning in the air is dropped: it came with the teleport
+  if (s.lane != null && s.lane >= 0 && s.lane < COLS){ m.lane = s.lane; m.x = m.tx = LANE(s.lane); }   // he comes back in the lane he had teleported to
   m.raiseT = 0;   // castles come back with the level, so his pieces are gone: he raises them again on arrival
 }
 
@@ -374,15 +380,13 @@ export function updateFallenCount(m, dt){
     return true;
   }
   if (m.p < 0.05) return false;
-  if ((m.spearT -= dt) <= 0){
+  if ((m.spearT -= dt) <= 0){   // three spears: his lane and the lanes either side, clamped to the field
     m.spearT = T.spearEvery;
-    (G.fcSpears || (G.fcSpears = [])).push({ lane:m.lane, p0:m.p, t:0 });
+    const sp = G.fcSpears || (G.fcSpears = []);
+    for (let l = Math.max(0, m.lane - T.spearLanes); l <= Math.min(COLS - 1, m.lane + T.spearLanes); l++) sp.push({ lane:l, p0:m.p, t:0 });
     m.anim = { clip:'bats', t:0, dur:BATS_DUR }; SFX.bossSfx('fallencount', 'spear');
   }
-  if ((m.boltT -= dt) <= 0){
-    m.boltT = T.boltEvery;
-    if (!G.fcBolt){ G.fcBolt = { c:Math.floor(Math.random() * COLS), warn:T.boltWarn, strike:0 }; m.anim = { clip:'wall', t:0, dur:WALL_DUR }; SFX.bossSfx('fallencount', 'warn'); }
-  }
+  if (m.p >= m.hold - 0.001 && (m.tpT -= dt) <= 0){ m.tpT = T.tpEvery; countTeleport(m); }   // once he holds: to another lane, with the lightning
   if ((m.summonT -= dt) <= 0){
     m.summonT = T.summonEvery;
     const p = Math.min(0.97, m.p + 0.04), side = m.lane === 0 ? 1 : m.lane === COLS - 1 ? -1 : Math.random() < 0.5 ? -1 : 1;
@@ -398,6 +402,18 @@ export function updateFallenCount(m, dt){
   }
   return false;
 }
+
+/** He vanishes in a blood mist and appears in a random other lane at the same height; the lightning comes down on his new lane's patch column. */
+function countTeleport(m){
+  const T = TYPES.fallencount, from = m.lane, others = [];
+  for (let l = 0; l < COLS; l++) if (l !== from) others.push(l);
+  countPuff(m);
+  m.lane = others[Math.floor(Math.random() * others.length)]; m.x = m.tx = LANE(m.lane);
+  countPuff(m);
+  G.fcBolt = { c:m.lane, warn:T.boltWarn, strike:0 };
+  m.anim = { clip:'wall', t:0, dur:WALL_DUR }; SFX.bossSfx('fallencount', 'teleport'); SFX.bossSfx('fallencount', 'warn');
+}
+const countPuff = m => { if (G.vfx) G.vfx.push({ kind:'fcpuff', x:m.x, y:mY(m) - m.r * mS(m) * 0.6, t:0, dur:0.55 }); for (let i = 0; i < 8; i++) spark(m.x, mY(m) - 20, i % 2 ? '#b8202e' : '#2a1020', 150); };
 
 /** Raise an Archer Tower and a Gatehouse of his, each only if none of his stands. */
 function raisePieces(m){

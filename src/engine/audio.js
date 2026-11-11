@@ -538,6 +538,7 @@ export const SFX = {
       case (__RELEASE__ >= 8 ? 'fallencount:tick' : ''): tone(1800, 0.05, 'sine', 0.06, 2200); break;
       case (__RELEASE__ >= 8 ? 'fallencount:break' : ''): S('glass', 0.5, { rate: 0.85 }) || (noise(0.3, 0.3, 4000, 1, 0, 1500), tone(1300, 0.3, 'sine', 0.06, 500)); S('hiss', 0.4, { delay: 0.1 }); break;
       case (__RELEASE__ >= 8 ? 'fallencount:spear' : ''): S('whoosh', 0.5, { rate: 1.2 }) || noise(0.2, 0.2, 1400, 1.4, 0, 3000); S('metallight', 0.35, { delay: 0.4 }); break;
+      case (__RELEASE__ >= 8 ? 'fallencount:teleport' : ''): S('bat', 0.4, { rate: 0.8 }) || noise(0.12, 0.12, 2500, 1.5); S('whoosh', 0.4, { rate: 0.6, delay: 0.05 }) || noise(0.3, 0.14, 700, 1.2, 0.05, 2000); break;
       case (__RELEASE__ >= 8 ? 'fallencount:warn' : ''): tone(900, 0.5, 'sine', 0.04, 1400); noise(0.5, 0.05, 3000, 2, 0, 5000); break;
       case (__RELEASE__ >= 8 ? 'fallencount:bolt' : ''): noise(0.35, 0.3, 2400, 1.4, 0, 400); S('boom', 0.5, { rate: 1.2, delay: 0.03 }) || tone(60, 0.6, 'sine', 0.08, 30, 0.03); break;
       case (__RELEASE__ >= 8 ? 'fallencount:summon' : ''): [0, 0.09, 0.18].forEach(d => S('bat', 0.35, { delay: d, rate: 0.9 }) || noise(0.05, 0.1, 2500, 1.5, d)); break;

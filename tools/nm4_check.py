@@ -1219,7 +1219,7 @@ FC_UP = """() => { const g = window.__gg, G = g.G; G.monsters.length = 0; G.arro
   g.grid.forEach(r => r.forEach(c => { if (c) { c.net = null; c.netBy = null; } })); for (let l = 0; l < 7; l++) { const w = g.walls[l]; w.max = 40; w.hp = 40; }
   G.def.boss = 'fallencount'; G.def.bossForm = 1; G.def.bossChest = 'normal'; G.def.gatePool = null; G.bossSpawned = true; G.bossDead = false;
   const b = g.spawnMonster('boss'); b.sp = 0; b.p = 0.2; window.__b = b; return [b.kind, b.hp, b.maxHp, b.hold, b.form, b.id != null]; }"""
-FC_PARK = "() => { const b = window.__b; b.tranceT = b.spearT = b.boltT = b.summonT = b.raiseT = 999; }"
+FC_PARK = "() => { const b = window.__b; b.tranceT = b.spearT = b.tpT = b.summonT = b.raiseT = 999; }"
 FC_CLEAR = "() => { const g = window.__gg, id = window.__b.id; g.clearNets(c => c.netBy === id); g.G.netsFlying = g.G.netsFlying.filter(f => f.by !== id); }"
 FC_OWN = "() => { const g = window.__gg, id = window.__b.id; let n = 0; g.grid.forEach(r => r.forEach(c => { if (c && c.net === 'red' && c.netBy === id) n++; })); return n + g.G.netsFlying.filter(f => f.kind === 'red' && f.by === id).length; }"
 FC_DMG = "([a]) => { const g = window.__gg, b = window.__b; b.lastHit = 0; g.damage(b, a, '#fff'); return [+b.hp.toFixed(3), b.dead]; }"
@@ -1247,20 +1247,32 @@ def check_fallen_count(browser, url):
         ok(page.evaluate("() => !(window.__gg.TYPES && window.__gg.TYPES.fallencount) && !(window.__gg.BOSS_NAMES && window.__gg.BOSS_NAMES.fallencount)"), 'no Fallen Count below Release 8')   # store builds expose no TYPES
         page.close(); return
     page, errors = fc_night(browser, url)
-    d = page.evaluate("() => { const T = window.__gg.TYPES.fallencount; return T ? [T.boss, T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.hold, T.netAt, T.netN, T.tranceEvery, T.tranceHeal, T.tranceTick, T.tranceHits, T.spearEvery, +T.spearHit.toFixed(6), T.boltEvery, T.boltWarn, T.summonEvery, T.raiseEvery, T.gatePool, T.noItems] : null; }")
-    ok(d == [True, 48, 34, 0.03, 50, 0, 400, 6, 0.3, [1, 0.75, 0.5, 0.25], 3, 18, 1, 2, 3, 10, round(1 / 3, 6), 12, 1.5, 14, 20, ['knight', 'bulwark', 'vampire'], True], f'Fallen Count data {d}')
+    d = page.evaluate("() => { const T = window.__gg.TYPES.fallencount; return T ? [T.boss, T.hp, T.r, T.sp, T.coins, T.eat, T.pts, T.drop, T.hold, T.netAt, T.netN, T.tranceEvery, T.tranceHeal, T.tranceTick, T.tranceHits, T.spearEvery, +T.spearHit.toFixed(6), T.spearLanes, T.tpEvery, T.boltEvery === undefined, T.boltWarn, T.summonEvery, T.raiseEvery, T.gatePool, T.noItems] : null; }")
+    ok(d == [True, 48, 34, 0.03, 50, 0, 400, 6, 0.3, [1, 0.75, 0.5, 0.25], 3, 18, 1, 2, 3, 10, round(1 / 3, 6), 1, 10, True, 1.5, 14, 20, ['knight', 'bulwark', 'vampire'], True], f'Fallen Count data {d}')
     ok(page.evaluate("() => window.__gg.BOSS_NAMES.fallencount") == 'The Fallen Count', 'his name on screen is "The Fallen Count"')
     intro = page.evaluate("() => window.__gg.BOSS_INTRO.fallencount || null")
     ok(bool(intro) and 'net' in intro['1'].lower() and 'lightning' in intro['1'].lower(), f'he has a boss intro text {intro}')
     b = fc_up(page)
     ok(b == ['fallencount', 48, 48, 0.3, 1, True], f'he arrives with 48 health, holding at 0.3 {b}')
-    # walks like the Vampire Count to 0.3, never to the wall, and never changes lane (no bat scatter), with every clock running
-    page.evaluate("() => { const b = window.__b; b.sp = 0.5; b.p = 0.25; window.__L = b.lane; window.__W = window.__gg.walls[b.lane].hp; }")
-    lanes = page.evaluate("""() => { const g = window.__gg, b = window.__b, seen = new Set(); b.spearT = 999; b.boltT = 2; b.summonT = 4; b.raiseT = 0; b.tranceT = 30;
-      for (let i = 0; i < 600; i++){ g.update(0.1); seen.add(b.lane); for (const o of g.G.monsters) if (o !== b) o.dead = true; if (b.dead || g.G.over) break; } return [...seen]; }""")
-    pp = page.evaluate("() => [window.__b.p, window.__b.eating, window.__b.lane === window.__L]")
+    # walks like the Vampire Count to 0.3, never to the wall; once he holds he teleports every 10 s (owner 2026-11-11) to another lane, bringing the lightning there
+    page.evaluate("() => { const b = window.__b; b.sp = 0.5; b.p = 0.1; window.__L = b.lane; window.__W = window.__gg.walls[b.lane].hp; }")
+    tp = page.evaluate("""() => { const g = window.__gg, b = window.__b, out = []; let t = 0, arrived = null; b.spearT = 999; b.summonT = 4; b.raiseT = 0; b.tranceT = 999; b.tpT = 10;
+      for (let i = 0; i < 700; i++){ const l0 = b.lane; g.update(0.1); t += 0.1; if (arrived == null && b.p >= b.hold - 0.001) arrived = t;
+        if (b.lane !== l0){ const f = g.G.fcBolt; out.push([+t.toFixed(1), l0, b.lane, +b.p.toFixed(3), f ? f.c : null, f ? +f.warn.toFixed(2) : null]); }
+        for (const o of g.G.monsters) if (o !== b) o.dead = true; if (b.dead || g.G.over) break; } return [arrived, out]; }""")
+    pp = page.evaluate("() => [window.__b.p, window.__b.eating]")
     ok(abs(pp[0] - 0.3) < 1e-6 and not pp[1], f'he walks to 0.3 and holds there, never chewing {pp}')
-    ok(lanes == [page.evaluate("() => window.__L")] and not page.evaluate("() => window.__gg.G.over"), f'in 60 s with every clock running he never leaves his lane {lanes}')
+    arr, hops = tp
+    ok(arr is not None and arr < 1 and len(hops) >= 5 and all(h[1] != h[2] for h in hops), f'once he holds ({arr} s) he teleports to another lane, again and again {hops}')
+    ok(hops and abs(hops[0][0] - arr - 10) < 0.25 and all(abs(b[0] - a[0] - 10) < 0.25 for a, b in zip(hops, hops[1:])), f'every 10 s, the clock starting as he arrives {[h[0] for h in hops]}')
+    ok(all(abs(h[3] - 0.3) < 1e-6 for h in hops), 'he appears at his hold height')
+    ok(all(h[4] == h[2] and 1.3 <= h[5] <= 1.5 for h in hops), f'each teleport brings the 1.5 s lightning warning onto his new lane\'s patch column {hops}')
+    ok(not page.evaluate("() => window.__gg.G.over"), 'the fence never falls to him meanwhile')
+    fc_up(page)
+    st = page.evaluate("""() => { const g = window.__gg, b = window.__b; b.p = b.hold; b.tpT = 0.05; b.stunT = 5; for (let i = 0; i < 20; i++) g.update(0.05); const a = [b.lane, +b.tpT.toFixed(2)];
+      b.stunT = 0; b.healing = true; b.healHits = 3; for (let i = 0; i < 20; i++) g.update(0.05); return [a, [b.lane, +b.tpT.toFixed(2)]]; }""")
+    ok(st[0][1] == 0.05 and st[1][1] == 0.05, f'his teleport clock stands still while he is stunned or in a trance {st}')
+    page.evaluate("() => { const b = window.__b; b.healing = false; b.p = 0.2; }")
     # immune to freeze and knockback
     fc_up(page)
     page.evaluate("() => { const g = window.__gg, b = window.__b; const pr = { type:2, vis:2, lv:1, size:1, lane:b.lane, x:b.x, y:0, hit:new Set(), grp:{ spawned:true, small:false, kills:0 }, guar:false, trail:[] }; g.hitMonster(pr, b); }")
@@ -1274,20 +1286,32 @@ def check_fallen_count(browser, url):
     page.evaluate(STEP, [15, 0.1])
     w = page.evaluate("() => window.__gg.walls[window.__b.lane].hp")
     ok(abs(w - (40 - 40 / 3)) < 1e-6, f'at 10 s the blood spear takes a third of his fence ({w:.3f} of 40)')
+    fl = page.evaluate("() => { const b = window.__b; return window.__gg.walls.map((w, l) => [l - b.lane, +w.hp.toFixed(3)]); }")
+    ok(all((abs(d) <= 1) == (abs(h - (40 - 40 / 3)) < 1e-3) and (abs(d) <= 1 or h == 40) for d, h in fl), f'three spears at once: his lane and the lanes either side each lose a third, the rest nothing {fl}')
+    for edge in (0, 6):
+        page.evaluate(f"() => {{ const g = window.__gg, b = window.__b; b.lane = {edge}; b.x = b.tx = g.LANE ? g.LANE({edge}) : b.x; for (const w of g.walls) w.hp = 40; b.spearT = 0.01; }}")
+        page.evaluate(STEP, [15, 0.1])
+        hit = page.evaluate("() => window.__gg.walls.map((w, l) => w.hp < 40 ? l : -1).filter(l => l >= 0)")
+        ok(hit == ([0, 1] if edge == 0 else [5, 6]), f'at the edge lane {edge} only two spears fly {hit}')
+    page.evaluate("() => { const g = window.__gg, b = window.__b; for (const w of g.walls) w.hp = 40; }")
     page.evaluate("() => { window.__gg.walls[window.__b.lane].hp = 5; window.__b.spearT = 0.01; }"); page.evaluate(STEP, [15, 0.1])
     ok(page.evaluate("() => window.__gg.walls[window.__b.lane].hp") == 1, 'a fence at 5 is left at 1, never broken')
     page.evaluate("() => { window.__b.spearT = 0.01; }"); page.evaluate(STEP, [15, 0.1])
     ok(page.evaluate("() => window.__gg.walls[window.__b.lane].hp") == 1, 'a fence at 1 takes nothing')
     ok(page.evaluate("() => window.__gg.G.fcSpears.length") == 0, 'the spears in flight are gone once they land')
-    # the bolt: every 12 s a column flashes for 1.5 s, then its pumpkins go
+    # the lightning comes only with a teleport now: held below his hold, no lightning in 30 s; a teleport's column flashes for 1.5 s, then its pumpkins go
     fc_up(page)
-    page.evaluate("() => { window.__b.boltT = 12; }")
-    page.evaluate(STEP, [115, 0.1])
-    ok(page.evaluate("() => window.__gg.G.fcBolt") is None, 'no lightning warning before 12 s')
-    page.evaluate(STEP, [6, 0.1])
-    bw = page.evaluate("() => { const f = window.__gg.G.fcBolt; return f ? [f.c >= 0 && f.c < 7, +f.warn.toFixed(2)] : null; }")
-    ok(bw is not None and bw[0] and 1.3 <= bw[1] <= 1.5, f'at 12 s a column is warned for 1.5 s {bw}')
-    page.evaluate("() => { window.__gg.G.fcBolt.c = 2; }")
+    page.evaluate("() => { window.__b.tpT = 10; }")
+    page.evaluate(STEP, [300, 0.1])
+    ok(page.evaluate("() => window.__gg.G.fcBolt") is None, 'no lightning without a teleport (the 12 s lightning clock is gone)')
+    page.evaluate("() => { const b = window.__b; b.p = b.hold; b.tpT = 0.05; b.lane = 1; b.x = b.tx = window.__gg.LANE(1); }")
+    for _ in range(40):
+        page.evaluate(STEP, [1, 0.1])
+        if page.evaluate("() => window.__b.lane !== 1"): break
+    bw = page.evaluate("() => { const f = window.__gg.G.fcBolt; return f ? [f.c === window.__b.lane, +f.warn.toFixed(2)] : null; }")
+    ok(bw is not None and bw[0] and 1.3 <= bw[1] <= 1.5, f'the teleport warns his new lane\'s column for 1.5 s {bw}')
+    ok(page.evaluate("() => window.__gg.G.vfx.filter(v => v.kind === 'fcpuff').length") == 2, 'a blood mist where he left and where he lands')
+    page.evaluate("() => { const b = window.__b; b.tpT = 999; b.p = 0.2; window.__gg.G.fcBolt.c = 2; }")
     page.evaluate(STEP, [12, 0.1])
     ok(page.evaluate("() => window.__gg.grid.every(r => r[2] != null)"), 'the column still stands during the warning')
     page.evaluate(STEP, [5, 0.1])
@@ -1424,17 +1448,15 @@ def check_fc_bolt(browser, url):
     page, errors = fc_night(browser, url)
     fc_up(page)
     page.evaluate("""() => { const g = window.__gg, b = window.__b; g.grid[0][4].net = 'net'; g.grid[2][4].net = 'red'; g.grid[2][4].netBy = b.id;
-      g.grid[4][4] = Object.assign(g.newCell(0), { gourd:'grave' }); g.grid[3][4].fly = 5; window.__keep = [g.grid[0][4], g.grid[2][4], g.grid[4][4], g.grid[3][4]]; b.boltT = 0.01; }""")
-    page.evaluate(STEP, [1, 0.02])
-    page.evaluate("() => { window.__gg.G.fcBolt.c = 4; }")
+      g.grid[4][4] = Object.assign(g.newCell(0), { gourd:'grave' }); g.grid[3][4].fly = 5; window.__keep = [g.grid[0][4], g.grid[2][4], g.grid[4][4], g.grid[3][4]]; window.__gg.G.fcBolt = { c:4, warn:1.5, strike:0 }; }""")
     page.evaluate(STEP, [80, 0.02])
     r = page.evaluate("() => { const g = window.__gg; return g.grid.map((row, i) => row[4] === null ? null : window.__keep.indexOf(row[4])); }")
     ok(r == [0, None, 1, 3, 2], f'netted pumpkins (both kinds), the gourd and a sprout still gliding in survive the bolt, the rest go {r}')
     ok(page.evaluate("() => window.__gg.G.fcBolt") is None or page.evaluate("() => window.__gg.G.fcBolt.warn") <= 0, 'the warning is over')
     # matches re-resolve: three in a row across the cleared column are no longer a bunch once the middle goes
     fc_up(page)
-    page.evaluate("""() => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); const p = window.__put; p(4, 2, 0); p(4, 3, 0); p(4, 4, 0); g.resolveMatches(); window.__lit0 = g.grid[4][2].lit; window.__b.boltT = 0.01; }""")
-    page.evaluate(STEP, [1, 0.02]); page.evaluate("() => { window.__gg.G.fcBolt.c = 3; }"); page.evaluate(STEP, [80, 0.02])
+    page.evaluate("""() => { const g = window.__gg; g.grid.forEach(r => r.fill(null)); const p = window.__put; p(4, 2, 0); p(4, 3, 0); p(4, 4, 0); g.resolveMatches(); window.__lit0 = g.grid[4][2].lit; g.G.fcBolt = { c:3, warn:1.5, strike:0 }; }""")
+    page.evaluate(STEP, [80, 0.02])
     lit = page.evaluate("() => [window.__lit0, window.__gg.grid[4][3] === null, window.__gg.grid[4][2].lit]")
     ok(lit == [True, True, False], f'a bunch broken by the bolt goes dark {lit}')
     ok(not errors, f'no page errors {errors[:2]}')
@@ -1466,17 +1488,18 @@ def check_fallen_count_continue(browser, url):
     page.evaluate("() => { const g = window.__gg, G = g.G; G.bossSpawned = true; const b = g.spawnMonster('boss'); b.sp = 0; b.p = 0.2; window.__b = b; }")
     page.evaluate(FC_PARK); page.evaluate(STEP, [1, 0.02]); page.evaluate(FC_CLEAR)
     page.evaluate("() => { window.__b.hp = 38; }"); page.evaluate(FC_DMG, [10])   # stops at 36: the 75% mark, three more nets
-    page.evaluate("() => { const b = window.__b; b.spearT = 5; b.boltT = 6; b.summonT = 7; b.raiseT = 0.01; b.tranceT = 9; }")
+    page.evaluate("() => { const b = window.__b; b.spearT = 5; b.tpT = 6; b.summonT = 7; b.raiseT = 0.01; b.tranceT = 9; b.lane = 5; b.x = b.tx = window.__gg.LANE(5); }")
     page.evaluate(STEP, [15, 0.1])
-    before = page.evaluate("() => { const b = window.__b; return [b.hp, b.fcDone, +b.spearT.toFixed(3), +b.boltT.toFixed(3), +b.summonT.toFixed(3), +b.raiseT.toFixed(3), +b.tranceT.toFixed(3)]; }")
+    before = page.evaluate("() => { const b = window.__b; return [b.hp, b.fcDone, +b.spearT.toFixed(3), +b.tpT.toFixed(3), +b.summonT.toFixed(3), +b.raiseT.toFixed(3), +b.tranceT.toFixed(3), b.lane]; }")
     ok(page.evaluate("() => window.__gg.G.castles.filter(w => !w.dead && w.by === window.__b.id).length") == 2, '(his Tower and Gatehouse stand before the loss)')
     ok(before[:2] == [36, 2] and page.evaluate("() => window.__gg.redNetsOf(window.__b)") == 3, f'(at the 75% mark, his three nets down {before})')
     page.evaluate("() => { const g = window.__gg; g.setState('play'); const c = g.continueState(); g.continueNight(c); g.setState('pause'); }")
     page.evaluate(STEP, [5, 0.02])
     page.evaluate("() => { const G = window.__gg.G; window.__pcs = G.castles.filter(w => !w.dead && w.kind !== 'wall').length; }")
-    after = page.evaluate("() => { const b = window.__gg.G.monsters.find(m => m.type === 'boss' && !m.dead); window.__b = b; return b ? [b.hp, b.fcDone, +b.spearT.toFixed(3), +b.boltT.toFixed(3), +b.summonT.toFixed(3), b.raiseT, +b.tranceT.toFixed(3), b.kind] : null; }")
+    after = page.evaluate("() => { const b = window.__gg.G.monsters.find(m => m.type === 'boss' && !m.dead); window.__b = b; return b ? [b.hp, b.fcDone, +b.spearT.toFixed(3), +b.tpT.toFixed(3), +b.summonT.toFixed(3), b.raiseT, +b.tranceT.toFixed(3), b.kind, b.lane] : null; }")
     page.evaluate("() => { const L = window.__gg.NIGHTMARE_LEVELS[3][0]; [L.boss, L.bossForm, L.bossChest] = window.__L0; }")
-    ok(after is not None and after[:5] == before[:5] and after[6] == before[6] and after[7] == 'fallencount', f'he comes back with his health, marks passed and clocks as they were {before} -> {after}')
+    ok(after is not None and after[:5] == before[:5] and after[6] == before[6] and after[7] == 'fallencount', f'he comes back with his health, marks passed and clocks (the teleport clock too) as they were {before} -> {after}')
+    ok(after is not None and after[8] == before[7] == 5, f'and in the lane he had teleported to {before[7]} -> {after and after[8]}')
     ok(after is not None and after[5] == 0 and page.evaluate("() => window.__pcs") == 0, f'his pieces went with the castles reset, and his raise clock comes back at 0 ({after and after[5]})')
     ok(page.evaluate(FC_OWN) == 3, f'his three red nets are his again, none replayed ({page.evaluate(FC_OWN)})')
     ok(page.evaluate(FC_DMG, [5])[0] == 36, 'and they still shield him')
@@ -1523,13 +1546,16 @@ def check_fc_budget(browser, url):
     fc_up(page)
     page.evaluate("() => { window.__gg.G.floats.length = 0; window.__gg.G.parts.length = 0; }")
     time.sleep(0.3); base = page.evaluate(CC10)
-    page.evaluate("() => { window.__b.boltT = 0.01; }"); page.evaluate(STEP, [1, 0.02]); page.evaluate("() => { window.__gg.G.floats.length = 0; }")
+    page.evaluate("() => { const b = window.__b; b.p = b.hold; b.tpT = 0.01; }"); page.evaluate(STEP, [1, 0.02]); page.evaluate("() => { const G = window.__gg.G; G.floats.length = 0; G.parts.length = 0; }")
+    tele = page.evaluate(CC10) if page.evaluate("() => window.__gg.G.vfx.filter(v => v.kind === 'fcpuff').length === 2") else None   # the warning and two blood mists
+    page.evaluate("() => { const b = window.__b; b.tpT = 999; window.__gg.G.vfx = window.__gg.G.vfx.filter(v => v.kind !== 'fcpuff'); }")
     warn = page.evaluate(CC10)
     page.evaluate("() => { window.__gg.G.fcBolt.warn = 0.01; }"); page.evaluate(STEP, [1, 0.02]); page.evaluate("() => { const G = window.__gg.G; G.floats.length = 0; G.parts.length = 0; }")
     strike = page.evaluate(CC10) if page.evaluate("() => !!window.__gg.G.fcBolt && window.__gg.G.fcBolt.strike > 0") else None
-    page.evaluate("() => { window.__gg.G.fcBolt = null; window.__b.spearT = 0.01; }"); page.evaluate(STEP, [2, 0.02])
-    spear = page.evaluate(CC10) if page.evaluate("() => window.__gg.G.fcSpears.length > 0") else None
-    for name, c in (('lightning warning', warn), ('bolt', strike), ('blood spear', spear)):
+    page.evaluate("() => { const b = window.__b; window.__gg.G.fcBolt = null; b.lane = 3; b.x = b.tx = window.__gg.LANE(3); b.spearT = 0.01; }"); page.evaluate(STEP, [2, 0.02])
+    spear = page.evaluate(CC10) if page.evaluate("() => window.__gg.G.fcSpears.length === 3") else None   # three spears in flight
+    ok(tele is not None and tele[0] - base[0] <= 4 and tele[1] <= base[1] + 0.1 and tele[2] <= base[2] + 0.1 and tele[3] == 0, f'the teleport (two baked mists and the warning) is baked: {base} -> {tele}')
+    for name, c in (('lightning warning', warn), ('bolt', strike), ('three blood spears', spear)):
         ok(c is not None and c[0] - base[0] <= 3 and c[1] <= base[1] + 0.1 and c[2] <= base[2] + 0.1 and c[3] == 0, f'the {name} is baked: [drawImage, stroke, gradients, shadowBlur] {base} -> {c}')
     ok(not errors, f'no page errors {errors[:2]}')
     page.close()
@@ -1966,7 +1992,7 @@ def check_n4_levels(browser, url):
     ok(L[15]['boss'] == 'fallencount' and L[15]['bossChest'] == 'normal', 'N4-16: the Fallen Count, one normal chest')
     ok([k + 1 for k, d in enumerate(L) if d['boss']] == [4, 13, 16], 'bosses on N4-4, N4-13 and N4-16 only')
     ok({'glutton', 'bride'} <= set(L[12]['pool']), f"N4-13: Gluttons and Brides with the tower {L[12]['pool']}")
-    ok({'knight', 'vampire'} <= set(L[15]['pool']), f"N4-16: Shield Knights and Vampires walk in during the fight {L[15]['pool']}")
+    ok(set(L[15]['pool']) == {'knight', 'bulwark', 'vampire', 'marshal', 'lobbercart'} and len(L[15]['pool']) == 5, f"N4-16 walks exactly Shield Knights, Bulwark Knights, Vampires, Storm Marshals and Lobber Carts (owner 2026-11-11) {L[15]['pool']}")
     # castle pieces
     first = {kind: next((k + 1 for k, d in enumerate(L) if kind in kinds_of(d)), None) for kind in ('tower', 'gate')}
     ok(first == N4_PIECE_FIRST, f'the Archer Tower first stands on N4-5, the Gatehouse on N4-7 {first}')

@@ -711,7 +711,17 @@ export function countSpearSprite(k){ k = bakeK(k); return bake(`fcspear:${k}`, F
   S.part(g, blade, pal('#c8101e'), { x:0, y:80, r:14 }, { hx:-2.4, hy:72, lw:1 });
   S.ln(g, [[0, 66], [0, 100]], { deep:'#ffb0b0' }, .9, .55);
 }); }
-export function prebakeCountFx(k){ countWarnSprite(k); countBoltSprite(k); countSpearSprite(k); }
+export const FC_PUFF = 120;
+/** His teleport (owner 2026-11-11): a blood-red mist with a few bat shapes flung out, baked once; the vfx 'fcpuff' swells and fades it (render/draw.js). */
+export function countPuffSprite(k){ k = bakeK(k); return bake(`fcpuff:${k}`, FC_PUFF, FC_PUFF, FC_PUFF / 2, FC_PUFF / 2, k, g => {
+  const R = rng(41), h = FC_PUFF / 2;
+  let gr = g.createRadialGradient(0, 0, 4, 0, 0, h); gr.addColorStop(0, 'rgba(255,200,210,.95)'); gr.addColorStop(.3, 'rgba(200,24,48,.8)'); gr.addColorStop(.7, 'rgba(70,8,24,.45)'); gr.addColorStop(1, 'rgba(30,4,12,0)');
+  g.fillStyle = gr; g.beginPath(); g.ellipse(0, 0, h, h, 0, 0, TAU); g.fill();
+  g.fillStyle = 'rgba(24,8,16,.9)';
+  for (let i = 0; i < 6; i++){ const a = i / 6 * TAU + R() * .5, d = h * (.45 + R() * .3), x = Math.cos(a) * d, y = Math.sin(a) * d, w = 7 + R() * 4;   // a little bat
+    g.beginPath(); g.moveTo(x - w, y - 2); g.quadraticCurveTo(x - w * .5, y - 5, x, y); g.quadraticCurveTo(x + w * .5, y - 5, x + w, y - 2); g.quadraticCurveTo(x + w * .4, y + 1, x, y + 3); g.quadraticCurveTo(x - w * .4, y + 1, x - w, y - 2); g.fill(); }
+}); }
+export function prebakeCountFx(k){ countWarnSprite(k); countBoltSprite(k); countSpearSprite(k); countPuffSprite(k); }
 
 // ---------- the Fallen Twin Tides (Release 9): the water spear's column warning and strike, the blood bolt and the water bolt; each baked once ----------
 // The column sprites are baked in fixed drawing units and stretched onto the patch at draw time (render/draw.js drawTidesSpear), as the Fallen Count's lightning; the bolts

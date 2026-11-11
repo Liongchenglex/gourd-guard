@@ -13,7 +13,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite, magSparkSprite } from './tools.js';
-import { drawBlackRing, castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, whirlSprite, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR, pirateAimSprite, pirateReticleSprite, pirateShotSprite, hiddenSphereSprite, hiddenWarnSprite, hiddenWashSprite, tidesWarnSprite, tidesSpearSprite, tidesBoltSprite, tidesDiveSpearSprite, tidesSphereSprite, tidesBadgeSprite, tidesPumpWarnSprite, tidesPumpBeamSprite } from './fx.js';
+import { drawBlackRing, castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, whirlSprite, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR, countPuffSprite, FC_PUFF, pirateAimSprite, pirateReticleSprite, pirateShotSprite, hiddenSphereSprite, hiddenWarnSprite, hiddenWashSprite, tidesWarnSprite, tidesSpearSprite, tidesBoltSprite, tidesDiveSpearSprite, tidesSphereSprite, tidesBadgeSprite, tidesPumpWarnSprite, tidesPumpBeamSprite } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -802,6 +802,7 @@ export function drawVfx(){
       ctx.save(); ctx.translate(v.x0 + (v.x1 - v.x0) * p, v.y0 + (v.y1 - v.y0) * p - Math.sin(p * Math.PI) * 70); ctx.scale(1.5, 1.5);
       drawChar(ctx, {}, 'rotshot', null, ['fly', Math.floor(v.t * 12) % 6]); ctx.restore();
     }
+    else if (__RELEASE__ >= 8 && v.kind === 'fcpuff'){ const c = countPuffSprite(K), sz = FC_PUFF * (0.6 + p * 0.7); ctx.globalAlpha = 1 - p; ctx.drawImage(c.c, v.x - sz / 2, v.y - sz / 2, sz, sz); ctx.globalAlpha = 1; }   // the Fallen Count's teleport mist: one baked sprite
     else if (v.kind === 'sigil') drawSigil(ctx, v);
     else if (__RELEASE__ >= 7 && v.kind === 'potiondrink') drawPotionFx(v);   // a monster drinks a potion (Release 7)
     else if (__RELEASE__ >= 4 && (v.kind === 'firehiss' || v.kind === 'fireflare' || v.kind === 'firewave')) drawFireFx(v);   // Ice puts a fire out / a pumpkin burns up in one / the Fallen Gravekeeper's smash   // Ice puts a fire out / a pumpkin burns up in one

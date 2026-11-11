@@ -91,9 +91,10 @@ export default __RELEASE__ >= 8 ? [
     castles:{ n:2, hp:12 }, castlesLayout:[W(2, 0.35, 'tower'), W(4, 0.3, 'gate')], gatePool:['knight', 'vampire'],
     pool:[['cryptGhoul', 5], ['lancer', 4], ['lobbercart', 3], ['marshal', 3], ['glutton', 3], ['bride', 3], ['knight', 3], ['vampire', 2], ['archer', 2]], caps:{ lobbercart:2 },
     quests:[['noTools'], ['wallMin', 40]] }),
-  // N4-16 The Fallen Count (spec Part 7): blood nets, trances, the spear, lightning, summons, his own Archer Tower and Gatehouse. Shield Knights and
-  // Vampires walk in meanwhile. One normal chest (his reward is still open). No castle layout: he raises his own pieces.
+  // N4-16 The Fallen Count (spec Part 7; owner 2026-11-11): blood nets, trances, three spears, teleports that bring the lightning, summons, his own Archer
+  // Tower and Gatehouse. Shield Knights, Bulwark Knights, Vampires, Storm Marshals and Lobber Carts walk in meanwhile (owner: exactly these). One normal
+  // chest (his reward is still open). No castle layout: he raises his own pieces.
   L({ level:16, name:'The Fallen Count', pattern:0, total:22, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.12, boss:'fallencount', bossChest:'normal', gourds:ALL4(),
-    pool:[['cryptGhoul', 6], ['knight', 6], ['vampire', 5]],
+    pool:[['knight', 6], ['bulwark', 3], ['vampire', 5], ['marshal', 3], ['lobbercart', 3]], caps:{ lobbercart:2 },
     quests:[['wallMin', 40], ['noTools']] }),
 ] : [];

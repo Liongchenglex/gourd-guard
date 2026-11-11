@@ -329,6 +329,8 @@ def check_ice_lock(browser, url):
     ok(any(x.startswith('Ice') for x in r) and 'only ice puts out fire' in w(), f'N1-14 (burning monsters) locks Ice with the fire wording {r} {w()!r}')
     r = musts(16)
     ok(any(x.startswith('Ice') for x in r) and 'Ice is locked in: flaming mummies only die to ice.' in w(), f'story 1-16 (Flaming Mummies, no fire) locks Ice exactly as before {r} {w()!r}')
+    r = musts(1016)
+    ok(not any(x.startswith('Fire') for x in r) and any(x.startswith('Ice') for x in r), f'N1-16 (owner 2026-11-11): Fire is no longer locked in (no Mummies); Ice still is (its fire) {r}')
     page.reload(); page.wait_for_function('() => !!window.__gg'); set_stars(page, story_done(70))
     ok(not page.evaluate("() => { const d = window.__gg.levelFor(1005); return d.fireStart > 0 || !!d.fireLayout || !!d.fireMarks; }"), 'control: N1-5 has no fire')
     r = musts(1005)
@@ -1490,12 +1492,14 @@ WALLS = "() => window.__gg.walls.map(w => [Math.round(w.hp * 100) / 100, w.max])
 
 
 def check_fallen_gk(browser, url):
-    """N1-16: teleport fire trail, summons from its pool, the 3-fence smash (a third each, never the last 1), infernos at 75/50/25% health (a whole
+    """N1-16: teleport fire trail, summons from its pool, the 3-fence smash (a fifth each, never the last 1), infernos at 75/50/25% health (a whole
     row or column, three a fight), crows swooping in, one normal chest, a continued night that does not replay infernos."""
     if not R4: return
     page, errors = open_page(browser, url)
     T = page.evaluate("() => { const T = window.__gg.TYPES.fallengravekeeper; return T && [T.boss, T.hp, T.hold, T.teleportEvery, T.summonEvery, T.summonN, T.summonPool, T.smashEvery, Math.round(T.smashHit * 1000) / 1000, T.infernoAt, T.crowEvery, T.crows, T.trailMax]; }")
-    ok(T == [True, 40, 0.28, 6, 8, 2, ['rooster', 'casketjack', 'graveriser'], 12, 0.333, [0.75, 0.5, 0.25], 6, [1, 3], 4], f'data {T}')
+    ok(T == [True, 40, 0.28, 6, 8, 2, ['graveriser', 'firemummy'], 12, 0.2, [0.75, 0.5, 0.25], 6, [1, 3], 4], f'data (owner 2026-11-11: raises Grave Risers and Flaming Mummies only, the smash a fifth) {T}')
+    P = page.evaluate("() => window.__gg.NIGHTMARE_LEVELS[0][15].pool.map(e => e[0])")
+    ok(sorted(P) == ['hayrick', 'husker', 'rooster'], f'N1-16 walks exactly Cinder Roosters, Hayricks and Corn Huskers {P}')
     L = page.evaluate("() => { const d = window.__gg.NIGHTMARE_LEVELS[0][15]; return [d.name, d.boss, d.bossChest, !!d.gourd, !!d.fireMarks]; }")
     ok(L == ['The Fallen Gravekeeper', 'fallengravekeeper', 'normal', True, False], f'N1-16: the Fallen Gravekeeper with one normal chest, the gourd, no fire marks {L}')
     b = strawlord_up(page, 16)
@@ -1507,17 +1511,21 @@ def check_fallen_gk(browser, url):
     r = page.evaluate("() => { const g = window.__gg, b = window.__b; return [window.__l0, b.lane, g.G.fires.map(f => [f.lane, Math.abs(f.p - b.p) < g.TILE_P() / 2])]; }")
     l0, l1, fs = r; step = 1 if l1 > l0 else -1; want = sorted([l0 + i * step for i in range(min(abs(l1 - l0), 4))])
     ok(l1 != l0 and sorted(f[0] for f in fs) == want and all(f[1] for f in fs), f'it teleports and leaves a fire trail on its row across the lanes it passed (at most 4, none under it) {r}')
-    page.evaluate("() => { const b = window.__b; b.teleport = 999; window.__gg.G.fires.length = 0; b.summon = 0.1; }")
-    time.sleep(0.3)
-    sm = page.evaluate("() => window.__gg.G.monsters.filter(m => m !== window.__b && !m.dead).map(m => [m.type, m.minion, Math.abs(m.lane - window.__b.lane) <= 1])")
-    ok(len(sm) == 2 and all(x[0] in ('rooster', 'casketjack', 'graveriser') and x[1] and x[2] for x in sm), f'it raises 2 minions from Roosters, Casket Jacks and Grave Risers, in or beside its lane {sm}')
-    # the smash: a third of the full health off its lane's fence and both neighbours, never the last 1; other fences untouched
+    seen = set()
+    for _ in range(6):
+        page.evaluate("() => { const g = window.__gg, b = window.__b; g.G.monsters.splice(0, g.G.monsters.length, b); b.teleport = 999; g.G.fires.length = 0; b.summon = 0.1; }")
+        time.sleep(0.3)
+        sm = page.evaluate("() => window.__gg.G.monsters.filter(m => m !== window.__b && !m.dead).map(m => [m.type, m.minion, Math.abs(m.lane - window.__b.lane) <= 1])")
+        ok(len(sm) == 2 and all(x[0] in ('graveriser', 'firemummy') and x[1] and x[2] for x in sm), f'it raises 2 minions, only Grave Risers and Flaming Mummies, in or beside its lane {sm}')
+        seen |= {x[0] for x in sm}
+    ok(seen == {'graveriser', 'firemummy'}, f'both kinds are raised over six summons {sorted(seen)}')
+    # the smash: a fifth (owner 2026-11-11) of the full health off its lane's fence and both neighbours, never the last 1; other fences untouched
     page.evaluate("() => { const g = window.__gg, b = window.__b; g.G.monsters.splice(0, g.G.monsters.length, b); g.walls.forEach(w => w.hp = w.max); b.lane = 3; b.x = b.tx = g.LANE(3); g.walls[4].hp = 2; b.summon = 999; b.smashT = 0.1; }")
     time.sleep(0.3)
     ok(page.evaluate("() => window.__gg.G.vfx.some(v => v.kind === 'firewave' && v.lanes.join() === '2,3,4')"), 'the smash sends a wave of fire down lanes 3, 4 and 5 (counted from 1)')
     time.sleep(0.6)
     w = page.evaluate(WALLS)
-    ok(abs((w[2][1] - w[2][0]) - w[2][1] / 3) < 0.6 and abs((w[3][1] - w[3][0]) - w[3][1] / 3) < 0.6, f'its lane\'s fence and the one beside it lose a third of their full health {w[2:4]}')
+    ok(abs((w[2][1] - w[2][0]) - w[2][1] / 5) < 0.3 and abs((w[3][1] - w[3][0]) - w[3][1] / 5) < 0.3, f'its lane\'s fence and the one beside it lose a fifth of their full health {w[2:4]}')
     ok(w[4][0] == 1, f'a fence on 2 health is left on 1, never broken by the smash ({w[4]})')
     ok(all(w[i][0] == w[i][1] for i in (0, 1, 5, 6)), f'the other fences are untouched {w}')
     # infernos: one at 75%, a whole row or a whole column; nothing more until 50%; three in all
@@ -1581,7 +1589,7 @@ def check_fallen_gk_baked(browser, url):
     page, errors = open_page(browser, url)
     page.evaluate("() => window.__gg.setBakeScale(2.5)")
     t0 = time.time(); nm_start(page, 16); dt = time.time() - t0
-    ok(page.evaluate("() => ['fallengravekeeper', 'rooster', 'casketjack', 'coffin', 'graveriser', 'crow', 'mummy', 'firemummy'].every(k => window.__gg.isBaked(k))"), 'N1-16 bakes the boss, its summons, the casket, crows and both mummies')
+    ok(page.evaluate("() => ['fallengravekeeper', 'rooster', 'hayrick', 'husker', 'graveriser', 'crow', 'firemummy'].every(k => window.__gg.isBaked(k))"), 'N1-16 bakes the boss, its walkers, its Grave Riser and Flaming Mummy raises and crows')
     mb = page.evaluate("() => window.__gg.atlasBytes('fallengravekeeper') / 1e6")
     ok(mb < 12, f'its frames take {mb:.1f} MB at bake scale 2.5 (limit 12)')
     ok(dt < 3, f'the night opens in {dt:.1f} s')

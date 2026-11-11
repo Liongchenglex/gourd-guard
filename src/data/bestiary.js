@@ -78,7 +78,7 @@ export const BESTIARY = {
     huskerBare: { lore:'What is under the husk: a cob with ideas.', ability:'Walks faster than the husker it came out of.' },
     huskerBurning:{ lore:'A husker that took a shortcut through the fire.', ability:'Any pumpkin strips its burning husk and leaves the charred cob.' },
     huskerCharred:{ lore:'Blackened to the core and still walking.', ability:'Only Ice finishes it. Anything else knocks it down for a while.' },
-    fallengravekeeper:{ lore:'The Gravekeeper, charred under the eclipse. His lantern burns black now.', ability:'Never reaches the wall. Teleports leaving fire behind, raises roosters, Casket Jacks and Grave Risers, slams three fences at once, and three times sets a whole row or column of the field on fire. Crows swoop in all night.' },
+    fallengravekeeper:{ lore:'The Gravekeeper, charred under the eclipse. His lantern burns black now.', ability:'Never reaches the wall. Teleports leaving fire behind, raises Grave Risers and Flaming Mummies, slams three fences at once, and three times sets a whole row or column of the field on fire. Crows swoop in all night.' },
   } : {}),
   ...(__RELEASE__ >= 5 ? {   // the nightmare Foggy Hollow (Release 5), in first-met order
     reaper:     { lore:'A wraith that found the road home and did not like what was waiting there. It picked up the scythe someone left at the crossroads.', ability:'Fades out for longer than a wraith and moves faster; three health. A crow bursts out where it falls. At the fence it swings its scythe without stopping, wearing down its own fence and both beside it.' },

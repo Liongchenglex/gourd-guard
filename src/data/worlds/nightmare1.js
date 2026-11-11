@@ -75,10 +75,11 @@ export default __RELEASE__ >= 4 ? [
   Gd({ level:15, name:'Eclipse', pattern:4, total:24, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.14,
     pool:[['rooster', 4], ['hayrick', 3], ['husker', 4], ['graveriser', 3], ['crow', 3], ['casketjack', 2], ['ghoul', 4], ['mummy', 2]], fireMarks:[{ at:0.33, n:4 }, { at:0.66, n:4 }, { at:1, n:5 }],
     quests:[['noTools'], ['wallMin', 40]] }),
-  // N1-16 The Fallen Gravekeeper (owner 2026-11-05): the nightmare patch's boss. It teleports leaving fire trails, raises Roosters, Casket Jacks and Grave
-  // Risers, smashes three fences at once with a wave of fire, sets a whole row or column ablaze at 75%, 50% and 25% health, and crows swoop in all night
-  // (engine/nightmare.js). Ghouls, Mummies and Hayricks walk in meanwhile. No fire marks: the boss brings its own fire. One normal chest for now (owner: reward later).
+  // N1-16 The Fallen Gravekeeper (owner 2026-11-05; nerfed 2026-11-11): the nightmare patch's boss. It teleports leaving fire trails, raises Grave Risers and
+  // Flaming Mummies, smashes three fences at once with a wave of fire (a fifth of each), sets a whole row or column ablaze at 75%, 50% and 25% health, and
+  // crows swoop in all night (engine/nightmare.js). Cinder Roosters, Hayricks and Corn Huskers walk in meanwhile (owner: exactly these; no Mummies, so Fire is
+  // no longer locked into the loadout). No fire marks: the boss brings its own fire. One normal chest for now (owner: reward later).
   Gd({ level:16, name:'The Fallen Gravekeeper', pattern:0, total:20, interval:3.2, spMul:0.95, spawnGap:1, spawnBurst:0.12, boss:'fallengravekeeper', bossChest:'normal',
-    pool:[['ghoul', 7], ['mummy', 5], ['hayrick', 4]], fireStart:2,
+    pool:[['rooster', 5], ['hayrick', 4], ['husker', 5]], fireStart:2,
     quests:[['noTools'], ['wallMin', 40]] }),
 ] : [];

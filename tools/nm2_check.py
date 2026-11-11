@@ -985,6 +985,11 @@ def check_rotdoctor(browser, url):
     ok(hit(0, 5, far_l) < 0, 'a ghoul two lanes away takes normal damage')
     ok(hit(0, 3, far_p) < 0, 'a ghoul beyond the zone in the same lane takes normal damage')
     ok(hit(0, 3, dr) < 0, 'the doctor itself takes normal damage')
+    d2 = page.evaluate(STILL, ['rotdoctor', 2, 0.5 - TP, 4])                 # a second doctor inside the first one's square
+    time.sleep(0.2)
+    ok(page.evaluate(f"() => [window.__ms[{d2}].rotOnly, window.__ms[{dr}].rotOnly]") == [False, False], 'two doctors in each other\'s squares: neither is protected (owner 2026-11-11)')
+    ok(hit(0, 2, d2) < 0, 'a normal pumpkin hurts a doctor standing in another doctor\'s square')
+    page.evaluate(f"() => {{ window.__ms[{d2}].dead = true; }}")
     # the zone is renewed every frame: gone with the doctor
     page.evaluate(f"() => {{ window.__gg.damage(window.__ms[{dr}], 100, '#fff'); }}")
     time.sleep(0.2)

@@ -39,14 +39,14 @@ import { banner } from '../ui/hud.js';
 
 /** Frame start: mark everything inside a standing Plague Doctor 2's square rot-only for this frame. The Frenzy jukebox and the Loot Sack are never
  *  marked: they are reward and event monsters the player must always be able to hit with an ordinary pumpkin. */
-export function markRotZones(){
+export function markRotZones(){   // owner 2026-11-11: one Plague Doctor 2's square never protects another Plague Doctor 2
   const ms = G.monsters, reach = 1.5 * TILE_P();
   for (let i = 0; i < ms.length; i++){
     const d = ms[i];
     if (d.type !== 'rotdoctor' || d.dead || d.p <= 0) continue;
     for (let j = 0; j < ms.length; j++){
       const o = ms[j];
-      if (o !== d && !o.dead && o.type !== 'jukebox' && o.type !== 'sack' && Math.abs(o.lane - d.lane) <= 1 && Math.abs(o.p - d.p) <= reach) o.rotOnly = true;
+      if (o !== d && !o.dead && o.type !== 'jukebox' && o.type !== 'sack' && o.type !== 'rotdoctor' && Math.abs(o.lane - d.lane) <= 1 && Math.abs(o.p - d.p) <= reach) o.rotOnly = true;
     }
   }
 }

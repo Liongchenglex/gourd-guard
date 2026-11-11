@@ -515,10 +515,11 @@ export const SFX = {
       case (__RELEASE__ >= 9 ? 'fallentides:dive' : ''): S('bubbles', 0.6, { rate: 0.8 }); S('splash', 0.6, { rate: 0.8, delay: 0.1 }) || noise(0.3, 0.2, 500, 0.8); break;
       case (__RELEASE__ >= 9 ? 'fallentides:rise' : ''): S('splash', 0.7, { rate: 0.7 }) || splash(0.2); S('seabark', 0.4, { rate: 0.7, delay: 0.2 }); S('bubbles', 0.4, { delay: 0.25 }); break;
       case (__RELEASE__ >= 9 ? 'fallentides:sing' : ''): S('scream', 0.45, { rate: 0.8 }) || tone(500, 1.2, 'sine', 0.07, 900); S('ghost', 0.4, { rate: 0.7, delay: 0.1 }); break;
-      case (__RELEASE__ >= 9 ? 'fallentides:heal' : ''): S('heartbeat', 0.4, { rate: 0.85 }) || (tone(58, 0.14, 'sine', 0.05, 44), tone(54, 0.12, 'sine', 0.04, 42, 0.14)); break;
       case (__RELEASE__ >= 9 ? 'fallentides:warn' : ''): tone(700, 0.6, 'sine', 0.04, 1500); noise(0.6, 0.05, 3000, 2, 0, 5500); break;
       case (__RELEASE__ >= 9 ? 'fallentides:spear' : ''): noise(0.35, 0.3, 2000, 1.2, 0, 300); S('boom', 0.5, { rate: 1.1, delay: 0.03 }) || tone(60, 0.6, 'sine', 0.08, 30, 0.03); S('splash', 0.6, { delay: 0.05 }); break;
-      case (__RELEASE__ >= 9 ? 'fallentides:whirl' : ''): S('whoosh', 0.5, { rate: 0.6 }) || noise(0.7, 0.2, 400, 1.4, 0, 2000); S('bubbles', 0.5, { delay: 0.2 }); break;
+      case (__RELEASE__ >= 9 ? 'fallentides:pump' : ''): S('whoosh', 0.6, { rate: 0.6 }) || noise(0.7, 0.25, 400, 1.4, 0, 2000); S('splash', 0.7, { rate: 0.8, delay: 0.05 }); S('bubbles', 0.5, { delay: 0.2 }); break;   // the hydro pump's beam (owner 2026-11-11)
+      case (__RELEASE__ >= 9 ? 'fallentides:sphere' : ''): S('heartbeat', 0.5, { rate: 0.8 }) || tone(58, 0.2, 'sine', 0.06, 44); S('bubbles', 0.5, { rate: 0.7, delay: 0.1 }); S('ghost', 0.3, { rate: 0.6, delay: 0.15 }); break;   // the blood sphere closes
+      case (__RELEASE__ >= 9 ? 'fallentides:divespear' : ''): S('splash', 0.45, { rate: 1.1 }) || noise(0.2, 0.2, 1500, 1, 0, 400); S('boom', 0.3, { rate: 1.3, delay: 0.02 }); break;   // a dive spear lands on the fence
       case (__RELEASE__ >= 9 ? 'fallentides:summon' : ''): [0, 0.1, 0.2].forEach(d => S('bubbles', 0.35, { delay: d, rate: 0.9 + d }) || noise(0.05, 0.1, 2000, 1.5, d)); S('roar', 0.3, { rate: 0.7 }); break;
       case (__RELEASE__ >= 9 ? 'fallentides:hit' : ''): S('splash', 0.5, { rate: 0.85 }) || tone(110, 0.12, 'square', 0.06, 70); S('seabark', 0.4, { rate: 0.8, delay: 0.03 }); break;
       case (__RELEASE__ >= 9 ? 'fallentides:die' : ''): S('roarbig', 0.75, { rate: 0.5 }) || noise(0.6, 0.3, 300, 0.7); S('scream', 0.4, { rate: 0.6, delay: 0.2 }); S('splash', 0.7, { rate: 0.7, delay: 0.4 }); S('bubbles', 0.5, { delay: 0.8 }); break;

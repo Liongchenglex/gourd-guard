@@ -4,7 +4,7 @@
 // Everything is deterministic per frame (seeded), so nothing flickers randomly. Owner asked for these on 2026-09-26.
 
 import { E, PL, RR, S, SM, SO, ell, mix, pal, rgba, rng } from './paint.js';
-import { COLS, CS, W } from '../state.js';
+import { COLS, CS, ROWS, W } from '../state.js';
 import { TAU } from '../util.js';
 
 const ease = t => 1 - (1 - t) * (1 - t);
@@ -747,7 +747,56 @@ export function tidesBoltSprite(k, kind){ k = bakeK(k); const blood = kind === '
   g.strokeStyle = blood ? 'rgba(60,2,10,.8)' : 'rgba(10,40,100,.7)'; g.lineWidth = 1.5; g.stroke();
   g.fillStyle = 'rgba(255,255,255,.75)'; g.beginPath(); g.ellipse(cx - 4, cy - 5, 3.5, 2.2, -.6, 0, TAU); g.fill();
 }); }
-export function prebakeTidesFx(k){ tidesWarnSprite(k); tidesSpearSprite(k); tidesBoltSprite(k, 'blood'); tidesBoltSprite(k, 'water'); }
+/** A dive spear (owner 2026-11-11), point down: `water` (a long ice-blue lance of water with a white core) or `blood` (a dark crimson lance with a black shaft). 24 x 120,
+ *  origin at the point. Distinct from the round bolts. */
+export const FT_DSPEAR = { w:24, h:120 };
+export function tidesDiveSpearSprite(k, kind){ k = bakeK(k); const blood = kind === 'blood'; return bake(`ftdspear:${kind}:${k}`, FT_DSPEAR.w, FT_DSPEAR.h, FT_DSPEAR.w / 2, FT_DSPEAR.h - 2, k, g => {
+  const c = blood ? ['#ffb0b0', '#c8101e', '#4a0208'] : ['#f2fdff', '#3aa0e0', '#0c3470'], glow = blood ? '#ff2030' : '#7af0ff';
+  g.fillStyle = blood ? '#1c1f2a' : 'rgba(150,220,250,.85)'; g.fillRect(-1.8, -118, 3.6, 78);   // the shaft
+  const trail = g.createLinearGradient(0, -118, 0, -40); trail.addColorStop(0, blood ? 'rgba(200,16,40,0)' : 'rgba(150,230,255,0)'); trail.addColorStop(1, blood ? 'rgba(200,16,40,.55)' : 'rgba(150,230,255,.6)');
+  g.fillStyle = trail; g.beginPath(); g.moveTo(-6, -118); g.lineTo(6, -118); g.lineTo(4, -40); g.lineTo(-4, -40); g.closePath(); g.fill();
+  g.save(); g.shadowColor = glow; g.shadowBlur = 10;
+  const gr = g.createLinearGradient(-7, 0, 7, 0); gr.addColorStop(0, c[2]); gr.addColorStop(.5, c[1]); gr.addColorStop(1, c[2]);
+  g.fillStyle = gr; g.beginPath(); g.moveTo(0, 0); g.lineTo(7.5, -26); g.lineTo(3.5, -44); g.lineTo(-3.5, -44); g.lineTo(-7.5, -26); g.closePath(); g.fill(); g.restore();
+  g.strokeStyle = c[2]; g.lineWidth = 1.2; g.stroke();
+  g.strokeStyle = c[0]; g.lineWidth = 1.6; g.beginPath(); g.moveTo(0, -4); g.lineTo(0, -38); g.stroke();
+}); }
+/** The blood sphere: a dark crimson bubble with a bright rim and a highlight, 150 across, centred. Blitted over the blood twin with a pulsing alpha. */
+export const FT_SPHERE = 150;
+export function tidesSphereSprite(k){ k = bakeK(k); return bake(`ftsphere:${k}`, FT_SPHERE, FT_SPHERE, FT_SPHERE / 2, FT_SPHERE / 2, k, g => {
+  const R = FT_SPHERE / 2 - 6, gr = g.createRadialGradient(-R * .3, -R * .35, R * .1, 0, 0, R);
+  gr.addColorStop(0, 'rgba(255,150,150,.32)'); gr.addColorStop(.6, 'rgba(180,10,30,.28)'); gr.addColorStop(.92, 'rgba(120,0,20,.6)'); gr.addColorStop(1, 'rgba(255,60,70,.9)');
+  g.fillStyle = gr; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.fill();
+  g.save(); g.shadowColor = '#ff2030'; g.shadowBlur = 12; g.strokeStyle = 'rgba(255,90,100,.9)'; g.lineWidth = 3; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.stroke(); g.restore();
+  g.fillStyle = 'rgba(255,255,255,.45)'; g.beginPath(); g.ellipse(-R * .42, -R * .5, R * .26, R * .12, -.6, 0, TAU); g.fill();
+  g.fillStyle = 'rgba(255,200,200,.5)'; for (let i = 0; i < 7; i++){ const a = i * TAU / 7 + .3, r = R * (.55 + (i % 3) * .12); g.beginPath(); g.arc(Math.cos(a) * r, Math.sin(a) * r, 2 + (i % 2), 0, TAU); g.fill(); }
+}); }
+/** The badge on the sphere counting the tentacles left: "×n" on a dark disc with a red ring. One sprite per n (1..9), 40 across, centred. */
+export function tidesBadgeSprite(k, n){ k = bakeK(k); return bake(`ftbadge:${n}:${k}`, 40, 40, 20, 20, k, g => {
+  g.fillStyle = 'rgba(30,2,8,.92)'; g.beginPath(); g.arc(0, 0, 17, 0, TAU); g.fill();
+  g.strokeStyle = '#ff5a64'; g.lineWidth = 3; g.stroke();
+  g.fillStyle = '#ffe0e0'; g.font = 'bold 17px Fredoka, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('\u00d7' + n, 0, 1);
+}); }
+/** The hydro pump's warning on one lane, the field's height (stretched): an aqua wash with dashed edges and a water drop at the foot. */
+export const FT_PUMP = { w:100, h:600 };
+export function tidesPumpWarnSprite(k){ k = bakeK(k); return bake(`ftpumpw:${k}`, FT_PUMP.w, FT_PUMP.h, 0, 0, k, g => {
+  const { w, h } = FT_PUMP;
+  const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(90,200,240,.05)'); gr.addColorStop(1, 'rgba(120,230,255,.45)');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(160,240,255,.85)'; g.lineWidth = 3; g.setLineDash([16, 12]); g.beginPath(); g.moveTo(3, 0); g.lineTo(3, h); g.moveTo(w - 3, 0); g.lineTo(w - 3, h); g.stroke(); g.setLineDash([]);
+  g.fillStyle = 'rgba(230,250,255,.85)'; for (let y = 120; y < h - 60; y += 140){ g.beginPath(); g.moveTo(w / 2, y); g.quadraticCurveTo(w / 2 + 14, y + 22, w / 2, y + 30); g.quadraticCurveTo(w / 2 - 14, y + 22, w / 2, y); g.fill(); }
+}); }
+/** The hydro pump's beam on one lane, the field's height (stretched): a roaring column of water with a white core. */
+export function tidesPumpBeamSprite(k){ k = bakeK(k); return bake(`ftpumpb:${k}`, FT_PUMP.w, FT_PUMP.h, 0, 0, k, g => {
+  const { w, h } = FT_PUMP, R = rng(53), cx = w / 2;
+  g.save(); g.shadowColor = '#7af0ff'; g.shadowBlur = 20; g.fillStyle = 'rgba(70,170,230,.5)'; g.fillRect(cx - 34, 0, 68, h); g.restore();
+  const gr = g.createLinearGradient(cx - 26, 0, cx + 26, 0); gr.addColorStop(0, 'rgba(30,110,190,.85)'); gr.addColorStop(.5, 'rgba(170,240,255,.95)'); gr.addColorStop(1, 'rgba(30,110,190,.85)');
+  g.fillStyle = gr; g.fillRect(cx - 26, 0, 52, h);
+  g.fillStyle = 'rgba(248,254,255,.95)'; g.fillRect(cx - 6, 0, 12, h);
+  g.fillStyle = 'rgba(210,246,255,.9)'; for (let i = 0; i < 30; i++){ const y = R() * h, x = cx + (R() < .5 ? -1 : 1) * (28 + R() * 18), r = 2 + R() * 3; g.beginPath(); g.ellipse(x, y, r, r * 1.4, 0, 0, TAU); g.fill(); }
+}); }
+export function prebakeTidesFx(k){ tidesWarnSprite(k); tidesSpearSprite(k); tidesBoltSprite(k, 'blood'); tidesBoltSprite(k, 'water'); tidesDiveSpearSprite(k, 'blood'); tidesDiveSpearSprite(k, 'water');
+  tidesSphereSprite(k); for (let n = 1; n <= 9; n++) tidesBadgeSprite(k, n); tidesPumpWarnSprite(k); tidesPumpBeamSprite(k); }
 
 // ---------- Whirlpools (Release 9): one baked spiral per colour and canvas scale, spun and pulsed when blitted ----------
 const WHIRL_R = CS * 0.46;
@@ -812,21 +861,37 @@ export function hiddenSphereSprite(k){
     g.fillStyle = 'rgba(70,0,12,.8)'; g.font = `bold ${Math.round(R * 1.05)}px Fredoka, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', 0, R * 0.08);
   });
 }
-/** The warning laid over a row about to be hidden: a red wash fading at the ends, with a sea-green song note in every cell. COLS x CS wide, top-left origin. */
-export function hiddenWarnSprite(k){
-  return bake('hiddenwarn:' + bakeK(k).toFixed(2), COLS * CS, CS, 0, 0, bakeK(k), g => {
-    const band = g.createLinearGradient(0, 0, 0, CS); band.addColorStop(0, 'rgba(255,60,70,.08)'); band.addColorStop(0.5, 'rgba(255,60,70,.42)'); band.addColorStop(1, 'rgba(255,60,70,.08)');
-    g.fillStyle = band; g.fillRect(0, 0, COLS * CS, CS);
-    g.strokeStyle = 'rgba(255,110,110,.8)'; g.lineWidth = 2; g.strokeRect(2, 2, COLS * CS - 4, CS - 4);
+/** The warning laid over a line about to be hidden: a red wash fading at the ends, with a sea-green song note in every cell. A row is COLS x CS, a column CS x ROWS*CS;
+ *  top-left origin. Baked once per kind and canvas scale. */
+export function hiddenWarnSprite(k, kind = 'row'){
+  const col = kind === 'col', w = col ? CS : COLS * CS, h = col ? ROWS * CS : CS;
+  return bake('hiddenwarn:' + kind + ':' + bakeK(k).toFixed(2), w, h, 0, 0, bakeK(k), g => {
+    washFill(g, w, h, col, 0.42);
+    g.strokeStyle = 'rgba(255,110,110,.8)'; g.lineWidth = 2; g.strokeRect(2, 2, w - 4, h - 4);
     g.fillStyle = 'rgba(255,225,220,.85)'; g.strokeStyle = 'rgba(255,225,220,.85)'; g.lineWidth = 3; g.lineCap = 'round';
-    for (let c = 0; c < COLS; c++){   // an eighth note in each cell
-      const x = (c + 0.5) * CS, y = CS * 0.58;
+    for (let i = 0; i < (col ? ROWS : COLS); i++){   // an eighth note in each cell
+      const x = col ? CS * 0.5 : (i + 0.5) * CS, y = (col ? i * CS : 0) + CS * 0.58;
       g.beginPath(); g.ellipse(x - 5, y, 9, 6.5, -0.45, 0, TAU); g.fill();
       g.beginPath(); g.moveTo(x + 3, y - 2); g.lineTo(x + 3, y - 28); g.quadraticCurveTo(x + 16, y - 24, x + 13, y - 11); g.stroke();
     }
   });
 }
-export function prebakeHiddenFx(k){ hiddenSphereSprite(k); hiddenWarnSprite(k); }
+/** The red band of a line's wash: strongest along its middle, fading to its long edges. */
+function washFill(g, w, h, col, a){
+  const band = col ? g.createLinearGradient(0, 0, w, 0) : g.createLinearGradient(0, 0, 0, h);
+  band.addColorStop(0, `rgba(255,60,70,${a * 0.2})`); band.addColorStop(0.5, `rgba(255,60,70,${a})`); band.addColorStop(1, `rgba(255,60,70,${a * 0.2})`);
+  g.fillStyle = band; g.fillRect(0, 0, w, h);
+}
+/** The red a hidden line keeps under its spheres for as long as it is hidden (owner 2026-11-11: "the red stays"): the warning's wash without the notes, with a dark
+ *  red edge. One sprite per kind ('row' | 'col') and canvas scale, top-left origin; one drawImage per hidden line. */
+export function hiddenWashSprite(k, kind = 'row'){
+  const col = kind === 'col', w = col ? CS : COLS * CS, h = col ? ROWS * CS : CS;
+  return bake('hiddenwash:' + kind + ':' + bakeK(k).toFixed(2), w, h, 0, 0, bakeK(k), g => {
+    washFill(g, w, h, col, 0.36);
+    g.strokeStyle = 'rgba(200,30,40,.55)'; g.lineWidth = 2; g.strokeRect(1.5, 1.5, w - 3, h - 3);
+  });
+}
+export function prebakeHiddenFx(k){ hiddenSphereSprite(k); for (const kind of ['row', 'col']){ hiddenWarnSprite(k, kind); hiddenWashSprite(k, kind); } }
 
 // ---------- The Swan Gourd's black-hole ring (Release 9) ----------
 /** A ring of marsh-dark with a faint violet rim and a thin violet glint inside, 100 units across, centred on its origin. Baked once per canvas

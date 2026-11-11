@@ -13,7 +13,7 @@ import { charKey, drawChar } from './anim.js';
 import { HIT_FX, SKIN_ART, drawCostume, wake } from './wardrobe.js';
 import { chestIcon, seedIcon } from './loot.js';
 import { drawMinesFx, drawScarecrowsFx, drawToolFx, toolIcon, glueSprite, magSparkSprite } from './tools.js';
-import { drawBlackRing, castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, whirlSprite, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR, pirateAimSprite, pirateReticleSprite, pirateShotSprite, hiddenSphereSprite, hiddenWarnSprite, tidesWarnSprite, tidesSpearSprite, tidesBoltSprite } from './fx.js';
+import { drawBlackRing, castleSprite, coinSprite, discSprite, drawBarrierFx, drawBlast, drawBolt, drawBulwarkZoneFx, drawHealZoneFx, drawRotZoneFx, drawBlackFogZoneFx, drawRallyZoneFx, drawHexBolt, drawCroneZoneFx, drawHexZoneFx, drawUndeadZoneFx, drawMist, drawSigil, fenceSprite, foamTile, whirlSprite, glowSprite, graveSprite, postSprite, puddleSprite, seaSprite, waveTile, countWarnSprite, countBoltSprite, countSpearSprite, FC_SPEAR, pirateAimSprite, pirateReticleSprite, pirateShotSprite, hiddenSphereSprite, hiddenWarnSprite, hiddenWashSprite, tidesWarnSprite, tidesSpearSprite, tidesBoltSprite, tidesDiveSpearSprite, tidesSphereSprite, tidesBadgeSprite, tidesPumpWarnSprite, tidesPumpBeamSprite } from './fx.js';
 import { bg, fogSprite, sprites } from './sprites.js';
 import { ell, rrect, tri } from './util.js';
 import { rng } from './paint.js';
@@ -29,7 +29,7 @@ import { drawPin, drawFlyingFork } from './pin.js';
 import { drawNetOver, drawNetFlight } from './nets.js';
 import { pieceFrame, pieceClip } from './castlepieces.js';
 import { CRUMBLE_DUR, CRUMBLE_LINGER, SPEAR_FLY, BOLT_FLASH } from '../keep.js';
-import { TIDES_STRIKE } from '../marsh.js';
+import { TIDES_STRIKE, DIVE_SPEAR_FLY, PUMP_FLASH, cellHidden, rowHid, colHid } from '../marsh.js';
 import { NET_FLY } from '../../data/rules.js';
 import { drawGourdCell, drawGourdGlow } from './gourd.js';
 import { ROTTEN, ROT_FX } from '../rot.js';
@@ -72,7 +72,6 @@ export function render(){
   for (const m of g.monsters) if (m.type === 'bulwark' && !m.dead && m.p > 0) drawBulwarkZone(m, t);
   if (__RELEASE__ >= 5) for (const m of g.monsters) if (m.type === 'rotdoctor' && !m.dead && m.p > 0) drawRotZone(m, t);
   if (__RELEASE__ >= 8) for (const m of g.monsters) if (m.type === 'marshal' && m.rallying && !m.dead) drawRallyZone(m, t);   // the Storm Marshal's rally square, while his sword is up (one baked sprite)
-  if (__RELEASE__ >= 9) for (const m of g.monsters) if (m.twinKind === 'blood' && !m.dead && !(m.rise > 0) && !(m.diveT > 0) && m.p > 0) drawBloodAura(m, t);   // the blood twin's 3x3 healing aura (one baked sprite)
   if (__RELEASE__ >= 5) for (const m of g.monsters) if (m.type === 'boss' && m.kind === 'fallenpoltergeist' && !m.dead) drawFallenPoltFx(m, t);   // its black fogs and its reaper glow, under the monsters
   drawHexZones(t);
   const ms = g.monsters.slice().sort((a, b) => a.p - b.p);
@@ -90,6 +89,8 @@ export function render(){
     drawMonster(m, t);
   }
   if (__RELEASE__ >= 9) drawPirateAims(t);   // a Pirate's aim line and reticle (baked sprites)
+  if (__RELEASE__ >= 9) for (const m of g.monsters) if (m.sphere && !m.dead) drawBloodSphere(m, t);   // the blood twin's sphere and its tentacle count (baked sprites)
+  if (__RELEASE__ >= 9 && g.ftPump) drawTidesPump(t);   // the blue twin's hydro pump: the lane warnings, then the beams (baked)
   drawVfx();
   drawTails(t);
   drawCastles(t);
@@ -97,6 +98,7 @@ export function render(){
   drawScarecrows(t);
   drawArrows(t);
   if (__RELEASE__ >= 8 && G.fcSpears && G.fcSpears.length) drawCountSpears();   // the Fallen Count's blood spears in flight (one baked sprite each)
+  if (__RELEASE__ >= 9 && G.ftDiveSpears && G.ftDiveSpears.length) drawDiveSpears();   // the Fallen twins' dive spears in flight (one baked sprite each)
   if (bands.length) drawFog(t, bands, g.fogClear > 0);
   if (fogCols.length) drawFogCols(t, fogCols, g.fogClear > 0);
   if (bands.length || fogCols.length) drawBossBarsOverFog(g);   // owner: the boss's health bar must show through the mist
@@ -112,8 +114,9 @@ export function render(){
   if (G.aim === 'buster') drawAimGraves(t);
   if (G.aim === 'repair') drawAimWalls(t);
   updatePaintPull(t);   // marks borrowed pumpkins so drawGrid lights them
+  if (__RELEASE__ >= 9) drawHiddenWash();   // hidden lines keep a baked red wash under their spheres (Release 9)
   drawGrid(t);
-  if (__RELEASE__ >= 9) drawHiddenRows(t);   // rows the Siren is about to hide: a baked red wash (Release 9)
+  if (__RELEASE__ >= 9) drawHiddenRows(t);   // lines about to be hidden: a baked red wash with notes (Release 9)
   if (__RELEASE__ >= 9 && G.ftSpear) drawTidesSpear(t);   // the blue twin's water spear over a patch column: the warning, then the spear (baked)
   if (__RELEASE__ >= 8 && G.fcBolt) drawCountBolt(t);   // the Fallen Count's lightning over a patch column: the warning, then the bolt (baked)
   if (__RELEASE__ >= 8 && G.netsFlying) for (const f of G.netsFlying) drawNetFlight(ctx, f.x, f.y, LANE(f.c), GY + f.r * CS + CS / 2, 1 - f.t / NET_FLY, f.kind, f.r + f.c);   // nets in flight
@@ -477,10 +480,31 @@ function drawCountBolt(t){
   else { const sp = countBoltSprite(K), bw = CS * 1.6, bh = h + CS * 1.5; ctx.globalAlpha = Math.max(0, b.strike / BOLT_FLASH); ctx.drawImage(sp.c, LANE(b.c) - bw / 2, GY - CS * 1.5, bw, bh); }
   ctx.restore();
 }
-/** The blood twin's healing aura (Release 9): the Marshal's crimson 3x3 square, a little dimmer. */
-function drawBloodAura(m, t){
-  const w = CS * 3 * 0.98, h = CS * 3, x = m.x - w / 2, y = mY(m) - h / 2;
-  drawRallyZoneFx(ctx, x, y, w, h, t, K, 0.7);
+/** The blood twin's sphere (Release 9, owner 2026-11-11): one baked bubble with a pulsing alpha, and a baked "×n" badge for the tentacles left. */
+function drawBloodSphere(m, t){
+  const sp = tidesSphereSprite(K), d = CS * 1.9, x = m.x, y = mY(m) - m.r * mS(m) * 0.3;
+  ctx.globalAlpha = 0.8 + 0.2 * Math.sin(t * 5); ctx.drawImage(sp.c, x - d / 2, y - d / 2, d, d); ctx.globalAlpha = 1;
+  const n = Math.max(1, Math.min(9, m.sphLeft || 1)), b = tidesBadgeSprite(K, n);
+  ctx.drawImage(b.c, x + d * 0.3 - b.ox, y - d * 0.36 - b.oy, b.w, b.h);
+}
+/** The blue twin's hydro pump (Release 9): a pulsing baked wash down each warned lane, then the baked beam fading over it. */
+function drawTidesPump(t){
+  const b = G.ftPump, h = FENCE_Y - FIELD_TOP, warn = b.warn > 0, sp = warn ? tidesPumpWarnSprite(K) : tidesPumpBeamSprite(K);
+  ctx.globalAlpha = warn ? 0.55 + 0.35 * Math.sin(t * 16) : Math.max(0, b.strike / PUMP_FLASH);
+  for (const l of b.lanes) ctx.drawImage(sp.c, LANE(l) - CS / 2, FIELD_TOP, CS, h);
+  ctx.globalAlpha = 1;
+}
+/** Every Fallen Twin Tides effect added 2026-11-11 at once (the sphere, the pump, the dive spears): for the draw-budget probe (tools/nm5_check.py). */
+export function drawTidesFx(t){
+  for (const m of G.monsters) if (m.sphere && !m.dead) drawBloodSphere(m, t);
+  if (G.ftPump) drawTidesPump(t);
+  if (G.ftDiveSpears && G.ftDiveSpears.length) drawDiveSpears();
+}
+/** The Fallen twins' dive spears flying down their lanes to the fence (Release 9). */
+function drawDiveSpears(){
+  const s = CS / 74;
+  for (const f of G.ftDiveSpears){ const sp = tidesDiveSpearSprite(K, f.kind), p = f.p0 + (1 - f.p0) * Math.min(1, f.t / DIVE_SPEAR_FLY), y = Math.min(FENCE_Y, FIELD_TOP + p * (FIELD_BOT - FIELD_TOP));
+    ctx.drawImage(sp.c, LANE(f.lane) - sp.ox * s, y - sp.oy * s, sp.w * s, sp.h * s); }
 }
 /** The blue twin's water spear (Release 9): a pulsing baked wash on the warned column, then the baked spear fading over it. */
 function drawTidesSpear(t){
@@ -594,7 +618,7 @@ export function drawCell(r, c, cell, t, hg){
   if (cell.fly > 0){ s *= 0.85; y -= Math.sin((1 - cell.fly / 0.55) * Math.PI) * 50; }
   if (cell.wig > 0) x += Math.sin(cell.wig * 30) * 3 * cell.wig;
   if (__RELEASE__ >= 4 && cell.gourd){ drawGourdCell(ctx, x, y, s, t, (r * 7 + c * 13) * .37, cell.gourd === true ? 'grave' : cell.gourd); return; }   // a gourd: its kind's baked sprite (no colour, never lit)
-  if (__RELEASE__ >= 9 && G.hidden && G.hidden[r] > 0 && !(cell.fly > 0)){   // a hidden row (the Siren): a baked red sphere, no colour and no light; the true pumpkin is still there
+  if (__RELEASE__ >= 9 && !(cell.fly > 0) && cellHidden(r, c)){   // a hidden row or column (the Siren, a cursed line, the blood twin; never in a Swan's square): a baked red sphere, no colour and no light; the true pumpkin is still there
     const sp = hiddenSphereSprite(K), sz = CS * s * 0.92; ctx.drawImage(sp.c, x - sz / 2, y - sz / 2, sz, sz);
     if (__RELEASE__ >= 8 && cell.net) drawNetOver(ctx, x, y, cell.net, (cell.t - (cell.netAt || 0)) / 0.25);
     if (cell.pinned > 0) drawPin(ctx, x, y, cell.pinned, cell.pinMax);
@@ -639,17 +663,26 @@ export function drawCell(r, c, cell, t, hg){
   }
 }
 
-/** Rows about to be hidden (Release 9): a pulsing baked red wash with a note in each cell, one drawImage a row. The hidden rows themselves are drawn by drawCell. */
+/** Lines about to be hidden (Release 9): a pulsing baked red wash with a note in each cell, one drawImage a line. The hidden cells themselves are drawn by drawCell. */
 export function drawHiddenRows(t){
   if (!G.hideWarn) return;
-  let sp = null;
-  for (let r = 0; r < ROWS; r++){
-    if (!(G.hideWarn[r] > 0)) continue;
-    if (!sp) sp = hiddenWarnSprite(K);
-    ctx.globalAlpha = 0.6 + 0.35 * Math.sin(t * 12 + r);
-    ctx.drawImage(sp.c, GX, GY + r * CS, sp.w, sp.h);
+  for (let k = 0; k < 2; k++){
+    const Wn = k ? G.hideWarnC : G.hideWarn; let sp = null;
+    for (let i = 0; i < Wn.length; i++){
+      if (!(Wn[i] > 0)) continue;
+      if (!sp) sp = hiddenWarnSprite(K, k ? 'col' : 'row');
+      ctx.globalAlpha = 0.6 + 0.35 * Math.sin(t * 12 + i);
+      ctx.drawImage(sp.c, k ? GX + i * CS : GX, k ? GY : GY + i * CS, sp.w, sp.h);
+    }
   }
   ctx.globalAlpha = 1;
+}
+/** Hidden lines keep their red under the spheres for as long as they are hidden (owner 2026-11-11): one baked wash a line, drawn under the pumpkins. */
+export function drawHiddenWash(){
+  if (!G.hidden) return;
+  let sr = null, sc = null;
+  for (let r = 0; r < ROWS; r++) if (rowHid(r)){ if (!sr) sr = hiddenWashSprite(K, 'row'); ctx.drawImage(sr.c, GX, GY + r * CS, sr.w, sr.h); }
+  for (let c = 0; c < COLS; c++) if (colHid(c)){ if (!sc) sc = hiddenWashSprite(K, 'col'); ctx.drawImage(sc.c, GX + c * CS, GY, sc.w, sc.h); }
 }
 
 export function drawSproutBar(){

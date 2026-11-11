@@ -3,7 +3,7 @@ import { SPAWN_STEPS } from '../data/patterns.js';
 import { NTYPES, PTYPES, lvDesc, lvStats, pct } from '../data/pumpkins.js';
 import { GEAR } from '../data/shop.js';
 import { LEVELS, WORLDS, WORLD_LEVELS, WORLD_NAMES, ALL_LEVELS, isOpen, highestOpen, unlockNightOf, levelFor, prevLevelFor, firstNightOf, typesForNight, gearUnlockNightOf, NIGHTMARE_LEVELS, NM_BOOK_LEVELS, nmNight, nmGateText } from '../data/worlds/index.js';
-import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO, PROTECTOR_INTRO, WARTLING_INTRO, POISON_INTRO, ROT_INTRO, POTION_INTRO, BREW_INTRO, CROOK_INTRO, SWAN_INTRO, TIDE_INTRO, WHIRL_INTRO, NET_INTRO, TOWER_INTRO, GATE_INTRO } from '../data/monsters.js';
+import { MNAME, MINTRO, BOSS_INTRO, BOSS_NAMES, GRAVES_INTRO, FOG_INTRO, CASTLE_INTRO, PUDDLE_INTRO, SEA_INTRO, WIND_INTRO, VARIANTS, FRENZY_INTRO, FIRE_INTRO, GOURD_INTRO, PROTECTOR_INTRO, WARTLING_INTRO, POISON_INTRO, ROT_INTRO, POTION_INTRO, BREW_INTRO, CROOK_INTRO, SWAN_INTRO, TIDE_INTRO, WHIRL_INTRO, REDLINE_INTRO, NET_INTRO, TOWER_INTRO, GATE_INTRO } from '../data/monsters.js';
 import { hasFire, nightmareTitle } from '../data/levels.js';
 import { monsterIcon } from '../engine/render/monsters.js';
 import { prebakeAsync } from '../engine/render/anim.js';
@@ -269,6 +269,7 @@ export function openPreview(n){
   if (__RELEASE__ >= 8 && pieceOn(def, 'tower')) info.push('Archer Towers shoot down their lanes until they fall.');
   if (__RELEASE__ >= 8 && pieceOn(def, 'gate')) info.push('Gatehouses send out monsters until they are broken.');
   if (__RELEASE__ >= 9 && def.tideMarks && def.tideMarks.length) info.push('The red tide rises as the night goes on.');
+  if (__RELEASE__ >= 9 && def.redLines && def.redLines.length) info.push(def.redLines.length > 1 ? 'Cursed lines: a row and a column stay red all night.' : `Cursed line: a ${def.redLines[0].kind === 'col' ? 'column' : 'row'} stays red all night.`);   // the marsh nightmare's cursed lines (owner 2026-11-11)
   if (__RELEASE__ >= 9 && def.whirlpools && def.whirlpools.length) info.push(def.whirlpools.length > 1 ? 'Whirlpools carry monsters between lanes.' : 'A whirlpool pair carries monsters between lanes.');
   if (__RELEASE__ >= 4 && def.fireMarks && def.fireMarks.length) info.push('Fire marks on the spawn bar light more fire and bring a horde.');
   if (__RELEASE__ >= 4) for (const k of def.unlockGourds) if (GOURDS[k] && !(save.gourds && save.gourds[k])) info.push(`🎁 Reward: the ${GOURDS[k].name}.`);
@@ -328,6 +329,7 @@ function startPreviewedNight(){
   if (__RELEASE__ >= 9 && homeHas(def, 'swan') && !homeHas(prev, 'swan')) cards.push({ key:'gourd:swan', icon:gourdIcon(160, 'swan'), title:'The Swan Gourd', text:SWAN_INTRO });   // its first night (N5-5, which gives it)
   if (__RELEASE__ >= 9 && def.tideMarks && def.tideMarks.length && !(prev && prev.tideMarks && prev.tideMarks.length)) cards.push({ key:'tide', icon:'🌊', title:'The blood tide', text:TIDE_INTRO });   // the marsh nightmare's first tide (N5-1)
   if (__RELEASE__ >= 9 && def.whirlpools && def.whirlpools.length && !(prev && prev.whirlpools && prev.whirlpools.length)) cards.push({ key:'whirlpools', icon:'🌀', title:'Whirlpools', text:WHIRL_INTRO });   // its first whirlpool pair (N5-1)
+  if (__RELEASE__ >= 9 && def.redLines && def.redLines.length && !(prev && prev.redLines && prev.redLines.length)) cards.push({ key:'redlines', icon:'❓', title:'Cursed lines', text:REDLINE_INTRO });   // the first night with a cursed line (N5-9; owner 2026-11-11)
   if (__RELEASE__ >= 8 && netsOn(def) && !netsOn(prev)) cards.push({ key:'nets', icon:'🕸️', title:'Nets', text:NET_INTRO });   // the keep nightmare's first nets (N4-1)
   if (__RELEASE__ >= 8 && pieceOn(def, 'tower') && !pieceOn(prev, 'tower')) cards.push({ key:'piece:tower', icon:pieceIcon('tower'), title:'Archer Tower', text:TOWER_INTRO });   // N4-5
   if (__RELEASE__ >= 8 && pieceOn(def, 'gate') && !pieceOn(prev, 'gate')) cards.push({ key:'piece:gate', icon:pieceIcon('gate'), title:'Gatehouse', text:GATE_INTRO });   // N4-7

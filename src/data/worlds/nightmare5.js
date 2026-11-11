@@ -11,6 +11,8 @@
 // New monsters, each introduced where it first walks in: Blood Slime (N5-2), Drowned Pirate (N5-3), the Kraken's tentacles (N5-4), Turtle Rider (N5-6),
 // Storm Eel (N5-7), Siren (N5-8); the blood tide and whirlpools have their own cards on N5-1. The Kraken holds N5-4 and N5-13 (form 2), the Fallen Twin
 // Tides N5-16. Each level sets spawnGap and spawnBurst itself. Music: the regular nightmare track.
+// Cursed lines (`redLines`, owner 2026-11-11: the marsh's signature, engine/marsh.js initHidden): a row or column hidden all night; one on N5-9 to N5-12, a row and a
+// column on N5-14 and N5-15, none on the boss nights, never the bottom row beside the sprouts.
 // Wrapped in the release gate so lower builds carry none of these names. Schema: ../levels.js.
 const base = d => ({ world:5, theme:10, nightmare:true, graves:0, boss:null, bossForm:1, unlockPumpkins:[], unlockGear:[], intro:[], sea:true, ...d, gourd:true });   // theme 10 = "Drowned Marsh: Nightmare" in WORLDS; every night is a gourd night
 const ALL4 = () => ['grave', 'protector', 'wartling', 'crookneck'];   // the gourds the first four books gave: pick two
@@ -50,25 +52,25 @@ export default __RELEASE__ >= 9 ? [
   L({ level: 7, name:'Storm Eel', pattern:1, total:20, interval:3.2, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL5(), shoreFrac:0.25, tideMarks:[{ at:0.35, to:0.35 }, { at:0.7, to:0.45 }],
     pools:[[0, 0.5], [2, 0.6], [4, 0.5], [6, 0.6]], intro:['eel'],
     pool:[['drownedGhoul', 7], ['eel', 4], ['crawler', 4], ['diver', 3], ['tideImp', 3]], quests:[['wallAvg', 55], ['bunch5', 2]] }),
-  // N5-8 Siren: her song hides rows (red spheres); a whirlpool pair to confuse the lanes too.
+  // N5-8 Siren: her song hides a row or a column (red spheres) and calls up a Blood Slime; a whirlpool pair to confuse the lanes too.
   L({ level: 8, name:'Siren', pattern:2, total:20, interval:3.2, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL5(), shoreFrac:0.25, tideMarks:[{ at:0.5, to:0.4 }],
     whirls:[[[2, 0.45], [4, 0.65]]], pools:[[1, 0.55], [5, 0.55]], intro:['siren'],
     pool:[['drownedGhoul', 7], ['siren', 3], ['bogTurtle', 3], ['sailor', 3], ['tideImp', 4]], quests:[['noTools'], ['wallMin', 50]] }),
-  // N5-9 Siren and Pirates: shots and hidden rows together.
+  // N5-9 Siren and Pirates: shots and hidden lines together; the first cursed line (row 1 stays red all night) and its card.
   L({ level: 9, name:'Siren and Pirates', pattern:3, total:20, interval:3.1, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL5(), shoreFrac:0.25, tideMarks:[{ at:0.4, to:0.4 }, { at:0.8, to:0.5 }],
-    pools:[[0, 0.5], [3, 0.6], [6, 0.5]],
+    pools:[[0, 0.5], [3, 0.6], [6, 0.5]], redLines:[{ kind:'row', i:1 }],
     pool:[['drownedGhoul', 6], ['siren', 3], ['pirate', 5], ['tideImp', 4], ['crawler', 3]], quests:[['bunch5', 2], ['wallMin', 45]] }),
   // N5-10 Chameleon tide: Chameleons and Reverse Chameleons; the Swan's splash ignores their colour.
   L({ level:10, name:'Chameleon tide', pattern:4, total:20, interval:3.1, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL5(), shoreFrac:0.25, tideMarks:[{ at:0.4, to:0.4 }, { at:0.75, to:0.5 }],
-    pools:[[2, 0.5], [4, 0.5]],
+    pools:[[2, 0.5], [4, 0.5]], redLines:[{ kind:'col', i:3 }],
     pool:[['drownedGhoul', 6], ['chameleon', 5], ['rchameleon', 4], ['tideImp', 3], ['crawler', 2]], quests:[['oneLaunch', 4], ['wallMin', 45]] }),
   // N5-11 Slime flood: many Blood Slimes while the tide goes past halfway.
   L({ level:11, name:'Slime flood', pattern:0, total:24, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL5(), shoreFrac:0.3, tideMarks:[{ at:0.25, to:0.4 }, { at:0.5, to:0.55 }, { at:0.75, to:0.65 }],
-    pools:[[1, 0.62], [3, 0.68], [5, 0.62]],
+    pools:[[1, 0.62], [3, 0.68], [5, 0.62]], redLines:[{ kind:'row', i:2 }],
     pool:[['bloodslime', 12], ['drownedGhoul', 6], ['tideImp', 4], ['slime', 3]], quests:[['oneLaunch', 5], ['wallMin', 45]] }),
   // N5-12 Eel storm: Eels with a high tide and three whirlpool pairs.
   L({ level:12, name:'Eel storm', pattern:1, total:22, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL5(), shoreFrac:0.3, tideMarks:[{ at:0.3, to:0.45 }, { at:0.6, to:0.6 }, { at:0.8, to:0.7 }],
-    whirls:[[[0, 0.5], [6, 0.62]], [[2, 0.55], [4, 0.68]], [[1, 0.66], [5, 0.5]]],
+    whirls:[[[0, 0.5], [6, 0.62]], [[2, 0.55], [4, 0.68]], [[1, 0.66], [5, 0.5]]], redLines:[{ kind:'col', i:5 }],
     pool:[['eel', 7], ['drownedGhoul', 6], ['diver', 3], ['crawler', 3], ['pirate', 2], ['tideImp', 3]], quests:[['noTools'], ['wallAvg', 50]] }),
   // N5-13 The Kraken 2: the Kraken in form 2 (more health, five tentacles) with a mixed crowd. One normal chest.
   L({ level:13, name:'The Kraken 2', pattern:2, total:20, interval:3.1, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL5(), shoreFrac:0.25, tideMarks:[{ at:0.5, to:0.4 }, { at:0.8, to:0.5 }],
@@ -76,14 +78,14 @@ export default __RELEASE__ >= 9 ? [
     pool:[['drownedGhoul', 7], ['bloodslime', 3], ['pirate', 3], ['siren', 2], ['turtlerider', 2], ['tideImp', 3]], quests:[['wallMin', 40], ['bunch5', 2]] }),
   // N5-14 Maelstrom: all four whirlpool pairs and a high tide; the surges carry each end it passes to the water\u2019s edge, where the pair keeps working.
   L({ level:14, name:'Maelstrom', pattern:3, total:24, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL5(), shoreFrac:0.3, tideMarks:[{ at:0.2, to:0.45 }, { at:0.45, to:0.55 }, { at:0.7, to:0.65 }, { at:0.9, to:0.7 }],
-    whirls:[[[0, 0.4], [6, 0.55]], [[1, 0.62], [5, 0.45]], [[2, 0.5], [4, 0.7]], [[3, 0.42], [0, 0.7]]],
+    whirls:[[[0, 0.4], [6, 0.55]], [[1, 0.62], [5, 0.45]], [[2, 0.5], [4, 0.7]], [[3, 0.42], [0, 0.7]]], redLines:[{ kind:'row', i:0 }, { kind:'col', i:1 }],
     pool:[['drownedGhoul', 6], ['tideImp', 5], ['crawler', 3], ['bloodslime', 3], ['turtlerider', 3], ['pirate', 2], ['sailor', 2], ['turtle', 2]], quests:[['oneLaunch', 4], ['wallMin', 40]] }),
   // N5-15 The gauntlet: every new monster, two whirlpool pairs, a longer night.
   L({ level:15, name:'The gauntlet', pattern:4, total:26, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL5(), shoreFrac:0.3, tideMarks:[{ at:0.3, to:0.45 }, { at:0.6, to:0.6 }, { at:0.85, to:0.65 }],
-    whirls:[[[1, 0.45], [5, 0.6]], [[2, 0.55], [4, 0.45]]], pools:[[0, 0.62], [6, 0.62]],
+    whirls:[[[1, 0.45], [5, 0.6]], [[2, 0.55], [4, 0.45]]], pools:[[0, 0.62], [6, 0.62]], redLines:[{ kind:'row', i:3 }, { kind:'col', i:4 }],
     pool:[['drownedGhoul', 5], ['tideImp', 4], ['bloodslime', 3], ['pirate', 3], ['turtlerider', 3], ['eel', 3], ['siren', 2], ['crawler', 3], ['turtle', 2]], quests:[['noTools'], ['wallMin', 40]] }),
-  // N5-16 The Fallen Twin Tides (spec Part 7; engine/marsh.js): both twins hold in the tide. Ghouls, imps and crawlers walk in meanwhile; the twins call Blood Slimes, Pirates and Eels. One normal chest.
+  // N5-16 The Fallen Twin Tides (spec Part 7; engine/marsh.js): both twins hold in the tide; two fixed whirlpool pairs (the blue twin no longer opens any, owner 2026-11-11). Ghouls, imps and crawlers walk in meanwhile; the twins call Blood Slimes, Pirates and Eels. One normal chest.
   L({ level:16, name:'The Fallen Twin Tides', pattern:0, total:22, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL5(), shoreFrac:0.25, tideMarks:[{ at:0.5, to:0.4 }],
-    pools:[[1, 0.5], [3, 0.55], [5, 0.5]], boss:'fallentides', bossChest:'normal',
+    whirls:[[[0, 0.45], [4, 0.6]], [[2, 0.62], [6, 0.45]]], pools:[[1, 0.5], [3, 0.55], [5, 0.5]], boss:'fallentides', bossChest:'normal',
     pool:[['drownedGhoul', 6], ['tideImp', 4], ['crawler', 4], ['sailor', 3], ['bogTurtle', 2]], quests:[['wallMin', 40], ['noTools']] }),
 ] : [];

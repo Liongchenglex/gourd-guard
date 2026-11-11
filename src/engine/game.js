@@ -192,7 +192,7 @@ export function startGame(mode, n, loadout, gourds){
   else if (def && def.castles) raiseCastles(def.castles.n, def.castles.hp);
   if (def && def.puddlesLayout) for (const [lane, p] of def.puddlesLayout) G.puddles.push({ lane, p }); else if (def && def.puddles) placePuddles(def.puddles);
   if (__RELEASE__ >= 9 && def) initWhirls(def);   // whirlpool pairs, now the pools stand (Release 9)
-  if (__RELEASE__ >= 9) initHidden();   // no row hidden yet (the Siren's song, engine/marsh.js)
+  if (__RELEASE__ >= 9) initHidden(def);   // no line hidden yet but the level's cursed ones (the Siren's song, engine/marsh.js)
   if (__RELEASE__ >= 4 && def){ startFires(def); if (def.nightmare) prebakeFire(); }   // after the castles, so random fires skip them; the flame strip is baked now, not on first sight
   if (__RELEASE__ >= 5 && def && def.poison) prebakePoison();   // the fog and its warning strips, baked now
   if (__RELEASE__ >= 7 && def && bakeKeys(def).some(k => k.split('|')[0] === 'triptych')) prebakeBarrier();   // the Triptych's barrier frames (Release 7, ~4-6 MB), only on a night that can spawn one
@@ -201,10 +201,10 @@ export function startGame(mode, n, loadout, gourds){
   if (__RELEASE__ >= 7 && def && (def.boss === 'fallenhexwitch' || def.boss2 === 'fallenhexwitch')) prebakeFallenHex();   // her altar's crack states and her 5x5 zone (Release 7), only on her night
   if (__RELEASE__ >= 7 && def && def.nightmare) prebakePotions();   // the three bottles, their icons and the drink puffs (Release 7), baked now
   if (__RELEASE__ >= 8 && def && def.nightmare) prebakeNets();   // the rope net, the crimson one and the net in flight, baked now
-  if (__RELEASE__ >= 9 && def && (bakeKeys(def).some(k => k.split('|')[0] === 'siren') || def.boss === 'fallentides')) prebakeHiddenFx(K);   // the hidden-row sphere and warning (render/fx.js), baked before she can sing
+  if (__RELEASE__ >= 9 && def && (bakeKeys(def).some(k => k.split('|')[0] === 'siren') || def.boss === 'fallentides' || (def.redLines && def.redLines.length))) prebakeHiddenFx(K);   // the hidden-line sphere, washes and warnings (render/fx.js), baked before she can sing or a cursed line shows
   if (__RELEASE__ >= 9 && def && (bakeKeys(def).some(k => k.split('|')[0] === 'pirate') || def.boss === 'fallentides')) prebakePirateFx(K);   // a Pirate's aim line, reticle and shot (render/fx.js), baked before he can aim
   if (__RELEASE__ >= 9 && def && def.nightmare) prebakeBlackRing(K);   // the Swan Gourd's black-hole ring (render/fx.js): any nightmare night may take the Swan, so baked now
-  if (__RELEASE__ >= 9 && def && def.boss === 'fallentides') prebakeTidesFx(K);   // the water spear's warning and strike, the blood and water bolts, baked now (render/fx.js)
+  if (__RELEASE__ >= 9 && def && def.boss === 'fallentides') prebakeTidesFx(K);   // the water spear's warning and strike, the bolts, the dive spears, the blood sphere and its badges, the hydro pump, baked now (render/fx.js)
   if (__RELEASE__ >= 8 && def && def.boss === 'fallencount') prebakeCountFx(K);   // his lightning warning, bolt and blood spear, baked now (render/fx.js)
   if (__RELEASE__ >= 8 && def && (def.boss === 'fallencount' || (def.castlesLayout || []).some(e => e[2] === 'gate' || e[2] === 'tower'))) prebakeCastlePieces();   // the Gatehouse's and the Archer Tower's frames, baked now (render/castlepieces.js)
   if (__RELEASE__ >= 8 && def) prebakeWeather();   // fresh weather timers every night; the Keep storm's rain and bolts baked now (Release 8, render/weather.js)

@@ -26,7 +26,7 @@ export const GOURDS = __RELEASE__ >= 4 ? {
   } : {}),
   ...(__RELEASE__ >= 9 ? {   // Release 9 (Nightmare Drowned Marsh, spec Part 5): the fifth gourd, won on N5-4 and given its tutorial on N5-5; five unlocked, still two slots
     swan:{ key:'swan', name:'Swan Gourd', role:'Black-hole splash',
-      power:'A pumpkin flicked from the 3×3 around it hits like a black hole: a ring bursts at the hit and hurts the monsters beside it for 1, whatever their colour, Ice or Fire rule. Press and hold it to break it: every empty cell around it sprouts a Rainbow. A new one sprouts on the next tick.',
+      power:'A pumpkin flicked from the 3×3 around it hits like a black hole: a ring bursts at the hit and hurts the monsters beside it for 1, whatever their colour, Ice or Fire rule. Pumpkins around it are never hidden: no song, cursed line or blood twin turns them into red spheres. Press and hold it to break it: every empty cell around it sprouts a Rainbow. A new one sprouts on the next tick.',
       lore:'A black swan that glided out of the marsh. Where it looks, the water folds in on itself.' },
   } : {}),
 } : {};

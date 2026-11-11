@@ -12,6 +12,7 @@ import { addChest } from './loot.js';
 import { banner, updateHud } from '../ui/hud.js';
 import { destroyGourd, gourdSlot, gourdsBack } from './gourd.js';
 import { ROTTEN, ROT_FX } from './rot.js';
+import { hideActive, hintAvoids } from './marsh.js';
 
 export function newCell(c){ return { c, lit:false, gids:[], bsize:0, ox:0, oy:0, pop:0, grow:1, fly:0, wig:0, t:Math.random() * 10, age:0 }; }
 /** Smallest bunch that lights up for a colour: Turquoise launches at 2, everything else at 3. */
@@ -333,7 +334,7 @@ export function boardScore(gr, threat){
 }
 
 export function bestMove(){
-  const threat = laneThreat(), base = boardScore(grid, threat);
+  const threat = laneThreat(), base = boardScore(grid, threat), hid = __RELEASE__ >= 9 && hideActive();
   let best = null, bs = base + 0.05;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
     const cell = grid[r][c]; if (!cell || cell.fly) continue;
@@ -343,7 +344,7 @@ export function bestMove(){
     for (const dir of ['up', 'left', 'right', 'down']){
       if (cell.lit && dir === 'up') continue;
       const moves = planMove(r, c, dir); if (!moves) continue;
-      if (__RELEASE__ >= 9 && G.hidden && moves.some(([a, , x]) => G.hidden[a] > 0 || G.hidden[x] > 0 || G.hideWarn[a] > 0 || G.hideWarn[x] > 0)) continue;   // the hint never moves a pumpkin from or into a hidden (or about to be hidden) row (the Siren)
+      if (__RELEASE__ >= 9 && hid && moves.some(([a, b, x, y]) => hintAvoids(a, b) || hintAvoids(x, y))) continue;   // the hint never moves a pumpkin from or into a hidden (or about to be hidden) cell: a Siren's row or column, a cursed line, a blood twin's columns (a Swan's square is never hidden)
       const cells = applyMove(moves, false);
       const sc = boardScore(grid, threat) - (moves.length > 1 ? 0.1 : 0);
       revertMove(moves, cells);

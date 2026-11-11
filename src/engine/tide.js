@@ -20,7 +20,7 @@ const ease = u => u * u * (3 - 2 * u);
 export function initTide(def){
   const marks = def && def.tideMarks && def.tideMarks.length ? def.tideMarks : null;
   G.tide = null;   // read the level's own shore, not a previous tide's
-  G.tide = marks ? { shore:shoreP(), from:0, target:0, t:-1, marksDone:0, tT:-99 } : null;
+  G.tide = marks ? { shore:shoreP(), from:0, target:0, t:-1, marksDone:0, tT:-99, hold:null } : null;
 }
 
 /** The shore now (a field fraction): the live line while a tide moves, the level's own otherwise. */
@@ -60,24 +60,71 @@ export function updateTide(dt){
   if (!T || !d || !d.tideMarks) return;
   const mk = d.tideMarks[T.marksDone];
   if (mk && T.t < 0 && G.spawned >= Math.floor((G.total || d.total) * mk.at)){
-    T.marksDone++; T.tT = G.t; T.from = T.shore; T.target = Math.max(T.shore, Math.min(mk.to, TIDE_STOP())); T.t = 0;
-    banner('The tide rises!', 'The blood sea creeps toward the fence.', 2.2); SFX.bossAlert();
-    addFloat('The tide rises!', 195, FIELD_TOP + 40, '#ff8a80', 18, 1.2);
+    T.marksDone++; T.tT = G.t;
+    const to = Math.min(mk.to, TIDE_STOP());
+    if (T.hold != null) T.hold = Math.max(T.hold, to);   // the blue twin holds the tide at its highest: the mark only raises where it will withdraw to
+    else {
+      T.from = T.shore; T.target = Math.max(T.shore, to); T.t = 0;
+      banner('The tide rises!', 'The blood sea creeps toward the fence.', 2.2); SFX.bossAlert();
+      addFloat('The tide rises!', 195, FIELD_TOP + 40, '#ff8a80', 18, 1.2);
+    }
   }
   if (T.t >= 0){
     T.t += dt;
-    const u = Math.min(1, T.t / SURGE_TIME);
+    const u = Math.min(1, T.t / SURGE_TIME), back = T.target < T.from;
     T.shore = T.from + (T.target - T.from) * ease(u);
-    swallowPools(); carryWhirlEnds(T.from);
+    if (!back) swallowPools();
+    carryWhirlEnds(T.from);
+    if (back) strandCheck();
     if (u >= 1){ T.shore = T.target; T.t = -1; }
   }
 }
 
-export const tideSnapshot = () => G.tide ? { shore:G.tide.target > G.tide.shore ? G.tide.target : G.tide.shore, marks:G.tide.marksDone } : null;
-/** A continued night: the marks passed and the shore they reached stay, and no surge replays. */
+/** Where the shore is going: the end of a surge or a withdrawal under way, else where it stands. */
+const shoreAim = T => T.t >= 0 ? T.target : T.shore;
+/** The Fallen blue twin is down (owner 2026-11-11): the tide surges to TIDE_STOP with the usual surge (banner, crest, swallowed pools), and remembers the shore to go
+ *  back to. `quiet`: a continued night restoring it, already at the top (no banner). */
+export function surgeTide(quiet){
+  const T = G.tide; if (!T) return;
+  if (T.hold == null) T.hold = shoreAim(T);
+  const top = TIDE_STOP();
+  if (quiet){ const was = T.shore; T.shore = T.from = T.target = Math.max(T.shore, top); T.t = -1; swallowPools(); carryWhirlEnds(was); return; }
+  if (shoreAim(T) >= top - 1e-6) return;
+  T.from = T.shore; T.target = top; T.t = 0;
+  banner('The tide surges!', 'The blue twin drags the blood sea to the fence.', 2.2); SFX.bossAlert();
+  addFloat('The tide surges!', 195, FIELD_TOP + 40, '#9fe0f0', 18, 1.2);
+}
+/** The blue twin rises again: the tide withdraws over SURGE_TIME to the shore it had before the surge (raised by any mark passed meanwhile). Wet whirlpool ends
+ *  follow it back; swallowed pools do not come back; sea dwellers left on dry ground move to the new water's edge (strandCheck). */
+export function retreatTide(){
+  const T = G.tide; if (!T || T.hold == null) return;
+  const to = T.hold; T.hold = null;
+  if (to >= shoreAim(T) - 1e-6) return;
+  T.from = T.shore; T.target = to; T.t = 0;
+  addFloat('The tide withdraws', 195, FIELD_TOP + 40, '#ff8a80', 16, 1.1);
+}
+/** The fight is over with the tide still up: it stays up (owner), nothing to withdraw to any more. */
+export function dropTideHold(){ if (G.tide) G.tide.hold = null; }
+/** Never left on dry ground: the water dwellers (Storm Eels, Divers, Siren, Tentacles, the Fallen twins, the Kraken) and whatever lurks hidden in the tide.
+ *  Walkers on the field just keep walking. */
+const DWELLERS = new Set(['eel', 'diver', 'siren', 'tentacle']);
+const dweller = m => DWELLERS.has(m.type) && !m.walker || (m.type === 'boss' && (m.kind === 'fallentides' || m.kind === 'kraken')) || (m.hidden && !!m.puddle);
+/** A withdrawing tide: any dweller now out of the water moves to the water's edge in its own lane (its pool and hold follow). No allocation. */
+export function strandCheck(){
+  const edge = Math.max(0.02, liveShore() - 0.03);
+  for (const m of G.monsters){
+    if (m.dead || !dweller(m) || inWater(m.lane, m.p)) continue;
+    m.p = edge;
+    if (m.puddle){ m.puddle.lane = m.lane; m.puddle.p = edge; }
+    if (m.stayP != null) m.stayP = edge;
+  }
+}
+
+export const tideSnapshot = () => G.tide ? { shore:shoreAim(G.tide), marks:G.tide.marksDone, hold:G.tide.hold != null ? G.tide.hold : null } : null;
+/** A continued night: the marks passed and the shore they reached stay, and no surge replays (a tide the blue twin holds up keeps the shore it will go back to). */
 export function restoreTide(s){
   if (!s || !G.tide) return;
-  G.tide.marksDone = s.marks || 0; G.tide.shore = s.shore; G.tide.t = -1; G.tide.from = G.tide.target = s.shore;
+  G.tide.marksDone = s.marks || 0; G.tide.shore = s.shore; G.tide.t = -1; G.tide.from = G.tide.target = s.shore; G.tide.hold = s.hold != null ? s.hold : null;
   const d = G.def;   // startGame placed the pools at the start shore: lay them again below the restored one (same count), without swallow sparks
   if (d.puddlesLayout) G.puddles = G.puddles.filter(pd => pd.p > s.shore);
   else if (d.puddles){ G.puddles = []; placePuddles(d.puddles); }

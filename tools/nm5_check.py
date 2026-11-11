@@ -2200,7 +2200,7 @@ N5_NAMES = ['The Red Tide', 'Blood Slime', 'Drowned Pirate', 'The Kraken', 'The 
 N5_NEW = {'bloodslime': 2, 'pirate': 3, 'tentacle': 4, 'turtlerider': 6, 'eel': 7, 'siren': 8}   # new monster -> the night that brings it (spec Part 6)
 ALL4_5 = ['grave', 'protector', 'wartling', 'crookneck']
 N5_LEVELS_JS = """() => { const g = window.__gg; return g.NIGHTMARE_LEVELS[4].map((d, i) => { const L = g.levelFor(1401 + i);
-  return { level:d.level, name:d.name, theme:d.theme, pool:d.pool.map(e => e[0]), types:d.pool.every(([k]) => !!(g.TYPES[k] || g.VARIANTS[k])), gourd:!!d.gourd, gourds:d.gourds || null,
+  return { level:d.level, name:d.name, theme:d.theme, pool:d.pool.map(e => e[0]), weights:Object.fromEntries(d.pool), types:d.pool.every(([k]) => !!(g.TYPES[k] || g.VARIANTS[k])), gourd:!!d.gourd, gourds:d.gourds || null,
     gourdLock:d.gourdLock || null, coach:d.coach || null, unlockGourds:d.unlockGourds || null, boss:d.boss, bossForm:d.bossForm, bossChest:d.bossChest || null, intro:d.intro || [],
     also:d.boss ? (g.ALSO_BAKE[d.boss] || []) : [], sea:!!d.sea, shoreFrac:d.shoreFrac || 0, shore:d.shore || 0, puddles:d.puddles || 0, layout:d.puddlesLayout || null,
     marks:d.tideMarks || [], whirls:d.whirlpools || [], spawnGap:d.spawnGap, spawnBurst:d.spawnBurst, total:d.total, interval:d.interval,
@@ -2257,6 +2257,8 @@ def check_n5_levels(browser, url):
     ok(all([m['at'] for m in d['marks']] == sorted(m['at'] for m in d['marks']) and all(0 < m['at'] < 1 for m in d['marks']) for d in L), 'tide marks are sorted, inside the night')
     ok(all(d['marks'][0]['to'] > (d['shoreFrac'] or d['shore'] * tile) for d in L), 'a mark always rises above the start shore')
     ok(len(L[13]['whirls']) == 4 and len(L[11]['whirls']) == 3 and len(L[0]['whirls']) >= 1, f"N5-14 has 4 whirlpool pairs, N5-12 has 3, N5-1 has one {[len(d['whirls']) for d in L]}")
+    ok(set(L[15]['pool']) == {'pirate', 'turtlerider', 'siren', 'eel', 'bloodslime'} and len(L[15]['pool']) == 5, f"N5-16 walks exactly Pirates, Turtle Riders, Sirens, Storm Eels and Blood Slimes (owner 2026-11-11) {L[15]['pool']}")
+    ok(L[15]['weights']['siren'] <= 0.15 * sum(L[15]['weights'].values()), f"N5-16 keeps the Sirens to a modest share {L[15]['weights']}")
     ok(len(L[15]['whirls']) == 2, f"N5-16 has two fixed whirlpool pairs (the blue twin no longer opens any) {L[15]['whirls']}")
     ok(all(len(d['whirls']) <= 4 for d in L), 'never more than four pairs')
     dry = []

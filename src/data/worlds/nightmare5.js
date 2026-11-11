@@ -84,8 +84,8 @@ export default __RELEASE__ >= 9 ? [
   L({ level:15, name:'The gauntlet', pattern:4, total:26, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.14, gourds:ALL5(), shoreFrac:0.3, tideMarks:[{ at:0.3, to:0.45 }, { at:0.6, to:0.6 }, { at:0.85, to:0.65 }],
     whirls:[[[1, 0.45], [5, 0.6]], [[2, 0.55], [4, 0.45]]], pools:[[0, 0.62], [6, 0.62]], redLines:[{ kind:'row', i:3 }, { kind:'col', i:4 }],
     pool:[['drownedGhoul', 5], ['tideImp', 4], ['bloodslime', 3], ['pirate', 3], ['turtlerider', 3], ['eel', 3], ['siren', 2], ['crawler', 3], ['turtle', 2]], quests:[['noTools'], ['wallMin', 40]] }),
-  // N5-16 The Fallen Twin Tides (spec Part 7; engine/marsh.js): both twins hold in the tide; two fixed whirlpool pairs (the blue twin no longer opens any, owner 2026-11-11). Ghouls, imps and crawlers walk in meanwhile; the twins call Blood Slimes, Pirates and Eels. One normal chest.
+  // N5-16 The Fallen Twin Tides (spec Part 7; engine/marsh.js): both twins hold in the tide; two fixed whirlpool pairs (the blue twin no longer opens any, owner 2026-11-11). Only the marsh nightmare's own monsters walk in (owner 2026-11-11: Pirates, Turtle Riders, Storm Eels, Blood Slimes and a few Sirens); the twins call Blood Slimes, Pirates and Eels. One normal chest.
   L({ level:16, name:'The Fallen Twin Tides', pattern:0, total:22, interval:3.0, spMul:0.95, spawnGap:1, spawnBurst:0.12, gourds:ALL5(), shoreFrac:0.25, tideMarks:[{ at:0.5, to:0.4 }],
     whirls:[[[0, 0.45], [4, 0.6]], [[2, 0.62], [6, 0.45]]], pools:[[1, 0.5], [3, 0.55], [5, 0.5]], boss:'fallentides', bossChest:'normal',
-    pool:[['drownedGhoul', 6], ['tideImp', 4], ['crawler', 4], ['sailor', 3], ['bogTurtle', 2]], quests:[['wallMin', 40], ['noTools']] }),
+    pool:[['pirate', 5], ['turtlerider', 4], ['eel', 4], ['bloodslime', 5], ['siren', 2]], quests:[['wallMin', 40], ['noTools']] }),
 ] : [];
